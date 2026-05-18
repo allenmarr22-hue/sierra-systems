@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <script>
+        // Prevenir parpadeo de tema (FOUC)
+        (function() {
+            var theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AS Sierra Systems — Soluciones Digitales Corporativas</title>
+    <meta name="description" content="Plataforma SaaS de gestión empresarial de alto rendimiento.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* Rediseño Premium Light Theme para el Portafolio */
+        :root {
+            --landing-primary: #4f46e5;
+            --landing-primary-hover: #4338ca;
+            --landing-secondary: #0f172a;
+            --landing-bg: #f8fafc;
+            --landing-surface: #ffffff;
+            --landing-text: #334155;
+            --landing-muted: #64748b;
+        }
+
+        body {
+            background-color: var(--landing-bg);
+            color: var(--landing-text);
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            scroll-behavior: smooth;
+        }
+
+        /* Header */
+        .landing-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 5%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        
+        .landing-header.scrolled {
+            padding: 0.8rem 5%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .landing-brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--landing-secondary);
+            text-decoration: none;
+        }
+
+        .brand-logo-img {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+            display: none; /* Oculto por defecto, se muestra si hay logo cargado */
+        }
+        .brand-logo-icon {
+            display: none; /* Oculto por defecto, se muestra si falla la carga del logo dinámico */
+        }
+
+        .landing-brand span { color: var(--landing-primary); }
+
+        .landing-nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .landing-nav a {
+            color: var(--landing-text);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+
+        .landing-nav a:hover {
+            color: var(--landing-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            padding: 10rem 5% 6rem;
+            text-align: center;
+            background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.08), transparent 40%);
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .badge-pro {
+            display: inline-block;
+            background: rgba(79, 70, 229, 0.1);
+            color: var(--landing-primary);
+            padding: 0.5rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(79, 70, 229, 0.2);
+        }
+
+        .hero-title {
+            font-size: 4.5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: var(--landing-secondary);
+            max-width: 900px;
+        }
+
+        .hero-title span {
+            background: linear-gradient(135deg, var(--landing-primary), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--landing-muted);
+            max-width: 700px;
+            margin: 0 auto 3rem;
+            line-height: 1.6;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+        }
+
+        .btn-large {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary-landing {
+            background: var(--landing-primary);
+            color: white;
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary-landing:hover {
+            background: var(--landing-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -5px rgba(79, 70, 229, 0.5);
+        }
+
+        .btn-outline-landing {
+            background: transparent;
+            color: var(--landing-secondary);
+            border: 2px solid rgba(15, 23, 42, 0.1);
+        }
+
+        .btn-outline-landing:hover {
+            border-color: var(--landing-secondary);
+            background: rgba(15, 23, 42, 0.05);
+        }
+
+        /* Generic Section */
+        .section {
+            padding: 6rem 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-alt {
+            background: var(--landing-surface);
+            padding: 6rem 5%;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section-title {
+            font-size: 2.75rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: var(--landing-secondary);
+        }
+
+        .section-subtitle {
+            color: var(--landing-muted);
+            font-size: 1.15rem;
+            line-height: 1.6;
+        }
+
+        /* Products Grid */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .product-card {
+            background: var(--landing-surface);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 24px;
+            padding: 2.5rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, var(--landing-primary), #8b5cf6);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .product-card:hover::before { opacity: 1; }
+
+        .product-icon {
+            width: 70px;
+            height: 70px;
+            background: rgba(79, 70, 229, 0.1);
+            color: var(--landing-primary);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-icon.purple {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+        }
+
+        .product-icon i { width: 36px; height: 36px; }
+        .product-title { font-size: 1.75rem; font-weight: 800; color: var(--landing-secondary); margin: 0; }
+        .product-desc { color: var(--landing-muted); flex: 1; line-height: 1.6; margin: 0; }
+        
+        .price-tag {
+            font-weight: 800;
+            font-size: 2rem;
+            color: var(--landing-secondary);
+        }
+        .price-tag span { font-size: 1rem; color: var(--landing-muted); font-weight: 500; }
+        
+        .product-actions { display: flex; gap: 1rem; margin-top: auto; }
+        .product-actions a, .product-actions button { flex: 1; justify-content: center; text-align: center; height: 50px; }
+
+        /* Features/Why Us */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        .feature-item {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            background: var(--landing-surface);
+            border: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--landing-primary);
+            flex-shrink: 0;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .feature-content h4 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+            color: var(--landing-secondary);
+        }
+        .feature-content p {
+            margin: 0;
+            color: var(--landing-muted);
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        /* Help & Guides */
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .faq-item {
+            background: var(--landing-surface);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .faq-question {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--landing-secondary);
+            font-size: 1.1rem;
+            user-select: none;
+        }
+        .faq-question i {
+            transition: transform 0.3s;
+            color: var(--landing-muted);
+        }
+        .faq-item.active .faq-question i {
+            transform: rotate(180deg);
+        }
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            color: var(--landing-muted);
+            line-height: 1.6;
+        }
+        .faq-item.active .faq-answer {
+            padding: 0 1.5rem 1.5rem;
+            max-height: 500px;
+        }
+        .faq-item:hover {
+            border-color: rgba(79, 70, 229, 0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Footer */
+        .landing-footer {
+            background: var(--landing-secondary);
+            color: rgba(255,255,255,0.7);
+            padding: 5rem 5% 2rem;
+        }
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 4rem;
+        }
+        .footer-brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .footer-brand span { color: #818cf8; }
+        .footer-desc {
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            max-width: 400px;
+        }
+        .footer-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+        .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .footer-links a:hover {
+            color: white;
+        }
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* WhatsApp Float */
+        .whatsapp-float {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #25d366;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 10px 20px rgba(37, 211, 102, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .whatsapp-float:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 15px 25px rgba(37, 211, 102, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .hero-title { font-size: 3.5rem; }
+            .landing-nav { display: none; } /* Ocultar nav en móvil para simplificar por ahora */
+            .footer-content { grid-template-columns: 1fr; gap: 2rem; }
+        }
+        @media (max-width: 768px) {
+            .hero-title { font-size: 2.5rem; }
+            .hero-subtitle { font-size: 1.1rem; }
+            .hero-actions { flex-direction: column; width: 100%; }
+            .hero-actions .btn-large { width: 100%; justify-content: center; }
+            #brand-text-name { display: none; }
+            .header-actions .btn-primary-landing { padding: 0.5rem 0.8rem !important; font-size: 0.85rem !important; }
+            .mobile-menu-toggle { display: flex !important; }
+            .section-title { font-size: 2rem; }
+            .hero-stats-container { flex-direction: column; gap: 2rem !important; }
+            .hero-stats-divider { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <header class="landing-header" id="header">
+        <a href="#" class="landing-brand">
+            <!-- Logo personalizado (se carga dinámicamente) -->
+            <img src="" alt="Logo AS Sierra Systems" class="brand-logo-img" id="custom-logo-img" style="height:42px; width:auto; object-fit:contain; display:none; border-radius:8px;">
+            <!-- Icono por defecto (visible si no hay logo cargado) -->
+            <div class="brand-logo-icon" id="default-logo-icon">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="url(#grad1)"/>
+                    <defs>
+                        <linearGradient id="grad1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#6366f1"/>
+                            <stop offset="1" stop-color="#8b5cf6"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <span id="brand-text-name">AS <span>Sierra</span> Systems</span>
+        </a>
+        
+        <nav class="landing-nav">
+            <a href="#inicio">Inicio</a>
+            <a href="#soluciones">Soluciones</a>
+            <a href="#ventajas">Ventajas</a>
+            <a href="#ayuda">Centro de Ayuda</a>
+        </nav>
+
+        <div class="header-actions">
+            <!-- Acceso Clientes (desktop & mobile) -->
+            <a href="/client-login.html" class="btn-primary-landing" style="padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; font-size:0.9rem; display: flex; align-items: center; justify-content: center; text-decoration: none;">
+                <span>Acceso Clientes</span>
+            </a>
+            <!-- Botón 3 rayitas (sólo móvil) -->
+            <button id="mobile-nav-toggle" class="mobile-menu-toggle" style="background: none; border: none; cursor: pointer; color: var(--landing-secondary); padding: 0.4rem; display: none; align-items: center; justify-content: center;">
+                <i data-lucide="menu" style="width: 28px; height: 28px;"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Navigation Dropdown -->
+        <div id="mobile-nav-menu" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--landing-surface); flex-direction: column; padding: 1rem; border-bottom: 1px solid rgba(0,0,0,0.1); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 999;">
+            <a href="#inicio" class="mobile-nav-link" style="padding: 1rem; text-decoration: none; color: var(--landing-secondary); font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05);">Inicio</a>
+            <a href="#soluciones" class="mobile-nav-link" style="padding: 1rem; text-decoration: none; color: var(--landing-secondary); font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05);">Soluciones</a>
+            <a href="#ventajas" class="mobile-nav-link" style="padding: 1rem; text-decoration: none; color: var(--landing-secondary); font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05);">Ventajas</a>
+            <a href="#ayuda" class="mobile-nav-link" style="padding: 1rem; text-decoration: none; color: var(--landing-secondary); font-weight: 600;">Centro de Ayuda</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section" id="inicio">
+        <div class="badge-pro">✦ Plataforma SaaS Nivel Empresarial</div>
+        <h1 class="hero-title">Automatiza, Gestiona y<br><span>Multiplica tus Ventas</span></h1>
+        <p class="hero-subtitle">El ecosistema digital definitivo para empresas que buscan escalar. Herramientas potentes, fáciles de usar y diseñadas para dar resultados desde el primer día.</p>
+        <div class="hero-actions">
+            <a href="#soluciones" class="btn-primary-landing btn-large">
+                Explorar Soluciones <i data-lucide="arrow-right"></i>
+            </a>
+            <a href="https://wa.me/573001234567?text=Hola,%20quiero%20más%20información%20sobre%20sus%20soluciones" target="_blank" class="btn-outline-landing btn-large">
+                <i data-lucide="message-circle"></i> Hablar con un Experto
+            </a>
+        </div>
+
+        <!-- Stats de confianza -->
+        <div class="hero-stats-container" style="display:flex; gap:3rem; margin-top:4rem; justify-content:center; flex-wrap:wrap;">
+            <div style="text-align:center;">
+                <div style="font-size:2.2rem; font-weight:900; color:#0f172a;">100%</div>
+                <div style="color:#64748b; font-size:0.9rem;">Implementación Digital</div>
+            </div>
+            <div class="hero-stats-divider" style="width:1px; background:#e2e8f0;"></div>
+            <div style="text-align:center;">
+                <div style="font-size:2.2rem; font-weight:900; color:#0f172a;">24/7</div>
+                <div style="color:#64748b; font-size:0.9rem;">Disponibilidad del Sistema</div>
+            </div>
+            <div class="hero-stats-divider" style="width:1px; background:#e2e8f0;"></div>
+            <div style="text-align:center;">
+                <div style="font-size:2.2rem; font-weight:900; color:#0f172a;">$0</div>
+                <div style="color:#64748b; font-size:0.9rem;">Costos de Instalación</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Us / Features -->
+    <section class="section section-alt" id="ventajas">
+        <div class="section-header">
+            <h2 class="section-title">¿Por qué elegir nuestro sistema?</h2>
+            <p class="section-subtitle">No somos solo software, somos tu socio tecnológico. Proveemos la infraestructura que los negocios modernos necesitan para competir y ganar.</p>
+        </div>
+        <div class="features-grid" style="max-width: 1200px; margin: 0 auto;">
+            <div class="feature-item">
+                <div class="feature-icon"><i data-lucide="zap"></i></div>
+                <div class="feature-content">
+                    <h4>Implementación Inmediata</h4>
+                    <p>Sin meses de desarrollo. Obtén acceso a tu sistema en minutos, configurado y listo para recibir clientes.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon"><i data-lucide="shield-check"></i></div>
+                <div class="feature-content">
+                    <h4>Seguridad Corporativa</h4>
+                    <p>Tus datos y los de tus clientes están protegidos con los estándares más altos de encriptación y seguridad.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon"><i data-lucide="trending-up"></i></div>
+                <div class="feature-content">
+                    <h4>Escalabilidad Total</h4>
+                    <p>Nuestros módulos crecen contigo. Ya sea que tengas 1 o 50 sucursales, el sistema se adapta a tu volumen.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon"><i data-lucide="headset"></i></div>
+                <div class="feature-content">
+                    <h4>Soporte Dedicado</h4>
+                    <p>No estás solo. Contamos con guías detalladas y atención directa por WhatsApp para resolver cualquier duda.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products / Portfolio Section -->
+    <section class="section" id="soluciones">
+        <div class="section-header">
+            <h2 class="section-title">Nuestras Soluciones SaaS</h2>
+            <p class="section-subtitle">Módulos especializados para diferentes industrias. Empieza con lo que necesitas y expande cuando estés listo.</p>
+        </div>
+        
+        <div class="products-grid">
+            
+            <!-- Producto Activo: StreetFeed -->
+            <div class="product-card">
+                <div class="product-icon"><i data-lucide="utensils-crossed"></i></div>
+                <h3 class="product-title">StreetFeed Pro</h3>
+                <p class="product-desc">Moderniza tu restaurante con un menú digital interactivo. Tus clientes escanean el QR, añaden al carrito y envían su pedido detallado directo a tu WhatsApp al instante.</p>
+                <div class="price-tag" id="price-streetfeed">$95.000 <span>COP / mes</span></div>
+                
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--landing-muted);">
+                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Catálogo ilimitado</li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Recepción por WhatsApp</li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Panel administrativo propio</li>
+                </ul>
+
+                <div class="product-actions" style="margin-top: 1.5rem;">
+                    <a href="/modules/order-system/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px;">Ver Demo</a>
+                    <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StreetFeed" class="btn-primary-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px;">Contratar Ahora</a>
+                </div>
+            </div>
+
+            <!-- Producto Activo: StyleSync Pro -->
+            <div class="product-card">
+                <div class="product-icon purple"><i data-lucide="scissors"></i></div>
+                <h3 class="product-title">StyleSync Pro</h3>
+                <p class="product-desc">Sistema integral para dueños de salones de belleza, spas y barberías. Agenda de citas inteligente, control de inventario de productos y reportes de ingresos diarios automáticos.</p>
+                <div class="price-tag" id="price-agenda">$135.000 <span>COP / mes</span></div>
+                
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--landing-muted);">
+                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Agenda online 24/7</li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Inventario en tiempo real</li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Analítica de ganancias</li>
+                </ul>
+
+                <div class="product-actions" style="margin-top: 1.5rem;">
+                    <a href="/modules/agenda/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px;">Ver Demo</a>
+                    <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StyleSync%20Pro" class="btn-primary-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px; background: #8b5cf6;">Contratar Ahora</a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Help & Guides Section -->
+    <section class="section section-alt" id="ayuda">
+        <div class="section-header">
+            <h2 class="section-title">Centro de Ayuda y Guías</h2>
+            <p class="section-subtitle">Todo lo que necesitas saber para sacarle el máximo provecho a nuestra plataforma.</p>
+        </div>
+
+        <div class="guides-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; max-width: 1200px; margin: 0 auto 4rem;">
+            <div class="guide-card glass" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.3s ease;">
+                <div style="width: 50px; height: 50px; background: rgba(79, 70, 229, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--landing-primary); margin-bottom: 1.5rem;">
+                    <i data-lucide="rocket"></i>
+                </div>
+                <h4 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--landing-secondary);">Guía de Inicio Rápido</h4>
+                <p style="color: var(--landing-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Aprende a configurar tu primer negocio y asignar módulos en menos de 5 minutos.</p>
+                <a href="#" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
+            </div>
+            
+            <div class="guide-card glass" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.3s ease;">
+                <div style="width: 50px; height: 50px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #8b5cf6; margin-bottom: 1.5rem;">
+                    <i data-lucide="settings"></i>
+                </div>
+                <h4 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--landing-secondary);">Configuración de Módulos</h4>
+                <p style="color: var(--landing-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Personaliza cada herramienta según las necesidades específicas de tu rubro.</p>
+                <a href="#" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
+            </div>
+
+            <div class="guide-card glass" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.3s ease;">
+                <div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #10b981; margin-bottom: 1.5rem;">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <h4 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--landing-secondary);">Seguridad y Accesos</h4>
+                <p style="color: var(--landing-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Mejores prácticas para proteger tu información y la de tus clientes finales.</p>
+                <a href="#" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
+            </div>
+        </div>
+        
+        <div class="faq-container">
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>¿Cómo accedo al panel administrativo de mi módulo?</span>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Una vez contratado el servicio, te proporcionaremos una URL única y credenciales seguras. En el caso del Super Administrador, puedes hacer clic en "Acceso Admin" en la parte superior derecha de esta página. Recuerda que debes tener tus accesos configurados por el equipo de soporte.</p>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>¿Puedo personalizar la plataforma con mi propio Logo?</span>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>¡Absolutamente! Nuestro sistema está diseñado para ser White-label (marca blanca). Desde el panel de Configuración de tu administración, puedes subir el logo de tu empresa, el cual reemplazará automáticamente nuestro logo en toda la interfaz de usuario.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>¿Cómo funciona la integración con WhatsApp en StreetFeed?</span>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Cuando un cliente selecciona sus productos en tu menú digital y hace clic en "Enviar Pedido", el sistema formatea automáticamente un mensaje claro y estructurado con el detalle del pedido, total a pagar y datos del cliente. Luego, redirige al cliente a su app de WhatsApp para enviártelo a tu número configurado.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Olvidé mi contraseña de administrador, ¿qué hago?</span>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Por políticas de seguridad estricta, si has olvidado tu contraseña administrativa, deberás contactar a nuestro equipo de soporte directamente a través de WhatsApp. Procederemos a verificar tu identidad y a restaurar tus accesos de forma segura.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 3rem;">
+            <p style="color: var(--landing-muted); margin-bottom: 1rem;">¿Tienes otra pregunta?</p>
+            <a href="https://wa.me/1234567890" target="_blank" class="btn-primary-landing" style="padding: 0.8rem 2rem; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="message-square"></i> Escríbenos por WhatsApp
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="footer-content">
+            <div>
+                <div class="footer-brand" id="footer-brand-container">
+                    <div id="footer-logo-icon" style="display: none;">
+                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="#818cf8"/></svg>
+                    </div>
+                    <img src="" id="footer-custom-logo" style="height:28px; width:auto; display:none; border-radius:4px; margin-right:8px;">
+                    AS <span>Sierra</span> Systems
+                </div>
+                <p class="footer-desc">Desarrollamos ecosistemas digitales inteligentes para automatizar operaciones y escalar negocios al siguiente nivel. Tecnología de vanguardia a tu alcance.</p>
+                <div style="display: flex; gap: 1rem;">
+                    <a href="#" style="color: white; opacity: 0.7;"><i data-lucide="facebook"></i></a>
+                    <a href="#" style="color: white; opacity: 0.7;"><i data-lucide="instagram"></i></a>
+                    <a href="#" style="color: white; opacity: 0.7;"><i data-lucide="linkedin"></i></a>
+                </div>
+            </div>
+            <div>
+                <h4 class="footer-title">Soluciones</h4>
+                <ul class="footer-links">
+                    <li><a href="#soluciones">StreetFeed Pro</a></li>
+                    <li><a href="#soluciones">StyleSync Pro</a></li>
+                    <li><a href="#">Desarrollo a Medida</a></li>
+                    <li><a href="#">Consultoría TI</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="footer-title">Soporte</h4>
+                <ul class="footer-links">
+                    <li><a href="#ayuda">Centro de Ayuda</a></li>
+                    <li><a href="#">Términos y Condiciones</a></li>
+                    <li><a href="#">Política de Privacidad</a></li>
+                    <li><a href="https://wa.me/1234567890" target="_blank" style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="message-circle" style="width: 16px;"></i> Contacto WhatsApp</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 AS Sierra Systems. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Botón Flotante WhatsApp -->
+    <a href="https://wa.me/1234567890" target="_blank" class="whatsapp-float" title="Contactar por WhatsApp">
+        <i data-lucide="phone" style="width: 28px; height: 28px;"></i>
+    </a>
+
+    <script>
+        // Inicializar Iconos
+        lucide.createIcons();
+
+        // Efecto Header Scrolled
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Funcionalidad FAQ (Centro de Ayuda)
+        document.querySelectorAll('.faq-item').forEach(item => {
+            const question = item.querySelector('.faq-question');
+            question.addEventListener('click', () => {
+                const isActive = item.classList.contains('active');
+                
+                // Cerrar todos
+                document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+                
+                // Si no estaba activo, abrirlo
+                if (!isActive) {
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // Cargar Configuración Dinámica (Logo) desde el Backend
+        async function loadDynamicConfig() {
+            const defaultIcon = document.getElementById('default-logo-icon');
+            const customImg = document.getElementById('custom-logo-img');
+            const footerDefault = document.getElementById('footer-logo-icon');
+            const footerCustom = document.getElementById('footer-custom-logo');
+
+            try {
+                const res = await fetch('/api/settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    if (data.config && data.config.logo) {
+                        // Mostrar imagen personalizada
+                        if (defaultIcon && customImg) {
+                            defaultIcon.style.display = 'none';
+                            customImg.src = data.config.logo;
+                            customImg.style.display = 'block';
+                        }
+                        
+                        if (footerDefault && footerCustom) {
+                            footerDefault.style.display = 'none';
+                            footerCustom.src = data.config.logo;
+                            footerCustom.style.display = 'block';
+                        }
+                    }
+                    
+                    if (data.modules && data.modules.length > 0) {
+                        data.modules.forEach(mod => {
+                            const priceEl = document.getElementById(`price-${mod.id}`);
+                            if (priceEl && mod.price) {
+                                priceEl.innerHTML = `${mod.price} <span style="font-size: 1rem; color: var(--landing-muted); font-weight: 500;">COP / mes</span>`;
+                            }
+                        });
+                    }
+                    
+                    if (data.config && data.config.logo) return; // Terminar si hay logo
+                }
+            } catch (error) {
+                console.log("No se pudo cargar la configuración personalizada.", error);
+            }
+
+            // Si llegamos aquí (error de red o sin logo), mostrar los iconos por defecto
+            if (defaultIcon) defaultIcon.style.display = 'flex';
+            if (footerDefault) footerDefault.style.display = 'block';
+        }
+
+        // Ejecutar al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDynamicConfig();
+
+            // Lógica del menú móvil
+            const mobileToggle = document.getElementById('mobile-nav-toggle');
+            const mobileMenu = document.getElementById('mobile-nav-menu');
+            
+            if (mobileToggle && mobileMenu) {
+                mobileToggle.addEventListener('click', () => {
+                    const isVisible = mobileMenu.style.display === 'flex';
+                    mobileMenu.style.display = isVisible ? 'none' : 'flex';
+                });
+
+                // Cerrar menú al hacer clic en un enlace
+                const mobileLinks = mobileMenu.querySelectorAll('.mobile-nav-link');
+                mobileLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        mobileMenu.style.display = 'none';
+                    });
+                });
+            }
+        });
+    </script>
+    <!-- FOOTER LEGAL & COMPLIANCE -->
+    <footer style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 4rem 5% 2rem; font-family: 'Outfit', sans-serif;">
+        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 3rem;">
+            <!-- Brand & Mission -->
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <div style="width: 35px; height: 35px; background: #6366f1; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
+                        <i data-lucide="shield-check" style="width: 20px;"></i>
+                    </div>
+                    <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">AS Sierra Systems</span>
+                </div>
+                <p style="color: #64748b; font-size: 0.9rem; line-height: 1.6;">
+                    Soluciones SaaS de alto rendimiento para la transformación digital empresarial. Seguridad, escalabilidad y cumplimiento legal garantizado.
+                </p>
+            </div>
+
+            <!-- Quick Links -->
+            <div>
+                <h4 style="color: #0f172a; font-weight: 700; margin-bottom: 1.5rem;">Plataforma</h4>
+                <ul style="list-style: none; padding: 0; font-size: 0.9rem; line-height: 2;">
+                    <li><a href="#" style="color: #64748b; text-decoration: none;">Inicio</a></li>
+                    <li><a href="#soluciones" style="color: #64748b; text-decoration: none;">Soluciones</a></li>
+                    <li><a href="#" style="color: #64748b; text-decoration: none;">Soporte Técnico</a></li>
+                    <li><a href="client-dashboard.html" style="color: #6366f1; font-weight: 600; text-decoration: none;">Acceso Clientes</a></li>
+                </ul>
+            </div>
+
+            <!-- Legal & Compliance -->
+            <div>
+                <h4 style="color: #0f172a; font-weight: 700; margin-bottom: 1.5rem;">Legal</h4>
+                <ul style="list-style: none; padding: 0; font-size: 0.9rem; line-height: 2;">
+                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: #64748b; text-decoration: none;">Términos de Servicio</a></li>
+                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: #64748b; text-decoration: none;">Política de Privacidad</a></li>
+                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: #64748b; text-decoration: none;">Uso de Cookies</a></li>
+                </ul>
+            </div>
+
+            <!-- Trust Badges -->
+            <div>
+                <h4 style="color: #0f172a; font-weight: 700; margin-bottom: 1.5rem;">Certificaciones</h4>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="background: white; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem; filter: grayscale(1); opacity: 0.7;">
+                        <i data-lucide="lock" style="width: 14px; color: #10b981;"></i>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #0f172a;">SSL SECURE</span>
+                    </div>
+                    <div style="background: white; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem; filter: grayscale(1); opacity: 0.7;">
+                        <i data-lucide="check-circle" style="width: 14px; color: #6366f1;"></i>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #0f172a;">LEY 1581 COMPLIANT</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="max-width: 1200px; margin: 3rem auto 0; padding-top: 2rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <p style="color: #94a3b8; font-size: 0.8rem;">
+                © 2026 AS Sierra Systems. Todos los derechos reservados. Diseñado con altos estándares de seguridad.
+            </p>
+            <div style="display: flex; gap: 1.5rem;">
+                <a href="#" style="color: #94a3b8;"><i data-lucide="linkedin" style="width: 18px;"></i></a>
+                <a href="#" style="color: #94a3b8;"><i data-lucide="twitter" style="width: 18px;"></i></a>
+                <a href="#" style="color: #94a3b8;"><i data-lucide="instagram" style="width: 18px;"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/consent.js"></script>
+</body>
+</html>

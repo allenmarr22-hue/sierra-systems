@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo | Margaritasmit</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css?v=20260423.01">
+    <script>
+        // Script Anti-Flash de Tema (Carga inmediata antes de renderizar el body)
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('margarita_admin_theme');
+                if (savedTheme && savedTheme !== 'rose') {
+                    const themes = {
+                        blue: { accent: '#2D4F6C', bg: '#F4F7F9', rgb: '45, 79, 108' },
+                        green: { accent: '#2E5A44', bg: '#F4F9F6', rgb: '46, 90, 68' },
+                        gold: { accent: '#6B4F3E', bg: '#F9F7F5', rgb: '107, 79, 62' },
+                        lavender: { accent: '#8E7CC3', bg: '#F9F8FC', rgb: '142, 124, 195' },
+                        orange: { accent: '#E67E22', bg: '#FEF9F5', rgb: '230, 126, 34' },
+                        cyan: { accent: '#3498DB', bg: '#F4F9FC', rgb: '52, 152, 219' },
+                        purple: { accent: '#7D3C98', bg: '#F8F4F9', rgb: '125, 60, 152' },
+                        maroon: { accent: '#922B21', bg: '#FCF5F4', rgb: '146, 43, 33' },
+                        slate: { accent: '#34495E', bg: '#F4F6F7', rgb: '52, 73, 94' }
+                    };
+                    const theme = themes[savedTheme];
+                    if (theme) {
+                        const root = document.documentElement;
+                        root.style.setProperty('--color-accent', theme.accent);
+                        root.style.setProperty('--gold-primary', theme.accent);
+                        root.style.setProperty('--color-dark-pink', theme.accent);
+                        root.style.setProperty('--color-bg', theme.bg);
+                        root.style.setProperty('--accent-rgb', theme.rgb);
+                    }
+                }
+            } catch(e) { console.error("Theme loader error:", e); }
+        })();
+    </script>
+    <style>
+        #auth-section {
+            display: none;
+            background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('admin_bg.png');
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-box {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(5px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo { margin-bottom: 20px; }
+    </style>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23111111%22/><text x=%2250%22 y=%2275%22 font-size=%2265%22 fill=%22%23B87381%22 font-family=%22Georgia, serif%22 text-anchor=%22middle%22 font-weight=%22bold%22>M</text><text x=%2280%22 y=%2235%22 font-size=%2230%22 text-anchor=%22middle%22>✨</text></svg>">
+</head>
+<body>
+    <div id="auth-section" class="text-center">
+        <h1 class="logo dynamic-brand-name"><a href="admin.html" style="text-decoration: none; color: inherit;">Margaritasmit<span>.</span> Admin</a></h1>
+        <p style="margin-bottom: 30px; color: #555; font-weight: 500;">Inicia sesión para gestionar tus Servicios, Precios y Galería.</p>
+        
+        <div class="login-box">
+            <div style="margin-bottom: 20px; font-size: 1.2rem; color: var(--color-accent); font-weight: 600;">
+                <i class="fas fa-lock"></i> Acceso Administrador
+            </div>
+            <input type="text" id="admin-email" placeholder="Usuario" required style="margin-bottom: 15px;">
+            <input type="password" id="admin-password" placeholder="Contraseña" required>
+            <button id="login-btn" class="btn-primary" style="margin-top: 20px; width: 100%;">ENTRAR AL PANEL</button>
+            <div style="margin-top:15px; text-align:center;">
+                <a href="#" onclick="handleForgotPassword()" style="color:#666; font-size:0.85rem; text-decoration:none; transition:0.3s;" onmouseover="this.style.color='var(--color-dark-pink)'" onmouseout="this.style.color='#666'">¿Olvidaste tu contraseña?</a>
+            </div>
+            <p id="auth-error" class="error-msg"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-section" style="display: none;">
+        <div class="dashboard-wrapper">
+            <!-- SIDEBAR NAV -->
+            <aside class="sidebar-nav">
+                <div class="sidebar-logo">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <nav id="admin-main-nav">
+                    <a href="#" onclick="showTab('agenda-tab', this)" class="active" title="Agenda"><i class="fas fa-calendar-check"></i></a>
+                    <a href="#" onclick="showTab('specialists-tab', this)" title="Personal"><i class="fas fa-users-cog"></i></a>
+                    <a href="#" onclick="showTab('services-tab', this)" title="Servicios y Categorías"><i class="fas fa-magic"></i></a>
+                    <a href="#" onclick="showTab('promo-tab', this)" title="Ofertas"><i class="fas fa-tags"></i></a>
+
+                    <a href="#" onclick="showTab('expenses-tab', this)" title="Libreta de Gastos"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none"><rect x="4" y="2" width="14" height="20" rx="2" fill="currentColor" opacity="0.85"/><rect x="6" y="7" width="8" height="1.5" rx="0.75" fill="white" opacity="0.7"/><rect x="6" y="10.5" width="8" height="1.5" rx="0.75" fill="white" opacity="0.7"/><rect x="6" y="14" width="5" height="1.5" rx="0.75" fill="white" opacity="0.7"/><line x1="14" y1="16" x2="20" y2="10" stroke="#f9ca24" stroke-width="2" stroke-linecap="round"/><polygon points="20,10 21.5,8.5 22,11" fill="#f9ca24"/><rect x="13.5" y="16" width="1.2" height="2" rx="0.4" fill="#c0392b" transform="rotate(-45 14 17)"/></svg></a>
+                    <a href="#" onclick="showTab('history-tab', this)" title="Historial"><i class="fas fa-history"></i></a>
+                    <a href="#" onclick="showTab('settings-tab', this)" title="Configuración"><i class="fas fa-cog"></i></a>
+                </nav>
+                <button id="logout-btn" class="logout-icon-btn" title="Cerrar Sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </aside>
+
+            <!-- MAIN CONTENT AREA -->
+            <main class="main-content">
+                <header class="admin-header">
+                    <h1 class="logo dynamic-brand-name"><a href="admin.html" style="text-decoration: none; color: inherit;">Margaritasmit<span>.</span> Admin</a></h1>
+                    <div class="user-status"><i class="fas fa-circle" style="color:#2ecc71; font-size:0.7rem;"></i> Modo Dashboard</div>
+                </header>
+
+                <div class="tabs-container">
+                    <!-- TAB 1: AGENDA (DEFAULT) -->
+                    <section id="agenda-tab" class="tab-content active" style="padding-top: 0px;">
+                        <div class="content-header" style="justify-content: space-between; align-items: center; display: flex; flex-wrap: wrap; margin: 0 0 5px 0; padding: 0;">
+                            <div>
+                                <h1 style="font-size: 1.3rem; margin:0; color:var(--color-dark-pink);"><i class="fas fa-calendar-alt"></i> Agenda de Citas</h1>
+                                <p style="margin:0; opacity: 0.7; font-size: 0.8rem;">Control de turnos y citas del día.</p>
+                            </div>
+                        </div>
+                        <div id="agenda-main-actions" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom: 5px; gap: 15px; flex-wrap: wrap; background: rgba(255,255,255,0.4); padding: 10px 15px; border-radius: 25px; border: 1px solid rgba(184, 115, 129, 0.1);">
+                            <!-- Izquierda: Nueva Cita -->
+                            <div style="flex-shrink:0;">
+                                <button class="btn-toggle" onclick="toggleManualForm()" id="btn-manual-toggle" style="height:52px; border-radius:15px; width:240px; display:flex; justify-content:center; align-items:center; gap:10px; margin:0; padding:10px;">
+                                    <i class="fas fa-plus-circle"></i> NUEVA CITA <i class="fas fa-chevron-down chevron-icon" style="font-size:0.8rem;"></i>
+                                </button>
+                            </div>
+
+                            <!-- Centro: Bandejas -->
+                            <div class="agenda-tabs" style="margin:0; flex:none; justify-content:flex-start; border:none; background:transparent; gap:15px; display:flex;">
+                                <button onclick="setAgendaTray('incoming')" id="tray-btn-incoming" class="tray-btn active" style="width:240px; height:52px; justify-content:center; margin:0;">
+                                    <i class="fas fa-inbox"></i> ENTRANTES <span class="badge" id="badge-incoming">0</span>
+                                </button>
+                                <button onclick="setAgendaTray('confirmed')" id="tray-btn-confirmed" class="tray-btn" style="width:240px; height:52px; justify-content:center; margin:0;">
+                                    <i class="fas fa-user-clock"></i> EN PROCESO <span class="badge" id="badge-confirmed">0</span>
+                                </button>
+                                <button onclick="setAgendaTray('postponed')" id="tray-btn-postponed" class="tray-btn" style="width:240px; height:52px; justify-content:center; margin:0;">
+                                    <i class="fas fa-history"></i> APLAZADAS <span class="badge" id="badge-postponed">0</span>
+                                </button>
+                                <button onclick="setAgendaTray('reminders')" id="tray-btn-reminders" class="tray-btn tray-btn-reminders-special" style="width:240px; height:52px; justify-content:center; margin:0;">
+                                    <i class="fas fa-bell fa-bell-shake"></i> RECORDATORIOS <span class="badge" id="badge-reminders">0</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Manual Booking Form (Hidden) -->
+                        <div id="manual-booking-container" class="glass-module smooth-collapse">
+                            <h3 style="margin-top:0;">Registrar Cita Manual</h3>
+                            <div style="display: flex; gap: 20px; align-items: stretch;">
+
+                                <!-- COLUMNA IZQUIERDA: Campos del formulario + Botones al fondo -->
+                                <div style="display: flex; flex-direction: column; flex: 2; min-width: 550px; gap: 12px;">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
+                                        <div class="form-group">
+                                            <label>Cliente</label>
+                                            <input type="text" id="manual-name" class="admin-input" placeholder="Nombre completo" maxlength="25" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''); checkManualFormCompletion()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Teléfono</label>
+                                            <input type="text" id="manual-phone" class="admin-input" placeholder="Ej: 3001234455" maxlength="10" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="checkManualFormCompletion()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Especialidad</label>
+                                            <select id="manual-category-select" class="admin-input" onchange="updateManualServices(); checkManualFormCompletion();">
+                                                <option value="">-- Selecciona --</option>
+                                                <!-- Inyectado por JS -->
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Servicio Disponible</label>
+                                            <select id="manual-service-select" class="admin-input" onchange="updateManualPrice(); checkManualFormCompletion();">
+                                                <option value="">-- Primero elige bloque --</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Precio (Auto)</label>
+                                            <input type="text" id="manual-price-display" class="admin-input" readonly style="background: #f9f9f9; color: var(--gold-primary); font-weight: 700;">
+                                        </div>
+                                    </div>
+
+                                    <!-- Contenedor dinámico para extras del combo (inyectado por JS) -->
+                                    <div id="combo-extra-left-panel" style="display:none;"></div>
+
+
+                                    <!-- Botones de Acción -->
+                                    <div style="margin-top: auto; display: flex; gap: 10px; align-items: center; padding-top: 15px; border-top: 1px solid #f0f0f0;">
+                                        <button id="manual-save-btn" class="btn-primary" onclick="saveManualAppointment()" style="padding:0 20px; height:50px; flex-grow:1; width:auto; border-radius:14px; opacity: 0.5; pointer-events: none; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95rem; letter-spacing:0.5px; transition:0.3s;">
+                                            AGENDAR CITA
+                                        </button>
+                                        
+                                        <button class="btn-cancel" onclick="cancelManualBooking()" style="background: #fff; border:1px solid #eee; height:50px; width:auto; padding: 0 15px; border-radius:14px; cursor:pointer; color:#999; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:800; font-size:0.75rem; transition:0.3s;" title="Cancelar">
+                                            <i class="fas fa-times"></i> CANCELAR
+                                        </button>
+
+                                        <!-- Botón para añadir a paquete (Carrito) -->
+                                        <button id="manual-add-cart-btn" class="btn-primary" onclick="window.addToManualCart()" style="background:#f39c12; color:white; border:none; width:auto; padding: 0 15px; height:50px; border-radius:14px; opacity: 0.5; pointer-events: none; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.75rem; font-weight:800; transition:0.3s; box-shadow:0 6px 15px rgba(243,156,18,0.25);" title="Añadir a mi paquete personalizado">
+                                            <i class="fas fa-plus-circle"></i> AÑADIR AL PAQUETE
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- COLUMNA DERECHA: Resumen de Selección / Paquete -->
+                                <div style="display: flex; flex-direction: column; gap: 12px; min-width: 360px; max-width: 440px; flex: 1;">
+                                    
+                                    <!-- MÓDULO DE PAQUETE DINÁMICO (Contenedor para cuando se arman grupos de servicios) -->
+                                    <div id="manual-cart-container" class="form-group" style="display:none; margin:0; background:linear-gradient(135deg, rgba(243, 156, 18, 0.08) 0%, rgba(243, 156, 18, 0.03) 100%); border:1.5px dashed rgba(243, 156, 18, 0.4); border-radius:18px; padding:15px; animation: slideInRight 0.3s ease;">
+                                        <div style="font-weight:900; color:#d35400; font-size:0.85rem; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                                            <span><i class="fas fa-cubes"></i> TU PAQUETE PERSONALIZADO</span>
+                                            <span id="manual-cart-total" style="background:var(--color-accent); color:white; padding:2px 10px; border-radius:10px; font-size:0.9rem;">$0</span>
+                                        </div>
+                                        <div id="manual-cart-items" style="display:flex; flex-direction:column; gap:8px; max-height:140px; overflow-y:auto; padding-right:5px; margin-bottom:12px;">
+                                            <!-- Items se inyectan por JS -->
+                                        </div>
+                                        <div style="display:flex; gap:10px;">
+                                            <button onclick="window.clearManualCart()" style="flex:1; background:rgba(231, 76, 60, 0.1); border:none; color:#e74c3c; font-size:0.75rem; font-weight:800; padding:10px; border-radius:10px; cursor:pointer; transition:0.3s;"><i class="fas fa-trash-alt"></i> VACIAR</button>
+                                            <button id="manual-cart-confirm-btn" onclick="window.confirmManualCart()" style="flex:2; background:#f39c12; border:none; color:white; font-size:0.75rem; font-weight:800; padding:10px; border-radius:10px; cursor:pointer; transition:0.3s; box-shadow: 0 4px 10px rgba(243,156,18,0.2);"><i class="fas fa-calendar-check"></i> ELEGIR HORARIOS</button>
+                                        </div>
+                                    </div>
+
+                                    <div id="manual-selection-summary-container" class="form-group" style="display: none; flex: 1;">
+                                        <label style="color:var(--color-dark-pink); font-weight:800; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Información del Turno</label>
+                                        <div id="manual-selection-summary" style="background: white; border: 1.5px solid #f0f0f0; border-radius: 18px; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; min-height: 55px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <div id="summary-spec-img" style="width: 38px; height: 38px; border-radius: 12px; background: #f8f8f8; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--color-dark-pink);">
+                                                    <i class="fas fa-user-circle" style="color: #ccc; font-size: 1.2rem;"></i>
+                                                </div>
+                                                <div id="summary-spec-name" style="font-weight: 800; color: #1a1a1a; font-size: 1rem; line-height: 1;">Profesional</div>
+                                            </div>
+                                            <div id="summary-datetime" style="font-size: 0.8rem; color: var(--color-dark-pink); font-weight: 700; line-height: 1.3; text-align: right;">Fecha y Hora</div>
+                                        </div>
+                                    </div>
+
+                                    <div id="manual-form-agenda-btn-container" class="form-group" style="display: flex; flex-direction: column;">
+                                        <label>&nbsp;</label>
+                                        <button id="main-agenda-trigger-btn" class="btn-primary" onclick="openManualVisualAgenda()" style="width:100%; height:46px; border-radius:10px; font-size:0.9rem; opacity: 0.5; pointer-events: none; letter-spacing:1px; background:var(--color-dark-pink); box-shadow: 0 4px 10px rgba(184, 115, 129, 0.1); display:flex; align-items:center; justify-content:center; gap:8px;">
+                                            <i class="far fa-calendar-check"></i> SELECCIONAR TURNO
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Inputs ocultos para la lógica de guardado -->
+                            <div style="display:none;">
+                                <select id="manual-specialist"></select>
+                                <input type="date" id="manual-date">
+                                <input type="time" id="manual-time">
+                            </div>
+                        </div>
+
+                        <!-- Agenda Layout (Calendar + List) -->
+                        <div class="agenda-dashboard-grid" style="display: grid; grid-template-columns: 240px 1fr; gap: 30px; margin-top: 0;">
+                            <!-- Sidebar: Calendar -->
+                            <div class="calendar-sidebar glass-module" style="padding: 20px;">
+                                <div id="calendar-container">
+                                    <!-- JS will render calendar here -->
+                                </div>
+                                <div id="date-filter-indicator" style="margin-top: 15px; font-size: 0.9rem; display: none;">
+                                    <span style="color: var(--gold-primary); font-weight: 600;">Filtrado por:</span> <span id="selected-date-label"></span>
+                                    <button onclick="clearDateFilter()" style="display: block; width: 100%; margin-top: 10px; padding: 5px; background: transparent; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Ver todas</button>
+                                </div>
+
+                                <button class="btn-primary" onclick="openVisualAgenda()" style="background:var(--color-bg); color:var(--color-dark-pink); border:2px solid var(--color-dark-pink); width:100%; border-radius:15px; padding: 10px; font-weight:700; height:52px; display:flex; align-items:center; justify-content:center; gap:10px; margin-top: 25px;">
+                                    <i class="fas fa-th"></i> AGENDA VISUAL
+                                </button>
+                            </div>
+
+                            <!-- Main: List -->
+                            <div class="agenda-list-main">
+                                <!-- La fila de bandejas se movió arriba a la barra de acciones -->
+                                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+                                    <div class="agenda-search-container" style="flex: 1; position: relative; background: #fff; border-radius: 15px; border: 1px solid rgba(184, 115, 129, 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; display: flex; align-items: center;">
+                                        <i class="fas fa-search" style="position: absolute; left: 18px; color: var(--color-dark-pink); opacity: 0.6; font-size: 1.1rem;"></i>
+                                        <input type="text" id="agenda-search-input" placeholder="Buscar por cliente o teléfono..." onkeyup="renderAgenda()" style="width: 100%; padding: 15px 15px 15px 50px; border: none; outline: none; font-size: 1rem; font-weight: 500; font-family: inherit; color: #333;">
+                                        <button onclick="document.getElementById('agenda-search-input').value=''; renderAgenda();" style="background: none; border: none; padding: 15px; color: #999; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s;" title="Limpiar búsqueda">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <button id="maint-config-btn" onclick="openMaintConfigModal()" style="display: none; background: white; border: 1px solid rgba(184, 115, 129, 0.3); color: var(--color-dark-pink); height: 52px; width: 52px; border-radius: 15px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03); align-items: center; justify-content: center;" title="Configurar tiempos de mantenimiento">
+                                        <i class="fas fa-sliders-h"></i>
+                                    </button>
+                                </div>
+
+                                <div id="agenda-list-container" class="agenda-full-list">
+                                    <p style="text-align:center; padding:20px;">Cargando citas...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+
+                    <!-- TAB 3: SERVICES -->
+                    <section id="services-tab" class="tab-content">
+                        <h2 class="section-title" style="margin-bottom:0;"><i class="fas fa-magic"></i> Publicar y Editar Servicios</h2>
+                        <p style="margin:0 0 20px 0; opacity: 0.8;">Añade nuevos servicios a tu catálogo.</p>
+                        
+                        <div style="display:flex; gap:12px; overflow-x:auto; padding: 10px 5px 15px 5px; margin-bottom: 25px; white-space:nowrap; -webkit-overflow-scrolling: touch; align-items: center;">
+                            <button id="open-new-cat-btn" class="btn-primary" style="background:var(--color-bg); color:var(--color-dark-pink); border:2px solid var(--color-dark-pink); width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="toggleNewCategoryForm()">
+                                <i class="fas fa-folder-plus"></i> AÑADIR O EDITAR CATEGORÍA
+                            </button>
+                            <button id="open-new-service-btn" class="btn-primary" style="width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="toggleNewServiceForm()">
+                                <i class="fas fa-plus-circle"></i> AÑADIR NUEVO SERVICIO
+                            </button>
+
+                            <button id="open-public-gallery-btn" class="btn-primary" style="background:var(--color-bg); color:var(--color-dark-pink); border:2px solid var(--color-dark-pink); width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="window.showGeneralGalleryModal()">
+                                <i class="fas fa-camera"></i> GESTIONAR GALERÍA GENERAL
+                            </button>
+                        </div>
+                        
+                        <!-- MODAL: Añadir Nueva Categoría (Espacio) -->
+                        <div id="newCategoryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:600px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+                                <button onclick="toggleNewCategoryForm()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; padding:0; line-height:1;">&times;</button>
+                                
+                                <h3 id="cat-modal-title" style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-folder-plus"></i> Nueva Categoría (Espacio)</h3>
+                                <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Crea los bloques principales donde se agruparán tus servicios.</p>
+
+                                <div class="form-group" style="margin-bottom:15px;">
+                                    <label>Nombre de la Categoría</label>
+                                    <input type="text" id="new-cat-name" placeholder="Ej: Uñas & Manicura" class="admin-input">
+                                </div>
+                                <div class="form-group" style="margin-bottom:15px;">
+                                    <label>Subtítulo / Descripción corta</label>
+                                    <input type="text" id="new-cat-subtitle" placeholder="Ej: Arte, precisión y cuidado..." class="admin-input">
+                                </div>
+
+                                <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                                    <button onclick="toggleNewCategoryForm()" style="background:#eee; color:#444; border:none; padding:12px 25px; border-radius:10px; font-weight:bold; cursor:pointer;">Cancelar</button>
+                                    <button id="add-category-btn" class="btn-primary" style="padding:12px 25px; border-radius:10px; width:auto; min-width:180px;">
+                                        <i class="fas fa-save"></i> GUARDAR CATEGORÍA
+                                    </button>
+                                </div>
+
+                                <!-- Lista para editar/borrar categorías actuales -->
+                                <div style="margin-top:25px; border-top:2px dashed #eee; padding-top:20px;">
+                                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#888; text-transform:uppercase;">Categorías Actuales</h4>
+                                    <div id="categories-manage-list" style="max-height:250px; overflow-y:auto; background:#f9f9f9; border-radius:10px; border:1px solid #eee;">
+                                        <!-- Dinámico -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- MODAL: Añadir Nuevo Servicio -->
+                        <div id="newServiceModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:650px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+                                <button onclick="toggleNewServiceForm()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; transition:0.3s; padding:0; line-height:1;">&times;</button>
+                                
+                                <h3 id="service-modal-title" style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-magic"></i> Nuevo Servicio</h3>
+                                <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Define los detalles del servicio que quieres ofrecer en tu catálogo.</p>
+
+                                <div id="new-service-form-container">
+                                    <div class="form-group" style="margin-bottom:15px;">
+                                        <label>Especialidad / Categoría</label>
+                                        <select id="service-category" class="admin-input">
+                                            <option value="" disabled selected>Selecciona la Especialidad...</option>
+                                        </select>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                        <div class="form-group">
+                                            <label>Nombre del Servicio</label>
+                                            <input type="text" id="service-name" placeholder="Ej: Corte de Cabello" class="admin-input">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Precio</label>
+                                            <input type="text" id="service-price" placeholder="Ej: $120.000" class="admin-input">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:15px;">
+                                        <label><i class="fas fa-clock"></i> Duración Estándar</label>
+                                        <select id="service-duration" class="admin-input">
+                                            <option value="30">30 Minutos</option>
+                                            <option value="60" selected>1 Hora</option>
+                                            <option value="90">1 Hora 30 Min</option>
+                                            <option value="120">2 Horas</option>
+                                            <option value="150">2 Horas 30 Min</option>
+                                            <option value="180">3 Horas</option>
+                                            <option value="240">4 Horas</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:15px;">
+                                        <label>Descripción (Opcional)</label>
+                                        <textarea id="service-desc" placeholder="Detalles del servicio..." class="admin-input" style="height:80px;"></textarea>
+                                    </div>
+
+                                    <div class="form-group" style="margin-bottom:20px;">
+                                        <label><i class="fas fa-camera"></i> Foto del Servicio</label>
+                                        <div style="display:flex; flex-direction:column; gap:10px;">
+                                            <input type="file" id="service-upload" accept="image/*" class="admin-input" style="padding:10px;">
+                                            <div id="service-preview" style="width:100%; border-radius:12px; overflow:hidden; background:#f0f0f0; display:flex; align-items:center; justify-content:center; min-height:100px;">
+                                                <p style="color:#aaa; font-size:0.85rem;">Vista previa de la imagen</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                                        <button onclick="toggleNewServiceForm()" style="background:#eee; color:#444; border:none; padding:12px 25px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
+                                        <button id="upload-service-btn" class="btn-primary" disabled style="padding:12px 25px; border-radius:10px; width:auto; min-width:180px;">
+                                            <i class="fas fa-save"></i> PUBLICAR SERVICIO
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL: GESTIONAR GALERÍA POR CATEGORÍA -->
+                        <div id="catGalleryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:900px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:90vh; overflow-y:auto;">
+                                <button onclick="closeCategoryGalleryManager()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; line-height:1;">&times;</button>
+                                
+                                <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-images"></i> Galerías de Modelos por Categoría</h3>
+                                <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Sube hasta 30 fotos por cada categoría para que tus clientes elijan un modelo específico.</p>
+                                <div style="display:grid; grid-template-columns: 320px 1fr; gap:25px;">
+                                    <!-- Lado Izquierdo: Selección y Carga -->
+                                    <div style="background:#f9f9f9; padding:20px; border-radius:15px; border:1px solid #eee;">
+                                        <div id="cat-gallery-selection-zone">
+                                            <div class="form-group" style="margin-bottom:15px;">
+                                                <label>1. Categoría</label>
+                                                <select id="cat-gallery-select" class="admin-input" onchange="updateGalleryServiceSelect()">
+                                                    <!-- Dinámico -->
+                                                </select>
+                                            </div>
+
+                                            <div class="form-group" style="margin-bottom:20px;">
+                                                <label>2. Servicio específico</label>
+                                                <select id="svc-gallery-select" class="admin-input" onchange="loadServiceGalleryFromSelect()">
+                                                    <!-- Dinámico -->
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div id="cat-gallery-upload-zone" style="display:none; border-top:1px solid #ddd; padding-top:20px;">
+                                            <label>Sube una Foto de Modelo</label>
+                                            <div style="border:2px dashed #ccc; padding:20px; border-radius:10px; text-align:center; position:relative; background:white; cursor:pointer;" onclick="document.getElementById('cat-gallery-input').click()">
+                                                <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:var(--color-accent); margin-bottom:10px;"></i>
+                                                <p style="margin:0; font-size:0.8rem; color:#888;">Clic para elegir imagen de modelo</p>
+                                                <input type="file" id="cat-gallery-input" accept="image/*" style="display:none;" onchange="handleCatGalleryUpload(this)">
+                                            </div>
+                                            
+                                            <div class="form-group" style="margin-top:15px;">
+                                                <label>Nombre del Modelo (Opcional)</label>
+                                                <input type="text" id="cat-gallery-model-name" placeholder="Ej: Ondas al Agua" class="admin-input">
+                                            </div>
+                                            
+                                            <div class="form-group" style="margin-top:10px;">
+                                                <label>Precio Estimado (Opcional)</label>
+                                                <input type="text" id="cat-gallery-model-price" placeholder="Ej: $150.000" class="admin-input">
+                                            </div>
+
+                                            <p id="cat-gallery-limit-msg" style="margin-top:15px; font-size:0.75rem; color:#888; text-align:center;"></p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Lado Derecho: Listado de fotos existendes -->
+                                    <div>
+                                        <div id="cat-gallery-title" style="font-weight:700; color:var(--color-dark-pink); margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">Selecciona una categoría para ver su galería</div>
+                                        <div id="cat-gallery-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:15px;">
+                                            <!-- Dinámico -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; justify-content:flex-end; margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
+                                    <button onclick="closeCategoryGalleryManager()" class="btn-primary" style="width:auto; padding:12px 40px; border-radius:10px;">LISTO / CERRAR</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:40px;">
+                            <h3 class="section-title"><i class="fas fa-list"></i> Catálogo Actual</h3>
+                            <div id="services-list-container">
+                                <!-- Dinámico -->
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB: EXPENSES (LIBRETITA DE GASTOS) -->
+                    <section id="expenses-tab" class="tab-content" style="position:relative;">
+                        <!-- CAPA DE PROTECCIÓN (LOCK SCREEN) -->
+                        <div id="expenses-lock-screen" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:100px 20px; text-align:center;">
+                            <div style="background:white; padding:40px; border-radius:25px; box-shadow:0 10px 40px rgba(0,0,0,0.1); width:100%; max-width:400px; border:1px solid #eee;">
+                                <div style="width:80px; height:80px; background:rgba(216, 27, 96, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#d81b60; font-size:2.5rem; margin:0 auto 20px;">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <h2 style="margin:0 0 10px 0; color:#333;">Acceso Restringido</h2>
+                                <p style="color:#666; font-size:0.9rem; margin-bottom:25px;">Esta sección contiene información financiera sensible. Por favor ingresa la clave de acceso.</p>
+                                
+                                <div class="form-group" style="margin-bottom:20px;">
+                                    <input type="password" id="expense-unlock-pass" placeholder="Ingresa la clave..." class="admin-input" style="text-align:center; font-size:1.2rem; letter-spacing:5px;">
+                                </div>
+                                <button onclick="window.unlockExpenses()" class="btn-primary" style="width:100%; padding:15px; border-radius:12px; font-weight:bold;">DESBLOQUEAR LIBRETA</button>
+                                <p style="margin-top:20px; font-size:0.8rem; color:#999;">La clave por defecto es la misma de administración si no has configurado una nueva.</p>
+                            </div>
+                        </div>
+
+                        <!-- CONTENIDO PROTEGIDO -->
+                        <div id="expenses-restricted-content" style="display:none;">
+                            <div class="content-header" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                                <div>
+                                    <h2 class="section-title" style="margin:0; display:flex; align-items:center; gap:14px;">
+                                        <span style="display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="42" height="42">
+                                          <!-- Notebook body -->
+                                          <rect x="8" y="4" width="30" height="38" rx="4" fill="#b8738133"/>
+                                          <rect x="11" y="4" width="27" height="38" rx="3" fill="#fff" stroke="#d9849266" stroke-width="1"/>
+                                          <!-- Spiral rings -->
+                                          <circle cx="9" cy="12" r="2.2" fill="none" stroke="var(--color-dark-pink)" stroke-width="1.8"/>
+                                          <circle cx="9" cy="20" r="2.2" fill="none" stroke="var(--color-dark-pink)" stroke-width="1.8"/>
+                                          <circle cx="9" cy="28" r="2.2" fill="none" stroke="var(--color-dark-pink)" stroke-width="1.8"/>
+                                          <circle cx="9" cy="36" r="2.2" fill="none" stroke="var(--color-dark-pink)" stroke-width="1.8"/>
+                                          <!-- Lines on notebook -->
+                                          <line x1="16" y1="16" x2="33" y2="16" stroke="#ddd" stroke-width="1.8" stroke-linecap="round"/>
+                                          <line x1="16" y1="21" x2="33" y2="21" stroke="#ddd" stroke-width="1.8" stroke-linecap="round"/>
+                                          <line x1="16" y1="26" x2="28" y2="26" stroke="#ddd" stroke-width="1.8" stroke-linecap="round"/>
+                                          <!-- Pencil body -->
+                                          <g transform="translate(36,4) rotate(40)">
+                                            <rect x="-3" y="0" width="6" height="26" rx="1.5" fill="#f6c90e"/>
+                                            <!-- Pencil eraser -->
+                                            <rect x="-3" y="0" width="6" height="5" rx="1.5" fill="#f0a0a0"/>
+                                            <!-- Pencil tip -->
+                                            <polygon points="-3,26 3,26 0,32" fill="#f9dfa0"/>
+                                            <polygon points="-1,28 1,28 0,32" fill="#3a2a1a"/>
+                                          </g>
+                                        </svg>
+                                        </span>
+                                        Libreta de Gastos
+                                    </h2>
+                                    <p style="margin:0; color:#666;">Control total de tus egresos y costos operativos.</p>
+                                </div>
+                            </div>
+
+                        <!-- RESUMEN DE GASTOS -->
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:30px;">
+                            <div class="glass-module" style="padding:25px; border-radius:20px; border-left:5px solid var(--color-dark-pink); position:relative; overflow:hidden;">
+                                <div style="position:absolute; right:-10px; top:-10px; font-size:5rem; color:var(--color-dark-pink); opacity:0.05;"><i class="fas fa-money-bill-wave"></i></div>
+                                <div style="font-size:0.8rem; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px;">Gasto Total (Este Mes)</div>
+                                <div id="expense-total-month" style="font-size:2.2rem; font-weight:900; color:#1a1a1a; margin:10px 0;">$0</div>
+                                <div style="font-size:0.8rem; color:#27ae60; font-weight:700;"><i class="fas fa-chart-line"></i> Flujo de caja actualizado</div>
+                            </div>
+                            <div class="glass-module" style="padding:25px; border-radius:20px; border-left:5px solid #2980b9; position:relative; overflow:hidden;">
+                                <div style="position:absolute; right:-10px; top:-10px; font-size:5rem; color:#2980b9; opacity:0.05;"><i class="fas fa-shopping-cart"></i></div>
+                                <div style="font-size:0.8rem; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px;">Gasto Principal</div>
+                                <div id="expense-top-category" style="font-size:1.6rem; font-weight:900; color:#1a1a1a; margin:10px 0;">--</div>
+                                <div style="font-size:0.8rem; color:#888;">Categoría con más egresos</div>
+                            </div>
+                            <div class="glass-module" style="padding:25px; border-radius:20px; border-left:5px solid #f39c12; position:relative; overflow:hidden;">
+                                <div style="position:absolute; right:-10px; top:-10px; font-size:5rem; color:#f39c12; opacity:0.05;"><i class="fas fa-calendar-alt"></i></div>
+                                <div style="font-size:0.8rem; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px;">Último Registro</div>
+                                <div id="expense-last-date" style="font-size:1.4rem; font-weight:900; color:#1a1a1a; margin:10px 0;">--</div>
+                                <div style="font-size:0.8rem; color:#888;">Ordenado por fecha</div>
+                            </div>
+                        </div>
+
+                        <!-- FILTROS Y BUSCADOR -->
+                        <div class="glass-module" style="padding:20px; border-radius:15px; margin-bottom:25px; display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:250px; position:relative;">
+                                <i class="fas fa-search" style="position:absolute; left:15px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
+                                <input type="text" id="expense-search-input" placeholder="Buscar gasto por detalle..." class="admin-input" style="width:100%; padding-left:45px; margin:0;" oninput="renderExpenses()">
+                            </div>
+                            <button class="btn-primary" onclick="window.toggleNewExpenseModal()" style="width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; display:flex; align-items:center; gap:8px; font-size:0.85rem; background:var(--color-dark-pink);">
+                                <i class="fas fa-plus-circle"></i> REGISTRAR GASTO
+                            </button>
+
+                            <div style="display:flex; align-items:center; gap:10px; border-left: 1px solid #eee; padding-left: 15px; margin-left: 5px;">
+                                <label style="font-size:0.9rem; font-weight:700; color:#555;">Mes:</label>
+                                <select id="expense-month-filter" class="admin-input" style="width:auto; margin:0;" onchange="renderExpenses()">
+                                    <option value="all">Ver Todos</option>
+                                    <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+                                    <option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+                                    <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+                                    <option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+                                </select>
+                            </div>
+                            <button class="btn-save" onclick="exportExpensesToExcel()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                                <i class="fas fa-file-excel"></i> Exportar
+                            </button>
+                        </div>
+
+                        <!-- LISTA DE GASTOS -->
+                        <div id="expenses-list-container" class="agenda-list">
+                            <!-- Dinámico -->
+                        </div>
+                    </div> <!-- Fin de restricted-content -->
+                    </section>
+
+                    <!-- TAB 4: PERSONAL (ESPECIALISTAS) -->
+                    <section id="specialists-tab" class="tab-content">
+                        <div class="content-header" style="justify-content: space-between; align-items: center; display: flex; flex-wrap: wrap; margin: 0 0 5px 0; padding: 0;">
+                            <div>
+                                <h1 style="font-size: 1.3rem; margin:0; color:var(--color-dark-pink);"><i class="fas fa-users-cog"></i> Gestión de Personal</h1>
+                                <p style="margin:0; opacity: 0.7; font-size: 0.8rem;">Gestiona tu equipo de trabajo.</p>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin-bottom: 25px;">
+                            <button id="open-new-specialist-btn" class="btn-primary" style="width:auto; min-width:220px; border-radius:12px; height:50px;" onclick="window.toggleNewSpecialistForm()">
+                                <i class="fas fa-user-plus"></i> AÑADIR NUEVO PROFESIONAL
+                            </button>
+                            
+                            <div class="search-box-premium" style="flex:1; max-width:500px; position:relative;">
+                                <i class="fas fa-search" style="position:absolute; left:15px; top:50%; transform:translateY(-50%); color:#999; font-size:0.9rem;"></i>
+                                <input type="text" id="specialist-search" class="admin-input" placeholder="Buscar profesional por nombre..." style="width:100%; padding-left:45px; border-radius:30px; border:1px solid #ddd; height:50px; background:white; box-shadow:0 4px 15px rgba(0,0,0,0.03);" onkeyup="handleSpecialistSearch(this.value)">
+                            </div>
+                            
+                            <div style="display:flex; align-items:center; gap:8px; background:white; padding:5px 12px; border-radius:30px; border:1px solid #ddd; box-shadow:0 4px 15px rgba(0,0,0,0.03); height:50px;">
+                                <span style="font-size: 0.82rem; font-weight: 700; color: #666; white-space: nowrap;"><i class="fas fa-store-alt" style="color:var(--color-dark-pink);"></i> SERVICIO HOY</span>
+                                <label class="switch-premium">
+                                    <input type="checkbox" id="salon-status-toggle" onchange="toggleSalonStatus(this.checked)" checked>
+                                    <span class="slider-premium round"></span>
+                                </label>
+                                <button onclick="window.openClosureSettings()" style="background:none; border:none; color:#999; cursor:pointer; font-size:1.1rem; padding:4px; transition:0.3s;" title="Configurar horario especial" onmouseover="this.style.color='var(--color-dark-pink)'" onmouseout="this.style.color='#999'">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+
+                            <!-- MODAL: Configuración de Cierre -->
+                            <div id="closureSettingsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10001; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                                <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:450px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+                                    <button onclick="window.closeClosureSettings()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999;">&times;</button>
+                                    <h3 style="margin:0 0 20px 0; color:var(--color-dark-pink);"><i class="fas fa-calendar-times"></i> Programar Cierre</h3>
+                                    
+                                    <div style="display:flex; flex-direction:column; gap:15px;">
+                                        <div class="form-group">
+                                            <label>Desde el día:</label>
+                                            <input type="date" id="closure-start" class="admin-input">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Hasta el día (Inclusive):</label>
+                                            <input type="date" id="closure-end" class="admin-input">
+                                        </div>
+                                        <p style="font-size:0.8rem; color:#888; margin:0;">* Durante este rango de fechas, los clientes verán el salón cerrado y no podrán agendar para esos días específicos.</p>
+                                        
+                                        <div style="display:flex; gap:10px; margin-top:10px;">
+                                            <button onclick="window.saveClosureSettings()" class="btn-primary" style="flex:1;">GUARDAR PROGRAMACIÓN</button>
+                                            <button onclick="window.clearClosureSettings()" style="background:#eee; border:none; padding:10px; border-radius:10px; cursor:pointer; font-weight:700; color:#666;">BORRAR</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL: Añadir Nuevo Profesional -->
+                        <div id="newSpecialistModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:600px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:95vh; overflow-y:auto;">
+                                <button onclick="window.toggleNewSpecialistForm()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; transition:0.3s; padding:0; line-height:1;">&times;</button>
+                                
+                                <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-user-plus"></i> Añadir Nuevo Profesional</h3>
+                                <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Completa los datos para dar de alta a un nuevo miembro del equipo.</p>
+
+                                <div id="new-specialist-form-container">
+                                    <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px;">
+                                        <div class="form-group">
+                                            <label>Nombre Completo</label>
+                                            <input type="text" id="new-specialist-name" class="admin-input" placeholder="Ej: María Rodríguez">
+                                        </div>
+                                <div class="form-group">
+                                    <label>Teléfono</label>
+                                    <input type="tel" id="new-specialist-phone" class="admin-input" placeholder="Ej: 3001234567">
+                                </div>
+                                <div class="form-group">
+                                    <label>Dirección</label>
+                                    <input type="text" id="new-specialist-address" class="admin-input" placeholder="Ej: Medellín">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div class="form-group">
+                                        <label>Edad</label>
+                                        <input type="number" id="new-specialist-age" class="admin-input" placeholder="Ej: 25">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Sexo</label>
+                                        <select id="new-specialist-gender" class="admin-input">
+                                            <option value="">Seleccionar...</option>
+                                            <option value="Femenino">Femenino</option>
+                                            <option value="Masculino">Masculino</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                                    <div>
+                                        <label>Especialidades</label>
+                                        <div id="new-specialist-specialties-container" style="display:flex; flex-wrap:wrap; gap:12px; background:#fff; padding:12px 15px; border:1px solid #ddd; border-radius:8px; min-height:45px; align-items:center;">
+                                            <!-- Llamado dinámicamente según categorías -->
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label><i class="fas fa-camera"></i> Foto de Perfil</label>
+                                        <div style="display:flex; align-items:center; gap:15px; background:#f9f9f9; padding:8px 10px; border-radius:8px; border:1px dashed #ccc;">
+                                            <div id="new-specialist-photo-preview" style="width:45px; height:45px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; overflow:hidden; border:2px solid var(--color-accent); flex-shrink:0;">
+                                                <i class="fas fa-user-tie" style="color:#aaa;"></i>
+                                            </div>
+                                            <input type="file" id="new-specialist-photo" class="admin-input" accept="image/*" style="padding: 5px; cursor: pointer; flex:1; border:none; background:transparent;" onchange="previewNewSpecialistPhoto(this)">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fas fa-percent"></i> % Ganancia para el Profesional</label>
+                                        <input type="number" id="new-specialist-profit" class="admin-input" placeholder="Ej: 50" value="50">
+                                    </div>
+                                </div>
+                            </div>
+                                    <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:10px; border-top:1px solid #eee; padding-top:20px;">
+                                        <button onclick="window.toggleNewSpecialistForm()" style="background:#eee; color:#444; border:none; padding:12px 25px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
+                                        <button onclick="addSpecialist()" class="btn-primary" style="padding:12px 25px; border-radius:10px; width:auto; min-width:180px;">
+                                            <i class="fas fa-save"></i> GUARDAR PROFESIONAL
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="specialists-container" class="specialists-grid agenda-full-list">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </section>
+
+                    <!-- TAB 4: PROMOTIONS (OFFERS) -->
+                    <section id="promo-tab" class="tab-content">
+                        <h2 class="section-title"><i class="fas fa-bullhorn"></i> Sistema de Ofertas y Anuncios</h2>
+                        <p style="margin-bottom:25px; color:#666;">Ahora puedes gestionar el Descuento y el Combo de forma independiente. Puedes tener ambos activos al mismo tiempo.</p>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                            
+                            <!-- CARD 1: DESCUENTO PORCENTUAL -->
+                            <div class="glass-module" style="padding: 25px; border: 1px solid var(--color-accent); border-top: 5px solid var(--color-accent);">
+                                <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.2rem;"><i class="fas fa-percent"></i> 1. Oferta de Descuento (%)</h3>
+                                <p style="font-size:0.85rem; color:#888; margin-bottom:20px;">Aplica un porcentaje de rebaja a categorías seleccionadas.</p>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Estado</label>
+                                    <select id="promo-discount-active" class="admin-input" style="width:100%;">
+                                        <option value="false">🔴 Desactivado</option>
+                                        <option value="true">🟢 Activo</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Aplicar descuento a:</label>
+                                    <select id="promo-discount-mode" class="admin-input" style="width:100%;" onchange="window.togglePromoMode('discount', this.value)">
+                                        <option value="category">Categorías Completas</option>
+                                        <option value="service">Servicios Específicos</option>
+                                    </select>
+                                </div>
+
+                                <div id="promo-discount-cat-group" class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Categorías</label>
+                                    <div id="promo-discount-categories-wrapper" class="promo-cat-checklist glass-module">
+                                        <!-- Dinámico -->
+                                    </div>
+                                    <small style="color:#888; font-size:0.75rem;">El descuento se aplicará a TODOS los servicios de las categorías marcadas.</small>
+                                </div>
+
+                                <div id="promo-discount-svc-group" class="form-group" style="margin-bottom: 20px; display: none;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Servicios</label>
+                                    
+                                    <div class="custom-multi-select-container">
+                                        <div id="combo-svc-trigger-discount" class="custom-multi-select-trigger" onclick="window.toggleSvcDropdown('discount')">
+                                            <div style="display:flex; align-items:center;">
+                                                <span id="promo-discount-svc-label">Elegir servicios...</span>
+                                                <span id="promo-discount-svc-count" class="svc-count-badge" style="display:none;">0</span>
+                                            </div>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <div id="promo-discount-dropdown" class="custom-multi-select-dropdown">
+                                            <div id="promo-discount-services-wrapper" class="promo-cat-checklist glass-module">
+                                                <!-- Dinámico -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small style="color:#888; font-size:0.75rem; margin-top:10px; display:block;">El descuento SOLO se aplicará a los servicios marcados.</small>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Porcentaje</label>
+                                    <select id="promo-discount-percent" class="admin-input" style="width:100%;">
+                                        <option value="10">10%</option>
+                                        <option value="20" selected>20%</option>
+                                        <option value="30">30%</option>
+                                        <option value="40">40%</option>
+                                        <option value="50">50%</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Válida hasta</label>
+                                    <input type="datetime-local" id="promo-discount-expiry" class="admin-input" onclick="this.showPicker()">
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Mensaje</label>
+                                    <textarea id="promo-discount-message" class="admin-input" placeholder="Ej: ¡Aprovecha hoy! Gran descuento..." style="height:80px;"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- CARD 2: COMBO PRECIO FIJO -->
+                            <div class="glass-module" style="padding: 25px; border: 1px solid var(--color-dark-pink); border-top: 5px solid var(--color-dark-pink);">
+                                <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.2rem;"><i class="fas fa-tags"></i> 2. Combo de Precio Fijo ($)</h3>
+                                <p style="font-size:0.85rem; color:#888; margin-bottom:20px;">Fija un precio total único por elegir varias categorías.</p>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Estado</label>
+                                    <select id="promo-combo-active" class="admin-input" style="width:100%;">
+                                        <option value="false">🔴 Desactivado</option>
+                                        <option value="true">🟢 Activo</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">El combo se basa en:</label>
+                                    <select id="promo-combo-mode" class="admin-input" style="width:100%;" onchange="window.togglePromoMode('combo', this.value)">
+                                        <option value="category">Categorías (Elige una de cada)</option>
+                                        <option value="service">Servicios (Items fijos)</option>
+                                    </select>
+                                </div>
+
+                                <div id="promo-combo-cat-group" class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Categorías</label>
+                                    <div id="promo-combo-categories-wrapper" class="promo-cat-checklist glass-module">
+                                        <!-- Dinámico -->
+                                    </div>
+                                    <small style="color:#888; font-size:0.75rem;">El cliente debe elegir UN servicio de cada categoría marcada.</small>
+                                </div>
+
+                                <div id="promo-combo-svc-group" class="form-group" style="margin-bottom: 20px; display: none;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Servicios</label>
+                                    
+                                    <div class="custom-multi-select-container">
+                                        <div id="combo-svc-trigger-combo" class="custom-multi-select-trigger" onclick="window.toggleSvcDropdown('combo')">
+                                            <div style="display:flex; align-items:center;">
+                                                <span id="promo-combo-svc-label">Elegir servicios...</span>
+                                                <span id="promo-combo-svc-count" class="svc-count-badge" style="display:none;">0</span>
+                                            </div>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <div id="promo-combo-dropdown" class="custom-multi-select-dropdown">
+                                            <div id="promo-combo-services-wrapper" class="promo-cat-checklist glass-module">
+                                                <!-- Dinámico -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small style="color:#888; font-size:0.75rem; margin-top:10px; display:block;">El combo requiere EXACTAMENTE estos servicios marcados.</small>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Precio Total Combo</label>
+                                    <input type="text" id="promo-combo-price" class="admin-input" placeholder="Ej: $100.000">
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Válida hasta</label>
+                                    <input type="datetime-local" id="promo-combo-expiry" class="admin-input" onclick="this.showPicker()">
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Mensaje</label>
+                                    <textarea id="promo-combo-message" class="admin-input" placeholder="Ej: Llévatelo todo por solo..." style="height:80px;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botón Único Global -->
+                        <button onclick="saveAllPromos()" class="btn-primary" style="margin-top:25px; width:100%; height:55px; font-size:1.1rem; border-radius:15px; box-shadow:0 10px 20px rgba(184,115,129,0.2);">GUARDAR PROMOCIONES (DESCUENTO Y COMBO)</button>
+
+                        <div id="promo-status-summary" style="margin-top:30px; padding:20px; border-radius:15px; background: rgba(184, 115, 129, 0.05); text-align:left; color:#666;">
+                            <!-- Resumen consolidado -->
+                        </div>
+                    </section>
+
+                        <!-- MODAL: GESTIONAR GALERÍA GENERAL (TRABAJOS REALES) -->
+                        <div id="generalGalleryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:900px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:90vh; overflow-y:auto;">
+                                <button onclick="window.closeGeneralGalleryModal()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; line-height:1;">&times;</button>
+                                
+                                <h1 style="font-size: 1.5rem; margin-top:0; color:var(--color-dark-pink);"><i class="fas fa-images"></i> Galería de Trabajos Reales</h1>
+                                <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Sube fotos de tus mejores resultados para mostrárselos a tus clientes en la web principal.</p>
+
+                                <div class="upload-card" style="background:#f9f9f9; padding:20px; border-radius:15px; border:1px solid #eee;">
+                                    <input type="file" id="gallery-upload" accept="image/*" class="file-input">
+                                    <label for="gallery-upload" class="file-label" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; border: 2px dashed #ccc; padding: 30px; border-radius: 12px; background: white; transition: 0.3s;">
+                                        <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: var(--color-accent); margin-bottom: 10px;"></i>
+                                        <span style="font-weight: 600; color: #555;">Selecciona fotos reales de tus trabajos</span>
+                                    </label>
+                                    <div id="gallery-preview" style="margin-top: 15px; display: flex; justify-content: center;"></div>
+                                    <button id="upload-gallery-btn" class="btn-primary" disabled style="margin-top:20px; width:100%;">Subir a la Galería Pública</button>
+                                </div>
+
+                                <div style="margin-top:40px;">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+                                        <h3 style="margin:0; font-size:1.2rem; color:#333;"><i class="fas fa-th"></i> Galería Actual</h3>
+                                        <button onclick="clearAllGallery()" id="clear-gallery-btn" style="display:flex; align-items:center; gap:8px; background:transparent; border:1.5px solid #e74c3c; color:#e74c3c; padding:9px 20px; border-radius:10px; font-weight:700; font-size:0.88rem; cursor:pointer; transition:all 0.2s;"><i class="fas fa-trash-alt"></i> Vaciar Galería</button>
+                                    </div>
+                                    <div id="admin-gallery-list" class="admin-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px;">
+                                        <!-- Dinámico -->
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; justify-content:flex-end; margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
+                                    <button onclick="window.closeGeneralGalleryModal()" class="btn-primary" style="width:auto; padding:12px 40px; border-radius:10px;">LISTO / CERRAR</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="HISTORY-section-start"></div>
+
+                    <!-- TAB 6: HISTORY -->
+                    <section id="history-tab" class="tab-content">
+                        <div class="content-header" style="display:flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2 class="section-title" style="margin:0;"><i class="fas fa-history"></i> Historial de Servicios</h2>
+                                <p style="margin:0; color:#666;">Registros de citas Finalizadas o Canceladas.</p>
+                            </div>
+                            <button class="btn-save" onclick="exportHistory()" style="background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 1rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.2);"><i class="fas fa-file-excel" style="font-size: 1.2rem;"></i> Exportar a Excel</button>
+                        </div>
+                        
+                        <div style="margin-top: 20px; display: flex; align-items: center; gap: 12px; background: rgba(184, 115, 129, 0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(184, 115, 129, 0.2); flex-wrap: wrap;">
+                            <label style="font-weight: 600; color: var(--color-dark-pink); margin: 0; white-space: nowrap;"><i class="fas fa-calendar-day"></i> Fecha:</label>
+                            <input type="date" id="history-stats-date" class="admin-input" style="width: auto; padding: 8px; margin: 0; cursor: pointer;" onchange="document.getElementById('history-month-filter').value=''; renderHistory();" onclick="this.showPicker()" onkeydown="return false;">
+                            
+                            <span style="color:#aaa; font-weight:600;">ó</span>
+                            
+                            <label style="font-weight: 600; color: var(--color-dark-pink); margin: 0; white-space: nowrap;"><i class="fas fa-calendar-alt"></i> Mes:</label>
+                            <select id="history-month-filter" class="admin-input" style="width: auto; padding: 8px; margin: 0; cursor: pointer;" onchange="document.getElementById('history-stats-date').value=''; renderHistory();">
+                                <option value="">-- Elegir Mes --</option>
+                                <option value="0">Enero</option>
+                                <option value="1">Febrero</option>
+                                <option value="2">Marzo</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Mayo</option>
+                                <option value="5">Junio</option>
+                                <option value="6">Julio</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Septiembre</option>
+                                <option value="9">Octubre</option>
+                                <option value="10">Noviembre</option>
+                                <option value="11">Diciembre</option>
+                            </select>
+
+                            <button onclick="document.getElementById('history-stats-date').value=''; document.getElementById('history-month-filter').value=''; renderHistory();" style="background: var(--color-dark-pink); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;"><i class="fas fa-list"></i> Ver Todo</button>
+                        </div>
+
+                        <div id="history-stats-summary" style="margin-top: 20px;">
+                            <!-- Dinámico por JS -->
+                        </div>
+
+                        <div class="glass-module" style="margin-top: 25px; padding: 25px;">
+                            <div id="history-filters" style="display: flex; gap: 15px; margin-bottom: 20px; align-items:center; flex-wrap:wrap;">
+                                <input type="text" id="history-search" class="admin-input" placeholder="Buscar por cliente/teléfono..." onkeyup="renderHistory()" style="margin:0;">
+                                <select id="history-status-filter" class="admin-input" onchange="renderHistory()" style="margin:0; width:auto;">
+                                    <option value="all">Ver Todos</option>
+                                    <option value="accepted">Solo Realizados</option>
+                                    <option value="cancelled">Solo Cancelados</option>
+                                </select>
+                                <button class="btn-save" onclick="openDeleteHistoryModal()" style="background:#fff0f0; color:#e74c3c; border:1px solid #ffcccc; margin:0; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:600;"><i class="fas fa-trash-alt"></i> Vaciar Historial</button>
+                            </div>
+                            <div id="history-list-container">
+                                <p style="text-align:center; padding:20px; color:#999;">No hay registros históricos aún.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 7: SETTINGS -->
+                    <section id="settings-tab" class="tab-content">
+                        <h2 class="section-title"><i class="fas fa-cog"></i> Configuración del Sistema</h2>
+                        <p style="margin:-15px 0 25px 0; opacity: 0.7;">Personaliza la identidad de tu negocio y la seguridad de tu panel.</p>
+
+                        <!-- Navegación de Ajustes -->
+                        <div class="settings-nav">
+                            <button class="settings-nav-btn active" onclick="showSettingsBlock('identidad')"><i class="fas fa-id-card"></i> Identidad</button>
+                            <button class="settings-nav-btn" onclick="showSettingsBlock('seguridad')"><i class="fas fa-shield-alt"></i> Seguridad</button>
+                            <button class="settings-nav-btn" onclick="showSettingsBlock('diseno')"><i class="fas fa-palette"></i> Diseño y Colores</button>
+                            <button class="settings-nav-btn" onclick="showSettingsBlock('redes')"><i class="fas fa-share-alt"></i> Redes Sociales</button>
+                        </div>
+
+                        <!-- Contenedor Principal de Ajustes -->
+                        <div style="position: relative;">
+                            
+                            <!-- Bloque: Identidad -->
+                            <div id="settings-block-identidad" class="settings-block active">
+                                <div class="glass-module" style="padding: 25px; border-top: 4px solid var(--gold-primary); max-width: 500px; margin: 0 auto;">
+                                    <h3 style="margin-top:0; font-size:1.1rem; color:var(--color-dark-pink); display:flex; align-items:center; gap:10px;"><i class="fas fa-id-card"></i> Identidad del Negocio</h3>
+                                    <div class="form-group" style="margin-top:20px; padding-top:10px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <label>Nombre de la Página</label>
+                                            <button onclick="toggleIdentityEdit('name')" class="sec-edit-btn" style="background:none; border:none; color:var(--color-dark-pink); font-size:0.85rem; font-weight:bold; cursor:pointer; padding:0;"><i class="fas fa-edit"></i> Editar</button>
+                                        </div>
+                                        <input type="text" id="settings-site-name" class="admin-input identity-input" placeholder="Ej: Margarita Smit" disabled style="background:#f8f9fa;">
+                                        <small style="color:#999;">Esto cambiará los títulos y logos en el panel y la web principal.</small>
+                                    </div>
+                                    <div class="form-group" style="margin-top:15px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <label>Género (Para mensajes del sistema)</label>
+                                            <button onclick="toggleIdentityEdit('gender')" class="sec-edit-btn" style="background:none; border:none; color:var(--color-dark-pink); font-size:0.85rem; font-weight:bold; cursor:pointer; padding:0;"><i class="fas fa-edit"></i> Editar</button>
+                                        </div>
+                                        <select id="settings-admin-gender" class="admin-input identity-input" style="cursor: pointer; background:#f8f9fa;" disabled>
+                                            <option value="Femenino">Femenino (Ej: ¿Segura?)</option>
+                                            <option value="Masculino">Masculino (Ej: ¿Seguro?)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-top:15px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <label>Teléfono WhatsApp (Para Agendar)</label>
+                                            <button onclick="toggleIdentityEdit('whatsapp')" class="sec-edit-btn" style="background:none; border:none; color:var(--color-dark-pink); font-size:0.85rem; font-weight:bold; cursor:pointer; padding:0;"><i class="fas fa-edit"></i> Editar</button>
+                                        </div>
+                                        <input type="text" id="settings-site-whatsapp" class="admin-input identity-input" placeholder="Ej: 3057726115" disabled style="background:#f8f9fa;">
+                                        <small style="color:#999;">Cambiar este número actualizará todos los botones de agenda en la web principal.</small>
+                                    </div>
+                                    <div class="form-group" style="margin-top:15px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <label>Fondo de Inicio de Sesión</label>
+                                            <button onclick="toggleIdentityEdit('bg')" class="sec-edit-btn" style="background:none; border:none; color:var(--color-dark-pink); font-size:0.85rem; font-weight:bold; cursor:pointer; padding:0;"><i class="fas fa-edit"></i> Editar</button>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:15px; margin-top:5px;">
+                                            <input type="file" id="settings-admin-bg" accept="image/*" class="admin-input identity-input" style="padding: 10px; background:#f8f9fa;" disabled>
+                                            <img id="settings-admin-bg-preview" src="" style="width:60px; height:60px; object-fit:cover; border-radius:8px; display:none; border:2px solid var(--color-accent);">
+                                        </div>
+                                        <small style="color:#999;">Elige una imagen personalizada para el fondo de la pantalla de acceso.</small>
+                                    </div>
+                                    <button onclick="saveIdentity()" class="btn-primary" style="margin-top:20px; width:100%; height:45px; border-radius:10px;">Actualizar Identidad</button>
+                                </div>
+                            </div>
+
+                            <!-- Bloque: Seguridad -->
+                            <div id="settings-block-seguridad" class="settings-block">
+                                <div class="glass-module" style="padding: 25px; border-top: 4px solid #34495e; max-width: 500px; margin: 0 auto;">
+                                    <h3 style="margin-top:0; font-size:1.1rem; color:#34495e; display:flex; align-items:center; gap:10px;"><i class="fas fa-shield-alt"></i> Acceso y Seguridad</h3>
+                                <div class="form-group" style="margin-top:15px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <label>Usuario de Acceso</label>
+                                        <button id="sec-edit-user" class="sec-edit-btn" onclick="toggleSecurityEdit('user')" type="button" style="background:none; border:none; color:var(--color-dark-pink); font-size:0.85rem; font-weight:bold; cursor:pointer; padding:0;"><i class="fas fa-edit"></i> Editar</button>
+                                    </div>
+                                    <input type="text" id="settings-admin-user" class="admin-input sec-input" placeholder="Nuevo usuario" disabled style="background:#f8f9fa;">
+                                </div>
+                                <div class="form-group" style="margin-top:10px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <label>Nueva Contraseña</label>
+                                        <button id="sec-edit-pass" class="sec-edit-btn" onclick="toggleSecurityEdit('pass')" type="button" style="background:none; border:none; color:var(--color-dark-pink); font-size:0.85rem; font-weight:bold; cursor:pointer; padding:0;"><i class="fas fa-edit"></i> Editar</button>
+                                    </div>
+                                    <input type="password" id="settings-admin-pass" class="admin-input sec-input" placeholder="Nueva clave" disabled style="background:#f8f9fa;">
+                                </div>
+                                <div class="form-group" style="margin-top:10px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <label>Clave de Libreta de Gastos</label>
+                                        <button id="sec-edit-expense-pass" class="sec-edit-btn" onclick="toggleSecurityEdit('expense-pass')" type="button" style="background:none; border:none; color:var(--color-dark-pink); font-size:0.85rem; font-weight:bold; cursor:pointer; padding:0;"><i class="fas fa-edit"></i> Editar</button>
+                                    </div>
+                                    <input type="password" id="settings-admin-expense-pass" class="admin-input sec-input" placeholder="Clave para finanzas" disabled style="background:#f8f9fa;">
+                                    <small style="color:#999;">Si se deja en blanco, usará la clave de administración.</small>
+                                </div>
+                                <div id="sec-validation-box" style="display:none; margin-top:20px; padding:15px; background:#fff8f0; border:1px dashed #f39c12; border-radius:10px; animation: fadeIn 0.3s ease;">
+                                    <label style="font-size:0.75rem; font-weight:bold; color:#d35400; text-transform:uppercase;">Validación requerida:</label>
+                                    <input type="password" id="settings-current-pass" class="admin-input" placeholder="Contraseña ACTUAL para confirmar" style="margin-top:5px; border-color:#f39c1244;">
+                                    <button onclick="saveSecurityDetails()" class="btn-primary" style="margin-top:15px; width:100%; height:45px; border-radius:10px; background:#34495e;">Guardar el cambio</button>
+                                </div>
+                                </div>
+                            </div>
+
+                            <div id="settings-block-diseno" class="settings-block">
+                                <div class="glass-module" style="padding: 25px; border-top: 4px solid var(--color-dark-pink); max-width: 900px; margin: 0 auto; text-align: center;">
+                                    <h3 style="margin-top:0; font-size:1.1rem; color:var(--color-dark-pink); display:flex; align-items:center; justify-content:center; gap:10px;"><i class="fas fa-palette"></i> Personalizar Colores del Panel</h3>
+                                    <p style="font-size:0.85rem; color:#666; margin-bottom:25px;">Selecciona una combinación para cambiar totalmente el aspecto visual.</p>
+                                    
+                                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom: 10px;">
+                                        <!-- Rosa Original -->
+                                        <button onclick="applyTheme('rose')" style="background:#fff; border:2.5px solid #A05D6B22; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#A05D6B'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#A05D6B22'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#A05D6B; border-radius:50%; border:3px solid #fceef0; box-shadow: 0 5px 15px rgba(160, 93, 107, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">ROSA SEDA</span>
+                                        </button>
+
+                                        <!-- Azul Pizarra -->
+                                        <button onclick="applyTheme('blue')" style="background:#fff; border:2.5px solid #2D4F6C22; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#2D4F6C'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#2D4F6C22'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#2D4F6C; border-radius:50%; border:3px solid #ebf1f6; box-shadow: 0 5px 15px rgba(45, 79, 108, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">AZUL PIZARRA</span>
+                                        </button>
+
+                                        <!-- Verde Bosque -->
+                                        <button onclick="applyTheme('green')" style="background:#fff; border:2.5px solid #2E5A4422; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#2E5A44'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#2E5A4422'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#2E5A44; border-radius:50%; border:3px solid #eaf6f0; box-shadow: 0 5px 15px rgba(46, 90, 68, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">VERDE BOSQUE</span>
+                                        </button>
+
+                                        <!-- Tierra Café -->
+                                        <button onclick="applyTheme('gold')" style="background:#fff; border:2.5px solid #6B4F3E22; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#6B4F3E'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#6B4F3E22'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#6B4F3E; border-radius:50%; border:3px solid #f6f3f0; box-shadow: 0 5px 15px rgba(107, 79, 62, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">TIERRA CAFÉ</span>
+                                        </button>
+
+                                        <!-- Lavanda Pastel -->
+                                        <button onclick="applyTheme('lavender')" style="background:#fff; border:2.5px solid #8E7CC322; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#8E7CC3'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#8E7CC322'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#8E7CC3; border-radius:50%; border:3px solid #f8f7fd; box-shadow: 0 5px 15px rgba(142, 124, 195, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">LAVANDA</span>
+                                        </button>
+
+                                        <!-- Sol de Verano -->
+                                        <button onclick="applyTheme('orange')" style="background:#fff; border:2.5px solid #E67E2222; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#E67E22'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#E67E2222'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#E67E22; border-radius:50%; border:3px solid #fef5ec; box-shadow: 0 5px 15px rgba(230, 126, 34, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">NARANJA</span>
+                                        </button>
+
+                                        <!-- Hielo Cyan -->
+                                        <button onclick="applyTheme('cyan')" style="background:#fff; border:2.5px solid #3498DB22; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#3498DB'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#3498DB22'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#3498DB; border-radius:50%; border:3px solid #eaf6fd; box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">CYAN HIELO</span>
+                                        </button>
+
+                                        <!-- Uva Profunda -->
+                                        <button onclick="applyTheme('purple')" style="background:#fff; border:2.5px solid #7D3C9822; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#7D3C98'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#7D3C9822'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#7D3C98; border-radius:50%; border:3px solid #f4ecf7; box-shadow: 0 5px 15px rgba(125, 60, 152, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">PÚRPURA</span>
+                                        </button>
+
+                                        <!-- Granate Real -->
+                                        <button onclick="applyTheme('maroon')" style="background:#fff; border:2.5px solid #922B2122; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#922B21'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#922B2122'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#922B21; border-radius:50%; border:3px solid #f9ebea; box-shadow: 0 5px 15px rgba(146, 43, 33, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">GRANATE</span>
+                                        </button>
+
+                                        <!-- Pizarra Oscura -->
+                                        <button onclick="applyTheme('slate')" style="background:#fff; border:2.5px solid #34495E22; border-radius:18px; padding:15px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03);" onmouseover="this.style.borderColor='#34495E'; this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#34495E22'; this.style.transform='translateY(0)'">
+                                            <div style="width:35px; height:35px; background:#34495E; border-radius:50%; border:3px solid #ebedef; box-shadow: 0 5px 15px rgba(52, 73, 94, 0.2);"></div>
+                                            <span style="font-size:0.75rem; font-weight:800; color:#444; letter-spacing:0.5px;">OSCURO</span>
+                                        </button>
+                                    </div>
+                                    <small style="display:block; margin-top:15px; color:#999; font-style:italic;">Los cambios se guardan automáticamente para tu próxima sesión.</small>
+                                </div>
+                            </div>
+
+                            <!-- Bloque: Redes Sociales -->
+                            <div id="settings-block-redes" class="settings-block">
+                                <div class="glass-module" style="padding: 25px; border-top: 4px solid #3b5998; max-width: 500px; margin: 0 auto;">
+                                    <h3 style="margin-top:0; font-size:1.1rem; color:#1a1a1a; display:flex; align-items:center; gap:10px;"><i class="fas fa-share-alt"></i> Redes Sociales</h3>
+                                <div class="form-group" style="margin-top:15px;">
+                                    <label><i class="fab fa-instagram" style="color:#e1306c;"></i> Instagram (URL completa)</label>
+                                    <input type="url" id="settings-social-insta" class="admin-input" placeholder="https://instagram.com/tu_perfil">
+                                </div>
+                                <div class="form-group" style="margin-top:12px;">
+                                    <label><i class="fab fa-tiktok" style="color:#000;"></i> TikTok (URL completa)</label>
+                                    <input type="url" id="settings-social-tiktok" class="admin-input" placeholder="https://tiktok.com/@tu_usuario">
+                                </div>
+                                <div class="form-group" style="margin-top:12px;">
+                                    <label><i class="fab fa-facebook" style="color:#3b5998;"></i> Facebook (URL completa)</label>
+                                    <input type="url" id="settings-social-face" class="admin-input" placeholder="https://facebook.com/tu_pagina">
+                                </div>
+                                    <button onclick="saveSocialLinks()" class="btn-primary" style="margin-top:25px; width:100%; height:45px; border-radius:10px; background:#2c3e50;">Vincular Redes Sociales</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: Vaciar Historial -->
+    <div id="deleteHistoryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; text-align:center; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <button onclick="closeDeleteHistoryModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
+            <h2 style="color:var(--color-dark-pink); margin-top:0;"><i class="fas fa-trash-alt"></i> Vaciar Historial</h2>
+            <p style="color:#666; margin-bottom:25px; line-height:1.5;">¿Qué acción deseas realizar con los registros de tu historial?</p>
+            <div style="display:flex; flex-direction:column; gap:15px;">
+                <button onclick="toggleDeleteMode()" style="background:var(--gold-primary); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem; transition:0.3s;"><i class="fas fa-hand-pointer"></i> Elegir registros para eliminar</button>
+                <button onclick="clearEntireHistory()" style="background:#e74c3c; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem; transition:0.3s;"><i class="fas fa-dumpster"></i> Eliminar todo el historial</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Mensaje Personalizado -->
+    <div id="customAlertModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; text-align:center; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+            <h3 id="customAlertTitle" style="color:var(--color-dark-pink); margin-top:0; font-size:1.4rem;"></h3>
+            <p id="customAlertText" style="color:#555; margin-bottom:25px; line-height:1.6; font-size:1rem;"></p>
+            <div id="customAlertButtons" style="display:flex; justify-content:center; gap:15px;">
+                <!-- Botones inyectados por JS -->
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Modal: Aplazar Cita -->
+    <div id="rescheduleModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+            <button onclick="closeRescheduleModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
+            <h3 style="color:#f39c12; margin-top:0; font-size:1.4rem; text-align:left;"><i class="fas fa-calendar-alt"></i> Aplazar Cita</h3>
+            <p style="color:#555; margin-bottom:20px; text-align:left;">Selecciona la nueva fecha y hora para esta cita:</p>
+            
+            <div style="margin-bottom:15px; text-align:left;">
+                <label style="display:block; font-weight:bold; color:var(--color-accent); margin-bottom:5px;">Nueva Fecha</label>
+                <input type="date" id="reschedule-date" class="admin-input" style="width:100%; box-sizing:border-box;" onclick="this.showPicker()" onkeydown="return false;">
+            </div>
+            <div style="margin-bottom:25px; text-align:left;">
+                <label style="display:block; font-weight:bold; color:var(--color-accent); margin-bottom:5px;">Nueva Hora</label>
+                <input type="time" id="reschedule-time" class="admin-input" style="width:100%; box-sizing:border-box; cursor:pointer;" min="07:00" max="20:00" onclick="this.showPicker()">
+            </div>
+
+            <div style="display:flex; justify-content:center; gap:15px;">
+                <button onclick="closeRescheduleModal()" style="background:#eee; color:#444; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
+                <button onclick="confirmReschedule()" style="background:#f39c12; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Zoom de Imágenes -->
+    <div id="image-zoom-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:20000; align-items:center; justify-content:center; cursor: zoom-out; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);" onclick="this.style.display='none'">
+        <span style="position:absolute; top:20px; right:30px; color:white; font-size:40px; font-weight:bold; cursor:pointer;">&times;</span>
+        <img id="zoomed-image" style="max-width:90%; max-height:90%; border-radius:15px; box-shadow:0 0 50px rgba(0,0,0,0.5); transform: scale(0.9); animation: zoomInEffect 0.3s forwards; border: 3px solid rgba(255,255,255,0.1);">
+    </div>
+
+    <!-- Modal: Editar Especialista -->
+    <div id="editSpecialistModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+        <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:600px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+            <button onclick="closeEditSpecialistModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
+            <h3 style="color:var(--color-dark-pink); margin-top:0; font-size:1.4rem; text-align:left;"><i class="fas fa-user-edit"></i> Editar Profesional</h3>
+            
+            <input type="hidden" id="edit-specialist-original-name">
+            
+            <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="edit-specialist-name" class="admin-input">
+                </div>
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="edit-specialist-phone" class="admin-input">
+                </div>
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <input type="text" id="edit-specialist-address" class="admin-input">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Edad</label>
+                        <input type="number" id="edit-specialist-age" class="admin-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Sexo</label>
+                        <select id="edit-specialist-gender" class="admin-input">
+                            <option value="Femenino">Femenino</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>Especialidades</label>
+                        <div id="edit-specialist-specialties-container" style="display:flex; flex-wrap:wrap; gap:12px; background:#fff; padding:12px 15px; border:1px solid #ddd; border-radius:8px; min-height:45px; align-items:center;">
+                            <!-- Dinámico -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-percent"></i> % Ganancia Profesional</label>
+                        <input type="number" id="edit-specialist-profit" class="admin-input" placeholder="Ej: 50">
+                    </div>
+                </div>
+                <div>
+                    <label><i class="fas fa-camera"></i> Actualizar Foto</label>
+                    <div style="display:flex; align-items:center; gap:15px; background:#f9f9f9; padding:8px 10px; border-radius:8px; border:1px dashed #ccc;">
+                        <div id="edit-specialist-current-photo" style="width:50px; height:50px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; overflow:hidden; border:2px solid var(--color-accent); flex-shrink:0;"></div>
+                        <div style="flex:1;">
+                            <input type="file" id="edit-specialist-photo" class="admin-input" accept="image/*" style="padding: 5px; cursor: pointer; border:none; background:transparent;" onchange="previewEditSpecialistPhoto(this)">
+                            <small style="color:#888; display:block; margin-top:3px; line-height:1.2;">No elijas archivo para conservar foto actual.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display:flex; justify-content:flex-end; gap:15px;">
+                <button onclick="closeEditSpecialistModal()" style="background:#eee; color:#444; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
+                <button onclick="saveSpecialistEdit()" class="btn-primary" style="padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;"><i class="fas fa-save"></i> Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Reporte Detallado de Servicios del Especialista -->
+    <div id="specialistServicesModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+        <div style="background:white; padding:30px; border-radius:15px; width:95%; max-width:700px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:92vh; display:flex; flex-direction:column;">
+            <button onclick="closeSpecialistServicesModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
+            <h3 style="color:var(--color-dark-pink); margin-top:0; margin-bottom:5px; font-size:1.4rem; text-align:left;"><i class="fas fa-clipboard-check"></i> Reporte de Servicios</h3>
+            <p id="specialist-services-title" style="color:#777; font-weight:bold; margin-top:0; margin-bottom:15px; font-size:1.1rem; border-bottom:1px solid #eee; padding-bottom:10px;"></p>
+            
+            <!-- Filtros de Fecha/Mes -->
+            <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; background:#f9f9f9; padding:12px; border-radius:12px; align-items:center; border:1px solid #eee;">
+                <div style="flex:1; min-width:140px;">
+                    <label style="display:block; font-size:0.7rem; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:5px;">Ver por Día:</label>
+                    <input type="date" id="spec-filter-date" class="admin-input" style="width:100%; margin:0; padding:8px; cursor:pointer;" onchange="document.getElementById('spec-filter-month').value=''; updateSpecialistReport()" onclick="this.showPicker()">
+                </div>
+                <div style="flex:1; min-width:140px;">
+                    <label style="display:block; font-size:0.7rem; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:5px;">Ver por Mes:</label>
+                    <input type="month" id="spec-filter-month" class="admin-input" style="width:100%; margin:0; padding:8px; cursor:pointer;" onchange="document.getElementById('spec-filter-date').value=''; updateSpecialistReport()" onclick="this.showPicker()">
+                </div>
+                <button onclick="resetSpecialistReport()" style="background:var(--color-dark-pink); color:white; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; cursor:pointer; height:fit-content; margin-top:18px; transition:0.3s; font-size:0.85rem;"><i class="fas fa-sync-alt"></i> Ver Hoy</button>
+            </div>
+
+            <div id="specialist-services-list" style="overflow-y:auto; flex:1; padding:5px 10px 15px 5px; background:rgba(255,255,255,0.5);">
+                <!-- Listado dinamico autogenerado -->
+            </div>
+
+            <!-- Resumen de Totales Dinámico -->
+            <div id="specialist-services-footer" style="padding:15px; background:#fff; border-top:2px solid #eee; margin-top:10px; border-radius:0 0 10px 10px;">
+                <!-- Dinámico por JS -->
+            </div>
+
+            <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee; display:flex; justify-content:center; gap:12px;">
+                <button onclick="exportSpecialistReportToPDF()" style="background:#3498db; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-file-pdf"></i> EXPORTAR PDF
+                </button>
+                <button onclick="closeSpecialistServicesModal()" style="background:#eee; color:#444; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;">
+                    Cerrar Reporte
+                </button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Información Personal del Especialista -->
+    <div id="specialistInfoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+        <div style="background:white; padding:30px; border-radius:15px; width:95%; max-width:500px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; display:flex; flex-direction:column; align-items:center; text-align:center;">
+            <button onclick="closeSpecialistInfoModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
+            
+            <div id="spec-info-photo" style="margin-bottom:20px;">
+                <!-- Foto dinámica -->
+            </div>
+            
+            <h3 id="spec-info-name" style="color:#1a1a1a; margin:0 0 20px 0; font-size:1.8rem; font-family:var(--font-heading);"></h3>
+
+            <div style="width:100%; background:#f9f9f9; padding:20px; border-radius:15px; border:1px solid #eee; display:flex; flex-direction:column; gap:15px;">
+                <div style="display:flex; align-items:center; gap:12px; text-align:left;">
+                    <div style="background:rgba(46, 204, 113, 0.1); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#27ae60; font-size:1.2rem;"><i class="fas fa-phone-alt"></i></div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#999; font-weight:700; text-transform:uppercase;">Teléfono / WhatsApp</div>
+                        <div id="spec-info-phone" style="font-weight:bold; color:#333; font-size:1.1rem;"></div>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:12px; text-align:left;">
+                    <div style="background:rgba(52, 152, 219, 0.1); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#2980b9; font-size:1.2rem;"><i class="fas fa-map-marker-alt"></i></div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#999; font-weight:700; text-transform:uppercase;">Dirección Residencial</div>
+                        <div id="spec-info-address" style="font-weight:bold; color:#333; font-size:0.95rem;"></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="display:flex; align-items:center; gap:10px; text-align:left; background:rgba(155, 89, 182, 0.05); padding:10px; border-radius:10px;">
+                        <div style="color:#8e44ad; font-size:1.1rem;"><i class="fas fa-birthday-cake"></i></div>
+                        <div>
+                            <div style="font-size:0.6rem; color:#999; font-weight:700; text-transform:uppercase;">Edad</div>
+                            <div id="spec-info-age" style="font-weight:bold; color:#333; font-size:0.9rem;"></div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; text-align:left; background:rgba(230, 126, 34, 0.05); padding:10px; border-radius:10px;">
+                        <div style="color:#d35400; font-size:1.1rem;"><i class="fas fa-venus-mars"></i></div>
+                        <div>
+                            <div style="font-size:0.6rem; color:#999; font-weight:700; text-transform:uppercase;">Sexo</div>
+                            <div id="spec-info-gender" style="font-weight:bold; color:#333; font-size:0.9rem;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:25px; display:flex; gap:15px; width:100%;">
+                <a id="spec-info-wa-btn" href="#" target="_blank" style="flex:1; background:#2ecc71; color:white; text-decoration:none; padding:12px; border-radius:10px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.3s; font-size:0.9rem;"><i class="fab fa-whatsapp"></i> Chatear</a>
+                <button onclick="closeSpecialistInfoModal()" style="flex:1; background:#eee; color:#444; border:none; padding:12px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s; font-size:0.9rem;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- MODAL: AGENDA VISUAL DINÁMICA (CUADRÍCULA DE TURNOS) -->
+    <div id="visualAgendaModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:#333; overflow:hidden;">
+        <div style="background:white; border-radius:25px; width:95%; height:94%; max-width:1500px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,0.4); animation: popIn 0.3s forwards; border: 1px solid rgba(255,255,255,0.2);">
+            <!-- Header Ventana -->
+            <div style="padding:15px 25px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center; background:#fff;">
+                <div style="flex:1; min-width:0;">
+                    <div class="agenda-header-responsive-wrapper">
+                        <i class="fas fa-th agenda-icon-responsive"></i>
+                        <h2 class="agenda-title-responsive">Cuadrícula<span class="desktop-only-space"> </span><br class="mobile-only-br">de Turnos</h2>
+                    </div>
+                    <p class="agenda-subtitle-responsive">Visualiza la ocupación de todo tu equipo de un vistazo.</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="position:relative; display:flex; align-items:center; gap:8px;">
+                        <button id="btn-show-completed-visual" onclick="window.toggleShowRealizadasInVisual()" style="background:transparent; border:1px solid #ddd; color:#999; padding:6px 12px; border-radius:10px; font-weight:700; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.3s; white-space:nowrap; height:40px;">
+                            <i class="fas fa-check-double" style="font-size:0.7rem;"></i> <span>VER REALIZADAS</span>
+                        </button>
+                        <div style="position:relative;">
+                            <input type="date" id="visual-agenda-date" class="admin-input" onchange="renderVisualAgenda()" style="width:130px; cursor:pointer; border:1px solid #eee; margin:0; height:40px; font-size:0.85rem;" onclick="this.showPicker()">
+                        </div>
+                    </div>
+                    <button onclick="closeVisualAgenda()" style="background:#f5f5f5; border:none; width:36px; height:36px; border-radius:50%; font-size:1.2rem; cursor:pointer; color:#777; transition:0.3s; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='#eee'; this.style.color='#e74c3c'" onmouseout="this.style.background='#f5f5f5'; this.style.color='#777'">&times;</button>
+                </div>
+            </div>
+            
+            <!-- Lienzo de la Cuadrícula -->
+            <div id="visual-agenda-canvas" style="flex:1; overflow:auto; padding:15px; background:#fbfbfb;">
+                <!-- Generado por JS: renderVisualAgenda() -->
+            </div>
+
+            <!-- Footer con Leyenda -->
+            <div style="padding:15px 35px; background:#fff; border-top:1px solid #f0f0f0; display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
+                <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(229, 169, 180, 0.15); border:1px solid var(--color-accent); border-radius:3px;"></div> Cita Pendiente</div>
+                <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(46, 204, 113, 0.15); border:1px solid #2ecc71; border-radius:3px;"></div> Cita Confirmada</div>
+                <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(243, 156, 18, 0.15); border:1px solid #f39c12; border-radius:3px;"></div> Aplazada</div>
+                <div style="margin-left:auto; color:#999; font-weight:normal;">Margaritasmit Beauty Studio &copy; 2024</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: AGENDA VISUAL DINÁMICA (ELEGIR TURNO MANUAL) -->
+    <div id="manual-visual-agenda-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:#333;">
+        <div style="background:white; width:95%; height:92%; max-width:1600px; border-radius:25px; display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s forwards; box-shadow:0 40px 100px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);">
+            <!-- Header Ventana Calibrada -->
+            <div style="padding:15px 30px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; gap:20px; background:#fff;">
+                <div style="flex:1; min-width:0;">
+                    <div class="agenda-header-responsive-wrapper">
+                        <i class="fas fa-th agenda-icon-responsive"></i>
+                        <h2 class="agenda-title-responsive">Cuadrícula<span class="desktop-only-space"> </span><br class="mobile-only-br">de Turnos</h2>
+                    </div>
+                    <p class="agenda-subtitle-responsive">Elige el espacio disponible para tu cliente.</p>
+                </div>
+                <div style="position:relative; display:flex; align-items:center;">
+                    <input type="date" id="manual-agenda-date" class="admin-input" onchange="renderManualVisualAgendaGrid()" style="width:130px; cursor:pointer; border:2px solid #eee; height:44px; font-size:0.9rem; border-radius:12px;" onclick="this.showPicker()">
+                </div>
+                <button onclick="closeManualVisualAgenda()" style="background:rgba(44, 62, 80, 0.05); border:none; width:45px; height:45px; border-radius:50%; font-size:1.6rem; cursor:pointer; color:#2c3e50; transition:0.3s; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.05); flex-shrink:0;" onmouseover="this.style.background='rgba(44, 62, 80, 0.1)'" onmouseout="this.style.background='rgba(44, 62, 80, 0.05)'">&times;</button>
+            </div>
+            
+            <!-- Lienzo de la Cuadrícula -->
+            <div id="manual-grid-canvas" style="flex:1; overflow:auto; padding:30px; background:#fbfbfb;">
+                <!-- Generado por JS -->
+            </div>
+
+            <!-- Footer con Leyenda -->
+            <div style="padding:15px 35px; background:#fff; border-top:1px solid #f0f0f0; display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
+                <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(184, 115, 129, 0.15); border:1px solid var(--color-dark-pink); border-radius:3px;"></div> Horario Reservado</div>
+                <div style="margin-left:auto; color:#999; font-weight:normal;">Margaritasmit Beauty Studio &copy; 2026</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR NUEVO GASTO -->
+    <div id="newExpenseModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+        <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:500px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+            <button onclick="window.toggleNewExpenseModal()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; padding:0; line-height:1;">&times;</button>
+            
+            <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-file-invoice-dollar"></i> Registrar Gasto</h3>
+            <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Registra los egresos del salón para mantener tus cuentas claras.</p>
+
+            <div class="form-group" style="margin-bottom:15px;">
+                <label>Descripción / Concepto</label>
+                <input type="text" id="expense-desc" placeholder="Ej: Compra de Tintes Loreal" class="admin-input">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                <div class="form-group">
+                    <label>Monto (COP)</label>
+                    <input type="text" id="expense-amount" placeholder="$ 0" class="admin-input" oninput="formatCurrencyInput(this)">
+                </div>
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="expense-date" class="admin-input">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:25px;">
+                <label>Categoría</label>
+                <select id="expense-category" class="admin-input">
+                    <option value="Productos">Compra de Productos</option>
+                    <option value="Renta">Pago de Arriendo / Renta</option>
+                    <option value="Servicios">Servicios Públicos (Agua, Luz, etc)</option>
+                    <option value="Salarios">Pago a Personal / Salarios</option>
+                    <option value="Publicidad">Marketing y Publicidad</option>
+                    <option value="Mantenimiento">Mantenimiento de Local</option>
+                    <option value="Imprevistos">Gastos Imprevistos</option>
+                    <option value="Otros">Otros Gastos</option>
+                </select>
+            </div>
+
+            <button onclick="window.saveNewExpense()" class="btn-primary" style="width:100%; padding:15px; border-radius:12px; font-size:1rem; font-weight:bold;">GUARDAR GASTO</button>
+        </div>
+    </div>
+
+    <script type="module" src="firebase_app.js?v=20260421.03"></script>
+    <div id="maintConfigModal" class="custom-modal-overlay" style="z-index: 12000;">
+        <div class="custom-modal" style="background:white; padding:0; border-radius:25px; width:95%; max-width: 600px; text-align: left; position:relative; overflow:hidden;">
+            <!-- Cabecera con Pestañas -->
+            <div style="background:var(--color-bg); padding:20px 30px; border-bottom:1px solid #eee;">
+                <h3 style="margin:0 0 15px 0; color:var(--color-dark-pink); display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-clock"></i> Ciclos de Mantenimiento (Uñas)
+                </h3>
+                <div style="display:flex; gap:20px; border-bottom:1px solid #ddd;">
+                    <button onclick="switchMaintTab('mantenimiento')" id="tab-btn-maint" style="background:none; border:none; padding:10px 0; font-weight:700; color:var(--color-dark-pink); border-bottom:3px solid var(--color-dark-pink); cursor:pointer; font-size:0.85rem;">RECOR./MANTENIMIENTO</button>
+                </div>
+            </div>
+
+            <div style="padding:30px;">
+                <!-- Sección 1: Recordatorios de Uñas -->
+                <div id="maint-section-recordatorios">
+                    <p style="font-size:0.85rem; color:#666; margin-bottom:20px;">Configura cuántos días debe pasar para que un servicio de uñas necesite retoque.</p>
+                    <div id="maint-config-list" style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                        <!-- Inyectado dinámicamente -->
+                    </div>
+                </div>
+
+
+
+                <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px; border-top:1px solid #eee; padding-top:20px;">
+                    <button onclick="document.getElementById('maintConfigModal').classList.remove('show')" style="background:#eee; color:#666; border:none; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer;">Cancelar</button>
+                    <button onclick="saveAdvancedTimeConfig()" class="btn-primary" style="width:auto; padding:10px 25px; border-radius:10px; background:var(--color-dark-pink); color:white; border:none; cursor:pointer; font-weight:700;">GUARDAR CAMBIOS</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js?v=20260423.01"></script>
+</body>
+</html>

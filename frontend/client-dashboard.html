@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <script>
+        // Prevenir parpadeo de tema (FOUC)
+        (function() {
+            var theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Cliente - AS Sierra Systems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .client-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-surface-light);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .user-profile:hover {
+            background: var(--border-color);
+        }
+        .client-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        /* Premium Dashboard Enhancements */
+        .dashboard-hero {
+            background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(79, 70, 229, 0.05) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dashboard-hero::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .hero-content h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+        .hero-content p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        .marketplace-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .billing-card-premium {
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        [data-theme="light"] .billing-card-premium {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            color: #0f172a;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
+        }
+        .billing-card-premium::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4f46e5, #8b5cf6, #ec4899);
+        }
+        .credit-card-chip {
+            width: 40px;
+            height: 30px;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 6px;
+            margin-bottom: 2rem;
+            position: relative;
+            opacity: 0.8;
+        }
+        .credit-card-chip::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            height: 1px;
+            background: rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div id="dashboard-view" style="display: flex; height: 100vh; overflow: hidden;">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <img src="" alt="Logo AS Sierra Systems" id="custom-logo-img" style="height:32px; width:auto; object-fit:contain; display:none; border-radius:6px; margin-right: 0.5rem;">
+                <div class="brand-icon" id="default-logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="url(#grad2)"/><defs><linearGradient id="grad2" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>
+                </div>
+                <div class="brand-text">AS <span>Sierra</span></div>
+            </div>
+            <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Colapsar menú">
+                <i data-lucide="panel-left-close"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">MI PANEL</div>
+            <button class="nav-btn active" data-tab="tab-modules">
+                <i data-lucide="grid-2x2"></i>
+                <span>Mis Módulos</span>
+            </button>
+            <button class="nav-btn" data-tab="tab-marketplace">
+                <i data-lucide="shopping-bag"></i>
+                <span>Marketplace</span>
+            </button>
+            <button class="nav-btn" data-tab="tab-billing">
+                <i data-lucide="credit-card"></i>
+                <span>Suscripción</span>
+            </button>
+            <div class="nav-section-label" style="margin-top: 2rem;">AYUDA</div>
+            <button class="nav-btn" data-tab="tab-support">
+                <i data-lucide="life-buoy"></i>
+                <span>Soporte</span>
+            </button>
+            <button class="nav-btn" id="btn-video-guide" style="margin-top: 0.5rem;">
+                <i data-lucide="play-circle"></i>
+                <span>Guía en Video</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" id="mobile-toggle" style="background:none;border:none;color:var(--text);cursor:pointer;display:none;">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="breadcrumbs">
+                    <span style="color:var(--text-muted);">Panel de Cliente</span>
+                    <i data-lucide="chevron-right" style="width:14px; color:var(--text-muted); margin:0 0.25rem;"></i>
+                    <strong id="current-tab-title">Mis Módulos</strong>
+                </div>
+            </div>
+            
+            <div class="topbar-right">
+                <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+                    <i data-lucide="sun"></i>
+                </button>
+
+                <!-- Profile Dropdown -->
+                <div style="position: relative;" id="profile-dropdown-wrap">
+                    <button id="profile-dropdown-btn" style="display:flex; align-items:center; gap:0.6rem; background: var(--bg-surface-light); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.4rem 0.9rem 0.4rem 0.5rem; cursor:pointer; transition: all 0.2s; color: var(--text-main);"
+                        onclick="document.getElementById('profile-dropdown-menu').classList.toggle('hidden')">
+                        <div id="client-avatar-wrap" style="width:36px; height:36px; border-radius:50%; background: linear-gradient(135deg,var(--primary),var(--secondary)); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; color:white; overflow:hidden; flex-shrink:0;">
+                            <span id="client-avatar">RF</span>
+                        </div>
+                        <span style="font-size: 0.875rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" id="client-name-display">Cargando...</span>
+                        <i data-lucide="chevron-down" style="width:16px; color:var(--text-muted);"></i>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="profile-dropdown-menu" class="hidden" style="position:absolute; right:0; top:calc(100% + 8px); background: var(--bg-surface); border:1px solid var(--border-color); border-radius:12px; min-width:200px; box-shadow:var(--shadow-md); z-index:9999; overflow:hidden;">
+                        <div style="padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.2rem;">Sesión activa como</div>
+                            <div id="profile-email-display" style="font-size:0.85rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                        </div>
+                        <div style="padding: 0.5rem;">
+                            <button onclick="document.getElementById('profile-dropdown-menu').classList.add('hidden'); switchTab('tab-account');"
+                                style="display:flex; align-items:center; gap:0.75rem; width:100%; padding:0.7rem 1rem; border-radius:8px; border:none; background:none; color:var(--text); font-size:0.875rem; font-weight:500; cursor:pointer; transition:background 0.2s; text-align:left;"
+                                onmouseover="this.style.background='rgba(99,102,241,0.1)'" onmouseout="this.style.background='none'">
+                                <i data-lucide="shield-check" style="width:18px; color:var(--primary);"></i>
+                                Seguridad y Cuenta
+                            </button>
+                            <button id="btn-open-profile"
+                                style="display:flex; align-items:center; gap:0.75rem; width:100%; padding:0.7rem 1rem; border-radius:8px; border:none; background:none; color:var(--text); font-size:0.875rem; font-weight:500; cursor:pointer; transition:background 0.2s; text-align:left;"
+                                onmouseover="this.style.background='rgba(99,102,241,0.1)'" onmouseout="this.style.background='none'">
+                                <i data-lucide="user" style="width:18px; color:#10b981;"></i>
+                                Mi Perfil
+                            </button>
+                        </div>
+                        <div style="padding: 0.5rem; border-top: 1px solid var(--border-color);">
+                            <button id="logout-btn"
+                                style="display:flex; align-items:center; gap:0.75rem; width:100%; padding:0.7rem 1rem; border-radius:8px; border:none; background:none; color:#ef4444; font-size:0.875rem; font-weight:500; cursor:pointer; transition:background 0.2s; text-align:left;"
+                                onmouseover="this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.background='none'">
+                                <i data-lucide="log-out" style="width:18px;"></i>
+                                Cerrar Sesión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-area" style="flex: 1; overflow-y: auto; position: relative; padding-bottom: 2rem;">
+            
+            <!-- TAB: MIS MÓDULOS -->
+            <section id="tab-modules" class="tab-content active">
+                <div class="dashboard-hero">
+                    <div class="hero-content">
+                        <h1>Hola, <span id="hero-client-name" style="color: var(--primary);">Cliente</span> 👋</h1>
+                        <p>Bienvenido a tu centro de control digital. Aquí puedes gestionar todas tus herramientas.</p>
+                    </div>
+                    <div style="display:none;" class="hero-illustration">
+                        <i data-lucide="layout-dashboard" style="width: 80px; height: 80px; color: rgba(99, 102, 241, 0.2);"></i>
+                    </div>
+                </div>
+
+                <div class="kpi-grid" style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <!-- KPI: Módulos Activos -->
+                    <div class="kpi-card" style="border: none; background: var(--bg-surface); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); flex: 1; min-width: 160px;">
+                        <div class="kpi-icon kpi-blue"><i data-lucide="check-circle"></i></div>
+                        <div class="kpi-info">
+                            <div class="kpi-value" id="active-modules-count">0</div>
+                            <div class="kpi-label">Módulos Activos</div>
+                        </div>
+                    </div>
+                    <!-- KPI: Módulos Suspendidos (siempre visible) -->
+                    <div class="kpi-card" id="kpi-cancelled-card"
+                        style="border: 1px solid rgba(245,158,11,0.2); background: var(--bg-surface); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); flex: 1; min-width: 160px;">
+                        <div class="kpi-icon" style="background: rgba(245,158,11,0.1); color: #f59e0b;"><i data-lucide="pause-circle"></i></div>
+                        <div class="kpi-info">
+                            <div class="kpi-value" id="cancelled-modules-count" style="color: #f59e0b;">0</div>
+                            <div class="kpi-label">Módulos Suspendidos</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 700;">Tus Aplicaciones</h3>
+                    
+                    <!-- Botones de pestaña SIEMPRE visibles -->
+                    <div class="module-tabs" id="module-tabs-container" style="display: flex; background: var(--bg-surface-light); padding: 0.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <button class="mod-tab-btn active" onclick="switchModuleSubTab('active')" id="btn-tab-mod-active" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: var(--primary); color: white; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                            Activos
+                        </button>
+                        <button class="mod-tab-btn" onclick="switchModuleSubTab('cancelled')" id="btn-tab-mod-cancelled" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                            Suspendidos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contenedor Activos -->
+                <div class="client-grid" id="client-modules-grid-active">
+                    <p style="color:var(--text-muted);">Cargando tus aplicaciones...</p>
+                </div>
+                
+                <!-- Contenedor Cancelados -->
+                <div class="client-grid" id="client-modules-grid-cancelled" style="display: none;">
+                </div>
+            </section>
+
+            <!-- TAB: MARKETPLACE -->
+            <section id="tab-marketplace" class="tab-content hidden">
+                <div class="dashboard-hero" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);">
+                    <div class="hero-content">
+                        <h1>Descubre más soluciones ✨</h1>
+                        <p>Potencia tu negocio con estas herramientas adicionales. Integración instantánea.</p>
+                    </div>
+                </div>
+
+                <div class="client-grid" id="client-marketplace-grid">
+                    <!-- Los módulos disponibles se cargarán por JS -->
+                    <p style="color:var(--text-muted);">Cargando mercado de aplicaciones...</p>
+                </div>
+            </section>
+
+            <!-- TAB: FACTURACIÓN -->
+            <section id="tab-billing" class="tab-content hidden">
+                <div class="page-header" style="margin-bottom: 2rem;">
+                    <div>
+                        <h2 class="page-title">Suscripción y Facturación</h2>
+                        <p class="page-subtitle">Gestiona de forma segura tu método de pago y ciclo de facturación.</p>
+                    </div>
+                </div>
+
+                <!-- Plan Info Row -->
+                <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:2.5rem;">
+                    <div class="biz-card" style="flex:1; min-width:200px; display:flex; align-items:center; gap:1rem; padding:1.25rem 1.5rem;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:rgba(99,102,241,0.12);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="layers"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Plan Actual</div>
+                            <div style="font-size:1.1rem;font-weight:800;color:var(--text);">SaaS Premium <i data-lucide="check-circle" style="width:16px;color:#10b981;vertical-align:middle;"></i></div>
+                        </div>
+                    </div>
+                    <div class="biz-card" style="flex:1; min-width:180px; display:flex; align-items:center; gap:1rem; padding:1.25rem 1.5rem;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="dollar-sign"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Monto Mensual</div>
+                            <div id="client-monthly-total" style="font-size:1.2rem;font-weight:800;font-variant-numeric:tabular-nums;">—</div>
+                        </div>
+                    </div>
+                    <div class="biz-card" style="flex:1; min-width:180px; display:flex; align-items:center; gap:1rem; padding:1.25rem 1.5rem;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:rgba(245,158,11,0.12);color:#f59e0b;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="calendar-clock"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Próximo Corte</div>
+                            <div id="client-next-payment" style="font-size:1.1rem;font-weight:700;">--/--/----</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods Title -->
+                <div style="margin-bottom:1.5rem;">
+                    <h3 style="font-size:1.2rem;font-weight:800;margin:0 0 0.25rem;">Métodos de Pago</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0;">🔒 Tus datos están protegidos con encriptación AES-256. Nunca almacenamos el número completo de tarjeta.</p>
+                </div>
+
+                <!-- Card Wallet Carousel -->
+                <div id="card-wallet" style="display:flex;gap:1.25rem;flex-wrap:wrap;align-items:flex-start;">
+                    <!-- Se llena por JS -->
+                </div>
+            </section>
+
+
+            <!-- TAB: SOPORTE -->
+            <section id="tab-support" class="tab-content hidden">
+                <div class="dashboard-hero" style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%);">
+                    <div class="hero-content">
+                        <h1>Centro de Ayuda 🚨</h1>
+                        <p>Estamos aquí para ayudarte. Elige el canal que prefieras y te atendemos al instante.</p>
+                    </div>
+                </div>
+                <div class="client-grid">
+                    <!-- WhatsApp -->
+                    <div class="biz-card">
+                        <div style="width: 48px; height: 48px; background: rgba(37, 211, 102, 0.12); color: #25D366; border-radius: 12px; display:flex; align-items:center; justify-content:center; margin-bottom: 1.25rem;">
+                            <i data-lucide="message-circle"></i>
+                        </div>
+                        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem;">WhatsApp Directo</h3>
+                        <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Tiempo de respuesta: <strong style="color:#25D366;">~5 minutos</strong></p>
+                        <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 1.75rem;">Ideal para soporte técnico urgente y consultas rápidas sobre tus módulos activos.</p>
+                        <a href="https://wa.me/573001234567?text=Hola,%20soy%20cliente%20de%20AS%20Sierra%20Systems%20y%20necesito%20soporte." target="_blank"
+                           class="btn-primary" style="background:#25D366; color:white; justify-content:center; text-decoration:none; box-shadow: 0 4px 14px 0 rgba(37,211,102,0.4);">
+                            <i data-lucide="message-circle"></i> Abrir WhatsApp
+                        </a>
+                    </div>
+                    <!-- Correo -->
+                    <div class="biz-card">
+                        <div style="width: 48px; height: 48px; background: rgba(99, 102, 241, 0.12); color: var(--primary); border-radius: 12px; display:flex; align-items:center; justify-content:center; margin-bottom: 1.25rem;">
+                            <i data-lucide="mail"></i>
+                        </div>
+                        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem;">Correo Electrónico</h3>
+                        <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Tiempo de respuesta: <strong style="color:var(--primary);">~24 horas</strong></p>
+                        <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 1.75rem;">Para solicitudes formales, escalamientos, facturación y reportes de errores detallados.</p>
+                        <a href="mailto:soporte@assierrasystems.com?subject=Solicitud%20de%20Soporte" class="btn-ghost"
+                           style="justify-content:center; text-decoration:none;">
+                            <i data-lucide="send"></i> Enviar Correo
+                        </a>
+                    </div>
+                    <!-- Ticket / Formulario -->
+                    <div class="biz-card">
+                        <div style="width: 48px; height: 48px; background: rgba(245, 158, 11, 0.12); color: #f59e0b; border-radius: 12px; display:flex; align-items:center; justify-content:center; margin-bottom: 1.25rem;">
+                            <i data-lucide="ticket"></i>
+                        </div>
+                        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem;">Crear Ticket</h3>
+                        <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Seguimiento garantizado</p>
+                        <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 1.75rem;">Registra tu problema en detalle y recibe seguimiento del estado de tu ticket en todo momento.</p>
+                        <button class="btn-primary" id="btn-open-ticket"
+                           style="justify-content:center; background: linear-gradient(135deg, #f59e0b, #f97316); border:none; box-shadow: 0 4px 14px 0 rgba(245,158,11,0.4);">
+                            <i data-lucide="plus-circle"></i> Abrir Ticket
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: MI CUENTA -->
+            <section id="tab-account" class="tab-content hidden">
+                <div class="dashboard-hero" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);">
+                    <div class="hero-content">
+                        <h1>Mi Cuenta 🔑</h1>
+                        <p>Actualiza tus credenciales de acceso para tu panel de cliente.</p>
+                    </div>
+                </div>
+
+                <div class="biz-card" style="max-width: 600px; margin: 0 auto; margin-top: 2rem; margin-bottom: 4rem; padding: 2.5rem; padding-bottom: 3rem; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <form id="account-settings-form">
+                        
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="font-size: 1.1rem; color: #f8fafc; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="shield-check" style="color: var(--primary); width: 20px;"></i> Verificación de Seguridad
+                            </h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Para realizar cualquier cambio en tu cuenta, ingresa tu contraseña actual.</p>
+                            <div class="form-group">
+                                <div style="position: relative;">
+                                    <i data-lucide="key" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                                    <input type="password" id="acc-current-pass" class="form-control" style="width: 100%; padding-left: 2.75rem; box-sizing: border-box; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(99,102,241,0.2); color: var(--text); border-radius: 8px; padding-top: 0.85rem; padding-bottom: 0.85rem; font-size: 0.95rem; transition: all 0.2s;" placeholder="Contraseña actual" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 2rem 0;"></div>
+
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label class="form-label" for="acc-email" style="font-weight: 600; color: var(--text); margin-bottom: 0.5rem; display: block;">Correo Electrónico (Usuario)</label>
+                            <div style="position: relative;">
+                                <i data-lucide="mail" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                                <input type="email" id="acc-email" class="form-control" style="width: 100%; padding-left: 2.75rem; box-sizing: border-box; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding-top: 0.85rem; padding-bottom: 0.85rem; font-size: 0.95rem; transition: all 0.2s;" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 2rem;">
+                            <label class="form-label" for="acc-pass" style="font-weight: 600; color: var(--text); margin-bottom: 0.5rem; display: block;">Nueva Contraseña <span style="font-weight: normal; color: var(--text-muted); font-size: 0.8rem;">(Opcional)</span></label>
+                            <div style="position: relative;">
+                                <i data-lucide="lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                                <input type="text" id="acc-pass" class="form-control" style="width: 100%; padding-left: 2.75rem; box-sizing: border-box; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding-top: 0.85rem; padding-bottom: 0.85rem; font-size: 0.95rem; transition: all 0.2s;" placeholder="Dejar en blanco para mantener la actual" minlength="6">
+                            </div>
+                        </div>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 1rem; padding-top: 2rem; padding-bottom: 1.5rem; display: flex; justify-content: flex-end;">
+                            <button type="submit" class="btn-primary" id="acc-save-btn" style="padding: 0.8rem 2rem; font-size: 0.95rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                                <i data-lucide="save"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<script>
+    async function loadDynamicConfig() {
+        try {
+            const res = await fetch('/api/settings');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.config && data.config.logo) {
+                    const defaultIcon = document.getElementById('default-logo-icon');
+                    const customImg = document.getElementById('custom-logo-img');
+                    if (defaultIcon && customImg) {
+                        defaultIcon.style.display = 'none';
+                        customImg.src = data.config.logo;
+                        customImg.style.display = 'block';
+                    }
+                }
+            }
+        } catch (err) {
+            console.log('Error cargando configuración', err);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', loadDynamicConfig);
+</script>
+<script src="js/client-app.js"></script>
+<script src="js/consent.js"></script>
+</body>
+</html>

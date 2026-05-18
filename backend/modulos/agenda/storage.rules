@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // Permitir que cualquiera lea (para mostrar el catálogo)
+      allow read: if true;
+      
+      // Escritura segura mediante validaciones
+      allow write: if request.resource.metadata.secret == 'Margarita_X7k9Pm2Lv89QrZw1'
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

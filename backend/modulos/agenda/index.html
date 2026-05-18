@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Margaritasmit Beauty Studio | Uñas, Pestañas, Cejas y Cabello</title>
+    <meta name="description" content="Especialistas en manicura, diseño de cejas, pestañas y estilismo en un ambiente exclusivo y femenino.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css?v=20260423.01">
+    <!-- Forzar inicio desde arriba al refrescar (fix Safari + Chrome mobile) -->
+    <script>
+        if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
+        if (window.location.hash) { history.replaceState(null, '', window.location.pathname + window.location.search); }
+    </script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23111111%22/><text x=%2250%22 y=%2275%22 font-size=%2265%22 fill=%22%23B87381%22 font-family=%22Georgia, serif%22 text-anchor=%22middle%22 font-weight=%22bold%22>M</text><text x=%2280%22 y=%2235%22 font-size=%2230%22 text-anchor=%22middle%22>✨</text></svg>">
+</head>
+<body>
+    <!-- Fixed Header Stack (Vanish-proof, Jitter-proof) -->
+    <header class="header-stack">
+        <!-- Banner de Estado de Servicio (Controlado por Panel) -->
+        <div id="salon-status-banner" class="global-banner" style="display: none;">
+            <div class="banner-track">
+                <div class="banner-item">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="salon-status-text">¡AVISO! El día de hoy el salón se encuentra CERRADO.</span>
+                </div>
+                <div class="banner-item">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="salon-status-text">¡AVISO! El día de hoy el salón se encuentra CERRADO.</span>
+                </div>
+                <div class="banner-item">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="salon-status-text">¡AVISO! El día de hoy el salón se encuentra CERRADO.</span>
+                </div>
+                <div class="banner-item">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="salon-status-text">¡AVISO! El día de hoy el salón se encuentra CERRADO.</span>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Navbar -->
+        <nav class="navbar">
+        <h1 class="logo"><a href="index.html" style="text-decoration: none; color: inherit; display: flex; align-items: center;"><i class="fas fa-crown" style="color: var(--color-accent); margin-right: 8px;"></i><span class="dynamic-brand-text">Margaritasmit</span><span>.</span></a></h1>
+        <ul class="nav-links" id="dynamic-nav-links">
+                    <a href="#" class="nav-link active" data-category="all">Todos</a>
+                    <a href="#" class="nav-link" data-category="nails">Uñas</a>
+                    <a href="#" class="nav-link" data-category="hair">Cabello</a>
+                    <a href="#" class="nav-link" data-category="brows">Cejas</a>
+                    <a href="#" class="nav-link" data-category="makeup">Maquillaje</a>
+                    <a href="#" class="nav-link" data-category="waxing">Depilación</a>
+        </ul>
+        <div class="nav-actions" style="display: flex; align-items: center; gap: 20px;">
+            <!-- Single Cart Icon in Navbar -->
+            <div id="cart-float-btn" onclick="toggleCart()" style="position: relative; cursor: pointer; font-size: 1.5rem; transition: 0.3s; display: flex; align-items: center;" title="Tu Agenda">
+                <i class="fas fa-shopping-bag"></i>
+                <span id="cart-count" style="position: absolute; top: -8px; right: -10px; background: #d9534f; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: none; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; border: 2px solid var(--color-bg);">0</span>
+            </div>
+            <div class="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+</header>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobile-menu">
+        <div class="close-menu"><i class="fas fa-times"></i></div>
+        <ul id="dynamic-mobile-nav">
+            <li><a href="#inicio">Inicio</a></li>
+            <li><a href="#servicios-unas">Uñas & Manicura</a></li>
+            <li><a href="#servicios-cabello">Cabello & Color</a></li>
+            <li><a href="#servicios-cejas">Cejas & Pestañas</a></li>
+            <li><a href="#servicios-depil">Depilación</a></li>
+            <li><a href="#servicios-maqui">Maquillaje</a></li>
+            <li><a href="#galeria">Galería</a></li>
+            <li><a href="https://wa.me/573057726115" class="btn-primary" style="margin-top: 20px;">Agenda tu cita</a></li>
+        </ul>
+    </div>
+
+    <!-- Hero Section -->
+    <header class="hero" id="inicio">
+        <div class="hero-overlay"></div>
+        <div class="hero-content reveal">
+            <h1>Todo para resaltar<br>tu feminidad.</h1>
+            <p>Especialistas en uñas esculpidas, cabello, pestañas y cejas. El cuidado que mereces en un espacio diseñado para ti.</p>
+            <div class="hero-buttons">
+                <button onclick="openPublicVisualAgenda()" class="btn-primary" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <i class="far fa-calendar-alt"></i> AGENDA
+                </button>
+                <!-- Location Button -->
+                <a href="https://www.google.com/maps/search/?api=1&query=Calle+14+%23+11-74" target="_blank" class="btn-primary">
+                    <i class="fas fa-map-marker-alt"></i> UBICACIÓN
+                </a>
+                <a href="#dynamic-categories-grid" class="btn-secondary">CATÁLOGOS</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Categorías Especialidades (Fixed Structural Placeholder to avoid flicker) -->
+    <section class="categories" id="dynamic-categories-grid">
+        <h2 class="section-title text-center reveal active" style="margin-bottom: 2rem;">Nuestras Especialidades</h2>
+        <div class="carousel-container">
+            <div class="carousel specialty-carousel" id="specialty-carousel" style="scroll-behavior: auto; min-height: 220px;">
+                <!-- Fixed placeholders that JS will later upgrade if needed. Priority: High for instant feel -->
+                <div class="category-item">
+                    <div class="category-circle" style="background:#fcebed">
+                        <img src="https://images.unsplash.com/photo-1599426184804-5ec8f67f607d?auto=format&fit=crop&q=80&w=300" 
+                             alt="Uñas" loading="eager" fetchpriority="high">
+                    </div>
+                    <h4>UÑAS</h4>
+                </div>
+                <div class="category-item">
+                    <div class="category-circle" style="background:#fcebed">
+                        <img src="https://images.unsplash.com/photo-1560869713-7d0a294308d3?auto=format&fit=crop&q=80&w=300" 
+                             alt="Cabello" loading="eager" fetchpriority="high">
+                    </div>
+                    <h4>CABELLO</h4>
+                </div>
+                <div class="category-item">
+                    <div class="category-circle" style="background:#fcebed">
+                        <img src="https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80&w=300" 
+                             alt="Cejas" loading="eager" fetchpriority="high">
+                    </div>
+                    <h4>CEJAS</h4>
+                </div>
+                <!-- ... other items JS will handle -->
+            </div>
+            <button class="carousel-btn prev-btn-specialty" style="opacity:0; transition:opacity 0.5s;"><i class="fas fa-chevron-left"></i></button>
+            <button class="carousel-btn next-btn-specialty" style="opacity:0; transition:opacity 0.5s;"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </section>
+
+
+    <!-- LUXURY SERVICES SECTION (Now Split) -->
+    <div>
+    
+    <!-- LUXURY SERVICES SECTIONS (DYNAMIC) -->
+    <div id="dynamic-services-sections" style="transition: opacity 0.5s ease;">
+        <!-- Injected via script.js -->
+    </div>
+    
+    </div>
+
+    <!-- Social Proof (Galería) -->
+    <section class="results" id="galeria" style="background-color: var(--color-bg);">
+        <div class="container reveal">
+            <h2 class="section-title text-center">Nuestra Galería</h2>
+            <p class="section-subtitle text-center">Resultados reales. Belleza real.</p>
+            
+            <!-- GALERÍA CON CARRUSEL -->
+            <div class="gallery-carousel-wrapper" style="position: relative; max-width: 1200px; margin: 3rem auto 0 auto; display: flex; align-items: center; justify-content: center; gap: 15px;">
+                <!-- Botón Izquierda -->
+                <button onclick="scrollPublicGallery(-1)" class="gallery-nav-btn prev" style="background:var(--color-white); border:none; width:45px; height:45px; border-radius:50%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); cursor:pointer; color:var(--color-dark-pink); font-size:1.2rem; transition:0.3s; z-index:10; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.transform='scale(1.1)'; this.style.color='var(--color-accent)'" onmouseout="this.style.transform='scale(1)'; this.style.color='var(--color-dark-pink)'">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <div class="results-grid" id="public-gallery-list">
+                    <!-- Las imágenes reales se cargan desde el panel administrativo -->
+                </div>
+
+                <!-- Botón Derecha -->
+                <button onclick="scrollPublicGallery(1)" class="gallery-nav-btn next" style="background:var(--color-white); border:none; width:45px; height:45px; border-radius:50%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); cursor:pointer; color:var(--color-dark-pink); font-size:1.2rem; transition:0.3s; z-index:10; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.transform='scale(1.1)'; this.style.color='var(--color-accent)'" onmouseout="this.style.transform='scale(1)'; this.style.color='var(--color-dark-pink)'">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="text-center mt-2">
+                <a href="https://instagram.com/margaritasmit.beautystudio" target="_blank" class="link-animate">Ver más inspiración en Instagram <i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </section>
+
+<!-- Sección de Agenda Pública Eliminada -->
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container text-center">
+            <h2 class="logo"><i class="fas fa-crown" style="color: var(--color-accent); margin-right: 8px;"></i><span class="dynamic-brand-text">Margaritasmit</span><span>.</span></h2>
+            <p>"La belleza comienza en el momento en que decides ser tú misma."</p>
+            <div class="social-icons">
+                <a href="#" id="footer-social-insta" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="#" id="footer-social-face" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" id="footer-social-tiktok" target="_blank"><i class="fab fa-tiktok"></i></a>
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.8rem; opacity: 0.7;">&copy; <span id="current-year-footer">2026</span> <span class="dynamic-brand-text">Margaritasmit</span>. Todos los derechos reservados.</p>
+            <div style="margin-top: 10px;">
+                <a href="admin.html" style="font-size: 0.75rem; text-decoration: none; user-select: none; cursor: default; opacity: 0;"><i class="fas fa-lock"></i> Admin</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Promo Reminder Bubble (solo icono regalo con brillitos) -->
+    <div id="promo-reminder-btn" onclick="reopenPromo()" style="display:none; position:fixed; bottom:110px; right:30px; z-index:10003; cursor:pointer;">
+        <div class="promo-gift-bubble">
+            <i class="fas fa-gift"></i>
+            <span class="promo-sparkle ps1">&#10024;</span>
+            <span class="promo-sparkle ps2">&#11088;</span>
+            <span class="promo-sparkle ps3">&#10024;</span>
+            <span class="promo-sparkle ps4">&#11088;</span>
+        </div>
+    </div>
+
+    <!-- Floating WhatsApp Button with Tooltip -->
+    <a href="https://wa.me/573057726115" target="_blank" class="whatsapp-float">
+        <span class="whatsapp-tooltip">Agenda tu cita</span>
+        <div class="whatsapp-icon-circle">
+            <i class="fab fa-whatsapp"></i>
+        </div>
+    </a>
+
+    <!-- Cart Drawer -->
+    <div id="cart-drawer" style="display:none; position:fixed; top:0; right:0; width:100%; max-width:450px; height:100%; z-index:9999; background:var(--color-white); box-shadow:-10px 0 40px rgba(0,0,0,0.2); overflow-y:auto; transition: transform 0.3s ease;">
+        <div style="padding:25px;">
+            <!-- Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(229,169,180,0.3); padding-bottom:15px;">
+                <h2 style="font-family:var(--font-heading); color:var(--color-dark-pink); margin:0; font-size:1.6rem;"><i class="fas fa-shopping-bag" style="margin-right:8px; color:var(--color-accent);"></i>Tu Agenda</h2>
+                <button onclick="toggleCart()" style="background:none; border:none; font-size:1.5rem; color:var(--color-dark-pink); cursor:pointer;">&times;</button>
+            </div>
+
+            <!-- Cart Items Container -->
+            <div id="cart-items-container">
+                <p style="text-align:center; color:#aaa; padding:40px 0;">Tu carrito está vacío.<br>Agrega servicios con el botón RESERVAR.</p>
+            </div>
+
+            <!-- Checkout Section (hidden until items in cart) -->
+            <div id="cart-checkout" style="display:none; margin-top:20px; border-top:2px solid var(--color-accent); padding-top:20px;">
+                <h3 style="font-family:var(--font-heading); color:var(--color-dark-pink); margin-bottom:15px;">Tus Datos</h3>
+                <input type="text" id="cart-client-name" class="booking-input" placeholder="Tu Nombre y Apellido" maxlength="30" style="margin-bottom:10px;" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')">
+                <input type="tel" id="cart-client-phone" class="booking-input" placeholder="Tu WhatsApp (10 dígitos)" maxlength="10" style="margin-bottom:10px;" oninput="this.value = this.value.replace(/\D/g, '')">
+                
+                <!-- ELIMINADO SELECTOR DE ESPECIALISTA MANUAL PARA EVITAR CONFUSIÓN -->
+                <button onclick="sendCartToWhatsApp()" class="btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <i class="fab fa-whatsapp" style="font-size:1.3rem;"></i> Agendar mis Citas
+                </button>
+            </div>
+        </div>
+
+        <!-- Selection Window (Subtle Blur / Transparent Glass) -->
+        <div id="specialist-window-overlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.2); z-index:10001; align-items:center; justify-content:center; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);">
+            <div style="background:rgba(255,255,255,0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-radius:15px; width:92%; max-width:380px; box-shadow:0 15px 40px rgba(0,0,0,0.1); overflow:hidden; animation: windowPop 0.3s ease; border: 1px solid rgba(255,255,255,0.3);">
+                <div style="padding:15px 20px; background:rgba(255,255,255,0.5); border-bottom:1px solid rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
+                    <h4 style="margin:0; color:var(--color-dark-pink); font-size:1rem; font-weight:700;">Selecciona Profesional</h4>
+                    <button type="button" onclick="closeSpecialistWindow()" style="background:none; border:none; font-size:1.4rem; color:#666; cursor:pointer;">&times;</button>
+                </div>
+                <div id="specialist-window-list" style="max-height:450px; overflow-y:auto; padding:10px 0;">
+                    <!-- Injected via script.js -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Overlay -->
+    <div id="cart-overlay" onclick="toggleCart()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(74,46,53,0.5); z-index:9998; backdrop-filter:blur(3px);"></div>
+
+    <!-- Promotion Modal (Announcements) -->
+    <div id="promo-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:10005; align-items:center; justify-content:center; padding:20px;">
+        <div id="promo-modal" class="glass-module reveal" style="max-width:420px; width:100%; max-height:90vh; overflow-y:auto; padding:28px 24px; text-align:center; position:relative; border: 2px solid var(--color-accent); overflow: visible; border-radius:24px;">
+            <!-- Close icon (X) -->
+            <button onclick="closePromo()" style="position: absolute; top: -14px; right: -14px; width: 36px; height: 36px; background: var(--color-accent); color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 10; font-size:0.9rem;">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div style="font-size:2.2rem; color:var(--color-accent); margin-bottom:10px;"><i class="fas fa-gift"></i></div>
+            <h2 id="promo-title" style="font-family:var(--font-heading); font-size:1.6rem; margin-bottom:10px; color:var(--color-dark-pink);">¡Oferta Especial!</h2>
+            <div id="promo-badge-large" style="background:var(--color-bg); color:var(--color-dark-pink); display:inline-block; padding:8px 20px; border-radius:12px; font-weight:800; font-size:1.5rem; margin-bottom:10px; border: 1.5px solid rgba(184,115,129,0.3);"></div>
+            
+            <!-- Category Display -->
+            <div id="promo-category-display" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; font-size: 0.85rem; color: var(--color-dark-pink); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px;"></div>
+
+            <p id="promo-text" style="font-size:1.05rem; line-height:1.6; margin-bottom:18px; color:#fff; font-weight:700; text-shadow: 0 1px 4px rgba(0,0,0,0.5);"></p>
+
+            <button id="promo-accept-combo-btn" onclick="addComboToCart()" class="btn-primary" style="display:none; width:100%; margin-bottom:12px; padding:14px; font-size:1rem; border-radius:14px; letter-spacing:1px; box-shadow: 0 8px 20px rgba(184,115,129,0.3);">
+                <i class="fas fa-magic"></i> ¡OFERTA! AGENDAR COMBO
+            </button>
+
+            <!-- Countdown Timer -->
+            <div id="promo-countdown" style="display:none; margin-bottom:14px; padding:12px; background:rgba(184,115,129,0.08); border-radius:12px; border: 1px dashed var(--color-accent);">
+                <p style="font-size:0.7rem; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight: 700;">🔥 La oferta termina en:</p>
+                <div id="promo-timer-display" style="font-family:monospace; font-size:1.3rem; font-weight:700; color:var(--color-dark-pink); display:flex; justify-content:center; gap:8px;">
+                    <!-- JS will inject time here -->
+                </div>
+            </div>
+
+            <button onclick="closePromo()" class="btn-primary" style="width:100%; padding:13px; font-size:0.95rem; text-transform:uppercase; letter-spacing:1px; font-weight:700;">¡ME ENCANTA, GRACIAS!</button>
+        </div>
+    </div>
+
+    <!-- Image Zoom Modal -->
+    <div id="image-zoom-modal" class="zoom-modal" onclick="closeImageZoom()">
+        <span class="zoom-close">&times;</span>
+        <img class="zoom-content" id="zoomed-image">
+    </div>
+
+    <!-- Category Gallery Modal (Models) -->
+    <div id="category-gallery-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:10010; align-items:center; justify-content:center;">
+        <div class="glass-module" style="max-width:900px; width:95%; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; padding:0; border:2px solid var(--color-accent); border-radius:30px; box-shadow:0 30px 60px rgba(0,0,0,0.25);">
+            <!-- Header -->
+            <div style="padding:25px 30px; border-bottom:1px solid rgba(184,115,129,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.95);">
+                <div>
+                    <h2 id="cat-gallery-title" style="margin:0; font-family:var(--font-heading); color:var(--color-dark-pink); font-size:1.8rem;">Galería de Modelos</h2>
+                    <p style="margin:5px 0 0 0; color:#888; font-size:0.9rem;">Elige el estilo que más te guste y resérvalo ahora.</p>
+                </div>
+                <button onclick="closeCategoryGallery()" style="width:40px; height:40px; border-radius:50%; background:var(--color-accent); color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.2rem; transition:0.3s; box-shadow:0 4px 10px rgba(0,0,0,0.1);" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Body (Scrollable Grid) -->
+            <div id="cat-gallery-body" style="flex:1; overflow-y:auto; padding:30px; display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:20px; background:rgba(255,255,255,0.2);">
+                <!-- Dinámico -->
+            </div>
+
+            <!-- Footer -->
+            <div id="cat-gallery-footer" style="padding:20px 30px; border-top:1px solid rgba(184,115,129,0.1); display:none; justify-content:center; gap:15px; background:rgba(255,255,255,0.95);">
+                <button id="cat-gallery-zoom-btn" onclick="zoomGalleryImage()" class="btn-secondary" style="padding:15px 25px; border-radius:15px; width:auto; font-weight:700; background:#f5f5f5; color:#555; border:1px solid #ddd; transition: all 0.3s ease;">
+                    <i class="fas fa-search-plus"></i> AMPLIAR IMAGEN
+                </button>
+                <button id="cat-gallery-reserve-btn" class="btn-primary" style="padding:15px 40px; border-radius:15px; width:auto; font-weight:700; letter-spacing:1px; box-shadow:0 10px 20px rgba(184,115,129,0.2);">
+                    <i class="fas fa-calendar-check"></i> RESERVAR ESTE ESTILO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: AGENDA VISUAL DINÁMICA (REPLICA ADMIN) -->
+    <div id="visual-agenda-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:#333;">
+        <div style="background:white; border-radius:25px; width:95%; height:94%; max-width:1500px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,0.4); animation: windowPop 0.3s forwards; border: 1px solid rgba(255,255,255,0.2);">
+            <!-- Header Ventana (Título + Fecha + Cerrar en una sola fila, igual que Admin) -->
+            <div style="padding:15px 20px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; gap:15px; background:#fff;">
+                <div style="flex:1; min-width:0;">
+                    <div class="agenda-header-responsive-wrapper">
+                        <i class="fas fa-th agenda-icon-responsive"></i>
+                        <h2 class="agenda-title-responsive">Cuadrícula<span class="desktop-only-space"> </span><br class="mobile-only-br">de Turnos</h2>
+                    </div>
+                    <p class="agenda-subtitle-responsive">Revisa el horario y disponibilidad.</p>
+                </div>
+                <div style="position:relative; display:flex; align-items:center;">
+                    <input type="date" id="public-agenda-date" class="booking-input" onchange="renderPublicVisualAgendaGrid()" style="width:135px; cursor:pointer; border:2px solid #eee; height:44px; font-size:0.9rem; border-radius:12px;" onclick="this.showPicker()">
+                </div>
+                <button onclick="closePublicVisualAgenda()" style="background:#ffeff2; border:none; width:42px; height:42px; border-radius:50%; font-size:1.4rem; cursor:pointer; color:var(--color-dark-pink); transition:0.3s; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.05); flex-shrink:0;" onmouseover="this.style.background='#ffdbe2'" onmouseout="this.style.background='#ffeff2'">&times;</button>
+            </div>
+            
+            <!-- Lienzo de la Cuadrícula -->
+            <div id="public-grid-canvas" style="flex:1; overflow:auto; padding:30px; background:#fbfbfb;">
+                <!-- Generado por JS -->
+            </div>
+
+            <!-- Footer con Leyenda -->
+            <div style="padding:15px 35px; background:#fff; border-top:1px solid #f0f0f0; display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
+                <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(var(--accent-rgb), 0.15); border:1px solid var(--color-accent); border-radius:3px;"></div> Horario Reservado</div>
+                <div style="margin-left:auto; color:#999; font-weight:normal;">Margaritasmit Beauty Studio &copy; 2026</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="firebase_app.js?v=20260423.01"></script>
+    <script src="script.js?v=20260423.01" defer></script>
+</body>
+</html>

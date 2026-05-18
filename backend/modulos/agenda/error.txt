@@ -1,0 +1,38 @@
+﻿node : C:\Users\Allenmar\D
+ocuments\Pagina web 
+Margarita\script.js:558
+En línea: 1 Carácter: 1
++ node -c script.js 2>&1 
+| Out-File error.txt 
+-Encoding UTF8
++ ~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (C  
+  :\Users\Allenm...a\sc   
+ ript.js:558:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+};
+^
+
+SyntaxError: Missing 
+catch or finally after try
+    at 
+internalCompileFunction 
+(node:internal/vm:73:18)
+    at wrapSafe (node:inte
+rnal/modules/cjs/loader:11
+53:20)
+    at node:internal/main/
+check_syntax:80:41
+    at loadESM (node:inter
+nal/process/esm_loader:40:
+13)
+    at checkSyntax (node:i
+nternal/main/check_syntax:
+80:21)
+
+Node.js v20.5.1

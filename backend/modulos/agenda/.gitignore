@@ -1,0 +1,20 @@
+# Node modules
+node_modules/
+
+# Scratch and backups
+scratch/
+*_backup_*
+*.ps1
+package-lock.json
+
+# System files
+Thumbs.db
+.DS_Store
+
+# Brain artifacts (internal)
+.gemini/
+brain/
+
+# Temp files
+*.tmp
+*.log

@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" id="app-favicon" href="assets/logo-default.png" type="image/png">
+    <title>Panel de Administración</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Image Compression -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    
+    <!-- Flash Prevention -->
+    <script>
+        (function() {
+            document.documentElement.classList.add('is-admin-route');
+            
+            try {
+                const stateRaw = localStorage.getItem('streetfeed_state');
+                if (stateRaw) {
+                    const state = JSON.parse(stateRaw);
+                    if (state && state.config) {
+                        const root = document.documentElement;
+                        if (state.config.themeAccent) {
+                            const accent = state.config.themeAccent;
+                            const bgUrl = state.config.themeBg || 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1920&auto=format&fit=crop';
+                            root.style.setProperty('--accent', accent);
+                            root.style.setProperty('--primary', accent);
+                            root.style.setProperty('--primary-glow', accent + '4d');
+                            root.style.setProperty('--theme-accent', accent);
+                            root.style.setProperty('--theme-bg-url', `url('${bgUrl}')`);
+                        }
+                        if (state.config.storeOpen === false && window.location.hash !== '#admin') {
+                            root.classList.add('init-store-closed');
+                        }
+                    }
+                }
+            } catch(e) {}
+        })();
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css?v=2.1">
+    <link rel="stylesheet" href="css/admin.css?v=4.26">
+    <!-- Disable public logo shimmer on admin panel -->
+    <style>
+        .logo-text::after { display: none !important; }
+        .logo-glow-layer { display: none !important; }
+        .logo-base {
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+            -webkit-text-fill-color: #ffffff !important;
+            animation: none !important;
+        }
+        .logo-base span {
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+            -webkit-text-fill-color: var(--primary) !important;
+            animation: none !important;
+        }
+    </style>
+    <!-- Chart.js for Pro Graphics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Rotate Phone Overlay (solo teléfonos en vertical) -->
+        <div id="rotate-overlay" class="rotate-overlay">
+            <div class="rotate-overlay-inner">
+                <div class="rotate-phone-icon">
+                    📱
+                </div>
+                <div class="rotate-arrow">↻</div>
+                <h2 class="rotate-title">Gira tu teléfono o tablet</h2>
+                <p class="rotate-desc">Para una mejor experiencia en el panel de control, usa el modo <strong>horizontal</strong>.</p>
+                <button id="rotate-dismiss-btn" onclick="dismissRotateHint()" style="margin-top:1.2rem; padding:0.65rem 1.8rem; border-radius:999px; border:none; background:var(--theme-accent,#f7931e); color:#fff; font-weight:800; font-size:0.95rem; cursor:pointer; font-family:'Outfit',sans-serif; box-shadow:0 4px 15px rgba(247,147,30,0.3);">
+                    Entendido ✓
+                </button>
+            </div>
+        </div>
+
+        <script>
+            (function() {
+                const overlay = document.getElementById('rotate-overlay');
+
+                function isPortraitTouch() {
+                    return window.matchMedia('(orientation: portrait)').matches &&
+                           window.matchMedia('(any-pointer: coarse)').matches;
+                }
+
+                function showOverlay() {
+                    if (overlay) overlay.style.display = 'flex';
+                }
+
+                function hideOverlay() {
+                    if (overlay) overlay.style.display = 'none';
+                }
+
+                window.dismissRotateHint = function() {
+                    hideOverlay();
+                };
+
+                // Mostrar siempre que entre o recargue en vertical
+                if (isPortraitTouch()) {
+                    showOverlay();
+                }
+
+                // Al girar a horizontal: ocultar
+                window.addEventListener('orientationchange', function() {
+                    setTimeout(function() {
+                        if (!window.matchMedia('(orientation: portrait)').matches) {
+                            hideOverlay();
+                        }
+                    }, 300);
+                });
+            })();
+        </script>
+
+        <!-- Background Elements -->
+        <div class="bg-blur-1"></div>
+        <div class="bg-blur-2"></div>
+
+        <!-- Navigation Bar (Admin) -->
+
+
+
+            <!-- Login View -->
+            <section id="login-view" class="hidden">
+                <div class="login-container glass">
+                    <div class="sidebar-logo" id="admin-login-logo" style="text-align: center; margin-bottom: 2rem; opacity: 0; transition: opacity 0.3s ease;"></div>
+                    <h2 class="font-serif" style="text-align: center; margin-bottom: 2rem;">Panel de Gestión</h2>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label>Usuario</label>
+                            <input type="text" id="login-user" required placeholder="Escribe tu usuario">
+                        </div>
+                        <div class="form-group">
+                            <label>Contraseña</label>
+                            <input type="password" id="login-pass" required placeholder="•••••••••">
+                        </div>
+                        <button type="submit" class="btn-primary w-full" style="margin-top: 1rem; padding: 1rem;">Entrar al Sistema</button>
+                        <button type="button" id="back-to-menu" class="btn-secondary w-full" style="margin-top: 0.5rem; background: transparent; border: none;">Volver al Menú</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Admin Dashboard View -->
+            <section id="admin-view" class="hidden admin-container-wrapper">
+                <aside class="admin-sidebar">
+                    <div class="sidebar-top">
+                        <div class="sidebar-logo" id="admin-sidebar-logo" style="opacity: 0; transition: opacity 0.3s ease;"></div>
+                        <div class="sidebar-logo-collapsed" id="admin-sidebar-logo-collapsed" style="display: none; opacity: 0; transition: opacity 0.3s ease;"></div>
+                    </div>
+                    <nav class="sidebar-nav">
+                        <button class="sidebar-btn active" data-tab="orders-tab" title="Gestión de Pedidos">
+                            <i data-lucide="shopping-bag"></i>
+                            <span>Pedidos</span>
+                            <span id="order-count-badge" class="order-badge-sidebar hidden">0</span>
+                        </button>
+                        <button class="sidebar-btn" data-tab="items-tab" title="Inventario">
+                            <i data-lucide="package"></i>
+                            <span>Inventario</span>
+                        </button>
+                        <button class="sidebar-btn" data-tab="combos-tab" title="Combos & Promos">
+                            <i data-lucide="gift"></i>
+                            <span>Combos</span>
+                        </button>
+                        <button class="sidebar-btn" data-tab="stats-tab" title="Métricas y Estadísticas">
+                            <i data-lucide="bar-chart-2"></i>
+                            <span>Métricas</span>
+                        </button>
+                        <button class="sidebar-btn" data-tab="history-tab" title="Historial de Pedidos">
+                            <i data-lucide="clock"></i>
+                            <span>Historial</span>
+                        </button>
+                        <button class="sidebar-btn" data-tab="config-tab" title="Configuración">
+                            <i data-lucide="settings"></i>
+                            <span>Ajustes</span>
+                        </button>
+                    </nav>
+                    <div class="sidebar-bottom">
+                        <button id="admin-logout" class="sidebar-btn" title="Salir al Menú">
+                            <i data-lucide="log-out"></i>
+                        </button>
+                    </div>
+                </aside>
+
+                <main class="admin-main">
+                    <div class="admin-header-main">
+                        <h2 class="font-serif" style="margin: 0; font-size: 1.6rem;">Panel de <span class="accent">Control</span></h2>
+                        
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <!-- Theme Toggle -->
+                            <button id="theme-toggle" class="theme-toggle-btn" title="Cambiar modo claro/oscuro">
+                                <span id="theme-icon-container">
+                                    <i data-lucide="moon" id="theme-icon"></i>
+                                </span>
+                                <span id="theme-text">Modo Noche</span>
+                            </button>
+
+                            <div class="admin-user-badge">
+                                <i data-lucide="user-circle" style="width: 20px; height: 20px; color: var(--theme-accent);"></i>
+                                <span id="admin-name-display">Administrador</span>
+                            </div>
+
+                            <!-- Mobile Landscape Logout Button -->
+                            <button id="admin-logout-mobile" class="theme-toggle-btn admin-logout-mobile" title="Salir al Menú" style="display: none; color: #ff5252; padding: 0.5rem 0.8rem;">
+                                <i data-lucide="log-out"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="items-tab" class="admin-tab-content hidden">
+                        <div class="admin-stats-grid">
+                            <div class="admin-stat-card">
+                                <span class="label">Total Productos</span>
+                                <span id="stat-total-dishes" class="value">0</span>
+                            </div>
+                            <div class="admin-stat-card">
+                                <span class="label">Categorías</span>
+                                <span id="stat-total-cats" class="value">0</span>
+                            </div>
+                            <div class="admin-stat-card">
+                                <span class="label">Estado Sistema</span>
+                                <span class="value" style="color: var(--success); font-size: 1.2rem;">● Online</span>
+                            </div>
+                        </div>
+                        
+                        <div class="admin-action-btns-row">
+                            <button id="add-cat-btn" class="admin-action-btn admin-action-btn--secondary" style="width: 100%;">
+                                <i data-lucide="folder-plus"></i>
+                                <span>Nueva Categoría</span>
+                            </button>
+                        </div>
+
+                        <div class="admin-table-container">
+                            <div id="admin-inventory-accordion">
+                                <!-- Category groups injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COMBOS & DESCUENTOS TAB -->
+                    <div id="combos-tab" class="admin-tab-content hidden">
+                        <div class="admin-subtabs" style="margin-bottom: 1.5rem;">
+                            <button type="button" class="subtab-btn promo-subtab-btn active" data-section="promo-combos-sec">🎁 Paquetes (Combos)</button>
+                            <button type="button" class="subtab-btn promo-subtab-btn" data-section="promo-discounts-sec">🏷️ Descuentos a Productos</button>
+                        </div>
+
+                        <div id="promo-combos-sec" class="promo-sub-section">
+                            <div class="admin-action-btns-row" style="margin-bottom: 1.5rem;">
+                                <button id="add-combo-btn" class="admin-action-btn admin-action-btn--primary">
+                                    <i data-lucide="plus-circle"></i>
+                                    <span>Nuevo Combo</span>
+                                </button>
+                            </div>
+                            <div id="admin-combos-list">
+                                <!-- Combo cards injected by admin.js -->
+                            </div>
+                        </div>
+
+                        <div id="promo-discounts-sec" class="promo-sub-section hidden">
+                            <div class="admin-action-btns-row" style="margin-bottom: 1.5rem;">
+                                <button id="add-discount-btn" class="admin-action-btn admin-action-btn--primary">
+                                    <i data-lucide="plus-circle"></i>
+                                    <span>Aplicar Descuento a Producto</span>
+                                </button>
+                            </div>
+                            <div id="admin-discounts-list">
+                                <!-- Discount cards injected by admin.js -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="stats-tab" class="admin-tab-content hidden">
+                        <div class="stats-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <div>
+                                <h2 class="font-serif">Dashboard Administrativo</h2>
+                                <p style="color: var(--text-dim);">Análisis inteligente de tu negocio.</p>
+                            </div>
+                            <div class="stats-filters-wrapper">
+                                <div class="stats-filters glass">
+                                    <!-- Reset Button (Unified inside) -->
+                                    <button id="reset-stats-btn" class="btn-reset-stats" title="Limpiar datos">
+                                        <i data-lucide="refresh-cw"></i> <span>Reset</span>
+                                    </button>
+
+                                    <!-- Specific Date Picker -->
+                                    <div id="stats-date-wrapper" class="date-picker-mini" title="Buscar día específico">
+                                        <i data-lucide="calendar"></i>
+                                        <input type="date" id="stats-date-filter">
+                                    </div>
+
+                                    <!-- Custom Range Dropdown -->
+                                    <div class="custom-dropdown" id="range-dropdown">
+                                        <div class="dropdown-trigger" id="range-trigger">
+                                            <span id="current-range">Hoy</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="today" class="active">Hoy</li>
+                                            <li data-value="week">7 Días</li>
+                                            <li data-value="fortnight">15 Días</li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Custom Month Dropdown -->
+                                    <div class="custom-dropdown" id="month-dropdown">
+                                        <div class="dropdown-trigger" id="month-trigger">
+                                            <span id="current-month">Meses...</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="">Meses...</li>
+                                            <li data-value="0">Enero</li>
+                                            <li data-value="1">Febrero</li>
+                                            <li data-value="2">Marzo</li>
+                                            <li data-value="3">Abril</li>
+                                            <li data-value="4">Mayo</li>
+                                            <li data-value="5">Junio</li>
+                                            <li data-value="6">Julio</li>
+                                            <li data-value="7">Agosto</li>
+                                            <li data-value="8">Septiembre</li>
+                                            <li data-value="9">Octubre</li>
+                                            <li data-value="10">Noviembre</li>
+                                            <li data-value="11">Diciembre</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Cards Grid -->
+                        <div class="metrics-grid">
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(76, 175, 80, 0.1); color: #4caf50;">
+                                    <i data-lucide="dollar-sign"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Ingresos Totales</span>
+                                    <span class="metric-value" id="stat-revenue">$0</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(33, 150, 243, 0.1); color: #2196f3;">
+                                    <i data-lucide="receipt"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Ticket Promedio</span>
+                                    <span class="metric-value" id="stat-avg-ticket">$0</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(255, 82, 82, 0.1); color: #ff5252;">
+                                    <i data-lucide="trending-up"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Producto Estrella</span>
+                                    <span class="metric-value" id="stat-top-seller" style="font-size: 1.1rem; margin-top: 0.3rem;">---</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Charts Quad Grid -->
+                        <div class="charts-container-grid quad-grid">
+                            <!-- Q1: Sales Trend -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="trending-up" style="color: #e91e63; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Tendencia Diaria</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Flujo de ventas en el tiempo.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-sales-trend"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Q2: Category Distribution -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="pie-chart" style="color: #2196f3; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ventas por Categoría</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Distribución de demanda por sección.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-categories"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Q3: Monthly Totals -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="bar-chart-3" style="color: #4caf50; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ingresos Mensuales</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Comparativa de rendimiento anual.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-monthly-revenue"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Q4: Top Products -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="award" style="color: #f7931e; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Top 5 Productos</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Los más pedidos en este periodo.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-top-products"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Orders Management -->
+                    <div id="orders-tab" class="admin-tab-content">
+                        <div class="tab-header-pro" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                            <h2 class="font-serif">Gestión de Pedidos</h2>
+                            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                                <!-- Sub-tabs: only Entrantes and Pendientes -->
+                                <div class="order-sub-tabs glass" style="display: flex; padding: 0.3rem; border-radius: 12px; gap: 0.3rem;">
+                                    <button class="sub-tab-btn active" data-subtab="incoming" style="padding: 0.6rem 1rem; border: 1px solid transparent; border-radius: 8px; background: var(--theme-accent); color: #fff; font-weight: 700; cursor: pointer; transition: all 0.2s; flex: 1; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                        Entrantes
+                                        <span id="badge-incoming" style="background: #4caf50; color: #fff; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 900; display: none;">0</span>
+                                    </button>
+                                    <button class="sub-tab-btn" data-subtab="pending" style="padding: 0.6rem 1rem; border: 1px solid var(--glass-border); border-radius: 8px; background: transparent; color: var(--text-dim); font-weight: 700; cursor: pointer; transition: all 0.2s; flex: 1; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                        Pendientes
+                                        <span id="badge-pending" style="background: #4caf50; color: #fff; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 900; display: none;">0</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Bar: New Order & Search -->
+                        <div id="orders-action-bar" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
+                            <button id="btn-new-manual-order" title="Agregar pedido manual" style="padding: 0.8rem 1.2rem; border: none; border-radius: 12px; background: var(--theme-accent); color: #fff; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; transition: all 0.2s; white-space: nowrap;">
+                                <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Nuevo Pedido
+                            </button>
+                            <div id="orders-search-container" style="flex-grow: 1;">
+                                <div style="position: relative;">
+                                    <i data-lucide="search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); width: 16px; color: var(--text-dim); pointer-events: none;"></i>
+                                    <input type="text" id="orders-search-input" placeholder="Buscar por nombre, teléfono, #pedido..." style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: inherit; font-size: 0.9rem;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Incoming Orders List -->
+                        <div id="incoming-orders-list" class="orders-container-pro">
+                            <div class="empty-state-orders" style="text-align: center; padding: 6rem 2rem; color: var(--text-dim);">
+                                <i data-lucide="coffee" style="width: 64px; height: 64px; margin-bottom: 1.5rem; opacity: 0.2;"></i>
+                                <p style="font-size: 1.1rem; font-weight: 500;">Esperando nuevos pedidos...</p>
+                            </div>
+                        </div>
+
+                        <!-- Pending (Confirmed) Orders List -->
+                        <div id="pending-orders-list" class="orders-container-pro hidden">
+                            <div class="empty-state-orders" style="text-align: center; padding: 6rem 2rem; color: var(--text-dim);">
+                                <i data-lucide="timer" style="width: 64px; height: 64px; margin-bottom: 1.5rem; opacity: 0.2;"></i>
+                                <p style="font-size: 1.1rem; font-weight: 500;">No hay pedidos en preparación.</p>
+                            </div>
+                        </div>
+
+                        <!-- Order Settings Modal (Ventana Flotante) -->
+                        <div id="order-settings-modal" class="modal hidden" style="z-index: 100010;">
+                            <div class="modal-content glass" style="max-width: 450px; padding: 2.5rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8);">
+                                <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, var(--theme-accent) 0%, transparent 70%); opacity: 0.1; pointer-events: none;"></div>
+
+                                <button id="close-order-settings" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.05); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10;">
+                                    <i data-lucide="x" style="width: 18px;"></i>
+                                </button>
+
+                                <h3 class="font-serif" style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.8rem; font-size: 1.6rem;">
+                                    <i data-lucide="settings-2" style="color: var(--theme-accent); width: 28px; height: 28px;"></i> Configuración
+                                </h3>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 1.8rem;">
+                                    <div class="form-group">
+                                        <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; font-size: 0.95rem; color: var(--text-dim);">Precio del Domicilio</label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
+                                            <span style="font-weight: 800; color: var(--theme-accent); font-size: 1.2rem;">$</span>
+                                            <input type="text" id="config-delivery-price" placeholder="5.000" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; font-size: 0.95rem; color: var(--text-dim);">Cantidad de Mesas</label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
+                                            <i data-lucide="utensils" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
+                                            <input type="number" id="config-table-count" placeholder="10" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button id="save-order-settings" style="margin-top: 2.5rem; width: 100%; padding: 1.2rem; background: var(--theme-accent); border: none; border-radius: 18px; color: #fff; font-weight: 900; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.8rem; transition: all 0.3s; box-shadow: 0 8px 25px rgba(255, 107, 0, 0.2);">
+                                    <i data-lucide="save"></i> Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: History -->
+                    <div id="history-tab" class="admin-tab-content hidden">
+                        <div class="tab-header-pro" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                            <h2 class="font-serif">Historial de Pedidos</h2>
+                        </div>
+
+
+                        <!-- Barra de Herramientas -->
+                        <div class="history-tools glass" style="margin-bottom: 1.5rem; padding: 1rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: nowrap;">
+                                <div style="position: relative; height: 42px; cursor: pointer; flex-shrink: 0;" onclick="document.getElementById('history-date-filter').showPicker()">
+                                    <input type="date" id="history-date-filter" class="admin-input" style="height: 42px; padding: 0 1rem 0 2.5rem; border-radius: 10px; font-weight: 700; color: var(--text); cursor: pointer; margin-bottom: 0; width: 160px;">
+                                    <i data-lucide="calendar" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 16px; color: var(--theme-accent); pointer-events: none;"></i>
+                                </div>
+                                <button id="clear-history-filter" class="admin-btn-secondary" style="height: 42px; padding: 0 1rem; border-radius: 10px; font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; margin-bottom: 0; width: fit-content; white-space: nowrap; flex-shrink: 0;" title="Ver Todo">VER TODO</button>
+                                <div style="position: relative; height: 42px; flex-grow: 1; max-width: 250px;">
+                                    <input type="text" id="history-search-filter" class="admin-input" placeholder="Nombre o Teléfono..." style="height: 42px; padding: 0 1rem 0 2.5rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0; width: 100%;">
+                                    <i data-lucide="search" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 16px; color: var(--theme-accent); pointer-events: none;"></i>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                <button id="export-pdf-btn" class="btn-primary" style="height: 42px; padding: 0 1.2rem; border-radius: 10px; font-weight: 800; font-size: 0.75rem; display: flex; align-items: center; gap: 0.5rem; background: #2e7d32; color: var(--text); border: none; box-shadow: 0 4px 10px rgba(46,125,50,0.2); margin-bottom: 0;">
+                                    <i data-lucide="file-text"></i> EXPORTAR PDF
+                                </button>
+                                <button id="clear-all-history" class="btn-primary" style="height: 42px; padding: 0 1.2rem; border-radius: 10px; font-weight: 800; font-size: 0.75rem; background: #c62828; color: var(--text); border: none; box-shadow: 0 4px 10px rgba(198,40,40,0.2); display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0;">
+                                    <i data-lucide="trash-2"></i> LIMPIAR
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Historial -->
+                        <div id="history-orders-list" class="orders-container-pro">
+                            <!-- Tarjetas de historial inyectadas por JS -->
+                            <div id="history-list-content"></div>
+                        </div>
+                    </div>
+
+                    <div id="config-tab" class="admin-tab-content hidden">
+                        <div class="admin-subtabs">
+                            <button type="button" class="subtab-btn active" data-section="info-sec">Información</button>
+                            <button type="button" class="subtab-btn" data-section="security-sec">Seguridad</button>
+                            <button type="button" class="subtab-btn" data-section="hero-sec">Portada (Hero)</button>
+                            <button type="button" class="subtab-btn" data-section="footer-sec">Pie de Página</button>
+                            <button type="button" class="subtab-btn subtab-btn-accent" data-section="appearance-sec">🎨 Apariencia</button>
+                        </div>
+
+                        <form id="global-config-form">
+                            <div id="info-sec" class="config-sub-section">
+                                <div class="config-card">
+                                    <h3>Información del Negocio</h3>
+                                    <p>Configura los datos básicos y redes sociales de tu establecimiento.</p>
+                                    <div class="config-grid-2">
+                                        <div class="form-group">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <label style="margin-bottom: 0;">Nombre del Negocio</label>
+                                                <div style="display: flex; align-items: center; gap: 0.5rem;" title="Activar animación de brillo">
+                                                    <span style="font-size: 0.8rem; color: var(--text-dim);">Brillo Animado</span>
+                                                    <label class="toggle-switch">
+                                                        <input type="checkbox" id="conf-logo-anim" checked>
+                                                        <span class="toggle-slider"></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <input type="text" id="conf-name">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>WhatsApp para Pedidos</label>
+                                            <input type="text" id="conf-whatsapp">
+                                        </div>
+                                        <div class="form-group" style="grid-column: span 2;">
+                                            <label>Eslogan Corto</label>
+                                            <input type="text" id="conf-tagline">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Instagram (URL)</label>
+                                            <input type="text" id="conf-instagram">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Facebook (URL)</label>
+                                            <input type="text" id="conf-facebook">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="save-config-btn"><i data-lucide="save"></i> Guardar Cambios</button>
+                                </div>
+                            </div><!-- END info-sec -->
+
+                            <div id="security-sec" class="config-sub-section hidden">
+                                <div class="config-card" style="max-width: 600px; margin: 0 auto;">
+                                    <h3>Seguridad del Panel</h3>
+                                    <p>Actualiza tus credenciales de acceso administrativo.</p>
+                                    <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 2rem;">
+                                        <label>Contraseña Actual (Validación)</label>
+                                        <input type="password" id="conf-admin-old-pass" placeholder="Ingresa tu clave actual para autorizar cambios">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Nuevo Usuario</label>
+                                        <input type="text" id="conf-admin-user">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Nueva Contraseña</label>
+                                        <input type="password" id="conf-admin-pass">
+                                    </div>
+                                    <button type="submit" class="save-config-btn" style="width: 100%; justify-content: center;"><i data-lucide="shield-check"></i> Actualizar Seguridad</button>
+                                </div>
+                            </div>
+
+                            <div id="hero-sec" class="config-sub-section hidden">
+                                <div class="config-card">
+                                    <h3>Portada y Hero</h3>
+                                    <p>Personaliza la primera impresión que tienen tus clientes.</p>
+                                    <div class="form-group">
+                                        <label>Título Parte 1</label>
+                                        <input type="text" id="conf-hero-t1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Palabra Resaltada</label>
+                                        <input type="text" id="conf-hero-highlight">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Título Parte 2</label>
+                                        <input type="text" id="conf-hero-t2">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Descripción Principal</label>
+                                        <textarea id="conf-hero-desc" rows="3"></textarea>
+                                    </div>
+                                    <div class="config-grid-2">
+                                        <div class="form-group">
+                                            <label>Tiempo Prep.</label>
+                                            <input type="text" id="conf-hero-time">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Puntaje Estrellas</label>
+                                            <input type="text" id="conf-hero-rating">
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                                        <!-- Manual Upload (penultimo) -->
+                                        <div>
+                                            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-dim);">O sube una imagen desde tu dispositivo</label>
+                                            <div class="file-upload-container" style="max-width: 400px;">
+                                                <button type="button" class="admin-btn-secondary" onclick="document.getElementById('conf-hero-img-file').click()">
+                                                    <i data-lucide="upload"></i> Seleccionar Imagen del Dispositivo
+                                                </button>
+                                                <input type="file" id="conf-hero-img-file" accept="image/*" class="file-input">
+                                                <div class="file-preview" id="hero-img-preview" style="aspect-ratio:16/9; width:100%; border:2px dashed var(--glass-border); border-radius:12px; overflow:hidden; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; min-height: 120px;">
+                                                    <span style="color:var(--text-dim); font-size:0.85rem;">Sin imagen seleccionada</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pexels Image Search Module (ultimo) -->
+                                        <div class="pexels-search-module" style="padding: 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px;">
+                                            <div class="admin-cat-title" style="margin-bottom: 1rem;">
+                                                <i data-lucide="search"></i>
+                                                <span>Buscador de Imágenes Pro (Pexels)</span>
+                                            </div>
+                                            <div class="pexels-search-bar" style="display: flex; gap: 0.8rem; margin-bottom: 1rem;">
+                                                <input type="text" id="pexels-search-input" placeholder="Ej: Hamburguesa gourmet, Pizza, Steak..." style="flex: 1;">
+                                                <button type="button" class="btn-primary" id="pexels-search-btn" style="padding: 0.8rem 1.5rem; white-space: nowrap;">
+                                                    <i data-lucide="camera"></i> Buscar
+                                                </button>
+                                            </div>
+                                            <div id="pexels-results-wrapper" class="pexels-results-wrapper" style="display: none;">
+                                                <div id="pexels-results-grid" class="pexels-results-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; max-height: 380px; overflow-y: auto; padding-right: 0.5rem;">
+                                                </div>
+                                                <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.75rem; text-align: center;">Haz clic en una imagen para aplicarla instantáneamente.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="save-config-btn" style="margin-top: 2rem;"><i data-lucide="save"></i> Guardar Cambios en Portada</button>
+                                </div>
+                            </div>
+
+                            <div id="footer-sec" class="config-sub-section hidden">
+                                <div class="config-card">
+                                    <h3>Estado Operativo</h3>
+                                    <p>Controla si la tienda está abierta o cerrada en tiempo real.</p>
+                                    
+                                    <div class="status-control">
+                                        <div class="status-info">
+                                            <h4>Interruptor de Tienda</h4>
+                                            <span id="current-status-label">ABIERTO AHORA</span>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="conf-store-open">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="date-inputs-row">
+                                        <div class="form-group">
+                                            <label>Cerrado Desde</label>
+                                            <input type="datetime-local" id="conf-closed-from">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Cerrado Hasta</label>
+                                            <input type="datetime-local" id="conf-closed-until">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Mensaje de Aviso para Clientes</label>
+                                        <input type="text" id="conf-closed-msg" placeholder="Ej: Volvemos mañana a las 11:00 AM">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Texto del Pie de Página</label>
+                                        <input type="text" id="conf-footer">
+                                    </div>
+
+                                    <button type="submit" class="save-config-btn"><i data-lucide="power"></i> Aplicar Estado</button>
+                                </div>
+                            </div>
+
+                            <div id="appearance-sec" class="config-sub-section hidden">
+                                <div class="config-card">
+                                    <h3>Identidad Visual</h3>
+                                    <p>Selecciona tu color de marca y el fondo de pantalla Ultra-HD.</p>
+
+                                    <!-- 0b. Master Themes Accordion -->
+                                    <div class="admin-cat-group" id="surface-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1rem;">
+                                        <button type="button" class="admin-cat-header" id="toggle-surface-btn" style="background: rgba(255,255,255,0.03);">
+                                            <div class="admin-cat-title">
+                                                <i data-lucide="palette"></i>
+                                                <span>Plantillas Premium (70 Temas)</span>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="accordion-icon"></i>
+                                        </button>
+                                        <div class="admin-cat-content" id="appearance-wrapper" style="padding: 1.5rem; display: none;">
+                                            <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.2rem;">Elige una de nuestras 70 plantillas premium. Cada una combina Fondo, Color de Acento y Tarjetas para un diseño perfecto.</p>
+
+                                            <!-- Mobile Layout Options -->
+                                            <div style="margin-bottom: 1.5rem; background: var(--surface-card); padding: 1rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                                                <label style="color: var(--text); font-weight: 600; font-size: 0.95rem; margin-bottom: 0.8rem; display: block;">Diseño del Encabezado (Modo Celular):</label>
+                                                <div style="display: flex; gap: 0.8rem;">
+                                                    <button type="button" class="layout-toggle-btn" data-layout="background" style="flex: 1; padding: 0.8rem; border-radius: 8px; border: 2px solid var(--glass-border); background: var(--surface); color: var(--text-dim); cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 500;">
+                                                        <i data-lucide="image"></i> Fondo
+                                                    </button>
+                                                    <button type="button" class="layout-toggle-btn" data-layout="right" style="flex: 1; padding: 0.8rem; border-radius: 8px; border: 2px solid var(--glass-border); background: var(--surface); color: var(--text-dim); cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 500;">
+                                                        <i data-lucide="layout"></i> Derecha
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Master Themes Gallery -->
+                                            <div id="theme-gallery-grid" class="master-themes-grid">
+                                                <!-- Dynamic themes will be rendered here -->
+                                            </div>
+
+                                            </div>
+
+                                    <!-- 0. Logo Upload Accordion -->
+                                    <div class="admin-cat-group" id="logo-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1rem;">
+                                        <button type="button" class="admin-cat-header" id="toggle-logo-btn" style="background: rgba(255,255,255,0.03);">
+                                            <div class="admin-cat-title">
+                                                <i data-lucide="image"></i>
+                                                <span>Logo del Negocio (Premium)</span>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="accordion-icon"></i>
+                                        </button>
+                                        <div class="admin-cat-content" id="logo-upload-wrapper" style="padding: 1.5rem; display: none;">
+                                            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 0.5rem;">Sube el logo de tu restaurante para el encabezado.</p>
+                                            <div style="background: rgba(247, 147, 30, 0.1); border-left: 3px solid var(--primary); padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                                <p style="font-size: 0.8rem; color: var(--text); margin: 0;"><strong>💡 Recomendación Pro:</strong></p>
+                                                <ul style="font-size: 0.75rem; color: var(--text-dim); margin: 0.3rem 0 0 1.2rem; padding: 0;">
+                                                    <li>Tamaño ideal: <strong>512 x 512 px</strong> (Cuadrado 1:1).</li>
+                                                    <li>Formato: <strong>PNG transparente</strong> (para un acabado premium).</li>
+                                                    <li>Evita bordes muy pegados al diseño.</li>
+                                                </ul>
+                                            </div>
+                                            <div class="file-upload-container" style="max-width: 280px; margin: 0 auto;">
+                                                <button type="button" class="admin-btn-secondary" onclick="document.getElementById('conf-logo-file').click()">
+                                                    <i data-lucide="image"></i> Seleccionar Logo
+                                                </button>
+                                                <input type="file" id="conf-logo-file" accept="image/*" class="file-input">
+                                                <div class="file-preview" id="logo-preview-box" style="aspect-ratio: 1/1; width: 100%; border-radius: 12px; background: rgba(255,255,255,0.03); border: 2px dashed var(--glass-border); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+                                                    <img id="logo-preview-img" src="assets/logo-default.png" style="width: 80%; height: 80%; object-fit: contain;">
+                                                </div>
+                                            </div>
+                                            <p style="text-align: center; font-size: 0.8rem; color: var(--text-dim); margin-top: 1rem;">Formatos: PNG, JPG, WEBP</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- 1. Biz Type Accordion -->
+                                    <div class="admin-cat-group" id="biz-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1rem;">
+                                        <button type="button" class="admin-cat-header" id="toggle-biz-btn" style="background: rgba(255,255,255,0.03);">
+                                            <div class="admin-cat-title">
+                                                <i data-lucide="briefcase"></i>
+                                                <span>Tipo de Negocio</span>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="accordion-icon"></i>
+                                        </button>
+                                        <div class="admin-cat-content" id="biz-type-wrapper" style="padding: 1.5rem; display: none;">
+                                            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1.5rem;">Selecciona tu categoría para configurar iconos y estilos automáticamente.</p>
+                                            <div class="biz-type-grid" id="biz-type-grid"></div>
+                                            
+                                            <div id="custom-emoji-row" class="form-group" style="display:none; margin-top:1.5rem; padding: 1.2rem; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--glass-border);">
+                                                <label>Emojis Personalizados (separados por espacio)</label>
+                                                <input type="text" id="conf-order-emojis" placeholder="Ej: 🥗 🥦">
+                                            </div>
+
+                                            <div id="biz-type-preview" class="biz-preview-card" style="margin-top: 1.5rem; flex-direction: column; align-items: stretch; gap: 0;"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 1.5 Promo Bubble Accordion -->
+                                    <div class="admin-cat-group" id="promo-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden;">
+                                        <button type="button" class="admin-cat-header" id="toggle-promo-btn" style="background: rgba(255,255,255,0.03);">
+                                            <div class="admin-cat-title">
+                                                <i data-lucide="gift"></i>
+                                                <span>Burbuja de Promociones (Pro)</span>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="accordion-icon"></i>
+                                        </button>
+                                        <div class="admin-cat-content" id="promo-wrapper" style="padding: 1.5rem; display: none;">
+                                            <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">Personaliza la cajita de sorpresas con colores vibrantes y animaciones 3D espectaculares.</p>
+                                            
+                                            <p class="appearance-section-title" style="margin-bottom: 1rem;">1. Estilo de Cajita (Colores 3D)</p>
+                                            <div class="color-swatches-row" id="promo-icon-selector" style="margin-bottom: 2rem;"></div>
+                                            
+                                            <p class="appearance-section-title" style="margin-bottom: 1rem;">2. Animación 3D (Efecto Visual)</p>
+                                            <div class="anim-selector-grid" id="promo-anim-selector" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Colors merged into Master Themes -->
+
+                                    <!-- 3. Wallpapers Accordion -->
+                                    <div class="admin-cat-group" id="wallpaper-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1rem;">
+                                        <button type="button" class="admin-cat-header" id="toggle-wp-btn" style="background: rgba(255,255,255,0.03);">
+                                            <div class="admin-cat-title">
+                                                <i data-lucide="image"></i>
+                                                <span>Fondos de Pantalla HD (40)</span>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="accordion-icon"></i>
+                                        </button>
+                                        <div class="admin-cat-content" id="wp-wrapper" style="padding: 1.5rem; display: none;">
+                                            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                                <!-- Upload Personalizado -->
+                                                <div>
+                                                    <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-dim);">O sube un fondo desde tu dispositivo</label>
+                                                    <div class="file-upload-container" style="max-width: 400px;">
+                                                        <button type="button" class="admin-btn-secondary" onclick="document.getElementById('conf-custom-bg-file').click()">
+                                                            <i data-lucide="upload-cloud"></i> Seleccionar Fondo del Dispositivo
+                                                        </button>
+                                                        <input type="file" id="conf-custom-bg-file" accept="image/*" class="file-input">
+                                                        <div class="file-preview" id="custom-bg-preview" style="aspect-ratio: 16/9; width: 100%; border: 2px dashed var(--glass-border); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); min-height: 120px;">
+                                                            <span style="color:var(--text-dim); font-size:0.85rem;">Sin fondo seleccionado</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Pexels Image Search Module (Fondos) -->
+                                                <div class="pexels-search-module" style="padding: 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px;">
+                                                    <div class="admin-cat-title" style="margin-bottom: 1rem;">
+                                                        <i data-lucide="search"></i>
+                                                        <span>Buscador de Imágenes Pro (Fondos)</span>
+                                                    </div>
+                                                    <div class="pexels-search-bar" style="display: flex; gap: 0.8rem; margin-bottom: 1rem;">
+                                                        <input type="text" id="pexels-bg-input" placeholder="Ej: Textura madera, Fondo oscuro, Abstracto..." style="flex: 1;">
+                                                        <button type="button" class="btn-primary" id="pexels-bg-btn" style="padding: 0.8rem 1.5rem; white-space: nowrap;">
+                                                            <i data-lucide="camera"></i> Buscar
+                                                        </button>
+                                                    </div>
+                                                    <div id="pexels-bg-wrapper" class="pexels-results-wrapper" style="display: none;">
+                                                        <div id="pexels-bg-grid" class="pexels-results-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; max-height: 380px; overflow-y: auto; padding-right: 0.5rem;">
+                                                        </div>
+                                                        <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.75rem; text-align: center;">Haz clic en un fondo para aplicarlo instantáneamente.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. Icons Accordion -->
+                                    <div class="admin-cat-group" id="icons-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1.5rem;">
+                                        <button type="button" class="admin-cat-header" id="toggle-icons-btn" style="background: rgba(255,255,255,0.03);">
+                                            <div class="admin-cat-title">
+                                                <i data-lucide="shopping-bag"></i>
+                                                <span>Iconos del Carrito (Premium)</span>
+                                            </div>
+                                            <i data-lucide="chevron-down" class="accordion-icon"></i>
+                                        </button>
+                                        <div class="admin-cat-content" id="icons-wrapper" style="padding: 1.5rem; display: none;">
+                                            <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">Explora cientos de iconos organizados por categoría para tu marca.</p>
+                                            
+                                            <div class="icon-browser-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center;">
+                                                <select id="icon-cat-filter" class="admin-select" style="max-width: 200px; margin-bottom: 0;">
+                                                    <option value="comida">🍔 Comida y Productos</option>
+                                                    <option value="dulces">🍦 Helados y Dulces</option>
+                                                    <option value="bebidas">🥤 Bebidas</option>
+                                                    <option value="tienda">🛍️ Tienda y Envío</option>
+                                                    <option value="premium">✨ Premium y Otros</option>
+                                                </select>
+                                                <div class="icon-nav-arrows" style="display: flex; gap: 0.5rem;">
+                                                    <button type="button" id="prev-icon-pg" class="wp-arrow" title="Anterior"><i data-lucide="chevron-left"></i></button>
+                                                    <button type="button" id="next-icon-pg" class="wp-arrow" title="Siguiente"><i data-lucide="chevron-right"></i></button>
+                                                </div>
+                                            </div>
+
+                                            <div class="icon-selector-grid" id="cart-icon-selector"></div>
+                                            <p id="icon-page-indicator" class="wp-page-indicator" style="margin-top: 1rem;">Página 1 de 1</p>
+                                        </div>
+                                    </div>
+
+
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </main>
+            </section>
+
+            <!-- Add Category Modal -->
+            <div id="cat-modal" class="modal hidden">
+                <div class="modal-content glass">
+                    <button class="modal-close" id="close-cat-modal"><i data-lucide="x"></i></button>
+                    <h2 class="font-serif" style="margin-bottom: 2rem;">Nueva Categoría</h2>
+                    <form id="cat-form" class="admin-form">
+                        <div class="form-group">
+                            <label>Nombre de la Categoría</label>
+                            <input type="text" id="cat-name" required placeholder="Ej: Salsas, Extras, Adiciones">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid var(--glass-border);">
+                            <label style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; margin-bottom: 0;">
+                                <input type="checkbox" id="cat-is-extras" style="width: 20px; height: 20px; accent-color: var(--theme-accent);">
+                                <div>
+                                    <span style="font-weight: 800; display: block; font-size: 0.95rem;">Categoría de Extras</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 500;">Sus productos se inyectarán como adiciones en todos los platos.</span>
+                                </div>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-primary w-full" style="margin-top: 1.5rem;">Crear Categoría</button>
+                    </form>
+                </div>
+            </div>
+
+
+
+            <!-- Prompt Modal -->
+            <div id="prompt-modal" class="modal hidden">
+                <div class="modal-content glass" style="max-width: 400px; text-align: center;">
+                    <h2 class="font-serif" id="prompt-title" style="margin-bottom: 1rem; font-size: 1.25rem;"></h2>
+                    <input type="text" id="prompt-input" class="admin-input" style="width: 100%; margin-bottom: 2rem; padding: 1rem; text-align: center; font-size: 1.1rem; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid var(--glass-border); color: var(--text);" />
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="prompt-cancel" class="btn-secondary w-full" style="padding: 1rem;">Cancelar</button>
+                        <button id="prompt-ok" class="btn-primary w-full" style="padding: 1rem;">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+
+
+        <!-- Admin Form Modal -->
+        <div id="admin-modal" class="modal hidden">
+            <div class="modal-content glass">
+                <button class="modal-close" id="close-admin-modal"><i data-lucide="x"></i></button>
+                <h2 class="font-serif" style="margin-bottom: 2rem;">Gestionar Producto</h2>
+                <form id="item-form" class="admin-form">
+                    <input type="hidden" id="edit-id">
+                    <div class="admin-form-grid-2">
+                        <div class="form-group">
+                            <label>Nombre del Producto</label>
+                            <input type="text" id="item-name" required placeholder="Ej: Super Burger">
+                        </div>
+                        <div class="form-group">
+                            <label>Precio Venta ($)</label>
+                            <input type="text" id="item-price" required placeholder="Ej: 29.000" inputmode="numeric">
+                        </div>
+                        <!-- Categoría hidden as it's now pre-filled from the inventory list -->
+                        <div class="form-group" style="display: none;">
+                            <label>Categoría</label>
+                            <select id="dish-cat" required></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción / Ingredientes</label>
+                        <textarea id="item-desc" rows="2" placeholder="Describe lo que lleva"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Imagen HD (Subir archivo)</label>
+                        <div class="file-upload-container">
+                            <button type="button" class="admin-btn-secondary" onclick="document.getElementById('item-img-file').click()">
+                                <i data-lucide="camera"></i> Seleccionar Imagen del Producto
+                            </button>
+                            <input type="file" id="item-img-file" accept="image/*" class="file-input">
+                            <div class="file-preview" id="item-img-preview" style="min-height: 150px; border: 2px dashed var(--glass-border); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); overflow: hidden;">
+                                <span>No hay imagen seleccionada</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <button type="submit" class="btn-primary w-full" style="margin-top: 1rem; padding: 1rem;">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Custom Confirm Modal (Modern Replace for window.confirm) -->
+        <div id="confirm-modal" class="modal hidden" style="z-index: 200000;">
+            <div class="modal-content glass" style="max-width: 400px; text-align: center; padding: 2.5rem;">
+                <div id="confirm-icon-circle" class="confirm-icon" style="width: 80px; height: 80px; background: rgba(76, 175, 80, 0.1); color: #4caf50; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; border: 2px solid rgba(76, 175, 80, 0.25); animation: pulse-alert 2s infinite; position: relative; font-size: 3rem; font-weight: 900; line-height: 1;">
+                    ?
+                </div>
+                <h3 class="font-serif" id="confirm-title" style="margin-bottom: 0.8rem; font-size: 1.4rem;">¿Estás seguro?</h3>
+                <p id="confirm-msg" style="color: var(--text-dim); margin-bottom: 2rem; line-height: 1.5;">Esta acción no se puede deshacer.</p>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="confirm-cancel-btn" class="btn-secondary w-full" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);">Cancelar</button>
+                    <button id="confirm-ok-btn" class="btn-primary w-full" style="background: #4caf50; border: none; color: #fff;">Aceptar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modern Month Picker Modal for PDF Export -->
+        <div id="month-picker-modal" class="modal hidden" style="z-index: 100000;">
+            <div class="modal-content glass" style="max-width: 500px; padding: 2rem; border-radius: 30px; position: relative;">
+                <button class="modal-close" onclick="document.getElementById('month-picker-modal').classList.add('hidden')" style="position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; color: var(--text-dim); cursor: pointer;"><i data-lucide="x"></i></button>
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <div style="width: 60px; height: 60px; background: rgba(var(--primary-rgb, 247, 147, 30), 0.1); color: var(--theme-accent); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                        <i data-lucide="calendar-range" style="width: 30px; height: 30px;"></i>
+                    </div>
+                    <h3 class="font-serif" style="font-size: 1.5rem; color: var(--text); margin-bottom: 0.5rem;">Reporte de Ventas</h3>
+                    <p style="color: var(--text-dim); font-size: 0.9rem;">Selecciona el mes que deseas descargar o elige el historial completo.</p>
+                </div>
+
+                <div class="month-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
+                    <!-- Months generated by JS -->
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                    <button id="month-all-btn" class="btn-primary" style="width: 100%; height: 50px; border-radius: 15px; font-weight: 800; background: var(--theme-accent); color: #fff; font-size: 0.9rem; margin: 0;">
+                        📄 TODO EL HISTORIAL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selective Delete Modal -->
+        <div id="delete-range-modal" class="modal hidden" style="z-index: 100001;">
+            <div class="modal-content glass" style="max-width: 480px; text-align: center; padding: 2.5rem; position: relative;">
+                <button class="modal-close" id="x-close-delete-range" style="position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; color: var(--text-dim); cursor: pointer;"><i data-lucide="x"></i></button>
+                
+                <h3 class="font-serif" style="margin-bottom: 0.5rem; font-size: 1.5rem;">Limpieza de Historial</h3>
+                <p style="color: var(--text-dim); margin-bottom: 2rem;">Selecciona el periodo que deseas borrar:</p>
+                
+                <div class="delete-options-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                    <button class="delete-opt-btn" data-range="today">
+                        <i data-lucide="calendar" style="display:block; margin: 0 auto 0.5rem; color: #4caf50;"></i>
+                        <span style="display:block; font-weight: 700; font-size: 0.9rem;">Hoy</span>
+                    </button>
+                    <button class="delete-opt-btn" data-range="week">
+                        <i data-lucide="calendar-days" style="display:block; margin: 0 auto 0.5rem; color: #2196f3;"></i>
+                        <span style="display:block; font-weight: 700; font-size: 0.9rem;">Esta Semana</span>
+                    </button>
+                    <button class="delete-opt-btn" data-range="month">
+                        <i data-lucide="bar-chart-3" style="display:block; margin: 0 auto 0.5rem; color: #ff9800;"></i>
+                        <span style="display:block; font-weight: 700; font-size: 0.9rem;">Este Mes</span>
+                    </button>
+                    <button class="delete-opt-btn" data-range="all">
+                        <i data-lucide="trash-2" style="display:block; margin: 0 auto 0.5rem; color: #ff5252;"></i>
+                        <span style="display:block; font-weight: 700; font-size: 0.9rem;">Todo</span>
+                    </button>
+                </div>
+                
+                <button id="execute-delete-btn" class="btn-primary w-full disabled" style="padding: 1.2rem; margin-bottom: 1rem; background: var(--theme-accent); color: #fff; font-weight: 800; opacity: 0.3; cursor: not-allowed; transition: all 0.3s;">
+                    Confirmar Selección
+                </button>
+                
+
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container"></div>
+
+
+
+        <!-- Combo Form Modal -->
+        <div id="combo-modal" class="modal hidden">
+            <div class="modal-content glass" style="max-width: 560px;">
+                <button class="modal-close" id="close-combo-modal"><i data-lucide="x"></i></button>
+                <h2 class="font-serif" style="margin-bottom: 1.5rem;">Gestionar Combo / Descuento</h2>
+                <form id="combo-form" class="admin-form">
+                    <input type="hidden" id="combo-edit-id">
+                    <div class="admin-form-grid-2">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Nombre del Combo</label>
+                            <input type="text" id="combo-name" required placeholder="Ej: Combo Bestia Supremo">
+                        </div>
+                        <div class="form-group">
+                            <label>Precio Final ($)</label>
+                            <input type="text" id="combo-price" required placeholder="Ej: 42.000" class="price-input">
+                        </div>
+                        <div class="form-group">
+                            <label><small style="display:block; width:100%; opacity:0.5; margin-bottom:0.2rem;">(para mostrar el ahorro)</small>Precio Original ($)</label>
+                            <input type="text" id="combo-original-price" placeholder="Ej: 56.000" class="price-input">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Descripción</label>
+                            <textarea id="combo-desc" rows="2" placeholder="Describe qué incluye el combo y por qué es especial"></textarea>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label><small style="display:block; width:100%; opacity:0.5; margin-bottom:0.2rem;">(Busca un producto o escribe y presiona Enter)</small>Ítems del Combo</label>
+                            <div class="tag-input-container" id="combo-tags-container" style="position: relative;">
+                                <!-- Tags will be injected here -->
+                                <input type="text" id="combo-items-input" class="tag-input-field" placeholder="Añadir ítem..." autocomplete="off">
+                                <div id="combo-autocomplete-dropdown" class="autocomplete-dropdown"></div>
+                            </div>
+                            <!-- Hidden input to store actual value for simple form submission fallback if needed, but we will handle it in JS -->
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Imagen HD (Subir archivo)</label>
+                            <div class="file-upload-container">
+                                <button type="button" class="admin-btn-secondary" onclick="document.getElementById('combo-img-file').click()">
+                                    <i data-lucide="gift"></i> Seleccionar Imagen del Combo
+                                </button>
+                                <input type="file" id="combo-img-file" accept="image/*" class="file-input">
+                                <div class="file-preview" id="combo-img-preview" style="min-height: 150px; border: 2px dashed var(--glass-border); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); overflow: hidden;">
+                                    <span>No hay imagen seleccionada</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Emoji (si no hay imagen)</label>
+                            <input type="text" id="combo-emoji" placeholder="🔥" maxlength="4">
+                        </div>
+                        <div class="form-group">
+                            <label><small style="display:block; width:100%; opacity:0.5; margin-bottom:0.2rem;">(opcional)</small>Fecha/Hora Expiración</label>
+                            <input type="datetime-local" id="combo-expires">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1.5rem; margin: 1rem 0; flex-wrap: wrap;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                            <input type="checkbox" id="combo-active" checked style="accent-color: var(--primary); width:18px; height:18px;">
+                            Activo (visible en menú)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                            <input type="checkbox" id="combo-limited" style="accent-color: var(--primary); width:18px; height:18px;">
+                            Tiempo Limitado (badge)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                            <input type="checkbox" id="combo-show-modal" style="accent-color: var(--primary); width:18px; height:18px;">
+                            Mostrar en Pop-Up al entrar
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary w-full" style="margin-top: 1rem; padding: 1rem;">
+                        <i data-lucide="save"></i> Guardar Combo
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Discount Form Modal -->
+        <div id="discount-modal" class="modal hidden">
+            <div class="modal-content glass" style="max-width: 500px;">
+                <button class="modal-close" id="close-discount-modal"><i data-lucide="x"></i></button>
+                <h2 class="font-serif" style="margin-bottom: 1.5rem;">Aplicar Descuento</h2>
+                <form id="discount-form" class="admin-form">
+                    <div class="admin-form-grid-2">
+                        <div class="form-group">
+                            <label>1. Filtrar por Categoría</label>
+                            <select id="discount-cat-filter" class="admin-select">
+                                <option value="todos">Todas las categorías</option>
+                                <!-- Categories injected by JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>2. Buscar Producto</label>
+                            <div style="position: relative;">
+                                <input type="text" id="discount-dish-search" class="admin-input" placeholder="Escribe el nombre del producto..." required autocomplete="off">
+                                <div id="discount-autocomplete-dropdown" class="autocomplete-dropdown"></div>
+                                <input type="hidden" id="discount-dish-id" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="admin-form-grid-2" style="margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label>Precio Original ($)</label>
+                            <input type="text" id="discount-original-price" class="price-input" disabled style="opacity: 0.7; background: rgba(255,255,255,0.05);">
+                        </div>
+                        <div class="form-group">
+                            <label>Nuevo Precio con Descuento ($)</label>
+                            <input type="text" id="discount-new-price" class="price-input" required placeholder="Ej: 25.000">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1.5rem; margin: 1.5rem 0;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                            <input type="checkbox" id="discount-active" checked style="accent-color: var(--primary); width:18px; height:18px;">
+                            Descuento Activo
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary w-full" style="padding: 1rem;">
+                        <i data-lucide="save"></i> Guardar Descuento
+                    </button>
+                </form>
+            </div>
+        </div>
+        <!-- Order Details Modal -->
+        <div id="order-details-modal" class="modal hidden" style="z-index: 100005;">
+            <div class="modal-content glass" style="max-width: 550px; padding: 0; overflow: hidden; border-radius: 24px;">
+                <div class="modal-header-pro" style="padding: 2rem; border-bottom: 1px solid var(--glass-border); position: relative; background: rgba(255,255,255,0.02);">
+                    <h3 class="font-serif" id="detail-order-id" style="font-size: 1.5rem;">Pedido #0000</h3>
+                    <p id="detail-order-date" style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.3rem;"></p>
+                    <button class="modal-close" id="close-order-details" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.05); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 18px;"></i></button>
+                </div>
+                <div class="modal-body-pro" style="padding: 2rem; max-height: 60vh; overflow-y: auto;">
+                    <div class="detail-section">
+                        <h4 style="color: var(--theme-accent); margin-bottom: 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800;">Información del Cliente</h4>
+                        <div class="detail-info-card" style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
+                            <p style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.8rem;" id="detail-customer-name">---</p>
+                            <div style="display: grid; gap: 0.6rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 140px; align-items: center; color: var(--text-dim); font-size: 0.9rem; gap: 1rem;">
+                                    <p style="display: flex; align-items: center; gap: 0.7rem; margin: 0;">
+                                        <i data-lucide="phone" style="width: 16px; color: var(--theme-accent);"></i> <span id="detail-customer-phone">---</span>
+                                    </p>
+                                    <div style="display: flex; align-items: center; gap: 0.7rem;">
+                                        <i data-lucide="credit-card" style="width: 16px; color: var(--theme-accent);"></i> <span id="detail-customer-payment">---</span>
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 140px; align-items: center; color: var(--text-dim); font-size: 0.9rem; gap: 1rem;">
+                                    <p style="display: flex; align-items: center; gap: 0.7rem; margin: 0;">
+                                        <i data-lucide="map-pin" style="width: 16px; color: var(--theme-accent);"></i> <span id="detail-customer-address">---</span>
+                                    </p>
+                                    <div style="display: flex; align-items: center; gap: 0.7rem;">
+                                        <i data-lucide="truck" style="width: 16px; color: var(--theme-accent);"></i> <span id="detail-customer-delivery-fee" style="font-weight: 800; color: #4caf50 !important;">Gratis</span>
+                                    </div>
+                                </div>
+                                <p id="detail-customer-note-row" style="display: flex; align-items: flex-start; gap: 0.7rem; color: var(--text-dim); font-size: 0.9rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom: 0;">
+                                    <i data-lucide="message-square" style="width: 16px; color: var(--theme-accent); margin-top: 2px;"></i> <span id="detail-customer-note">---</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h4 style="color: var(--theme-accent); margin-bottom: 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800;">Detalle del Pedido</h4>
+                        <div id="detail-items-list" style="display: grid; gap: 0.8rem; margin-bottom: 2rem;">
+                            <!-- Items dinámicos -->
+                        </div>
+                    </div>
+                    <div class="detail-total glass" style="padding: 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to right, rgba(247, 147, 30, 0.1), transparent); border: 1px solid rgba(247, 147, 30, 0.2);">
+                        <span style="font-weight: 700; color: var(--text-dim);">Total a Cobrar</span>
+                        <span id="detail-total-price" style="font-size: 1.8rem; font-weight: 900; color: var(--theme-accent); letter-spacing: -1px;">$0</span>
+                    </div>
+                </div>
+                <div class="modal-footer-pro" id="order-action-footer" style="padding: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: rgba(0,0,0,0.2); border-top: 1px solid var(--glass-border);">
+                    <!-- Botones dinámicos -->
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ===== MANUAL ORDER MODAL ===== -->
+        <div id="manual-order-modal" class="modal hidden" style="z-index: 100002;">
+            <div class="modal-content glass" style="max-width: 700px; width: 95vw; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+                <!-- Header -->
+                <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+                    <h2 class="font-serif" style="margin: 0; font-size: 1.2rem;">Nuevo Pedido Manual</h2>
+                    <button class="modal-close" id="close-manual-order-modal"><i data-lucide="x"></i></button>
+                </div>
+
+                <!-- Product Search Row -->
+                <div style="padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--glass-border); display: flex; gap: 0.6rem; flex-shrink: 0; background: rgba(0,0,0,0.1);">
+                    <select id="manual-order-cat-filter" style="padding: 0.55rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(20,20,40,0.95); color: inherit; font-size: 0.85rem; min-width: 140px;">
+                    </select>
+                    <div style="position: relative; flex: 1;">
+                        <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 14px; color: var(--text-dim); pointer-events: none;"></i>
+                        <input type="text" id="manual-product-search" placeholder="Buscar producto..." style="width: 100%; padding: 0.55rem 0.8rem 0.55rem 2.2rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: inherit; font-size: 0.85rem; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <!-- Content Area: Products (Left) + Cart (Right) -->
+                <div class="manual-order-split-container" style="flex: 1; display: flex; overflow: hidden; min-height: 0; border-top: 1px solid var(--glass-border);">
+                    <!-- Products list -->
+                    <div id="manual-order-products-container" style="flex: 1.1; overflow-y: auto; min-height: 0; border-right: 1px solid var(--glass-border); overscroll-behavior: contain;">
+                        <div id="manual-order-products" style="display: flex; flex-direction: column;">
+                            <!-- Dynamic products as rows -->
+                        </div>
+                    </div>
+
+                    <!-- Side Cart -->
+                    <div id="manual-order-cart-section" style="flex: 0.9; background: rgba(0,0,0,0.15); display: flex; flex-direction: column; min-height: 0;">
+                        <div style="padding: 0.6rem 0.8rem; font-size: 0.72rem; color: var(--theme-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.1);">Pedido Actual:</div>
+                        <div id="manual-order-cart-items" style="flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem; overscroll-behavior: contain;">
+                            <!-- Items appear here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Info + Total -->
+                <div style="border-top: 1px solid var(--glass-border); padding: 1rem 1.2rem; background: rgba(0,0,0,0.2); flex-shrink: 0;">
+                    <!-- Name + Phone -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
+                        <input type="text" id="manual-cust-name" maxlength="25" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')" placeholder="Nombre del cliente" style="padding: 0.55rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: inherit; font-size: 0.85rem; box-sizing: border-box; width: 100%;">
+                        <input type="tel" id="manual-cust-phone" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="WhatsApp (opcional)" style="padding: 0.55rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: inherit; font-size: 0.85rem; box-sizing: border-box; width: 100%;">
+                    </div>
+
+                    <!-- Delivery type (3 buttons, full width) -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.6rem;">
+                        <button type="button" class="manual-delivery-btn" data-type="dine-in" style="padding: 0.5rem 0.3rem; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.78rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; transition: all 0.2s;"><i data-lucide="utensils" style="width: 14px;"></i>En Mesa</button>
+                        <button type="button" class="manual-delivery-btn" data-type="takeout" style="padding: 0.5rem 0.3rem; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.78rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; transition: all 0.2s;"><i data-lucide="package" style="width: 14px;"></i>Para Llevar</button>
+                        <button type="button" class="manual-delivery-btn" data-type="delivery" style="padding: 0.5rem 0.3rem; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.78rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; transition: all 0.2s;"><i data-lucide="truck" style="width: 14px;"></i>Domicilio</button>
+                    </div>
+
+                    <!-- Dynamic delivery detail -->
+                    <div id="manual-delivery-detail" style="margin-bottom: 0.6rem; display: none;"></div>
+
+                    <!-- Payment method (custom toggle buttons) -->
+                    <div style="display:flex; align-items:center; gap:0.8rem; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); padding:0.5rem 0.8rem; border-radius:10px; margin-bottom:0.6rem;">
+                        <label style="font-size:0.78rem; color:var(--text-dim); font-weight:800; white-space:nowrap;">Pago:</label>
+                        <div style="display:flex; gap:0.4rem; flex:1;">
+                            <button type="button" class="manual-pay-btn" data-value="Efectivo" style="flex:1; padding:0.45rem; border-radius:7px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:0.8rem; font-weight:700; transition:all 0.2s;">Efectivo</button>
+                            <button type="button" class="manual-pay-btn" data-value="Transferencia" style="flex:1; padding:0.45rem; border-radius:7px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:0.8rem; font-weight:700; transition:all 0.2s;">Transferencia</button>
+                        </div>
+                        <input type="hidden" id="manual-cust-payment" value="">
+                    </div>
+
+                    <script>
+                        // Logic for payment buttons (injected here or handled in admin.js)
+                        document.addEventListener('click', (e) => {
+                            if (e.target.classList.contains('manual-pay-btn')) {
+                                document.querySelectorAll('.manual-pay-btn').forEach(btn => {
+                                    btn.style.background = 'transparent';
+                                    btn.style.borderColor = 'var(--glass-border)';
+                                    btn.style.color = 'var(--text-dim)';
+                                });
+                                e.target.style.background = 'rgba(247,147,30,0.12)';
+                                e.target.style.borderColor = 'var(--theme-accent)';
+                                e.target.style.color = '#fff';
+                                document.getElementById('manual-cust-payment').value = e.target.dataset.value;
+                            }
+                        });
+                    </script>
+
+                    <!-- Note (full width) -->
+                    <input type="text" id="manual-cust-note" placeholder="Nota (opcional)..." style="width: 100%; padding: 0.55rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: inherit; font-size: 0.85rem; box-sizing: border-box; margin-bottom: 0.7rem;">
+
+                    <!-- Total + Confirm -->
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <div style="background: rgba(247,147,30,0.1); border: 1px solid rgba(247,147,30,0.25); border-radius: 10px; padding: 0.5rem 1.1rem;">
+                            <span id="manual-order-total" style="font-size: 1.15rem; font-weight: 900; color: var(--theme-accent);">$0</span>
+                        </div>
+                        <button id="btn-confirm-manual-order" style="flex: 1; padding: 0.6rem 1rem; border: none; border-radius: 10px; background: var(--theme-accent); color: #fff; font-weight: 900; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;">
+                            <i data-lucide="check-circle" style="width: 16px;"></i> Confirmar Pedido
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    <script src="js/script_v9.js"></script>
+    <script src="js/admin.js?v=4.26"></script>
+</body>
+</html>
