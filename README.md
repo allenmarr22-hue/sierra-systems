@@ -51,6 +51,9 @@ Administracion AS Sierra Systems/
 │   ├── services/
 │   │   └── PaymentService.js            # Abstracción de pasarela Wompi (soporta modo simulación y real).
 │   ├── data.json                        # Base de datos local simulada (Ignorada en Git, contiene credenciales).
+│   ├── node_modules/                    # Dependencias de npm instaladas (Ignoradas en Git).
+│   ├── package.json                     # Definición de dependencias y scripts de npm.
+│   ├── package-lock.json                # Bloqueo de versiones exactas de las dependencias.
 │   └── server.js                        # Servidor Express. APIs, SSE Stream, autenticación y CRUD.
 │
 ├── frontend/                            # --- INTERFAZ DE USUARIO (Vanilla CSS/JS) ---
@@ -66,9 +69,7 @@ Administracion AS Sierra Systems/
 │   ├── super-admin.html                 # Panel central del Super Administrador.
 │   └── index.html                       # Página de redirección o inicio del portal.
 │
-├── .gitignore                           # Exclusiones de Git (node_modules, data.json, uploads, etc.).
-├── package.json                         # Dependencias y scripts de ejecución.
-└── package-lock.json                    # Bloqueo de versiones de npm.
+└── .gitignore                           # Exclusiones de Git (node_modules, data.json, uploads, etc.).
 ```
 
 ---
@@ -113,7 +114,9 @@ Diseñado con una estética sumamente premium, moderna y con microinteracciones 
 Para poner en marcha el proyecto localmente, sigue estos pasos:
 
 1. **Instalar Dependencias**:
+   Ingresa a la carpeta `backend` e instala las dependencias de npm:
    ```bash
+   cd backend
    npm install
    ```
 
@@ -152,9 +155,13 @@ Para poner en marcha el proyecto localmente, sigue estos pasos:
 
 * **Ejecutar el servidor en desarrollo**:
   ```bash
-  npm run dev
+  # Desde la raíz del proyecto:
+  node backend/server.js
+  
+  # O ingresando a la carpeta backend:
+  cd backend
+  npm start
   ```
-  *(O directamente usando `node backend/server.js`)*
 
 * **Probar el Ciclo de Facturación Manual (Modo Simulado / Dry-Run)**:
   Puedes forzar la ejecución del cron job inmediatamente sin esperar a la medianoche para probar el comportamiento de los cobros automáticos:
