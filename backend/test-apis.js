@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const PORT = 3001;
-const BASE_URL = `http://localhost:${PORT}`;
+const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 let serverProcess;
 
@@ -18,6 +18,7 @@ function startServer() {
 
         serverProcess.stdout.on('data', (data) => {
             const output = data.toString();
+            console.log(`[Spawned Server]: ${output.trim()}`);
             if (output.includes('Servidor unificado en línea')) {
                 console.log('✅ Servidor iniciado correctamente.');
                 resolve();

@@ -1564,7 +1564,7 @@ window.switchTab = function(tabId) {
     }
 
     if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.remove('active');
+        document.getElementById('sidebar').classList.remove('mobile-open');
     }
 };
 
@@ -1581,10 +1581,19 @@ function setupTabs() {
 function setupSidebar() {
     const sidebar = document.getElementById('sidebar');
     const collapseBtn = document.getElementById('sidebar-collapse-btn');
-    const mobileToggle = document.getElementById('mobile-toggle');
+    const mobileBtn = document.getElementById('mobile-menu-btn');
 
     collapseBtn?.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
-    mobileToggle?.addEventListener('click', () => sidebar.classList.toggle('active'));
+    mobileBtn?.addEventListener('click', () => sidebar.classList.toggle('mobile-open'));
+
+    // Close mobile menu when clicking outside sidebar
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && sidebar?.classList.contains('mobile-open')) {
+            if (!sidebar.contains(e.target) && !mobileBtn?.contains(e.target)) {
+                sidebar.classList.remove('mobile-open');
+            }
+        }
+    });
 
     if (window.innerWidth <= 1024 && window.innerWidth > 768) {
         sidebar.classList.add('collapsed');

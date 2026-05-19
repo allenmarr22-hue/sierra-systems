@@ -221,7 +221,7 @@
             </div>
 
         <!-- CHARTS SECTION -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2.5rem;">
+        <div class="charts-grid">
             <div class="biz-card" style="padding: 1.5rem;">
                 <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
                     <i data-lucide="trending-up" style="color: var(--primary);"></i> Crecimiento de Negocios
@@ -330,20 +330,22 @@
                 </button>
             </div>
             <div class="section-card" style="padding: 0; overflow: hidden;">
-                <table class="data-table" id="users-table">
-                    <thead>
-                        <tr>
-                            <th>Usuario</th>
-                            <th>Correo</th>
-                            <th>Rol</th>
-                            <th>Estado</th>
-                            <th style="text-align: right;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-list">
-                        <!-- Users will be loaded here -->
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="data-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th style="text-align: right;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-list">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 

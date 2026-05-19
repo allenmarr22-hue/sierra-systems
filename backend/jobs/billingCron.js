@@ -12,27 +12,28 @@
  * ============================================================
  */
 
-require('../db');
+const dbHelper = require('../db');
 const cron = require('node-cron');
-const fs = require('fs');
-const path = require('path');
 const PaymentService = require('../services/PaymentService');
-
-const DATA_FILE = path.join(__dirname, '..', 'data.json');
 
 // ─── Utilidades ────────────────────────────────────────────────────────────────
 
-function readDb() {
+async function readDb() {
     try {
-        return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+        return await dbHelper.getCompleteState();
     } catch (err) {
-        console.error('[BillingCron] ❌ Error leyendo data.json:', err.message);
-        throw new Error('No se puede leer la base de datos. Verifique data.json.');
+        console.error('[BillingCron] ❌ Error leyendo base de datos relacional:', err.message);
+        throw new Error('No se puede leer la base de datos relacional.');
     }
 }
 
-function writeDb(db) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 4));
+async function writeDb(db) {
+    try {
+        await dbHelper.saveCompleteState(db);
+    } catch (err) {
+        console.error('[BillingCron] ❌ Error escribiendo base de datos relacional:', err.message);
+        throw new Error('No se puede guardar en la base de datos relacional.');
+    }
 }
 
 function todayStr() {
@@ -69,7 +70,14 @@ async function runBillingCycle(dryRun = false) {
     console.log(`\n[BillingCron] 🕛 Iniciando ciclo de facturación. ${dryRun ? '(DRY RUN)' : ''}`);
     console.log(`[BillingCron] Fecha de hoy: ${todayStr()}`);
 
-    const db = readDb();
+    let db;
+    try {
+        db = await readDb();
+    } catch (err) {
+        console.error('[BillingCron] Abortando ciclo: error al cargar DB.');
+        return { processed: 0, charged: 0, failed: 0 };
+    }
+
     const today = todayStr();
     let processed = 0;
     let charged = 0;
@@ -159,7 +167,7 @@ async function runBillingCycle(dryRun = false) {
     }
 
     if (!dryRun && processed > 0) {
-        writeDb(db);
+        await writeDb(db);
     }
 
     console.log(`[BillingCron] 📊 Resumen: ${processed} procesados, ${charged} exitosos, ${failed} fallidos.\n`);
@@ -185,8 +193,6 @@ function startBillingCron() {
 module.exports = { startBillingCron, runBillingCycle };
 
 // ─── Ejecución directa (para pruebas) ────────────────────────────────────────
-// Ejecutar con: node backend/jobs/billingCron.js
-// Ejecutar simulación sin cobrar: node backend/jobs/billingCron.js --dry-run
 if (require.main === module) {
     const dryRun = process.argv.includes('--dry-run');
     runBillingCycle(dryRun).then(() => process.exit(0));
