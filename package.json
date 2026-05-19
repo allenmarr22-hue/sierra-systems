@@ -1,0 +1,14 @@
+{
+  "name": "administracion-as-sierra-systems-root",
+  "version": "1.0.0",
+  "description": "Proxy de comandos npm para el panel de administración de AS Sierra Systems",
+  "scripts": {
+    "postinstall": "npm install --prefix backend",
+    "start": "npm start --prefix backend",
+    "dev": "npm start --prefix backend",
+    "test": "npm test --prefix backend"
+  },
+  "keywords": [],
+  "author": "AS Sierra Systems",
+  "license": "ISC"
+}
