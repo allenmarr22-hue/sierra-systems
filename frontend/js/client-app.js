@@ -636,10 +636,13 @@ function renderDashboard() {
         appState.modules.find(m => String(m.id) === String(mid))
     ).filter(Boolean);
 
-    const cancelledMods = (clientBiz.cancelledModules || []).map(cm => {
-        const modInfo = appState.modules.find(m => String(m.id) === String(cm.id));
-        return modInfo ? { ...modInfo, cancelledAt: cm.cancelledAt, accessUntil: cm.accessUntil } : null;
-    }).filter(Boolean);
+    const cancelledMods = (clientBiz.cancelledModules || [])
+        // Excluir módulos que ya están activos (guardia de seguridad frontend)
+        .filter(cm => !(clientBiz.modules || []).some(mid => String(mid) === String(cm.id)))
+        .map(cm => {
+            const modInfo = appState.modules.find(m => String(m.id) === String(cm.id));
+            return modInfo ? { ...modInfo, cancelledAt: cm.cancelledAt, accessUntil: cm.accessUntil } : null;
+        }).filter(Boolean);
 
     const allClientModIds = [
         ...(clientBiz.modules || []).map(id => String(id)),
@@ -2138,24 +2141,24 @@ window.reactivateModule = async function(modId, modName) {
 };
 
 window.switchModuleSubTab = function(tabName) {
-    const gridActive = document.getElementById('client-modules-grid-active');
-    const gridCancelled = document.getElementById('client-modules-grid-cancelled');
+    const wrapActive = document.getElementById('carousel-active-wrap');
+    const wrapCancelled = document.getElementById('carousel-cancelled-wrap');
     const btnActive = document.getElementById('btn-tab-mod-active');
     const btnCancelled = document.getElementById('btn-tab-mod-cancelled');
 
-    if (!gridActive || !gridCancelled || !btnActive || !btnCancelled) return;
+    if (!wrapActive || !wrapCancelled || !btnActive || !btnCancelled) return;
 
     if (tabName === 'active') {
-        gridActive.style.display = 'grid';
-        gridCancelled.style.display = 'none';
+        wrapActive.style.display = 'block';
+        wrapCancelled.style.display = 'none';
         
         btnActive.style.background = 'var(--primary)';
         btnActive.style.color = 'white';
         btnCancelled.style.background = 'transparent';
         btnCancelled.style.color = 'var(--text-muted)';
     } else {
-        gridActive.style.display = 'none';
-        gridCancelled.style.display = 'grid';
+        wrapActive.style.display = 'none';
+        wrapCancelled.style.display = 'block';
         
         btnCancelled.style.background = '#f59e0b';
         btnCancelled.style.color = 'white';

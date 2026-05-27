@@ -375,7 +375,7 @@ async function getCompleteState() {
                         moduleDates[mr.module_id] = mr.renewal_date;
                     }
                 } else if (mr.status === 'cancelled') {
-                    // Legacy support
+                    // Legacy support — se filtrará después para excluir módulos que aún tienen instancias activas
                     const targetMod = dbModules.find(dm => dm.id === mr.module_id);
                     const moduleName = targetMod ? targetMod.name : mr.module_id;
                     cancelledModules.push({
@@ -386,6 +386,24 @@ async function getCompleteState() {
                     });
                 }
             }
+
+            // Filtrar cancelledModules: excluir módulos que aún tienen instancias activas
+            // (evita que el mismo módulo aparezca en ambas pestañas Activos y Suspendidos)
+            const filteredCancelledModules = cancelledModules
+                .filter(cm => !activeModules.includes(cm.id))
+                // Deduplicar por module_id (mantener el de accessUntil más próximo)
+                .reduce((acc, cm) => {
+                    const existing = acc.find(x => x.id === cm.id);
+                    if (!existing) {
+                        acc.push(cm);
+                    } else {
+                        // Mantener el que expira más tarde
+                        if (cm.accessUntil && (!existing.accessUntil || new Date(cm.accessUntil) > new Date(existing.accessUntil))) {
+                            acc[acc.indexOf(existing)] = cm;
+                        }
+                    }
+                    return acc;
+                }, []);
 
             dbBusinesses.push({
                 id: Number(b.id),
@@ -398,7 +416,7 @@ async function getCompleteState() {
                 clientEmail: b.client_email,
                 clientPass: b.client_pass,
                 avatarUrl: b.avatar_url,
-                cancelledModules: cancelledModules,
+                cancelledModules: filteredCancelledModules,
                 moduleDates: moduleDates,
                 billing: {
                     gateway_token: b.gateway_token,
