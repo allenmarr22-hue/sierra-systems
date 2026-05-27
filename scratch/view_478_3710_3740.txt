@@ -1,0 +1,43 @@
+Created At: 2026-05-26T11:59:41Z
+Completed At: 2026-05-26T11:59:41Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4500
+Total Bytes: 208698
+Showing lines 4116 to 4150
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4116:                 <td style="padding:1rem 1.5rem;">
+4117:                     <a href="javascript:void(0)" onclick="viewTicketDetails('${t.id}')" style="font-size:0.78rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver detalles del ticket">
+4118:                         #${String(t.id || '').substring(0, 8).toUpperCase()}
+4119:                     </a>
+4120:                 </td>
+4121:                 <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || 'â€”'}</td>
+4122:                 <td style="padding:1rem 1.5rem; color:var(--text-muted);">${t.module || 'â€”'}</td>
+4123:                 <td style="padding:1rem 1.5rem;">
+4124:                     <span style="font-size:0.78rem; font-weight:700; padding:3px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color};">
+4125:                         ${pr.label}
+4126:                     </span>
+4127:                 </td>
+4128:                 <td style="padding:1rem 1.5rem; font-size:0.85rem; color:var(--text-muted); max-width:220px;" title="${(t.description || '').replace(/"/g, '&quot;')}">${desc}</td>
+4129:                 <td style="padding:1rem 1.5rem; text-align:center;">
+4130:                     <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem; font-weight:700; padding:4px 12px; border-radius:20px; background:${st.bg}; color:${st.color};">
+4131:                         <i data-lucide="${st.icon}" style="width:12px;height:12px;"></i> ${st.label}
+4132:                     </span>
+4133:                 </td>
+4134:                 <td style="padding:1rem 1.5rem; font-size:0.82rem; color:var(--text-muted);">${dateStr}</td>
+4135:                 <td style="padding:1rem 1.5rem; text-align:center;">
+4136:                     <button class="btn-ghost" style="padding:0.35rem 0.85rem; font-size:0.8rem; border:1px solid var(--border-color); border-radius:8px; cursor:pointer;"
+4137:                         onclick="updateTicketStatus('${t.id}', '${t.status}')">
+4138:                         <i data-lucide="edit-3" style="width:13px;"></i> Estado
+4139:                     </button>
+4140:                 </td>
+4141:             </tr>`;
+4142:     }).join('');
+4143:     lucide.createIcons();
+4144: }
+4145: 
+4146: /**
+4147:  * Abre un modal de Swal para cambiar el estado de un ticket.
+4148:  */
+4149: async function updateTicketStatus(ticketId, currentStatus) {
+4150:     const { value: newStatus } = await Swal.fire({
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

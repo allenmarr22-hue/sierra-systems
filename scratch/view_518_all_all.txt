@@ -1,0 +1,75 @@
+Created At: 2026-05-26T12:03:57Z
+Completed At: 2026-05-26T12:03:57Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 4004
+Total Bytes: 216808
+Showing lines 420 to 680
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+420:                     confirmButtonColor: 'var(--primary)',
+421:                     timer: 5000,
+422:                     timerProgressBar: true
+423:                 });
+424:             }
+425:         });
+426:     });
+427: 
+428:     // Account settings form
+429:     const accForm = document.getElementById('account-settings-form');
+430:     if (accForm) {
+431:         accForm.addEventListener('submit', async (e) => {
+432:             e.preventDefault();
+433:             const currentPass = document.getElementById('acc-current-pass').value;
+434:             const newEmail = document.getElementById('acc-email').value;
+435:             const newPass = document.getElementById('acc-pass').value;
+436:             const btn = document.getElementById('acc-save-btn');
+437:             
+438:             if (!currentPass) {
+439:                 return Swal.fire({ icon: 'warning', title: 'Contraseña requerida', text: 'Por favor, ingresa tu contraseña actual por seguridad.', background: 'var(--bg-surface)', color: 'var(--text)' });
+440:             }
+441: 
+442:             const sessionRaw = sessionStorage.getItem('clientSession');
+443:             if (!sessionRaw) return;
+444:             const session = JSON.parse(sessionRaw);
+445: 
+446:             btn.disabled = true;
+447:             btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Guardando...';
+448:             lucide.createIcons();
+449: 
+450:             try {
+451:                 const res = await fetch
+<truncated 10102 bytes>
+47:         tbody.innerHTML = `
+648:             <tr>
+649:                 <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+650:                     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+651:                         <i data-lucide="inbox" style="width: 32px; height: 32px; opacity: 0.5;"></i>
+652:                         <div>Aún no se registran pagos en tu historial.</div>
+653:                     </div>
+654:                 </td>
+655:             </tr>
+656:         `;
+657:         lucide.createIcons();
+658:         return;
+659:     }
+660: 
+661:     let html = '';
+662:     history.forEach(pay => {
+663:         const d = new Date(pay.created_at);
+664:         const day = String(d.getDate()).padStart(2, '0');
+665:         const month = String(d.getMonth() + 1).padStart(2, '0');
+666:         const year = d.getFullYear();
+667:         let hours = d.getHours();
+668:         const minutes = String(d.getMinutes()).padStart(2, '0');
+669:         const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
+670:         hours = hours % 12;
+671:         hours = hours ? hours : 12; // el 0 debe ser 12
+672:         const hoursStr = String(hours).padStart(2, '0');
+673:         const dateStr = `${day}-${month}-${year}, ${hoursStr}:${minutes} ${ampm}`;
+674: 
+675:         const amountDisplay = `$ ${parseFloat(pay.amount).toLocaleString('es-CO')} COP`;
+676:         
+677:         let statusBadge = '';
+678:         if (pay.status === 'APPROVED') {
+679:             statusBadge = `<span style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">Aprobado</span>`;
+680:         } else {
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

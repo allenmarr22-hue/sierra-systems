@@ -1,0 +1,60 @@
+Created At: 2026-05-26T12:03:50Z
+Completed At: 2026-05-26T12:03:50Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 4004
+Total Bytes: 216808
+Showing lines 330 to 420
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+330:     });
+331: 
+332:     // Ticket button
+333:     document.getElementById('btn-open-ticket')?.addEventListener('click', () => {
+334:         const moduleOptions = appState.modules ? appState.modules.map(m => `<option value="${m.name}">${m.name}</option>`).join('') : '';
+335: 
+336:         Swal.fire({
+337:             title: 'Crear Ticket de Soporte',
+338:             html: `
+339:                 <style>
+340:                     .pro-input { width: 100%; box-sizing: border-box; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--primary-border); background: var(--bg-body); color: var(--text); font-family: inherit; font-size: 0.95rem; outline: none; transition: all 0.2s; margin:0; }
+341:                     .pro-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-alpha); }
+342:                     .pro-label { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+343:                 </style>
+344:                 <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; margin-top:1.5rem; overflow:hidden;">
+345:                     <div>
+346:                         <label class="pro-label">Módulo Afectado</label>
+347:                         <select id="ticket-module" class="pro-input">
+348:                             <option value="">Selecciona un módulo...</opt
+<truncated 2722 bytes>
+.'); return false; }
+390:                 const session = JSON.parse(sessionRaw);
+391: 
+392:                 try {
+393:                     const res = await fetch('/api/tickets', {
+394:                         method: 'POST',
+395:                         headers: {
+396:                             'Content-Type': 'application/json',
+397:                             'Authorization': `Bearer ${session.token}`
+398:                         },
+399:                         body: JSON.stringify({ module: mod, priority, description: desc })
+400:                     });
+401:                     const data = await res.json();
+402:                     if (!res.ok) { Swal.showValidationMessage(data.error || 'Error al guardar el ticket.'); return false; }
+403:                     return { mod, desc, priority, ticketId: data.ticketId };
+404:                 } catch (err) {
+405:                     Swal.showValidationMessage('Error de conexión. Intenta de nuevo.');
+406:                     return false;
+407:                 }
+408:             }
+409:         }).then((result) => {
+410:             if (result.isConfirmed) {
+411:                 const { mod, desc, priority, ticketId } = result.value;
+412:                 // Recargar historial de tickets
+413:                 loadMyTickets();
+414:                 Swal.fire({
+415:                     icon: 'success',
+416:                     title: '¡Ticket registrado!',
+417:                     html: `<p style="color:var(--text-muted);">Tu ticket <strong style="color:var(--text);">${ticketId}</strong> fue guardado con éxito. Ahora puedes hacer clic en su ID en la lista para chatear con soporte.</p>`,
+418:                     background: 'var(--bg-surface)',
+419:                     color: 'var(--text)',
+420:                     confirmButtonColor: 'var(--primary)',
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

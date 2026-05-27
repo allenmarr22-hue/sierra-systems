@@ -1,0 +1,32 @@
+Created At: 2026-05-26T11:51:17Z
+Completed At: 2026-05-26T11:51:17Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4403
+Total Bytes: 196908
+Showing lines 4380 to 4403
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4380:         }) : clientFetch(fetchUrl, {
+4381:             method: 'POST',
+4382:             headers: { 'Content-Type': 'application/json' },
+4383:             body: JSON.stringify({ message })
+4384:         }));
+4385: 
+4386:         if (!res.ok) {
+4387:             const data = await res.json();
+4388:             throw new Error(data.error || 'Error al enviar el mensaje');
+4389:         }
+4390: 
+4391:         input.value = '';
+4392:         await fetchAndRenderChatMessages(ticketId, role);
+4393:     } catch (err) {
+4394:         console.error('Error al enviar mensaje:', err);
+4395:         showToast(err.message || 'Error de conexión', 'error');
+4396:     } finally {
+4397:         input.disabled = false;
+4398:         if (sendBtn) sendBtn.disabled = false;
+4399:         input.focus();
+4400:     }
+4401: };
+4402: 
+4403: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

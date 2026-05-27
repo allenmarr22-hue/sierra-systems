@@ -1,0 +1,58 @@
+Created At: 2026-05-26T11:35:58Z
+Completed At: 2026-05-26T11:35:58Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4403
+Total Bytes: 196710
+Showing lines 3475 to 3530
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3475: };
+3476: 
+3477: window.renderPromotionsList = function() {
+3478:     const list = document.getElementById('promotions-list');
+3479:     if (!list) return;
+3480:     const modules = appState.modules || [];
+3481:     const search = (document.getElementById('promo-search')?.value || '').toLowerCase();
+3482: 
+3483:     let promos = [...appPromotions];
+3484: 
+3485:     if (currentPromoFilter !== 'all') {
+3486:         promos = promos.filter(p => getPromoStatus(p) === currentPromoFilter);
+3487:     }
+3488: 
+3489:     if (search) {
+3490:         promos = promos.filter(p => {
+3491:             const mod = modules.find(m => m.id === p.moduleId);
+3492:             const name = (mod?.name || p.moduleId).toLowerCase();
+3493:             return name.includes(search);
+3494:         });
+3495:     }
+3496: 
+3497:     if (promos.length === 0) {
+3498:         list.innerHTML = `
+3499:             <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted);">
+3500:                 <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+3501:                     <i data-lucide="tag" style="width:40px; height:40px; opacity:0.3;"></i>
+3502:                     <div style="font-weight:600;">No hay campañas en esta categoría</div>
+3503:                     <p style="font-size:0.85rem; margin:0;">Crea tu primera campaña con el botón <strong>Nueva Promoción</strong>.</p>
+3504:                 </div>
+3505:             </td></tr>`;
+3506:         lucide.createIcons();
+3507:
+<truncated 321 bytes>
+ing('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+3516:         const endFmt = new Date(p.endDate).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+3517: 
+3518:         const discountDisplay = p.discountType === 'percentage'
+3519:             ? `<span style="color:var(--success); font-weight:800; font-size:1.1rem;">-${p.discountValue}%</span>`
+3520:             : `<span style="color:var(--success); font-weight:800; font-size:1.1rem;">$ ${Number(p.discountValue).toLocaleString('es-CO')} COP</span>`;
+3521: 
+3522:         const typeLabel = p.discountType === 'percentage'
+3523:             ? `<span style="display:inline-flex; align-items:center; gap:4px; background:rgba(139,92,246,0.1); color:#8b5cf6; padding:0.2rem 0.6rem; border-radius:6px; font-size:0.78rem; font-weight:700;"><i data-lucide="percent" style="width:12px;"></i> Porcentaje</span>`
+3524:             : `<span style="display:inline-flex; align-items:center; gap:4px; background:rgba(59,130,246,0.1); color:#3b82f6; padding:0.2rem 0.6rem; border-radius:6px; font-size:0.78rem; font-weight:700;"><i data-lucide="dollar-sign" style="width:12px;"></i> Precio Fijo</span>`;
+3525: 
+3526:         let statusBadge;
+3527:         if (st === 'active') {
+3528:             statusBadge = `<span class="status-badge" style="background:var(--success-bg); color:var(--success); border-color:var(--success-border); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="check-circle" style="width:11px;"></i> Activa</span>`;
+3529:         } else if (st === 'scheduled') {
+3530:             statusBadge = `<span class="status-badge" style="background:rgba(59,130,246,0.1); color:#3b82f6; border-color:rgba(59,130,246,0.2); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="calendar" style="width:11px;"></i> Programada</span>`;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

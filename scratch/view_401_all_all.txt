@@ -1,0 +1,93 @@
+Created At: 2026-05-26T11:53:49Z
+Completed At: 2026-05-26T11:53:49Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4698
+Total Bytes: 214057
+Showing lines 4560 to 4698
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4560:                         </button>
+4561:                     </div>
+4562:                 `}
+4563:                 
+4564:                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border-color); padding-top:0.6rem;">
+4565:                     <span>Creado el: <strong>${fullDate}</strong></span>
+4566:                 </div>
+4567:             </div>
+4568:         `,
+4569:         background: 'var(--bg-surface)',
+4570:         color: 'var(--text-main)',
+4571:         width: '500px',
+4572:         confirmButtonText: 'Cerrar',
+4573:         confirmButtonColor: 'var(--primary)',
+4574:         didOpen: () => {
+4575:             lucide.createIcons();
+4576:             fetchAndRenderChatMessages(ticketId, 'admin');
+4577: 
+4578:             // Habilitar enviar con Enter
+4579:             const input = document.getElementById('chat-message-input');
+4580:             if (input) {
+4581:                 input.addEventListener('keypress', function(e) {
+4582:                     if (e.key === 'Enter') {
+4583:                         e.preventDefault();
+4584:                         sendTicketMessage(ticketId, 'admin');
+4585:                     }
+4586:                 });
+4587:             }
+4588:         },
+4589:         willClose: () => {
+4590:             window.activeChatTicketId = null;
+4591:         }
+4592:     });
+4593: };
+4594: 
+4595: window.fetchAndRenderChatMessages = async function(ticketId, role) 
+<truncated 3313 bytes>
+     console.error('Error cargando chat:', err);
+4652:         container.innerHTML = `
+4653:             <div style="text-align:center; color:#ef4444; font-size:0.85rem; padding:20px 10px;">
+4654:                 Error al cargar la conversación.
+4655:             </div>
+4656:         `;
+4657:     }
+4658: };
+4659: 
+4660: window.sendTicketMessage = async function(ticketId, role) {
+4661:     const input = document.getElementById('chat-message-input');
+4662:     const sendBtn = document.getElementById('chat-send-btn');
+4663:     if (!input || !input.value.trim()) return;
+4664: 
+4665:     const message = input.value.trim();
+4666:     input.disabled = true;
+4667:     if (sendBtn) sendBtn.disabled = true;
+4668: 
+4669:     try {
+4670:         const fetchUrl = `/api/tickets/${ticketId}/messages`;
+4671:         const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+4672:             method: 'POST',
+4673:             headers: { 'Content-Type': 'application/json' },
+4674:             body: JSON.stringify({ message })
+4675:         }) : clientFetch(fetchUrl, {
+4676:             method: 'POST',
+4677:             headers: { 'Content-Type': 'application/json' },
+4678:             body: JSON.stringify({ message })
+4679:         }));
+4680: 
+4681:         if (!res.ok) {
+4682:             const data = await res.json();
+4683:             throw new Error(data.error || 'Error al enviar el mensaje');
+4684:         }
+4685: 
+4686:         input.value = '';
+4687:         await fetchAndRenderChatMessages(ticketId, role);
+4688:     } catch (err) {
+4689:         console.error('Error al enviar mensaje:', err);
+4690:         showToast(err.message || 'Error de conexión', 'error');
+4691:     } finally {
+4692:         input.disabled = false;
+4693:         if (sendBtn) sendBtn.disabled = false;
+4694:         input.focus();
+4695:     }
+4696: };
+4697: 
+4698: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

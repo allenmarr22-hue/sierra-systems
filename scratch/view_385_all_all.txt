@@ -1,0 +1,83 @@
+Created At: 2026-05-26T11:51:21Z
+Completed At: 2026-05-26T11:51:21Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3915
+Total Bytes: 204866
+Showing lines 3690 to 3900
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3690: 
+3691: // ============================================================
+3692: // SISTEMA DE TICKETS - CHAT FEED CLIENTE
+3693: // ============================================================
+3694: 
+3695: async function clientFetch(url, options = {}) {
+3696:     const sessionRaw = sessionStorage.getItem('clientSession');
+3697:     if (!sessionRaw) {
+3698:         window.location.href = '/client-login.html';
+3699:         return;
+3700:     }
+3701:     const session = JSON.parse(sessionRaw);
+3702:     options.headers = options.headers || {};
+3703:     options.headers['Authorization'] = `Bearer ${session.token}`;
+3704:     return fetch(url, options);
+3705: }
+3706: 
+3707: window.viewClientTicketDetails = function(ticketId) {
+3708:     if (!appState.clientTickets) return;
+3709:     const ticket = appState.clientTickets.find(t => t.id === ticketId);
+3710:     if (!ticket) return;
+3711: 
+3712:     window.activeChatTicketId = ticketId;
+3713: 
+3714:     const statusMap = {
+3715:         abierto:    { label: 'Abierto',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' },
+3716:         en_proceso: { label: 'En Proceso',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
+3717:         resuelto:   { label: 'Resuelto',    color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+3718:         cerrado:    { label: 'Cerrado',     color: '#6b7280', bg: 'rgba(107,114,128,0.12)', border: 'rgba(107,114,128,0.25)' },
+3719:   
+<truncated 9596 bytes>
+size: 0.88rem; line-height: 1.45; word-break: break-word; white-space: pre-wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.06); text-align: left;">
+3858:                             ${msg.message}
+3859:                         </div>
+3860:                     </div>
+3861:                 </div>
+3862:             `;
+3863:         }).join('');
+3864: 
+3865:         container.scrollTop = container.scrollHeight;
+3866:     } catch (err) {
+3867:         console.error('Error cargando chat:', err);
+3868:         container.innerHTML = `
+3869:             <div style="text-align:center; color:#ef4444; font-size:0.85rem; padding:20px 10px;">
+3870:                 Error al cargar la conversación.
+3871:             </div>
+3872:         `;
+3873:     }
+3874: };
+3875: 
+3876: window.sendTicketMessage = async function(ticketId, role) {
+3877:     const input = document.getElementById('chat-message-input');
+3878:     const sendBtn = document.getElementById('chat-send-btn');
+3879:     if (!input || !input.value.trim()) return;
+3880: 
+3881:     const message = input.value.trim();
+3882:     input.disabled = true;
+3883:     if (sendBtn) sendBtn.disabled = true;
+3884: 
+3885:     try {
+3886:         const fetchUrl = `/api/tickets/${ticketId}/messages`;
+3887:         const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+3888:             method: 'POST',
+3889:             headers: { 'Content-Type': 'application/json' },
+3890:             body: JSON.stringify({ message })
+3891:         }) : clientFetch(fetchUrl, {
+3892:             method: 'POST',
+3893:             headers: { 'Content-Type': 'application/json' },
+3894:             body: JSON.stringify({ message })
+3895:         }));
+3896: 
+3897:         if (!res.ok) {
+3898:             const data = await res.json();
+3899:             throw new Error(data.error || 'Error al enviar el mensaje');
+3900:         }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

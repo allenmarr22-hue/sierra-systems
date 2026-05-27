@@ -1274,3 +1274,197 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     .desktop-only-space { display: none !important; }
     .mobile-only-br { display: block !important; }
 }
+
+/* ================================================
+   10+ PRO BUBBLE ANIMATIONS — usadas por admin
+   ================================================ */
+
+/* Keyframe base del 3D Spinner */
+@keyframes promo3DLevel {
+    0%   { transform: translateY(0) rotateY(0deg) rotateX(5deg); }
+    50%  { transform: translateY(-15px) rotateY(180deg) rotateX(-5deg); }
+    100% { transform: translateY(0) rotateY(360deg) rotateX(5deg); }
+}
+
+/* 1. 3D Spinner */
+.anim-3d-spinner { animation: promo3DLevel 4s infinite ease-in-out; }
+
+/* 2. Latido Atómico */
+.anim-atomic-heart { animation: atomicHeart 1.5s infinite cubic-bezier(0.4, 0, 0.2, 1); }
+@keyframes atomicHeart {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255,61,0,0.6)); }
+    50%       { transform: scale(1.15); filter: drop-shadow(0 0 15px rgba(255,61,0,0.8)); }
+}
+
+/* 3. Magnetismo */
+.anim-magnetic { animation: magneticFloat 5s infinite ease-in-out; }
+@keyframes magneticFloat {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33%       { transform: translate(5px, -15px) rotate(5deg); }
+    66%       { transform: translate(-5px, -10px) rotate(-5deg); }
+}
+
+/* 4. Gelatina */
+.anim-elastic { animation: elasticJelly 2s infinite; }
+@keyframes elasticJelly {
+    0%, 100% { transform: scale(1, 1); }
+    25%       { transform: scale(1.2, 0.8); }
+    50%       { transform: scale(0.8, 1.2); }
+    75%       { transform: scale(1.1, 0.9); }
+}
+
+/* 5. Órbita Solar */
+.anim-orbital { animation: orbitalSwing 3s infinite linear; }
+@keyframes orbitalSwing {
+    0%   { transform: rotate(0deg) translateY(-10px) rotate(0deg); }
+    100% { transform: rotate(360deg) translateY(-10px) rotate(-360deg); }
+}
+
+/* 6. Glitch Pro */
+.anim-glitch { animation: glitchPro 3s infinite; }
+@keyframes glitchPro {
+    0%, 90%, 100% { transform: none; filter: none; }
+    92%            { transform: translate(-3px, 2px); filter: hue-rotate(90deg) saturate(2); }
+    94%            { transform: translate(3px, -2px); filter: hue-rotate(-90deg); }
+}
+
+/* 7. Solar Flare */
+.anim-solar { animation: solarFlare 2s infinite alternate; }
+@keyframes solarFlare {
+    from { filter: drop-shadow(0 0 10px #ff3d00); transform: scale(1); }
+    to   { filter: drop-shadow(0 0 25px #ff9100); transform: scale(1.1); }
+}
+
+/* 8. Deriva Cósmica */
+.anim-cosmic { animation: cosmicDrift 6s infinite linear; }
+@keyframes cosmicDrift {
+    from { transform: rotateY(0deg) translateY(0); }
+    50%  { transform: rotateY(180deg) translateY(-20px); }
+    to   { transform: rotateY(360deg) translateY(0); }
+}
+
+/* 9. Pulso Radar */
+.anim-radar { animation: radarPulse 2s infinite; }
+@keyframes radarPulse {
+    0%   { filter: drop-shadow(0 0 0 rgba(255,61,0,0.7)); }
+    100% { filter: drop-shadow(0 0 20px rgba(255,61,0,0)); }
+}
+
+/* 10. Flip & Glide */
+.anim-flip-glide { animation: flipGlide 4s infinite ease-in-out; }
+@keyframes flipGlide {
+    0%, 100% { transform: translateX(0) rotateY(0); }
+    45%       { transform: translateX(-15px) rotateY(180deg); }
+    55%       { transform: translateX(-15px) rotateY(180deg); }
+}
+
+/* 11. Vórtice Cuántico */
+.anim-vortex { animation: quantumVortex 3s infinite ease-in-out; }
+@keyframes quantumVortex {
+    0%   { transform: rotate(0deg) scale(1);    filter: hue-rotate(0deg) brightness(1); }
+    25%  { transform: rotate(90deg) scale(1.2); filter: hue-rotate(90deg) brightness(1.3); }
+    50%  { transform: rotate(180deg) scale(0.85); filter: hue-rotate(180deg) brightness(0.9); }
+    75%  { transform: rotate(270deg) scale(1.2); filter: hue-rotate(270deg) brightness(1.3); }
+    100% { transform: rotate(360deg) scale(1);   filter: hue-rotate(360deg) brightness(1); }
+}
+
+/* 12. Rebote Cósmico */
+.anim-cosmic-bounce { animation: cosmicBounce 2.5s infinite cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes cosmicBounce {
+    0%, 100% { transform: translateY(0) scale(1);     filter: drop-shadow(0 10px 15px rgba(255,61,0,0.4)); }
+    20%      { transform: translateY(-22px) scale(1.08); filter: drop-shadow(0 30px 25px rgba(255,61,0,0.1)); }
+    40%      { transform: translateY(-6px) scale(0.97); }
+    60%      { transform: translateY(-14px) scale(1.04); }
+    80%      { transform: translateY(-2px) scale(0.99); }
+}
+
+/* ================================================
+   SVG GIFT BOX SELECTOR (Burbuja Pro admin)
+   ================================================ */
+.promo-svg-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    background: rgba(0,0,0,0.03);
+    transition: all 0.25s ease;
+    width: 72px;
+}
+.promo-svg-box svg {
+    width: 52px;
+    height: 52px;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25));
+    transition: transform 0.25s ease;
+}
+.promo-svg-box:hover {
+    background: rgba(var(--accent-rgb), 0.07);
+    border-color: rgba(var(--accent-rgb), 0.25);
+}
+.promo-svg-box:hover svg { transform: translateY(-3px) scale(1.08); }
+.promo-svg-box.active {
+    border-color: var(--color-accent);
+    background: rgba(var(--accent-rgb), 0.08);
+    box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.18);
+}
+.promo-svg-box.active svg { filter: drop-shadow(0 4px 10px rgba(var(--accent-rgb), 0.5)); transform: scale(1.05); }
+.promo-box-label {
+    font-size: 0.56rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #666;
+    text-align: center;
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.promo-svg-box.active .promo-box-label { color: var(--color-dark-pink); }
+
+/* Animation selector grid cards */
+.promo-anim-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.75rem;
+}
+.promo-anim-card {
+    background: rgba(255,255,255,0.6);
+    border: 1.5px solid rgba(var(--accent-rgb), 0.12);
+    border-radius: 10px;
+    padding: 0.7rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #555;
+}
+.promo-anim-card:hover {
+    border-color: var(--color-accent);
+    background: rgba(var(--accent-rgb), 0.06);
+    color: var(--color-dark-pink);
+}
+.promo-anim-card.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.35);
+}
+
+/* Promo icon selector row (wrapping flex) */
+.promo-icon-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(0,0,0,0.02);
+    border-radius: 12px;
+    border: 1px dashed rgba(var(--accent-rgb), 0.18);
+    margin-bottom: 1.5rem;
+}

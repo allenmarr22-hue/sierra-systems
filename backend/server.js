@@ -7,11 +7,14 @@ const multer = require('multer');
 const crypto = require('crypto');
 const PaymentService = require('./services/PaymentService');
 const { startBillingCron, runBillingCycle } = require('./jobs/billingCron');
+const { startTicketCleanupCron } = require('./jobs/ticketCleanupCron');
 
 const uploadsDir = path.join(__dirname, '..', 'frontend', 'uploads', 'avatars');
+const ticketImagesDir = path.join(__dirname, '..', 'frontend', 'uploads', 'ticket-images');
 
-// Ensure uploads directory exists
+// Ensure uploads directories exist
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(ticketImagesDir)) fs.mkdirSync(ticketImagesDir, { recursive: true });
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
@@ -23,6 +26,22 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage,
     limits: { fileSize: 3 * 1024 * 1024 }, // 3MB max
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) return cb(new Error('Solo se permiten imágenes.'));
+        cb(null, true);
+    }
+});
+
+const ticketImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, ticketImagesDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `ticket_${Date.now()}_${Math.random().toString(36).slice(2,7)}${ext}`);
+    }
+});
+const uploadTicketImage = multer({
+    storage: ticketImageStorage,
+    limits: { fileSize: 8 * 1024 * 1024 }, // 8MB max for ticket images
     fileFilter: (req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) return cb(new Error('Solo se permiten imágenes.'));
         cb(null, true);
@@ -70,30 +89,74 @@ function pushNotification(dbState, notification) {
 }
 
 // ============================================================
-// TOKEN STORE (En memoria - válidos por 8 horas)
+// HELPER: Obtener precio promocional de un módulo
 // ============================================================
-const clientTokens = new Map(); // token -> { clientId, expires }
+function getActivePromoPrice(dbState, moduleId, basePrice) {
+    if (!dbState.promotions) return basePrice;
+    
+    const now = new Date().toISOString();
+    // Buscar promoción activa para el módulo
+    const activePromo = dbState.promotions.find(p => 
+        p.moduleId === moduleId &&
+        p.status === 'active' &&
+        now >= p.startDate &&
+        now <= p.endDate
+    );
 
-function generateToken() {
-    return [...Array(40)].map(() => Math.random().toString(36)[2]).join('');
+    if (!activePromo) return basePrice;
+
+    if (activePromo.discountType === 'percentage') {
+        return Math.round(basePrice * (1 - parseFloat(activePromo.discountValue) / 100));
+    } else if (activePromo.discountType === 'fixed_price') {
+        return Math.round(parseFloat(activePromo.discountValue));
+    }
+
+    return basePrice;
 }
 
-function cleanExpiredTokens() {
-    const now = Date.now();
-    for (const [token, data] of clientTokens.entries()) {
-        if (data.expires < now) clientTokens.delete(token);
+// ============================================================
+// STATELESS CRYPTOGRAPHIC TOKENS (JWT-like HMAC-SHA256)
+// ============================================================
+const JWT_SECRET = process.env.JWT_SECRET || 'sierra_systems_secret_key_987654321';
+
+function generateSignedToken(payload) {
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const signature = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${encodedPayload}`).digest('base64url');
+    return `${header}.${encodedPayload}.${signature}`;
+}
+
+function verifySignedToken(token) {
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const [header, encodedPayload, signature] = parts;
+    const expectedSignature = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${encodedPayload}`).digest('base64url');
+    if (signature !== expectedSignature) return null;
+    try {
+        const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+        if (payload.expires && payload.expires < Date.now()) {
+            return null; // Token expirado
+        }
+        return payload;
+    } catch {
+        return null;
     }
 }
+
+// Para compatibilidad con otras funciones legacy del backend que requieran verificar o limpiar tokens
+function cleanExpiredTokens() {}
 
 // ============================================================
 // SERVER-SENT EVENTS (SSE) PARA SINCRONIZACIÓN EN TIEMPO REAL
 // ============================================================
 let sseClients = [];
 
-function broadcastUpdate() {
+function broadcastUpdate(payload) {
+    const dataToSend = payload ? payload : { type: 'update' };
     sseClients.forEach(client => {
         try {
-            client.res.write(`data: ${JSON.stringify({ type: 'update' })}\n\n`);
+            client.res.write(`data: ${JSON.stringify(dataToSend)}\n\n`);
         } catch (e) {
             console.error('Error enviando SSE:', e);
         }
@@ -118,13 +181,8 @@ app.get('/api/stream', (req, res) => {
 });
 
 // ============================================================
-// ADMIN SESSION TOKENS (En memoria - válidos por 8 horas)
+// AUTH MIDDLEWARE (SESIONES TOTALMENTE PERSISTENTES Y STATELESS)
 // ============================================================
-const adminSessions = new Map(); // token -> { user, role, expires }
-
-function generateAdminToken() {
-    return 'adm_' + [...Array(36)].map(() => Math.random().toString(36)[2]).join('');
-}
 
 function requireAdmin(req, res, next) {
     const auth = req.headers.authorization;
@@ -132,54 +190,79 @@ function requireAdmin(req, res, next) {
         return res.status(401).json({ error: 'Acceso no autorizado. Se requiere sesión de administrador.' });
     }
     const token = auth.split(' ')[1];
-    const session = adminSessions.get(token);
-    if (!session || session.expires < Date.now()) {
-        adminSessions.delete(token);
-        return res.status(401).json({ error: 'Sesión expirada. Por favor inicia sesión nuevamente.' });
+    const session = verifySignedToken(token);
+    if (!session || (session.role !== 'Super Admin' && session.role !== 'Admin')) {
+        return res.status(401).json({ error: 'Sesión expirada o no autorizada. Por favor inicia sesión nuevamente.' });
     }
     req.adminUser = session;
+    next();
+}
+
+function requireAdminOrMatchingClient(req, res, next) {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Acceso no autorizado. Se requiere sesión válida.' });
+    }
+    const token = auth.split(' ')[1];
+    
+    const session = verifySignedToken(token);
+    if (!session) {
+        return res.status(401).json({ error: 'Sesión expirada o inválida. Por favor inicia sesión de nuevo.' });
+    }
+    
+    if (session.clientId) {
+        req.userRole = 'client';
+        req.clientId = session.clientId;
+    } else {
+        req.userRole = 'admin';
+        req.adminUser = session;
+    }
     next();
 }
 
 // ============================================================
 // AUTH ADMIN
 // ============================================================
+// ============================================================
+// AUTH ADMIN
+// ============================================================
 app.post('/api/login', async (req, res) => {
     const { user, pass } = req.body;
     try {
-        const dbState = await readDb();
-        const config = dbState.config || {};
-        const masterUser = config.adminUser || 'admin';
-        const masterPass = config.adminPass || '123456';
-
         let loggedUser = null;
-        if (user === masterUser && pass === masterPass) {
-            loggedUser = { name: config.adminName || 'Allenmar', role: 'Super Admin', user: masterUser };
+        
+        // 1. Intentar validar como super-admin
+        const masterUser = await db.findMasterUser(user, pass);
+        if (masterUser) {
+            loggedUser = { name: masterUser.admin_name || 'Allenmar', role: 'Super Admin', user: masterUser.admin_user };
         } else {
-            const users = dbState.users || [];
-            const foundUser = users.find(u => u.user === user && u.pass === pass && u.status === 'active');
-            if (foundUser) loggedUser = { name: foundUser.name, role: foundUser.role, user: foundUser.user };
+            // 2. Intentar validar como usuario administrador
+            const foundUser = await db.findUser(user, pass);
+            if (foundUser) {
+                loggedUser = { name: foundUser.name, role: foundUser.role, user: foundUser.user };
+            }
         }
 
         if (!loggedUser) {
             return res.status(401).json({ success: false, error: 'Credenciales inválidas' });
         }
 
-        // Generar token de sesión admin
-        const token = generateAdminToken();
-        adminSessions.set(token, { ...loggedUser, expires: Date.now() + 8 * 60 * 60 * 1000 });
+        // Generar token de sesión stateless firmado
+        const token = generateSignedToken({
+            name: loggedUser.name,
+            role: loggedUser.role,
+            user: loggedUser.user,
+            expires: Date.now() + 8 * 60 * 60 * 1000 // 8 horas
+        });
 
         return res.json({ success: true, token, user: loggedUser });
     } catch (err) {
+        console.error('Error en /api/login:', err);
         return res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
 
 app.post('/api/admin/logout', (req, res) => {
-    const auth = req.headers.authorization;
-    if (auth?.startsWith('Bearer ')) {
-        adminSessions.delete(auth.split(' ')[1]);
-    }
     res.json({ success: true });
 });
 
@@ -187,24 +270,25 @@ app.post('/api/admin/refresh-token', async (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ ok: false, error: 'Credenciales requeridas.' });
     try {
-        const dbState = await readDb();
-        const config = dbState.config || {};
-        const masterUser = config.adminUser || 'admin';
-        const masterPass = config.adminPass || '123456';
-
         let loggedUser = null;
-        if (user === masterUser && pass === masterPass) {
-            loggedUser = { name: config.adminName || 'Allenmar', role: 'Super Admin', user: masterUser };
+        const masterUser = await db.findMasterUser(user, pass);
+        if (masterUser) {
+            loggedUser = { name: masterUser.admin_name || 'Allenmar', role: 'Super Admin', user: masterUser.admin_user };
         } else {
-            const users = dbState.users || [];
-            const found = users.find(u => u.user === user && u.pass === pass && u.status === 'active');
-            if (found) loggedUser = { name: found.name, role: found.role, user: found.user };
+            const foundUser = await db.findUser(user, pass);
+            if (foundUser) {
+                loggedUser = { name: foundUser.name, role: foundUser.role, user: foundUser.user };
+            }
         }
 
         if (!loggedUser) return res.status(401).json({ ok: false, error: 'Credenciales inválidas.' });
 
-        const token = generateAdminToken();
-        adminSessions.set(token, { ...loggedUser, expires: Date.now() + 8 * 60 * 60 * 1000 });
+        const token = generateSignedToken({
+            name: loggedUser.name,
+            role: loggedUser.role,
+            user: loggedUser.user,
+            expires: Date.now() + 8 * 60 * 60 * 1000
+        });
         return res.json({ ok: true, token });
     } catch (err) {
         return res.status(500).json({ ok: false, error: 'Error del servidor.' });
@@ -219,26 +303,19 @@ app.post('/api/client/login', async (req, res) => {
     if (!email || !pass) return res.status(400).json({ success: false, error: 'Faltan credenciales.' });
 
     try {
-        const dbState = await readDb();
-        const businesses = dbState.businesses || [];
-
-        // Buscar negocio con ese email + contraseña
-        const biz = businesses.find(b =>
-            b.clientEmail && b.clientEmail.toLowerCase() === email.toLowerCase() &&
-            b.clientPass === pass
-        );
-
+        const biz = await db.findBusinessByClientCredentials(email, pass);
         if (!biz) {
             return res.status(401).json({ success: false, error: 'Correo o contraseña incorrectos.' });
         }
 
-        cleanExpiredTokens();
-        const token = generateToken();
-        clientTokens.set(token, {
+        const token = generateSignedToken({
             clientId: biz.id,
+            clientEmail: biz.client_email,
             expires: Date.now() + 8 * 60 * 60 * 1000 // 8 horas
         });
 
+        // Registrar notificación atómica
+        const dbState = await readDb();
         pushNotification(dbState, {
             title: 'Acceso de Cliente',
             desc: `"${biz.name}" inició sesión en el portal.`,
@@ -252,9 +329,10 @@ app.post('/api/client/login', async (req, res) => {
             token,
             clientId: biz.id,
             clientName: biz.name,
-            clientEmail: biz.clientEmail
+            clientEmail: biz.client_email
         });
     } catch (err) {
+        console.error('Error en client login:', err);
         return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
     }
 });
@@ -262,25 +340,22 @@ app.post('/api/client/login', async (req, res) => {
 app.post('/api/client/verify', async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ valid: false });
-    cleanExpiredTokens();
-    const session = clientTokens.get(token);
-    if (!session) return res.json({ valid: false });
+    
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.json({ valid: false });
 
     try {
-        const dbState = await readDb();
-        const biz = (dbState.businesses || []).find(b => b.id == session.clientId);
+        const biz = await db.findBusinessById(session.clientId);
         if (!biz) return res.json({ valid: false });
 
-        // 1. Verificar si la facturación está suspendida
-        if (biz.billing?.subscription_status === 'suspended') {
-            clientTokens.delete(token);
-            return res.json({ valid: false, reason: 'payment_required' });
+        // 1. Verificar si el administrador lo desactivó manualmente (no por pago)
+        if (biz.status !== 'active' && biz.subscription_status !== 'suspended') {
+            return res.json({ valid: false, reason: 'account_inactive' });
         }
 
-        // 2. Verificar si el administrador lo desactivó manualmente
-        if (biz.status !== 'active') {
-            clientTokens.delete(token);
-            return res.json({ valid: false, reason: 'account_inactive' });
+        // 2. Verificar si la facturación está suspendida por impago
+        if (biz.subscription_status === 'suspended') {
+            return res.json({ valid: true, clientId: session.clientId, isSuspended: true });
         }
 
         return res.json({ valid: true, clientId: session.clientId });
@@ -295,7 +370,7 @@ app.post('/api/client/verify', async (req, res) => {
 app.post('/api/businesses/:id/credentials', async (req, res) => {
     const { id } = req.params;
     const { clientEmail, clientPass } = req.body;
-    if (!clientEmail || !clientPass) return res.status(400).json({ error: 'Email y contraseña requeridos.' });
+    if (!clientEmail) return res.status(400).json({ error: 'Email requerido.' });
 
     try {
         let dbState = await readDb();
@@ -309,7 +384,9 @@ app.post('/api/businesses/:id/credentials', async (req, res) => {
         if (emailInUse) return res.status(409).json({ error: 'Ese correo ya está asignado a otro negocio.' });
 
         dbState.businesses[bizIndex].clientEmail = clientEmail;
-        dbState.businesses[bizIndex].clientPass = clientPass;
+        if (clientPass && clientPass !== '__NO_CHANGE__') {
+            dbState.businesses[bizIndex].clientPass = db.hashPassword(clientPass);
+        }
 
         pushNotification(dbState, {
             title: 'Credenciales Actualizadas',
@@ -331,42 +408,40 @@ app.post('/api/businesses/:id/credentials', async (req, res) => {
 // ============================================================
 app.post('/api/client/credentials/update', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token || !clientTokens.has(token)) return res.status(401).json({ error: 'No autorizado' });
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
 
-    const session = clientTokens.get(token);
     const { currentPass, newEmail, newPass } = req.body;
     if (!currentPass || !newEmail) return res.status(400).json({ error: 'Faltan datos requeridos.' });
 
     try {
-        let dbState = await readDb();
-        const bizIndex = dbState.businesses.findIndex(b => b.id == session.clientId);
-        if (bizIndex === -1) return res.status(404).json({ error: 'Negocio no encontrado.' });
+        const biz = await db.findBusinessById(session.clientId);
+        if (!biz) return res.status(404).json({ error: 'Negocio no encontrado.' });
 
-        if (dbState.businesses[bizIndex].clientPass !== currentPass) {
+        if (!db.verifyPassword(currentPass, biz.client_pass)) {
             return res.status(401).json({ error: 'La contraseña actual es incorrecta.' });
         }
 
-        const emailInUse = dbState.businesses.some((b, i) =>
-            i !== bizIndex && b.clientEmail && b.clientEmail.toLowerCase() === newEmail.toLowerCase()
-        );
+        const emailInUse = await db.emailInUseByOtherBusiness(newEmail, session.clientId);
         if (emailInUse) return res.status(409).json({ error: 'Este correo ya está registrado en otra cuenta.' });
 
-        dbState.businesses[bizIndex].clientEmail = newEmail;
+        const fieldsToUpdate = { clientEmail: newEmail };
         if (newPass && newPass.trim() !== '') {
-            dbState.businesses[bizIndex].clientPass = newPass;
+            fieldsToUpdate.clientPass = newPass;
         }
+        await db.updateBusiness(session.clientId, fieldsToUpdate);
 
-        pushNotification(dbState, {
+        await db.pushNotification({
             title: 'Credenciales de Cliente',
-            desc: `"${dbState.businesses[bizIndex].name}" ha actualizado sus accesos de seguridad.`,
+            desc: `"${biz.name}" ha actualizado sus accesos de seguridad.`,
             icon: 'shield-check',
             color: '#3b82f6'
         });
 
-        await writeDb(dbState);
         broadcastUpdate();
         res.json({ success: true, email: newEmail });
     } catch (err) {
+        console.error('Error actualizando credenciales cliente:', err);
         res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
@@ -376,26 +451,22 @@ app.post('/api/client/credentials/update', async (req, res) => {
 // ============================================================
 app.post('/api/client/avatar', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token || !clientTokens.has(token)) return res.status(401).json({ error: 'No autorizado' });
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
 
     upload.single('avatar')(req, res, async (err) => {
         if (err) return res.status(400).json({ error: err.message });
         if (!req.file) return res.status(400).json({ error: 'No se recibió ningún archivo.' });
 
         try {
-            const session = clientTokens.get(token);
             const avatarUrl = `/uploads/avatars/${req.file.filename}`;
 
-            let dbState = await readDb();
-            const bizIndex = dbState.businesses.findIndex(b => b.id == session.clientId);
-            if (bizIndex === -1) return res.status(404).json({ error: 'Negocio no encontrado.' });
+            await db.updateBusiness(session.clientId, { avatarUrl });
 
-            dbState.businesses[bizIndex].avatarUrl = avatarUrl;
-
-            await writeDb(dbState);
             broadcastUpdate();
             res.json({ success: true, avatarUrl });
         } catch (error) {
+            console.error('Error al guardar avatar cliente:', error);
             res.status(500).json({ error: 'Error interno al guardar avatar.' });
         }
     });
@@ -406,23 +477,19 @@ app.post('/api/client/avatar', async (req, res) => {
 // ============================================================
 app.post('/api/client/profile/update', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token || !clientTokens.has(token)) return res.status(401).json({ error: 'No autorizado' });
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
 
-    const session = clientTokens.get(token);
     const { newName } = req.body;
     if (!newName || newName.trim() === '') return res.status(400).json({ error: 'El nombre es requerido.' });
 
     try {
-        let dbState = await readDb();
-        const bizIndex = dbState.businesses.findIndex(b => b.id == session.clientId);
-        if (bizIndex === -1) return res.status(404).json({ error: 'Negocio no encontrado.' });
+        await db.updateBusiness(session.clientId, { name: newName });
 
-        dbState.businesses[bizIndex].name = newName;
-
-        await writeDb(dbState);
         broadcastUpdate();
         res.json({ success: true, name: newName });
     } catch (err) {
+        console.error('Error actualizando perfil cliente:', err);
         res.status(500).json({ error: 'Error del servidor.' });
     }
 });
@@ -432,6 +499,10 @@ app.post('/api/client/profile/update', async (req, res) => {
 // ============================================================
 app.get('/api/data', async (req, res) => {
     try {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.set('Expires', '-1');
+        res.set('Pragma', 'no-cache');
+        
         let dbState = await readDb();
         const now = Date.now();
         let changed = false;
@@ -468,15 +539,34 @@ app.get('/api/data', async (req, res) => {
             await writeDb(dbState);
         }
 
+        // 🔒 SEGURIDAD: Determinar si el solicitante es un Admin
+        let isAdmin = false;
+        const auth = req.headers.authorization;
+        if (auth && auth.startsWith('Bearer ')) {
+            const token = auth.split(' ')[1];
+            const session = verifySignedToken(token);
+            if (session && (session.role === 'Super Admin' || session.role === 'Admin')) {
+                isAdmin = true;
+            }
+        }
+
         // 🔒 SEGURIDAD: Eliminar campos sensibles antes de enviar al frontend
         const safeDb = {
             ...dbState,
+            config: isAdmin ? dbState.config : { ...dbState.config, adminUser: undefined, adminPass: undefined },
+            users: isAdmin ? dbState.users : [], // Clientes/Público no deben ver a los usuarios admin
             businesses: dbState.businesses.map(biz => {
-                const { clientPass, ...safeBiz } = biz;
+                const safeBiz = { ...biz };
+                
+                // Ocultar contraseñas a todo el mundo (excepto Admin)
+                if (!isAdmin) {
+                    safeBiz.clientPass = undefined;
+                }
+
                 if (safeBiz.billing?.gateway_token) {
                     safeBiz.billing = {
                         ...safeBiz.billing,
-                        gateway_token: '***TOKENIZED***', // No exponer el token real
+                        gateway_token: '***TOKENIZED***', // Nunca exponer el token real
                     };
                 }
                 return safeBiz;
@@ -490,7 +580,7 @@ app.get('/api/data', async (req, res) => {
 });
 
 // ============================================================
-// NOTIFICACIONES
+// NOTIFICATIONS
 // ============================================================
 app.get('/api/notifications', async (req, res) => {
     try {
@@ -501,7 +591,7 @@ app.get('/api/notifications', async (req, res) => {
     }
 });
 
-app.delete('/api/notifications', async (req, res) => {
+app.delete('/api/notifications', requireAdmin, async (req, res) => {
     try {
         let dbState = await readDb();
         dbState.notifications = [];
@@ -514,9 +604,9 @@ app.delete('/api/notifications', async (req, res) => {
 });
 
 // ============================================================
-// NEGOCIOS
+// NEGOCIOS (BUSINESSES)
 // ============================================================
-app.post('/api/businesses/toggle', async (req, res) => {
+app.post('/api/businesses/toggle', requireAdmin, async (req, res) => {
     const { id, status } = req.body;
     try {
         let dbState = await readDb();
@@ -525,14 +615,8 @@ app.post('/api/businesses/toggle', async (req, res) => {
             dbState.businesses[bizIndex].status = status;
             const biz = dbState.businesses[bizIndex];
 
-            // Si se desactiva, invalidar TODAS las sesiones activas de ese negocio
-            if (status !== 'active') {
-                for (const [token, session] of clientTokens.entries()) {
-                    if (String(session.clientId) === String(id)) {
-                        clientTokens.delete(token);
-                    }
-                }
-            }
+            // Si se desactiva, se validará en tiempo real en la base de datos en la verificación del token.
+
 
             pushNotification(dbState, {
                 title: status === 'active' ? 'Negocio Activado' : 'Negocio Desactivado',
@@ -552,7 +636,7 @@ app.post('/api/businesses/toggle', async (req, res) => {
     }
 });
 
-app.post('/api/businesses/new', async (req, res) => {
+app.post('/api/businesses/new', requireAdmin, async (req, res) => {
     const newBiz = req.body;
     try {
         let dbState = await readDb();
@@ -573,12 +657,12 @@ app.post('/api/businesses/new', async (req, res) => {
     }
 });
 
-app.put('/api/businesses/:id', async (req, res) => {
-    const { id } = req.params;
+app.put('/api/businesses/:id', requireAdmin, async (req, res) => {
+    const bizId = req.params.id;
     const updatedFields = req.body;
     try {
         let dbState = await readDb();
-        const bizIndex = dbState.businesses.findIndex(b => b.id == id);
+        const bizIndex = dbState.businesses.findIndex(b => b.id == bizId);
         if (bizIndex !== -1) {
             dbState.businesses[bizIndex] = { ...dbState.businesses[bizIndex], ...updatedFields };
             const biz = dbState.businesses[bizIndex];
@@ -601,21 +685,17 @@ app.put('/api/businesses/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/businesses/:id', async (req, res) => {
-    const { id } = req.params;
+app.delete('/api/businesses/:id', requireAdmin, async (req, res) => {
+    const bizId = req.params.id;
     try {
         let dbState = await readDb();
-        const biz = dbState.businesses.find(b => b.id == id);
+        const biz = dbState.businesses.find(b => b.id == bizId);
         const initialLength = dbState.businesses.length;
-        dbState.businesses = dbState.businesses.filter(b => b.id != id);
+        dbState.businesses = dbState.businesses.filter(b => b.id != bizId);
 
         if (dbState.businesses.length < initialLength) {
-            // Invalidar tokens del negocio eliminado
-            for (const [token, session] of clientTokens.entries()) {
-                if (String(session.clientId) === String(id)) {
-                    clientTokens.delete(token);
-                }
-            }
+            // Las sesiones activas se invalidarán en la verificación del token al no existir en la base de datos.
+
 
             if (biz) {
                 pushNotification(dbState, {
@@ -640,7 +720,7 @@ app.delete('/api/businesses/:id', async (req, res) => {
 // ============================================================
 // MÓDULOS
 // ============================================================
-app.post('/api/modules/toggle', async (req, res) => {
+app.post('/api/modules/toggle', requireAdmin, async (req, res) => {
     const { id, status } = req.body;
     try {
         let dbState = await readDb();
@@ -668,9 +748,177 @@ app.post('/api/modules/toggle', async (req, res) => {
 });
 
 // ============================================================
+// PROMOCIONES (Campañas de descuentos)
+// ============================================================
+app.get('/api/admin/promotions', requireAdmin, async (req, res) => {
+    try {
+        const dbState = await readDb();
+        res.json({ success: true, promotions: dbState.promotions || [] });
+    } catch (err) {
+        res.status(500).json({ error: 'Error al obtener promociones.' });
+    }
+});
+
+app.post('/api/admin/promotions/new', requireAdmin, async (req, res) => {
+    const { moduleId, discountType, discountValue, startDate, endDate } = req.body;
+    if (!moduleId || !discountType || discountValue === undefined || !startDate || !endDate) {
+        return res.status(400).json({ error: 'Faltan parámetros obligatorios.' });
+    }
+
+    try {
+        let dbState = await readDb();
+        if (!dbState.promotions) dbState.promotions = [];
+
+        // Validar que no se solape con otra promoción activa para el mismo módulo
+        const hasOverlap = dbState.promotions.some(p => 
+            p.moduleId === moduleId && 
+            p.status === 'active' &&
+            ((startDate >= p.startDate && startDate <= p.endDate) ||
+             (endDate >= p.startDate && endDate <= p.endDate) ||
+             (startDate <= p.startDate && endDate >= p.endDate))
+        );
+
+        if (hasOverlap) {
+            return res.status(400).json({ error: 'Ya existe una promoción activa programada para este módulo en este rango de fechas.' });
+        }
+
+        const newPromo = {
+            id: `promo_${Date.now()}`,
+            moduleId,
+            discountType,
+            discountValue: parseFloat(discountValue),
+            startDate,
+            endDate,
+            status: 'active'
+        };
+
+        dbState.promotions.push(newPromo);
+
+        pushNotification(dbState, {
+            title: 'Nueva Promoción Creada',
+            desc: `Se ha lanzado una campaña de descuento para el módulo "${moduleId}".`,
+            icon: 'tag',
+            color: '#3b82f6'
+        });
+
+        await writeDb(dbState);
+        broadcastUpdate();
+        res.json({ success: true, promotion: newPromo });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor al crear promoción.' });
+    }
+});
+
+app.post('/api/admin/promotions/toggle', requireAdmin, async (req, res) => {
+    const { id, status } = req.body;
+    if (!id || !status) return res.status(400).json({ error: 'ID y estado requeridos.' });
+
+    try {
+        let dbState = await readDb();
+        if (!dbState.promotions) dbState.promotions = [];
+
+        const promoIndex = dbState.promotions.findIndex(p => p.id === id);
+        if (promoIndex === -1) return res.status(404).json({ error: 'Promoción no encontrada.' });
+
+        dbState.promotions[promoIndex].status = status;
+
+        pushNotification(dbState, {
+            title: `Campaña ${status === 'active' ? 'Reactivada' : 'Pausada'}`,
+            desc: `La campaña publicitaria fue ${status === 'active' ? 'activada' : 'pausada'}.`,
+            icon: 'tag',
+            color: status === 'active' ? '#10b981' : '#f59e0b'
+        });
+
+        await writeDb(dbState);
+        broadcastUpdate();
+        res.json({ success: true, status });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor.' });
+    }
+});
+
+app.put('/api/admin/promotions/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { moduleId, discountType, discountValue, startDate, endDate } = req.body;
+    if (!moduleId || !discountType || discountValue === undefined || !startDate || !endDate) {
+        return res.status(400).json({ error: 'Faltan parámetros obligatorios.' });
+    }
+
+    try {
+        let dbState = await readDb();
+        if (!dbState.promotions) dbState.promotions = [];
+
+        const promoIndex = dbState.promotions.findIndex(p => p.id === id);
+        if (promoIndex === -1) return res.status(404).json({ error: 'Promoción no encontrada.' });
+
+        // Validar solapamiento con OTRA promoción (excluyendo la promoción actual)
+        const hasOverlap = dbState.promotions.some(p => 
+            p.id !== id &&
+            p.moduleId === moduleId && 
+            p.status === 'active' &&
+            ((startDate >= p.startDate && startDate <= p.endDate) ||
+             (endDate >= p.startDate && endDate <= p.endDate) ||
+             (startDate <= p.startDate && endDate >= p.endDate))
+        );
+
+        if (hasOverlap) {
+            return res.status(400).json({ error: 'Ya existe otra promoción activa programada para este módulo en este rango de fechas.' });
+        }
+
+        dbState.promotions[promoIndex] = {
+            ...dbState.promotions[promoIndex],
+            moduleId,
+            discountType,
+            discountValue: parseFloat(discountValue),
+            startDate,
+            endDate
+        };
+
+        pushNotification(dbState, {
+            title: 'Promoción Actualizada',
+            desc: `Se ha modificado la campaña de descuento para el módulo "${moduleId}".`,
+            icon: 'tag',
+            color: '#3b82f6'
+        });
+
+        await writeDb(dbState);
+        broadcastUpdate();
+        res.json({ success: true, promotion: dbState.promotions[promoIndex] });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor al actualizar promoción.' });
+    }
+});
+
+app.delete('/api/admin/promotions/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        let dbState = await readDb();
+        if (!dbState.promotions) dbState.promotions = [];
+
+        const promoIndex = dbState.promotions.findIndex(p => p.id === id);
+        if (promoIndex === -1) return res.status(404).json({ error: 'Promoción no encontrada.' });
+
+        dbState.promotions.splice(promoIndex, 1);
+
+        pushNotification(dbState, {
+            title: 'Campaña Eliminada',
+            desc: 'Una promoción ha sido eliminada permanentemente.',
+            icon: 'tag',
+            color: '#ef4444'
+        });
+
+        await writeDb(dbState);
+        broadcastUpdate();
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor.' });
+    }
+});
+
+// ============================================================
 // USUARIOS
 // ============================================================
-app.post('/api/users/new', async (req, res) => {
+app.post('/api/users/new', requireAdmin, async (req, res) => {
     const newUser = req.body;
     try {
         let dbState = await readDb();
@@ -692,12 +940,12 @@ app.post('/api/users/new', async (req, res) => {
     }
 });
 
-app.put('/api/users/:id', async (req, res) => {
-    const { id } = req.params;
+app.put('/api/users/:id', requireAdmin, async (req, res) => {
+    const userId = req.params.id;
     const updatedFields = req.body;
     try {
         let dbState = await readDb();
-        const userIndex = dbState.users.findIndex(u => u.id == id);
+        const userIndex = dbState.users.findIndex(u => u.id == userId);
         if (userIndex !== -1) {
             dbState.users[userIndex] = { ...dbState.users[userIndex], ...updatedFields };
             const u = dbState.users[userIndex];
@@ -720,13 +968,13 @@ app.put('/api/users/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/users/:id', async (req, res) => {
-    const { id } = req.params;
+app.delete('/api/users/:id', requireAdmin, async (req, res) => {
+    const userId = req.params.id;
     try {
         let dbState = await readDb();
-        const u = dbState.users.find(u => u.id == id);
+        const u = dbState.users.find(u => u.id == userId);
         const initialLength = dbState.users.length;
-        dbState.users = dbState.users.filter(u => u.id != id);
+        dbState.users = dbState.users.filter(u => u.id != userId);
 
         if (dbState.users.length < initialLength) {
             if (u) {
@@ -762,16 +1010,20 @@ app.get('/api/settings', async (req, res) => {
         const publicModules = (dbState.modules || []).map(m => ({
             id: m.id,
             name: m.name,
+            desc: m.desc || null,
+            icon: m.icon || null,
             price: m.price,
-            status: m.status
+            status: m.status,
+            image: m.image || null
         }));
-        res.json({ config: publicConfig, modules: publicModules });
+        const publicPromotions = (dbState.promotions || []).filter(p => p.status === 'active');
+        res.json({ config: publicConfig, modules: publicModules, promotions: publicPromotions });
     } catch (err) {
         res.status(500).json({ error: 'Error del servidor.' });
     }
 });
 
-app.post('/api/settings/save', async (req, res) => {
+app.post('/api/settings/save', requireAdmin, async (req, res) => {
     const { logo, adminUser, adminPass, currentPass } = req.body;
     try {
         let dbState = await readDb();
@@ -780,14 +1032,14 @@ app.post('/api/settings/save', async (req, res) => {
         const masterPass = dbState.config.adminPass || '123456';
 
         if (adminUser || adminPass) {
-            if (currentPass !== masterPass) {
+            if (!db.verifyPassword(currentPass, masterPass)) {
                 return res.status(401).json({ success: false, error: 'La contraseña actual es incorrecta' });
             }
         }
 
         if (logo) dbState.config.logo = logo;
         if (adminUser) dbState.config.adminUser = adminUser;
-        if (adminPass) dbState.config.adminPass = adminPass;
+        if (adminPass) dbState.config.adminPass = db.hashPassword(adminPass);
 
         await writeDb(dbState);
         broadcastUpdate();
@@ -800,16 +1052,16 @@ app.post('/api/settings/save', async (req, res) => {
 // ============================================================
 // MÓDULOS (SUPER ADMIN)
 // ============================================================
-app.put('/api/modules/:id', async (req, res) => {
-    const { id } = req.params;
+app.put('/api/modules/:id', requireAdmin, async (req, res) => {
+    const modId = req.params.id;
     const updatedFields = req.body;
     try {
         let dbState = await readDb();
-        const moduleIndex = dbState.modules.findIndex(m => String(m.id) === String(id));
+        const moduleIndex = dbState.modules.findIndex(m => String(m.id) === String(modId));
         if (moduleIndex !== -1) {
             dbState.modules[moduleIndex] = { ...dbState.modules[moduleIndex], ...updatedFields };
         } else {
-            const newMod = { id, ...updatedFields };
+            const newMod = { id: modId, ...updatedFields };
             if (!dbState.modules) dbState.modules = [];
             dbState.modules.push(newMod);
         }
@@ -827,11 +1079,10 @@ app.put('/api/modules/:id', async (req, res) => {
 // ============================================================
 app.post('/api/client/module/cancel', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token || !clientTokens.has(token)) return res.status(401).json({ error: 'No autorizado' });
-
-    const session = clientTokens.get(token);
-    const { moduleId, moduleName } = req.body;
-    if (!moduleId) return res.status(400).json({ error: 'moduleId es requerido.' });
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
+    const { moduleId, moduleName, instanceId } = req.body;
+    if (!moduleId && !instanceId) return res.status(400).json({ error: 'moduleId o instanceId es requerido.' });
 
     try {
         let dbState = await readDb();
@@ -840,42 +1091,71 @@ app.post('/api/client/module/cancel', async (req, res) => {
 
         const biz = dbState.businesses[bizIndex];
 
-        if (!biz.modules || !biz.modules.some(id => String(id) === String(moduleId))) {
-            return res.status(400).json({ error: 'El módulo no está activo.' });
-        }
+        // Sincronizar/inicializar moduleInstances y modules si es necesario
+        if (!biz.moduleInstances) biz.moduleInstances = [];
+        if (!biz.modules) biz.modules = [];
 
-        // Quitar de módulos activos
-        biz.modules = biz.modules.filter(id => String(id) !== String(moduleId));
+        let targetInstance = null;
 
-        let renewalDate;
-        if (biz.moduleDates && biz.moduleDates[moduleId]) {
-            renewalDate = new Date(biz.moduleDates[moduleId]);
+        if (instanceId) {
+            targetInstance = biz.moduleInstances.find(inst => inst.instanceId === instanceId);
         } else {
-            console.warn(`[AVISO] El módulo ${moduleId} del negocio ${biz.name} no tiene moduleDates registrado. Se usará la fecha actual como vencimiento.`);
-            renewalDate = new Date();
+            // Si no mandan instanceId, buscar el primer instance activo de ese moduleId
+            targetInstance = biz.moduleInstances.find(inst => String(inst.moduleId) === String(moduleId) && inst.status === 'active');
         }
 
-        // Agregar a cancelados
-        if (!biz.cancelledModules) biz.cancelledModules = [];
-        biz.cancelledModules = biz.cancelledModules.filter(cm => String(cm.id) !== String(moduleId));
-        biz.cancelledModules.push({
-            id: moduleId,
-            name: moduleName || moduleId,
-            cancelledAt: new Date().toISOString(),
-            accessUntil: renewalDate.toISOString()
-        });
+        if (targetInstance) {
+            // Cambiar estado de la instancia a cancelado
+            targetInstance.status = 'cancelled';
+            targetInstance.cancelledAt = new Date().toISOString();
+            targetInstance.accessUntil = targetInstance.renewalDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            
+            // Si ya no quedan instancias activas de este moduleId, quitarlo de biz.modules
+            const activeInstancesLeft = biz.moduleInstances.filter(inst => String(inst.moduleId) === String(targetInstance.moduleId) && inst.status === 'active');
+            if (activeInstancesLeft.length === 0) {
+                biz.modules = biz.modules.filter(id => String(id) !== String(targetInstance.moduleId));
+            }
+
+            // También mantener compatibilidad con biz.cancelledModules
+            if (!biz.cancelledModules) biz.cancelledModules = [];
+            biz.cancelledModules = biz.cancelledModules.filter(cm => String(cm.id) !== String(targetInstance.moduleId));
+            biz.cancelledModules.push({
+                id: targetInstance.moduleId,
+                name: moduleName || targetInstance.moduleId,
+                cancelledAt: targetInstance.cancelledAt,
+                accessUntil: targetInstance.accessUntil
+            });
+        } else {
+            // Comportamiento legacy por si acaso
+            if (biz.modules.some(id => String(id) === String(moduleId))) {
+                biz.modules = biz.modules.filter(id => String(id) !== String(moduleId));
+                let renewalDate = biz.moduleDates?.[moduleId] ? new Date(biz.moduleDates[moduleId]) : new Date();
+                
+                if (!biz.cancelledModules) biz.cancelledModules = [];
+                biz.cancelledModules = biz.cancelledModules.filter(cm => String(cm.id) !== String(moduleId));
+                biz.cancelledModules.push({
+                    id: moduleId,
+                    name: moduleName || moduleId,
+                    cancelledAt: new Date().toISOString(),
+                    accessUntil: renewalDate.toISOString()
+                });
+            } else {
+                return res.status(400).json({ error: 'La suscripción no está activa.' });
+            }
+        }
 
         pushNotification(dbState, {
             title: 'Suscripción Suspendida',
-            desc: `"${biz.name}" suspendió el módulo "${moduleName || moduleId}". Acceso hasta ${renewalDate.toLocaleDateString('es-CO')}.`,
+            desc: `"${biz.name}" suspendió "${moduleName || moduleId}" (${targetInstance?.branchName || 'Sede Principal'}).`,
             icon: 'pause-circle',
             color: '#f59e0b'
         });
 
         await writeDb(dbState);
         broadcastUpdate();
-        res.json({ success: true, cancelledModules: biz.cancelledModules, modules: biz.modules });
+        res.json({ success: true, cancelledModules: biz.cancelledModules, modules: biz.modules, moduleInstances: biz.moduleInstances });
     } catch (err) {
+        console.error('[CancelModule] Error:', err);
         res.status(500).json({ error: 'Error del servidor.' });
     }
 });
@@ -885,11 +1165,10 @@ app.post('/api/client/module/cancel', async (req, res) => {
 // ============================================================
 app.post('/api/client/module/reactivate', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token || !clientTokens.has(token)) return res.status(401).json({ error: 'No autorizado' });
-
-    const session = clientTokens.get(token);
-    const { moduleId } = req.body;
-    if (!moduleId) return res.status(400).json({ error: 'moduleId es requerido.' });
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
+    const { moduleId, instanceId } = req.body;
+    if (!moduleId && !instanceId) return res.status(400).json({ error: 'moduleId o instanceId es requerido.' });
 
     try {
         let dbState = await readDb();
@@ -898,50 +1177,88 @@ app.post('/api/client/module/reactivate', async (req, res) => {
 
         const biz = dbState.businesses[bizIndex];
 
-        const cancelledEntry = (biz.cancelledModules || []).find(cm => String(cm.id) === String(moduleId));
-        if (!cancelledEntry) return res.status(400).json({ error: 'El módulo no está suspendido.' });
-
-        // Quitar de cancelados
-        biz.cancelledModules = biz.cancelledModules.filter(cm => String(cm.id) !== String(moduleId));
-
-        // Devolver a activos
+        // Sincronizar/inicializar moduleInstances y modules si es necesario
+        if (!biz.moduleInstances) biz.moduleInstances = [];
         if (!biz.modules) biz.modules = [];
-        if (!biz.modules.some(id => String(id) === String(moduleId))) {
-            biz.modules.push(moduleId);
+
+        let targetInstance = null;
+
+        if (instanceId) {
+            targetInstance = biz.moduleInstances.find(inst => inst.instanceId === instanceId);
+        } else {
+            // Si no mandan instanceId, buscar el primer instance cancelado de ese moduleId
+            targetInstance = biz.moduleInstances.find(inst => String(inst.moduleId) === String(moduleId) && inst.status === 'cancelled');
         }
 
-        const originalExpiry = new Date(cancelledEntry.accessUntil);
+        if (targetInstance) {
+            const originalExpiry = new Date(targetInstance.accessUntil || targetInstance.renewalDate);
+            if (originalExpiry.getTime() <= Date.now()) {
+                return res.status(403).json({ 
+                    error: 'Tu ciclo de acceso ha expirado. Contacta al administrador para renovar tu suscripción.' 
+                });
+            }
 
-        if (originalExpiry.getTime() <= Date.now()) {
-            return res.status(403).json({ 
-                error: 'Tu ciclo de acceso ha expirado. Contacta al administrador para renovar tu suscripción.' 
-            });
+            // Cambiar estado a activo
+            targetInstance.status = 'active';
+            targetInstance.renewalDate = targetInstance.accessUntil;
+            targetInstance.cancelledAt = null;
+            targetInstance.accessUntil = null;
+
+            // Asegurar que el moduleId esté en biz.modules
+            if (!biz.modules.some(id => String(id) === String(targetInstance.moduleId))) {
+                biz.modules.push(targetInstance.moduleId);
+            }
+
+            // Quitar de biz.cancelledModules si no quedan más cancelados de ese tipo
+            const cancelledInstancesLeft = biz.moduleInstances.filter(inst => String(inst.moduleId) === String(targetInstance.moduleId) && inst.status === 'cancelled');
+            if (cancelledInstancesLeft.length === 0) {
+                biz.cancelledModules = (biz.cancelledModules || []).filter(cm => String(cm.id) !== String(targetInstance.moduleId));
+            }
+        } else {
+            // Comportamiento legacy por si acaso
+            const cancelledEntry = (biz.cancelledModules || []).find(cm => String(cm.id) === String(moduleId));
+            if (!cancelledEntry) return res.status(400).json({ error: 'El módulo no está suspendido.' });
+
+            const originalExpiry = new Date(cancelledEntry.accessUntil);
+            if (originalExpiry.getTime() <= Date.now()) {
+                return res.status(403).json({ 
+                    error: 'Tu ciclo de acceso ha expirado. Contacta al administrador para renovar tu suscripción.' 
+                });
+            }
+
+            // Quitar de cancelados
+            biz.cancelledModules = biz.cancelledModules.filter(cm => String(cm.id) !== String(moduleId));
+
+            // Devolver a activos
+            if (!biz.modules.some(id => String(id) === String(moduleId))) {
+                biz.modules.push(moduleId);
+            }
+
+            if (!biz.moduleDates) biz.moduleDates = {};
+            biz.moduleDates[moduleId] = cancelledEntry.accessUntil;
         }
-
-        if (!biz.moduleDates) biz.moduleDates = {};
-        biz.moduleDates[moduleId] = cancelledEntry.accessUntil;
 
         pushNotification(dbState, {
             title: 'Suscripción Reactivada',
-            desc: `"${biz.name}" reactivó el módulo "${cancelledEntry.name}". Vence el ${originalExpiry.toLocaleDateString('es-CO')} (sin cambios de ciclo).`,
+            desc: `"${biz.name}" reactivó "${targetInstance?.moduleId || moduleId}" (${targetInstance?.branchName || 'Sede Principal'}).`,
             icon: 'refresh-cw',
             color: '#10b981'
         });
 
         await writeDb(dbState);
         broadcastUpdate();
-        res.json({ success: true, modules: biz.modules, cancelledModules: biz.cancelledModules, moduleDates: biz.moduleDates });
+        res.json({ success: true, modules: biz.modules, moduleInstances: biz.moduleInstances, cancelledModules: biz.cancelledModules, moduleDates: biz.moduleDates });
     } catch (err) {
+        console.error('[ReactivateModule] Error:', err);
         res.status(500).json({ error: 'Error del servidor.' });
     }
 });
 
 app.post('/api/client/module/renew', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token || !clientTokens.has(token)) return res.status(401).json({ error: 'No autorizado' });
-
-    const session = clientTokens.get(token);
-    const { moduleId, moduleName, last4 } = req.body;
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
+    const { moduleId, moduleName, last4, branchName } = req.body;
     if (!moduleId) return res.status(400).json({ error: 'moduleId es requerido.' });
 
     try {
@@ -950,32 +1267,242 @@ app.post('/api/client/module/renew', async (req, res) => {
         if (bizIndex === -1) return res.status(404).json({ error: 'Negocio no encontrado.' });
 
         const biz = dbState.businesses[bizIndex];
+        const allModules = dbState.modules || [];
+        const baseModule = allModules.find(m => String(m.id) === String(moduleId));
+        
+        let basePrice = 0;
+        if (baseModule && baseModule.price) {
+            basePrice = parseInt(String(baseModule.price).replace(/[^0-9]/g, ''), 10) || 0;
+        }
 
+        // Initialize arrays if they don't exist
+        if (!biz.moduleInstances) biz.moduleInstances = [];
+        if (!biz.modules) biz.modules = [];
+        
+        // Convert legacy modules to instances if they don't exist in moduleInstances
+        if (biz.moduleInstances.length === 0 && biz.modules.length > 0) {
+            for (let i = 0; i < biz.modules.length; i++) {
+                const legacyModId = biz.modules[i];
+                const renewalDate = biz.moduleDates && biz.moduleDates[legacyModId] ? biz.moduleDates[legacyModId] : null;
+                const legacyMod = allModules.find(m => String(m.id) === String(legacyModId));
+                let legacyPrice = 0;
+                if (legacyMod && legacyMod.price) {
+                    legacyPrice = parseInt(String(legacyMod.price).replace(/[^0-9]/g, ''), 10) || 0;
+                }
+                biz.moduleInstances.push({
+                    instanceId: `${biz.id}-${legacyModId}-${i}`,
+                    moduleId: legacyModId,
+                    branchName: 'Sede Principal',
+                    status: 'active',
+                    priceApplied: legacyPrice,
+                    renewalDate: renewalDate
+                });
+            }
+        }
+
+        // Check if there are active instances of THIS module already
+        const activeInstancesOfModule = biz.moduleInstances.filter(m => String(m.moduleId) === String(moduleId) && m.status === 'active');
+        const hasExisting = activeInstancesOfModule.length > 0;
+        
+        // 1. Obtener precio base considerando promociones activas
+        const promoPrice = getActivePromoPrice(dbState, moduleId, basePrice);
+
+        // 2. Si ya tiene una sede de este módulo, aplicamos 30% descuento sobre el precio promocional (acumulativo)
+        let priceApplied = promoPrice;
+        let isDiscountApplied = false;
+        if (hasExisting) {
+            priceApplied = Math.round(promoPrice * 0.70); // 30% descuento
+            isDiscountApplied = true;
+        }
+
+        // Remove from cancelled if exists (mostly legacy fallback or simple reactivation)
         if (biz.cancelledModules) {
             biz.cancelledModules = biz.cancelledModules.filter(cm => String(cm.id) !== String(moduleId));
         }
+        
+        // Also remove specific instance from cancelled if reactivation
+        // if we implemented specific instance reactivation... (kept simple for now)
 
-        if (!biz.modules) biz.modules = [];
         if (!biz.modules.some(id => String(id) === String(moduleId))) {
             biz.modules.push(moduleId);
         }
 
-        if (!biz.moduleDates) biz.moduleDates = {};
         const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        biz.moduleDates[moduleId] = newExpiry.toISOString();
+        const newExpiryStr = newExpiry.toISOString();
+        
+        // Keep legacy moduleDates for compatibility with some parts of UI
+        if (!biz.moduleDates) biz.moduleDates = {};
+        biz.moduleDates[moduleId] = newExpiryStr;
+
+        const finalBranchName = branchName || (hasExisting ? `Sede ${activeInstancesOfModule.length + 1}` : 'Sede Principal');
+        const newInstanceId = `inst_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        biz.moduleInstances.push({
+            instanceId: newInstanceId,
+            moduleId: moduleId,
+            branchName: finalBranchName,
+            status: 'active',
+            priceApplied: priceApplied,
+            renewalDate: newExpiryStr
+        });
+
+        // Registrar en historial de pagos SQL directo (Compra/Renovación Módulo)
+        try {
+            await db.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                session.clientId,
+                priceApplied,
+                `Adquisición / Renovación de Módulo — ${moduleName || moduleId} (${finalBranchName})`,
+                'APPROVED',
+                `sim_txn_${Date.now()}_${Math.floor(Math.random()*1000)}`
+            ]);
+        } catch (dbErr) {
+            console.error('[RenewModule] Error registrando historial de pago:', dbErr.message);
+        }
 
         pushNotification(dbState, {
             title: 'Pago Recibido',
-            desc: `"${biz.name}" renovó el módulo "${moduleName || moduleId}" pagando con tarjeta terminada en ${last4 || '****'}. Válido hasta ${newExpiry.toLocaleDateString('es-CO')}.`,
+            desc: `"${biz.name}" adquirió/renovó "${moduleName || moduleId}" (${finalBranchName}) con tarjeta terminada en ${last4 || '****'}. Válido hasta ${newExpiry.toLocaleDateString('es-CO')}.${isDiscountApplied ? ' ¡Descuento de 30% aplicado!' : ''}`,
             icon: 'credit-card',
             color: '#10b981'
         });
 
         await writeDb(dbState);
         broadcastUpdate();
-        res.json({ success: true, modules: biz.modules, cancelledModules: biz.cancelledModules, moduleDates: biz.moduleDates });
+        res.json({ success: true, modules: biz.modules, moduleInstances: biz.moduleInstances, cancelledModules: biz.cancelledModules, moduleDates: biz.moduleDates });
     } catch (err) {
+        console.error('[RenewModule] Error general:', err);
         res.status(500).json({ error: 'Error del servidor.' });
+    }
+});
+
+// ====== CLIENTE: AUTO-PAGO DE SALDO PENDIENTE Y AUTO-REACTIVACIÓN ======
+app.post('/api/client/pay-pending-balance', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
+    
+    try {
+        let dbState = await readDb();
+        const bizIndex = dbState.businesses.findIndex(b => b.id == session.clientId);
+        if (bizIndex === -1) return res.status(404).json({ error: 'Negocio no encontrado.' });
+
+        const biz = dbState.businesses[bizIndex];
+        if (!biz.billing?.gateway_token) {
+            return res.status(400).json({ error: 'No tienes ninguna tarjeta registrada. Por favor, agrega una tarjeta primero.' });
+        }
+
+        // 1. Calcular monto total acumulado adeudado (basado en sedes activas)
+        let totalAmount = 0;
+        const activeInstances = biz.moduleInstances ? biz.moduleInstances.filter(m => m.status === 'active') : [];
+        if (activeInstances.length > 0) {
+            for (const inst of activeInstances) {
+                const p = parseFloat(inst.priceApplied) || 0;
+                totalAmount += p;
+            }
+        } else {
+            // Fallback legacy
+            for (const modId of (biz.modules || [])) {
+                const mod = (dbState.modules || []).find(m => m.id === modId);
+                if (mod?.price) {
+                    const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(p)) totalAmount += p;
+                }
+            }
+        }
+
+        if (totalAmount === 0) {
+            return res.status(400).json({ error: 'El monto adeudado es $0. No tienes cobros pendientes.' });
+        }
+
+        // 2. Procesar el pago con la tarjeta (Wompi Sandbox)
+        const result = await PaymentService.chargeWithToken(
+            biz.billing.gateway_token,
+            totalAmount * 100,
+            `Auto-reactivación de Suscripción — ${biz.name}`
+        );
+
+        if (result.ok) {
+            // 3. Reactivar el negocio y la facturación
+            biz.billing.subscription_status = 'active';
+            biz.status = 'active'; // Reactivar negocio
+            biz.billing.last_payment_date = new Date().toISOString();
+            biz.billing.last_payment_amount = totalAmount;
+            
+            // Renovar las fechas de vencimiento de las sucursales cobradas (+30 días desde HOY)
+            const d = new Date();
+            d.setDate(d.getDate() + 30);
+            const nextDateStr = d.toISOString().slice(0, 10);
+            biz.billing.next_billing_date = nextDateStr;
+            biz.billing.last_transaction_id = result.transactionId;
+
+            if (biz.moduleInstances) {
+                for (const mod of biz.moduleInstances) {
+                    if (mod.status === 'active') {
+                        mod.renewalDate = nextDateStr;
+                    }
+                }
+            }
+
+            // Registrar en historial de pagos SQL directo
+            await db.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                session.clientId,
+                totalAmount,
+                `Auto-reactivación de Suscripción — ${biz.name}`,
+                'APPROVED',
+                result.transactionId
+            ]);
+
+            // Notificación global
+            pushNotification(dbState, {
+                title: 'Auto-Reactivación Exitosa',
+                desc: `✅ ${biz.name} se auto-reactivó exitosamente tras pagar $${totalAmount.toLocaleString('es-CO')} COP. TXN: ${result.transactionId}`,
+                icon: 'check-circle',
+                color: '#10b981'
+            });
+
+            await writeDb(dbState);
+            broadcastUpdate();
+
+            res.json({
+                success: true,
+                message: `¡Pago exitoso! Tu portal ha sido reactivado al instante. TXN: ${result.transactionId}`,
+                nextBillingDate: nextDateStr,
+                monthlyTotal: totalAmount
+            });
+        } else {
+            // Registrar en historial de pagos como fallido SQL directo
+            await db.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                session.clientId,
+                totalAmount,
+                `Intento Auto-reactivación Fallido — ${biz.name}`,
+                'DECLINED',
+                null
+            ]);
+
+            // Si falla, actualizar registro
+            biz.billing.last_failed_attempt = new Date().toISOString();
+            await writeDb(dbState);
+            broadcastUpdate();
+            
+            res.status(400).json({
+                error: `Pago rechazado por el procesador: ${result.message}`
+            });
+        }
+    } catch (err) {
+        console.error('[AutoReactivation] Error:', err);
+        res.status(500).json({ error: 'Error interno del servidor al procesar tu reactivación.' });
     }
 });
 
@@ -997,12 +1524,18 @@ app.get('/admin', (req, res) => {
 /**
  * POST /api/payment/save-token
  */
-app.post('/api/payment/save-token', requireAdmin, async (req, res) => {
+app.post('/api/payment/save-token', requireAdminOrMatchingClient, async (req, res) => {
     try {
-        const { bizId, token, last_four, card_brand, next_billing_date } = req.body;
+        const { bizId, token, last_four, card_brand, card_expiry, card_holder, next_billing_date } = req.body;
         if (!bizId || !token || !last_four || !card_brand) {
             return res.status(400).json({ ok: false, message: 'Faltan campos obligatorios.' });
         }
+
+        // Si el usuario es un cliente, verificar que solo pueda modificar su propio negocio
+        if (req.userRole === 'client' && String(req.clientId) !== String(bizId)) {
+            return res.status(403).json({ ok: false, message: 'Acceso denegado. No puedes modificar la tarjeta de este negocio.' });
+        }
+
         const dbState = await readDb();
         const biz = dbState.businesses.find(b => b.id == bizId);
         if (!biz) return res.status(404).json({ ok: false, message: 'Negocio no encontrado.' });
@@ -1012,10 +1545,12 @@ app.post('/api/payment/save-token', requireAdmin, async (req, res) => {
             gateway_token: token,
             last_four,
             card_brand,
+            card_expiry: card_expiry || biz.billing?.card_expiry || '',
+            card_holder: card_holder || biz.billing?.card_holder || '',
             subscription_status: 'active',
-            next_billing_date: next_billing_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-            last_payment_date: null,
-            last_payment_amount: 0,
+            next_billing_date: next_billing_date || biz.billing?.next_billing_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+            last_payment_date: biz.billing?.last_payment_date || null,
+            last_payment_amount: biz.billing?.last_payment_amount || 0,
         };
 
         await writeDb(dbState);
@@ -1040,13 +1575,22 @@ app.post('/api/payment/charge-subscription/:bizId', requireAdmin, async (req, re
             return res.status(400).json({ ok: false, message: 'Este negocio no tiene una tarjeta guardada.' });
         }
 
-        // Calcular monto
+        // Calcular monto basado en sucursales activas (moduleInstances)
         let totalAmount = 0;
-        for (const modId of (biz.modules || [])) {
-            const mod = (dbState.modules || []).find(m => m.id === modId);
-            if (mod?.price) {
-                const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-                if (!isNaN(p)) totalAmount += p;
+        const activeInstances = biz.moduleInstances ? biz.moduleInstances.filter(m => m.status === 'active') : [];
+        if (activeInstances.length > 0) {
+            for (const inst of activeInstances) {
+                const p = parseFloat(inst.priceApplied) || 0;
+                totalAmount += p;
+            }
+        } else {
+            // Fallback legacy
+            for (const modId of (biz.modules || [])) {
+                const mod = (dbState.modules || []).find(m => m.id === modId);
+                if (mod?.price) {
+                    const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(p)) totalAmount += p;
+                }
             }
         }
 
@@ -1057,21 +1601,59 @@ app.post('/api/payment/charge-subscription/:bizId', requireAdmin, async (req, re
         const result = await PaymentService.chargeWithToken(
             biz.billing.gateway_token,
             totalAmount * 100,
-            `Suscripción AS Sierra Systems — ${biz.name}`
+            `Suscripción Módulo — ${biz.name}`
         );
 
         const updatedBiz = dbState.businesses.find(b => b.id == req.params.bizId);
         if (result.ok) {
             updatedBiz.billing.subscription_status = 'active';
+            updatedBiz.status = 'active'; // Alinear estado del negocio
             updatedBiz.billing.last_payment_date = new Date().toISOString();
             updatedBiz.billing.last_payment_amount = totalAmount;
             const d = new Date();
             d.setDate(d.getDate() + 30);
-            updatedBiz.billing.next_billing_date = d.toISOString().slice(0, 10);
+            const nextDateStr = d.toISOString().slice(0, 10);
+            updatedBiz.billing.next_billing_date = nextDateStr;
             updatedBiz.billing.last_transaction_id = result.transactionId;
+
+            // Sincronizar fechas de renovación de todas las sucursales cobradas (+30 días)
+            if (updatedBiz.moduleInstances) {
+                for (const mod of updatedBiz.moduleInstances) {
+                    if (mod.status === 'active') {
+                        mod.renewalDate = nextDateStr;
+                    }
+                }
+            }
+
+            // Registrar en historial de pagos SQL directo (Super Admin Manual)
+            await db.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                biz.id,
+                totalAmount,
+                `Cobro Manual de Suscripción — ${biz.name}`,
+                'APPROVED',
+                result.transactionId
+            ]);
         } else {
             updatedBiz.billing.subscription_status = 'suspended';
+            updatedBiz.status = 'inactive'; // Alinear estado del negocio
             updatedBiz.billing.last_failed_attempt = new Date().toISOString();
+
+            // Registrar en historial de pagos como fallido SQL directo
+            await db.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                biz.id,
+                totalAmount,
+                `Intento Cobro Manual Fallido — ${biz.name}`,
+                'DECLINED',
+                null
+            ]);
         }
 
         pushNotification(dbState, {
@@ -1095,18 +1677,24 @@ app.post('/api/payment/charge-subscription/:bizId', requireAdmin, async (req, re
 /**
  * DELETE /api/payment/remove-card/:bizId
  */
-app.delete('/api/payment/remove-card/:bizId', requireAdmin, async (req, res) => {
+app.delete('/api/payment/remove-card/:bizId', requireAdminOrMatchingClient, async (req, res) => {
     try {
+        const { bizId } = req.params;
+
+        // Si el usuario es un cliente, verificar que solo pueda modificar su propio negocio
+        if (req.userRole === 'client' && String(req.clientId) !== String(bizId)) {
+            return res.status(403).json({ ok: false, message: 'Acceso denegado. No puedes eliminar la tarjeta de este negocio.' });
+        }
+
         const dbState = await readDb();
-        const biz = dbState.businesses.find(b => b.id == req.params.bizId);
+        const biz = dbState.businesses.find(b => b.id == bizId);
         if (!biz) return res.status(404).json({ ok: false, message: 'Negocio no encontrado.' });
 
         biz.billing = {
             ...(biz.billing || {}),
             gateway_token: null,
             last_four: null,
-            card_brand: null,
-            subscription_status: 'pending',
+            card_brand: null
         };
 
         await writeDb(dbState);
@@ -1196,11 +1784,364 @@ app.post('/api/webhooks/wompi', async (req, res) => {
     }
 });
 
+// ============================================================
+// PAYMENT HISTORY ENDPOINTS
+// ============================================================
+
+app.get('/api/payments/history', requireAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.pool.query(`
+            SELECT ph.*, b.name as business_name 
+            FROM payment_history ph
+            JOIN businesses b ON ph.business_id = b.id
+            ORDER BY ph.created_at DESC
+        `);
+        res.json({ success: true, history: rows });
+    } catch (err) {
+        console.error('Error al obtener historial de pagos:', err);
+        res.status(500).json({ success: false, error: 'Error al consultar historial de pagos.' });
+    }
+});
+
+app.get('/api/client/payments', requireAdminOrMatchingClient, async (req, res) => {
+    let bizId = req.clientId;
+    if (req.userRole === 'admin' && req.query.bizId) {
+        bizId = req.query.bizId;
+    }
+    if (!bizId) {
+        return res.status(400).json({ success: false, error: 'Identificador de negocio requerido.' });
+    }
+    try {
+        const [rows] = await db.pool.query(`
+            SELECT * FROM payment_history 
+            WHERE business_id = ?
+            ORDER BY created_at DESC
+        `, [bizId]);
+        res.json({ success: true, history: rows });
+    } catch (err) {
+        console.error('Error al obtener historial de pagos del cliente:', err);
+        res.status(500).json({ success: false, error: 'Error al consultar historial de pagos.' });
+    }
+});
+
+// ============================================================
+// TICKETS DE SOPORTE (Híbrido: BD + WhatsApp)
+// ============================================================
+
+// CLIENT: Crear nuevo ticket
+app.post('/api/tickets', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
+
+    const { module: ticketModule, priority, description } = req.body;
+    if (!ticketModule || !description || description.length < 10) {
+        return res.status(400).json({ error: 'Módulo y descripción (mín. 10 caracteres) son requeridos.' });
+    }
+
+    try {
+        const biz = await db.findBusinessById(session.clientId);
+        if (!biz) return res.status(404).json({ error: 'Negocio no encontrado.' });
+
+        const ticketId = `TKT-${Date.now()}`;
+        await db.pool.query(
+            `INSERT INTO tickets (id, business_id, business_name, module, priority, description, status)
+             VALUES (?, ?, ?, ?, ?, ?, 'abierto')`,
+            [ticketId, session.clientId, biz.name, ticketModule, priority || 'normal', description]
+        );
+
+        // Guardar la descripción como el primer mensaje del chat
+        await db.pool.query(
+            `INSERT INTO ticket_messages (ticket_id, sender, sender_name, message)
+             VALUES (?, 'client', ?, ?)`,
+            [ticketId, biz.name, description]
+        );
+
+        // Notificación para el admin
+        await db.pushNotification({
+            title: '🎟️ Nuevo Ticket de Soporte',
+            desc: `"${biz.name}" abrió un ticket [${(priority || 'normal').toUpperCase()}] en ${ticketModule}.`,
+            icon: 'ticket',
+            color: priority === 'urgente' ? '#ef4444' : '#f59e0b'
+        });
+        broadcastUpdate();
+
+        res.json({ success: true, ticketId });
+    } catch (err) {
+        console.error('Error creando ticket:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// CLIENT: Obtener mis tickets
+app.get('/api/tickets/my', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
+
+    try {
+        const [rows] = await db.pool.query(
+            `SELECT id, module, priority, description, status, created_at
+             FROM tickets WHERE business_id = ?
+             ORDER BY created_at DESC LIMIT 20`,
+            [session.clientId]
+        );
+        res.json({ success: true, tickets: rows });
+    } catch (err) {
+        console.error('Error obteniendo tickets del cliente:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// ADMIN: Listar todos los tickets
+app.get('/api/admin/tickets', requireAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.pool.query(
+            `SELECT t.*, b.name as business_name
+             FROM tickets t
+             LEFT JOIN businesses b ON t.business_id = b.id
+             ORDER BY
+               CASE t.priority WHEN 'urgente' THEN 1 WHEN 'normal' THEN 2 WHEN 'baja' THEN 3 ELSE 4 END,
+               CASE t.status WHEN 'abierto' THEN 1 WHEN 'en_proceso' THEN 2 WHEN 'resuelto' THEN 3 WHEN 'cerrado' THEN 4 ELSE 5 END,
+               t.created_at DESC`
+        );
+        res.json({ success: true, tickets: rows });
+    } catch (err) {
+        console.error('Error obteniendo tickets:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// ADMIN: Actualizar estado de un ticket
+app.patch('/api/admin/tickets/:id/status', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    const validStatuses = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
+    if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Estado inválido.' });
+    }
+    try {
+        const [result] = await db.pool.query(
+            `UPDATE tickets SET status = ? WHERE id = ?`,
+            [status, id]
+        );
+        if (result.affectedRows === 0) return res.status(404).json({ error: 'Ticket no encontrado.' });
+        broadcastUpdate();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error actualizando ticket:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// ADMIN: Eliminar un ticket (de forma física y sus imágenes)
+app.delete('/api/admin/tickets/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        // 1. Buscar todas las imágenes de este ticket para eliminarlas del disco
+        const [messages] = await db.pool.query(
+            `SELECT image_url FROM ticket_messages WHERE ticket_id = ? AND image_url IS NOT NULL AND image_url != ''`,
+            [id]
+        );
+        const ticketImagesDir = path.join(__dirname, '..', 'frontend', 'uploads', 'ticket-images');
+        for (const msg of messages) {
+            const url = msg.image_url;
+            if (url) {
+                const filename = path.basename(url);
+                const fullPath = path.join(ticketImagesDir, filename);
+                if (fs.existsSync(fullPath)) {
+                    try {
+                        fs.unlinkSync(fullPath);
+                    } catch (err) {
+                        console.error('Error unlinking ticket image:', err);
+                    }
+                }
+            }
+        }
+
+        // 2. Eliminar el ticket de la base de datos (ON DELETE CASCADE eliminará automáticamente los mensajes de ticket_messages)
+        const [result] = await db.pool.query(`DELETE FROM tickets WHERE id = ?`, [id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Ticket no encontrado.' });
+        }
+        
+        broadcastUpdate();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error al eliminar ticket:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// SOPORTE: Obtener todos los mensajes de un ticket (Admin o Cliente dueño)
+app.get('/api/tickets/:id/messages', requireAdminOrMatchingClient, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [tickets] = await db.pool.query(
+            `SELECT business_id FROM tickets WHERE id = ?`,
+            [id]
+        );
+        if (tickets.length === 0) {
+            return res.status(404).json({ error: 'Ticket no encontrado.' });
+        }
+        
+        const ticket = tickets[0];
+        if (req.userRole === 'client' && ticket.business_id !== req.clientId) {
+            return res.status(403).json({ error: 'No autorizado para ver este ticket.' });
+        }
+
+        const [messages] = await db.pool.query(
+            `SELECT id, ticket_id, sender, sender_name, message, image_url, created_at
+             FROM ticket_messages
+             WHERE ticket_id = ?
+             ORDER BY created_at ASC`,
+            [id]
+        );
+        res.json({ success: true, messages });
+    } catch (err) {
+        console.error('Error obteniendo mensajes del ticket:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// SOPORTE: Enviar un nuevo mensaje en el chat de un ticket (Admin o Cliente dueño)
+app.post('/api/tickets/:id/messages', requireAdminOrMatchingClient, async (req, res) => {
+    const { id } = req.params;
+    const { message } = req.body;
+    if (!message || message.trim().length === 0) {
+        return res.status(400).json({ error: 'El mensaje no puede estar vacío.' });
+    }
+
+    try {
+        const [tickets] = await db.pool.query(
+            `SELECT business_id, business_name, status FROM tickets WHERE id = ?`,
+            [id]
+        );
+        if (tickets.length === 0) {
+            return res.status(404).json({ error: 'Ticket no encontrado.' });
+        }
+        
+        const ticket = tickets[0];
+        if (req.userRole === 'client' && ticket.business_id !== req.clientId) {
+            return res.status(403).json({ error: 'No autorizado para responder en este ticket.' });
+        }
+
+        if (ticket.status === 'cerrado') {
+            return res.status(400).json({ error: 'El ticket está cerrado y no admite nuevos mensajes.' });
+        }
+
+        let senderName = '';
+        if (req.userRole === 'client') {
+            senderName = ticket.business_name || 'Cliente';
+        } else {
+            senderName = req.adminUser.name || req.adminUser.user || 'Soporte';
+        }
+
+        await db.pool.query(
+            `INSERT INTO ticket_messages (ticket_id, sender, sender_name, message, image_url)
+             VALUES (?, ?, ?, ?, NULL)`,
+            [id, req.userRole, senderName, message]
+        );
+
+        broadcastUpdate();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error enviando mensaje de ticket:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// SOPORTE: Subir imagen en el chat de un ticket
+app.post('/api/tickets/:id/messages/image', requireAdminOrMatchingClient, (req, res, next) => {
+    uploadTicketImage.single('image')(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ error: 'La imagen no puede superar los 8 MB.' });
+            }
+            return res.status(400).json({ error: err.message || 'Error al procesar la imagen.' });
+        }
+        next();
+    });
+}, async (req, res) => {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen.' });
+
+    try {
+        const [tickets] = await db.pool.query(
+            `SELECT business_id, business_name, status FROM tickets WHERE id = ?`,
+            [id]
+        );
+        if (tickets.length === 0) {
+            fs.unlink(req.file.path, () => {});
+            return res.status(404).json({ error: 'Ticket no encontrado.' });
+        }
+        const ticket = tickets[0];
+        if (req.userRole === 'client' && ticket.business_id !== req.clientId) {
+            fs.unlink(req.file.path, () => {});
+            return res.status(403).json({ error: 'No autorizado.' });
+        }
+        if (ticket.status === 'cerrado') {
+            fs.unlink(req.file.path, () => {});
+            return res.status(400).json({ error: 'El ticket está cerrado.' });
+        }
+
+        let senderName = '';
+        if (req.userRole === 'client') {
+            senderName = ticket.business_name || 'Cliente';
+        } else {
+            senderName = req.adminUser.name || req.adminUser.user || 'Soporte';
+        }
+
+        const imageUrl = `/uploads/ticket-images/${req.file.filename}`;
+
+        await db.pool.query(
+            `INSERT INTO ticket_messages (ticket_id, sender, sender_name, message, image_url)
+             VALUES (?, ?, ?, '', ?)`,
+            [id, req.userRole, senderName, imageUrl]
+        );
+
+        broadcastUpdate();
+        res.json({ success: true, imageUrl });
+    } catch (err) {
+        console.error('Error subiendo imagen de ticket:', err);
+        if (req.file) fs.unlink(req.file.path, () => {});
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// SOPORTE: Emitir indicador de escritura (Typing Indicator) (Admin o Cliente dueño)
+app.post('/api/tickets/:id/typing', requireAdminOrMatchingClient, async (req, res) => {
+    const { id } = req.params;
+    const { role } = req.body;
+    try {
+        const [tickets] = await db.pool.query(
+            `SELECT business_id FROM tickets WHERE id = ?`,
+            [id]
+        );
+        if (tickets.length === 0) {
+            return res.status(404).json({ error: 'Ticket no encontrado.' });
+        }
+        
+        const ticket = tickets[0];
+        if (req.userRole === 'client' && ticket.business_id !== req.clientId) {
+            return res.status(403).json({ error: 'No autorizado.' });
+        }
+
+        // Emitir evento de escritura vía SSE
+        broadcastUpdate({ type: 'typing', ticketId: id, role });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error enviando typing indicator:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`====================================================`);
     console.log(`[AS Sierra Systems] Servidor unificado en línea`);
     console.log(`====================================================`);
@@ -1208,5 +2149,57 @@ app.listen(PORT, () => {
     console.log(`➡️  Panel de Super Admin: http://localhost:${PORT}/admin`);
     console.log(`====================================================`);
 
+    // Inicializar todas las tablas de base de datos (auto-migración segura)
+    await db.initializeDatabase();
+
     startBillingCron();
+    startTicketCleanupCron();
+
+    // Crear/verificar tablas adicionales del sistema de tickets legacy
+    try {
+        await db.pool.query(`
+            CREATE TABLE IF NOT EXISTS tickets (
+                id VARCHAR(60) PRIMARY KEY,
+                business_id BIGINT NOT NULL,
+                business_name VARCHAR(150) NULL,
+                module VARCHAR(150) NOT NULL,
+                priority ENUM('baja', 'normal', 'urgente') NOT NULL DEFAULT 'normal',
+                description TEXT NOT NULL,
+                status ENUM('abierto', 'en_proceso', 'resuelto', 'cerrado') NOT NULL DEFAULT 'abierto',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('[AS Sierra] ✅ Tabla tickets verificada/creada.');
+
+        await db.pool.query(`
+            CREATE TABLE IF NOT EXISTS ticket_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id VARCHAR(60) NOT NULL,
+                sender ENUM('client', 'admin') NOT NULL,
+                sender_name VARCHAR(150) NOT NULL,
+                message TEXT NOT NULL DEFAULT '',
+                image_url VARCHAR(512) NULL DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+            )
+        `);
+        console.log('[AS Sierra] ✅ Tabla ticket_messages verificada/creada.');
+
+        // Safe migration: add image_url column if it doesn't exist yet
+        try {
+            const [cols] = await db.pool.query(`
+                SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ticket_messages' AND COLUMN_NAME = 'image_url'
+            `);
+            if (cols.length === 0) {
+                await db.pool.query(`ALTER TABLE ticket_messages ADD COLUMN image_url VARCHAR(512) NULL DEFAULT NULL`);
+                console.log('[AS Sierra] ✅ Columna image_url agregada a ticket_messages.');
+            }
+        } catch (err) {
+            console.warn('[AS Sierra] ⚠️ No se pudo migrar image_url:', err.message);
+        }
+    } catch (err) {
+        console.error('[AS Sierra] ⚠️ Error creando tablas de soporte:', err.message);
+    }
 });

@@ -1,0 +1,68 @@
+Created At: 2026-05-26T05:02:04Z
+Completed At: 2026-05-26T05:02:04Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4185
+Total Bytes: 185110
+Showing lines 4040 to 4125
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4040:     cerrado:    { label: 'Cerrado',     color: '#6b7280', bg: 'rgba(107,114,128,0.12)', icon: 'archive' },
+4041: };
+4042: const TICKET_PRIORITY_MAP = {
+4043:     baja:    { label: 'Baja',    color: '#94a3b8' },
+4044:     normal:  { label: 'Normal',  color: '#64748b' },
+4045:     urgente: { label: '🔴 Urgente', color: '#ef4444' },
+4046: };
+4047: 
+4048: /**
+4049:  * Renderiza la tabla de tickets aplicando búsqueda y filtro actual.
+4050:  */
+4051: function renderAdminTickets() {
+4052:     const tbody = document.getElementById('tickets-list');
+4053:     if (!tbody) return;
+4054: 
+4055:     const search = (document.getElementById('ticket-search')?.value || '').toLowerCase().trim();
+4056:     const filter = window._currentTicketFilter || 'all';
+4057: 
+4058:     let list = appState.adminTickets || [];
+4059: 
+4060:     // Filtro por estado
+4061:     if (filter !== 'all') list = list.filter(t => t.status === filter);
+4062: 
+4063:     // Búsqueda por texto
+4064:     if (search) {
+4065:         list = list.filter(t =>
+4066:             (t.business_name || '').toLowerCase().includes(search) ||
+4067:             (t.module || '').toLowerCase().includes(search) ||
+4068:             (t.description || '').toLowerCase().includes(search)
+4069:         );
+4070:     }
+4071: 
+4072:     // Actualizar KPIs
+4073:     const all = appState.adminTickets || [];
+4074:     const set = (id, count) => { const el = document.getElementById(id); if (el) el.textContent = count; };
+4075:     set('ticket-kpi-open',        all.filt
+<truncated 1739 bytes>
+3:                 </td>
+4104:                 <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || '—'}</td>
+4105:                 <td style="padding:1rem 1.5rem; color:var(--text-muted);">${t.module || '—'}</td>
+4106:                 <td style="padding:1rem 1.5rem;">
+4107:                     <span style="font-size:0.78rem; font-weight:700; padding:3px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color};">
+4108:                         ${pr.label}
+4109:                     </span>
+4110:                 </td>
+4111:                 <td style="padding:1rem 1.5rem; font-size:0.85rem; color:var(--text-muted); max-width:220px;" title="${(t.description || '').replace(/"/g, '&quot;')}">${desc}</td>
+4112:                 <td style="padding:1rem 1.5rem; text-align:center;">
+4113:                     <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem; font-weight:700; padding:4px 12px; border-radius:20px; background:${st.bg}; color:${st.color};">
+4114:                         <i data-lucide="${st.icon}" style="width:12px;height:12px;"></i> ${st.label}
+4115:                     </span>
+4116:                 </td>
+4117:                 <td style="padding:1rem 1.5rem; font-size:0.82rem; color:var(--text-muted);">${date}</td>
+4118:                 <td style="padding:1rem 1.5rem; text-align:center;">
+4119:                     <button class="btn-ghost" style="padding:0.35rem 0.85rem; font-size:0.8rem; border:1px solid var(--border-color); border-radius:8px; cursor:pointer;"
+4120:                         onclick="updateTicketStatus('${t.id}', '${t.status}')">
+4121:                         <i data-lucide="edit-3" style="width:13px;"></i> Estado
+4122:                     </button>
+4123:                 </td>
+4124:             </tr>`;
+4125:     }).join('');
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

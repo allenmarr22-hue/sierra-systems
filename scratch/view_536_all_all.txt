@@ -1,0 +1,34 @@
+Created At: 2026-05-26T12:04:58Z
+Completed At: 2026-05-26T12:04:58Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4500
+Total Bytes: 208056
+Showing lines 200 to 225
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+200:         // SSE REAL-TIME SYNC
+201:         // ==========================================
+202:         const evtSource = new EventSource('/api/stream');
+203:         evtSource.onmessage = function(event) {
+204:             try {
+205:                 const data = JSON.parse(event.data);
+206:                 if (data.type === 'update') {
+207:                     console.log('Update received via SSE, reloading data...');
+208:                     loadData();
+209:                     if (typeof loadAdminTickets === 'function') {
+210:                         loadAdminTickets();
+211:                     }
+212:                     if (window.activeChatTicketId) {
+213:                         fetchAndRenderChatMessages(window.activeChatTicketId, 'admin');
+214:                     }
+215:                 }
+216:             } catch (err) {
+217:                 console.error('SSE Error:', err);
+218:             }
+219:         };
+220:     } else {
+221:         localStorage.removeItem('as_auth');
+222:         localStorage.removeItem('as_user');
+223:         localStorage.removeItem('as_admin_token');
+224:         appState.user = null;
+225:         showView('login-view');
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

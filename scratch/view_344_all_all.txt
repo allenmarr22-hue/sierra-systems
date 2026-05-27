@@ -1,0 +1,39 @@
+Created At: 2026-05-26T11:47:22Z
+Completed At: 2026-05-26T11:47:23Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3918
+Total Bytes: 204938
+Showing lines 395 to 425
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+395:                         headers: {
+396:                             'Content-Type': 'application/json',
+397:                             'Authorization': `Bearer ${session.token}`
+398:                         },
+399:                         body: JSON.stringify({ module: mod, priority, description: desc })
+400:                     });
+401:                     const data = await res.json();
+402:                     if (!res.ok) { Swal.showValidationMessage(data.error || 'Error al guardar el ticket.'); return false; }
+403:                     return { mod, desc, priority, ticketId: data.ticketId };
+404:                 } catch (err) {
+405:                     Swal.showValidationMessage('Error de conexión. Intenta de nuevo.');
+406:                     return false;
+407:                 }
+408:             }
+409:         }).then((result) => {
+410:             if (result.isConfirmed) {
+411:                 const { mod, desc, priority, ticketId } = result.value;
+412:                 const msg = encodeURIComponent(`🎟️ TICKET ${ticketId}\nMódulo: ${mod}\nPrioridad: ${priority.toUpperCase()}\n\n${desc}`);
+413:                 // Abrir WhatsApp con el ticket referenciado
+414:                 window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+415:                 // Recargar historial de tickets
+416:                 loadMyTickets();
+417:                 Swal.fire({
+418:                     icon: 'success',
+419:                     title: '¡Ticket registrado!',
+420:                     html: `<p style="color:var(--text-muted);">Tu ticket <strong style="color:var(--text);">${ticketId}</strong> fue guardado en el sistema. Un agente te responderá por WhatsApp pronto.</p>`,
+421:                     background: 'var(--bg-surface)',
+422:                     color: 'var(--text)',
+423:                     confirmButtonColor: 'var(--primary)',
+424:                     timer: 5000,
+425:                     timerProgressBar: true
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

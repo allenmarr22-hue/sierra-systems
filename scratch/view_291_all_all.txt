@@ -1,0 +1,30 @@
+Created At: 2026-05-26T11:28:30Z
+Completed At: 2026-05-26T11:28:30Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3684
+Total Bytes: 192403
+Showing lines 564 to 585
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+564:     try {
+565:         const res = await fetch(`/api/tickets/my?t=${Date.now()}`, {
+566:             headers: { 'Authorization': `Bearer ${session.token}` }
+567:         });
+568:         if (!res.ok) return;
+569:         const data = await res.json();
+570:         const tickets = data.tickets || [];
+571: 
+572:         if (tickets.length === 0) {
+573:             tbody.innerHTML = `
+574:                 <tr>
+575:                     <td colspan="5" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
+576:                         <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+577:                             <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
+578:                             <span>Aún no has creado ningún ticket de soporte.</span>
+579:                         </div>
+580:                     </td>
+581:                 </tr>`;
+582:             lucide.createIcons();
+583:             return;
+584:         }
+585: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

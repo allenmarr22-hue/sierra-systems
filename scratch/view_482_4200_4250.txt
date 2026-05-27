@@ -1,0 +1,39 @@
+Created At: 2026-05-26T11:59:44Z
+Completed At: 2026-05-26T11:59:44Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 4004
+Total Bytes: 217533
+Showing lines 3710 to 3740
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3710:     if (!ticket) return;
+3711: 
+3712:     window.activeChatTicketId = ticketId;
+3713: 
+3714:     const statusMap = {
+3715:         abierto:    { label: 'Abierto',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' },
+3716:         en_proceso: { label: 'En Proceso',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
+3717:         resuelto:   { label: 'Resuelto',    color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+3718:         cerrado:    { label: 'Cerrado',     color: '#6b7280', bg: 'rgba(107,114,128,0.12)', border: 'rgba(107,114,128,0.25)' },
+3719:     };
+3720:     const priorityMap = {
+3721:         normal:  { label: 'Normal',       color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
+3722:         urgente: { label: '\uD83D\uDD34 Urgente', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+3723:         baja:    { label: 'Baja',         color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+3724:     };
+3725: 
+3726:     const st = statusMap[ticket.status] || statusMap['abierto'];
+3727:     const pr = priorityMap[ticket.priority] || priorityMap['normal'];
+3728:     const d = ticket.created_at ? new Date(ticket.created_at) : null;
+3729:     const fullDate = d ? d.toLocaleString('es-CO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true }) : '\u2014';
+3730: 
+3731:     Swal.fire({
+3732:         title: '',
+3733:         html: `
+3734:             <div style="font-family:'Outfit',sans-serif; color:var(--text-main);">
+3735: 
+3736:                 <!-- Header -->
+3737:                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+3738:                     <div style="display:flex; align-items:center; gap:10px;">
+3739:                         <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">\uD83C\uDF9F\uFE0F</div>
+3740:                         <div style="text-align:left;">
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -15,10 +15,95 @@
     <link rel="stylesheet" href="styles.css?v=20260423.01">
     <!-- Forzar inicio desde arriba al refrescar (fix Safari + Chrome mobile) -->
     <script>
+        // ====== MONKEY PATCH & INITIAL BRAND SYNC IN HEAD (FOUC PREVENTER) ======
+        (function() {
+            // 1. Aislamiento de LocalStorage (Tenant Isolation)
+            const urlParams = new URLSearchParams(window.location.search);
+            const instanceId = urlParams.get('instanceId');
+            let suffix = "";
+            if (instanceId) {
+                suffix = `_${instanceId}`;
+                const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+                const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
+                const originalGetItem = Storage.prototype.getItem;
+                const originalSetItem = Storage.prototype.setItem;
+                const originalRemoveItem = Storage.prototype.removeItem;
+                Storage.prototype.getItem = function(key) {
+                    return shouldAiso(key) ? originalGetItem.call(this, key + suffix) : originalGetItem.call(this, key);
+                };
+                Storage.prototype.setItem = function(key, value) {
+                    return shouldAiso(key) ? originalSetItem.call(this, key + suffix, value) : originalSetItem.call(this, key, value);
+                };
+                Storage.prototype.removeItem = function(key) {
+                    return shouldAiso(key) ? originalRemoveItem.call(this, key + suffix) : originalRemoveItem.call(this, key);
+                };
+                Storage.prototype.getItem.__isPatched = true;
+            }
+
+            // 2. Título de Pestaña y Favicon inmediato
+            const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+            document.title = name + " | Agenda de Citas";
+
+            const logoUrl = localStorage.getItem('margarita_logo_url');
+            const DEFAULT_M_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2220%22%20fill%3D%22%23111111%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2275%22%20font-size%3D%2265%22%20fill%3D%22%23B87381%22%20font-family%3D%22Georgia%2Cserif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22bold%22%3EM%3C%2Ftext%3E%3Ctext%20x%3D%2280%22%20y%3D%2235%22%20font-size%3D%2230%22%20text-anchor%3D%22middle%22%3E%E2%9C%A8%3C%2Ftext%3E%3C%2Fsvg%3E";
+            const favLink = document.createElement('link');
+            favLink.id = 'dynamic-favicon';
+            favLink.rel = 'icon';
+            if (logoUrl) {
+                favLink.type = logoUrl.startsWith('data:image/svg') || logoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                favLink.href = logoUrl;
+            } else {
+                favLink.type = 'image/svg+xml';
+                favLink.href = DEFAULT_M_SVG;
+            }
+            document.getElementsByTagName('head')[0].appendChild(favLink);
+
+            // 3. Aplicar colores del tema seleccionado al vuelo para evitar destello rosa
+            const cachedTheme = localStorage.getItem('margarita_client_theme') || 'rose';
+            const themes = {
+                rose: { accent: '#A05D6B', bg: '#FFF4F7', rgb: '160, 93, 107', hover: '#B87E8C', dark: '#804350' },
+                blue: { accent: '#2D4F6C', bg: '#F0F4F8', rgb: '45, 79, 108', hover: '#3D6487', dark: '#1B3347' },
+                green: { accent: '#2E5A44', bg: '#F0F6F3', rgb: '46, 90, 68', hover: '#3E775A', dark: '#1D3D2D' },
+                gold: { accent: '#6B4F3E', bg: '#F9F6F2', rgb: '107, 79, 62', hover: '#856450', dark: '#4C372A' },
+                lavender: { accent: '#8E7CC3', bg: '#F5F3FA', rgb: '142, 124, 195', hover: '#A493D6', dark: '#6A58A1' },
+                orange: { accent: '#E67E22', bg: '#FFF8F2', rgb: '230, 126, 34', hover: '#F39C12', dark: '#D35400' },
+                cyan: { accent: '#3498DB', bg: '#F2F8FC', rgb: '52, 152, 219', hover: '#5DADE2', dark: '#1A5276' },
+                purple: { accent: '#7D3C98', bg: '#F8F2FC', rgb: '125, 60, 152', hover: '#9B59B6', dark: '#4A235A' },
+                maroon: { accent: '#922B21', bg: '#FDEDEC', rgb: '146, 43, 33', hover: '#C0392B', dark: '#78281F' },
+                slate: { accent: '#34495E', bg: '#EAECEE', rgb: '52, 73, 94', hover: '#5D6D7E', dark: '#1A252F' },
+                emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133', hover: '#1ABC9C', dark: '#0E6251' },
+                mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96', hover: '#2ECC71', dark: '#196F3D' },
+                teal: { accent: '#117A65', bg: '#E8F6F3', rgb: '17, 122, 101', hover: '#148F77', dark: '#0B5345' },
+                olive: { accent: '#7D6608', bg: '#FEFDE8', rgb: '125, 102, 8', hover: '#9A7D0A', dark: '#4F4105' },
+                mustard: { accent: '#B7950B', bg: '#FEFDF0', rgb: '183, 149, 11', hover: '#D4AC0D', dark: '#7D6608' },
+                terracotta: { accent: '#A04000', bg: '#FDF5E6', rgb: '160, 64, 0', hover: '#BA4A00', dark: '#6E2C00' },
+                coral: { accent: '#D35400', bg: '#FDF2E9', rgb: '211, 84, 0', hover: '#E67E22', dark: '#873600' },
+                sand: { accent: '#A08A75', bg: '#F9F6F0', rgb: '160, 138, 117', hover: '#BCA893', dark: '#735F4C' },
+                coffee: { accent: '#5D4037', bg: '#F6F2F0', rgb: '93, 64, 55', hover: '#7D564C', dark: '#3E2723' },
+                plum: { accent: '#6C3483', bg: '#F5EEF8', rgb: '108, 52, 131', hover: '#8E44AD', dark: '#4A235A' },
+                orchid: { accent: '#8E44AD', bg: '#F4ECF7', rgb: '142, 68, 173', hover: '#9B59B6', dark: '#5B2C6F' },
+                magenta: { accent: '#C0392B', bg: '#FDEDEC', rgb: '192, 57, 43', hover: '#D98880', dark: '#641E16' },
+                rosewood: { accent: '#78281F', bg: '#FAF2F2', rgb: '120, 40, 31', hover: '#922B21', dark: '#4A1510' },
+                navy: { accent: '#1B4F72', bg: '#EAF2F8', rgb: '27, 79, 114', hover: '#2874A6', dark: '#0E2F44' },
+                peacock: { accent: '#21618C', bg: '#EBF5FB', rgb: '33, 97, 140', hover: '#2E86C1', dark: '#154360' },
+                indigo: { accent: '#2874A6', bg: '#EAF2F8', rgb: '40, 116, 166', hover: '#5499C7', dark: '#1B4F72' },
+                charcoal: { accent: '#455A64', bg: '#ECEFF1', rgb: '69, 90, 100', hover: '#607D8B', dark: '#263238' },
+                sakura: { accent: '#E8A7B5', bg: '#FFF3F5', rgb: '232, 167, 181', hover: '#F0C0C8', dark: '#B86675' },
+                wine: { accent: '#780820', bg: '#FCF2F4', rgb: '120, 8, 32', hover: '#961D36', dark: '#480210' },
+                amber: { accent: '#D68910', bg: '#FEF9E7', rgb: '214, 137, 16', hover: '#F5B041', dark: '#7E5109' }
+            };
+            const theme = themes[cachedTheme] || themes.rose;
+            const root = document.documentElement;
+            root.style.setProperty('--color-accent', theme.accent);
+            root.style.setProperty('--color-accent-hover', theme.hover);
+            root.style.setProperty('--color-dark-pink', theme.dark);
+            root.style.setProperty('--color-bg', theme.bg);
+            root.style.setProperty('--accent-rgb', theme.rgb);
+        })();
+
         if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
         if (window.location.hash) { history.replaceState(null, '', window.location.pathname + window.location.search); }
     </script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23111111%22/><text x=%2250%22 y=%2275%22 font-size=%2265%22 fill=%22%23B87381%22 font-family=%22Georgia, serif%22 text-anchor=%22middle%22 font-weight=%22bold%22>M</text><text x=%2280%22 y=%2235%22 font-size=%2230%22 text-anchor=%22middle%22>✨</text></svg>">
 </head>
 <body>
     <!-- Fixed Header Stack (Vanish-proof, Jitter-proof) -->
@@ -47,7 +132,26 @@
     
         <!-- Navbar -->
         <nav class="navbar">
-        <h1 class="logo"><a href="index.html" style="text-decoration: none; color: inherit; display: flex; align-items: center;"><i class="fas fa-crown" style="color: var(--color-accent); margin-right: 8px;"></i><span class="dynamic-brand-text">Margaritasmit</span><span>.</span></a></h1>
+        <h1 class="logo">
+            <a href="index.html" id="logo-anchor" style="text-decoration: none; color: inherit; display: flex; align-items: center;">
+                <i class="fas fa-crown" id="logo-icon" style="color: var(--color-accent); margin-right: 8px;"></i>
+                <span class="dynamic-brand-text" id="logo-text">Margaritasmit</span><span id="logo-dot">.</span>
+            </a>
+            <script>
+                (function() {
+                    const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+                    document.getElementById('logo-text').innerText = name;
+                    const logoUrl = localStorage.getItem('margarita_logo_url');
+                    if (logoUrl) {
+                        const img = document.createElement('img');
+                        img.src = logoUrl;
+                        img.style.cssText = "height: 38px; max-width: 120px; object-fit: contain; border-radius: 6px; margin-right: 10px; vertical-align: middle; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;";
+                        const icon = document.getElementById('logo-icon');
+                        if (icon) icon.parentNode.replaceChild(img, icon);
+                    }
+                })();
+            </script>
+        </h1>
         <ul class="nav-links" id="dynamic-nav-links">
                     <a href="#" class="nav-link active" data-category="all">Todos</a>
                     <a href="#" class="nav-link" data-category="nails">Uñas</a>
@@ -86,6 +190,24 @@
 
     <!-- Hero Section -->
     <header class="hero" id="inicio">
+        <script>
+            (function() {
+                const heroUrl = localStorage.getItem('margarita_hero_url');
+                if (heroUrl) {
+                    const cachedTheme = localStorage.getItem('margarita_client_theme') || 'rose';
+                    const themes = {
+                        rose: '160, 93, 107', blue: '45, 79, 108', green: '46, 90, 68', gold: '107, 79, 62', lavender: '142, 124, 195',
+                        orange: '230, 126, 34', cyan: '52, 152, 219', purple: '125, 60, 152', maroon: '146, 43, 33', slate: '52, 73, 94',
+                        emerald: '22, 160, 133', mint: '39, 174, 96', teal: '17, 122, 101', olive: '125, 102, 8', mustard: '183, 149, 11',
+                        terracotta: '160, 64, 0', coral: '211, 84, 0', sand: '160, 138, 117', coffee: '93, 64, 55', plum: '108, 52, 131',
+                        orchid: '142, 68, 173', magenta: '192, 57, 43', rosewood: '120, 40, 31', navy: '27, 79, 114', peacock: '33, 97, 140',
+                        indigo: '40, 116, 166', charcoal: '69, 90, 100', sakura: '232, 167, 181', wine: '120, 8, 32', amber: '214, 137, 16'
+                    };
+                    const rgb = themes[cachedTheme] || '160, 93, 107';
+                    document.getElementById('inicio').style.backgroundImage = `linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(${rgb},0.3) 100%), url('${heroUrl}')`;
+                }
+            })();
+        </script>
         <div class="hero-overlay"></div>
         <div class="hero-content reveal">
             <h1>Todo para resaltar<br>tu feminidad.</h1>
@@ -181,7 +303,26 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container text-center">
-            <h2 class="logo"><i class="fas fa-crown" style="color: var(--color-accent); margin-right: 8px;"></i><span class="dynamic-brand-text">Margaritasmit</span><span>.</span></h2>
+            <h2 class="logo" id="footer-logo-container" style="display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-crown" id="footer-logo-icon" style="color: var(--color-accent); margin-right: 8px;"></i>
+                <span class="dynamic-brand-text" id="footer-logo-text">Margaritasmit</span><span id="footer-logo-dot">.</span>
+            </h2>
+            <script>
+                (function() {
+                    const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+                    document.getElementById('footer-logo-text').innerText = name;
+                    const logoUrl = localStorage.getItem('margarita_logo_url');
+                    if (logoUrl) {
+                        const img = document.createElement('img');
+                        img.src = logoUrl;
+                        img.style.cssText = "height: 38px; max-width: 140px; object-fit: contain; border-radius: 6px; margin-right: 10px; vertical-align: middle; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;";
+                        const icon = document.getElementById('footer-logo-icon');
+                        if (icon) icon.parentNode.replaceChild(img, icon);
+                    }
+                    // Actualizar el copyright text y otras ocurrencias
+                    document.querySelectorAll('.dynamic-brand-text').forEach(el => { el.innerText = name; });
+                })();
+            </script>
             <p>"La belleza comienza en el momento en que decides ser tú misma."</p>
             <div class="social-icons">
                 <a href="#" id="footer-social-insta" target="_blank"><i class="fab fa-instagram"></i></a>
@@ -195,14 +336,10 @@
         </div>
     </footer>
 
-    <!-- Floating Promo Reminder Bubble (solo icono regalo con brillitos) -->
+    <!-- Floating Promo Reminder Bubble (solo icono regalo) -->
     <div id="promo-reminder-btn" onclick="reopenPromo()" style="display:none; position:fixed; bottom:110px; right:30px; z-index:10003; cursor:pointer;">
         <div class="promo-gift-bubble">
             <i class="fas fa-gift"></i>
-            <span class="promo-sparkle ps1">&#10024;</span>
-            <span class="promo-sparkle ps2">&#11088;</span>
-            <span class="promo-sparkle ps3">&#10024;</span>
-            <span class="promo-sparkle ps4">&#11088;</span>
         </div>
     </div>
 
@@ -354,13 +491,13 @@
             <!-- Footer con Leyenda -->
             <div style="padding:15px 35px; background:#fff; border-top:1px solid #f0f0f0; display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(var(--accent-rgb), 0.15); border:1px solid var(--color-accent); border-radius:3px;"></div> Horario Reservado</div>
-                <div style="margin-left:auto; color:#999; font-weight:normal;">Margaritasmit Beauty Studio &copy; 2026</div>
+                <div style="margin-left:auto; color:#999; font-weight:normal;"><span class="dynamic-brand-text">Margaritasmit</span> &copy; 2026</div>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="firebase_app.js?v=20260423.01"></script>
-    <script src="script.js?v=20260423.01" defer></script>
+    <script type="module" src="firebase_app.js?v=20260527.local"></script>
+    <script src="script.js?v=20260527.03" defer></script>
 </body>
 </html>

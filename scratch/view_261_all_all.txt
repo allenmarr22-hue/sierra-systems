@@ -1,0 +1,59 @@
+Created At: 2026-05-26T11:27:45Z
+Completed At: 2026-05-26T11:27:45Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4259
+Total Bytes: 189734
+Showing lines 3980 to 4030
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3980:     const tbody = document.getElementById('tickets-list');
+3981:     if (!tbody) return;
+3982:     tbody.innerHTML = `
+3983:         <tr>
+3984:             <td colspan="8" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
+3985:                 <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+3986:                     <i data-lucide="loader" style="width:28px;height:28px;opacity:0.5;"></i>
+3987:                     <span>Cargando tickets...</span>
+3988:                 </div>
+3989:             </td>
+3990:         </tr>`;
+3991:     lucide.createIcons();
+3992:     try {
+3993:         const res = await adminFetch('/api/admin/tickets');
+3994:         if (!res.ok) {
+3995:             throw new Error(`HTTP error! status: ${res.status}`);
+3996:         }
+3997:         const data = await res.json();
+3998:         appState.adminTickets = data.tickets || [];
+3999:         renderAdminTickets();
+4000:         updateTicketBadge();
+4001:     } catch (err) {
+4002:         console.error('Error cargando tickets de admin:', err);
+4003:         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--danger);">Error al cargar los tickets. (${err.message})</td></tr>`;
+4004:     }
+4005: }
+4006: 
+4007: /**
+4008:  * Actualiza el badge del sidebar con el número de tickets abiertos.
+4009:  */
+4010: function updateTicketBadge() {
+4011:     const badge = document.getElementById('badge-tickets');
+4012:     if (!badge) return;
+4013:     const openCount = appState.adminTickets.filter(t => t.status === 'abierto').length;
+4014:     if (openCount > 0) {
+4015:         badge.textContent = openCount > 99 ? '99+' : String(openCount);
+4016:         badge.classList.remove('hidden');
+4017:     } else {
+4018:         badge.classList.add('hidden');
+4019:     }
+4020: }
+4021: 
+4022: /**
+4023:  * Establece el filtro activo de tickets y re-renderiza.
+4024:  */
+4025: function setTicketFilter(filter) {
+4026:     window._currentTicketFilter = filter;
+4027:     document.querySelectorAll('#ticket-filters .pill').forEach(p => p.classList.remove('active'));
+4028:     const activeBtn = document.querySelector(`#ticket-filters .pill[onclick="setTicketFilter('${filter}')"]`);
+4029:     if (activeBtn) activeBtn.classList.add('active');
+4030:     renderAdminTickets();
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

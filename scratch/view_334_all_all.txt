@@ -1,0 +1,45 @@
+Created At: 2026-05-26T11:36:01Z
+Completed At: 2026-05-26T11:36:01Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4403
+Total Bytes: 196710
+Showing lines 3530 to 3570
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3530:             statusBadge = `<span class="status-badge" style="background:rgba(59,130,246,0.1); color:#3b82f6; border-color:rgba(59,130,246,0.2); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="calendar" style="width:11px;"></i> Programada</span>`;
+3531:         } else if (st === 'paused') {
+3532:             statusBadge = `<span class="status-badge" style="background:rgba(245,158,11,0.1); color:#f59e0b; border-color:rgba(245,158,11,0.2); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="pause" style="width:11px;"></i> Pausada</span>`;
+3533:         } else {
+3534:             statusBadge = `<span class="status-badge" style="background:var(--error-bg); color:var(--danger); border-color:var(--error-border); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="clock" style="width:11px;"></i> Expirada</span>`;
+3535:         }
+3536: 
+3537:         const toggleBtn = p.status === 'active'
+3538:             ? `<button class="btn-ghost promo-toggle-btn" data-id="${p.id}" data-status="inactive" style="padding:0.35rem 0.7rem; font-size:0.78rem;"><i data-lucide="pause" style="width:13px;"></i> Pausar</button>`
+3539:             : `<button class="btn-ghost promo-toggle-btn" data-id="${p.id}" data-status="active" style="padding:0.35rem 0.7rem; font-size:0.78rem; color:var(--success);"><i data-lucide="play" style="width:13px;"></i> Activar</button>`;
+3540: 
+3541:         return `<tr>
+3542:             <td style="padding:1rem 1.5rem;">
+3543:                 <div st
+<truncated 578 bytes>
+ color:var(--text-muted);">ID: ${p.moduleId}</div>
+3550:                     </div>
+3551:                 </div>
+3552:             </td>
+3553:             <td style="padding:1rem 1.5rem;">${typeLabel}</td>
+3554:             <td style="padding:1rem 1.5rem; text-align:center;">${discountDisplay}</td>
+3555:             <td style="padding:1rem 1.5rem; text-align:center; font-size:0.85rem; line-height:1.6;">
+3556:                 <span style="color:var(--text-muted);">Inicio:</span> <strong>${startFmt}</strong><br>
+3557:                 <span style="color:var(--text-muted);">Fin:</span> <strong>${endFmt}</strong>
+3558:             </td>
+3559:             <td style="padding:1rem 1.5rem; text-align:center;">${statusBadge}</td>
+3560:             <td style="padding:1rem 1.5rem; text-align:center;">
+3561:                 <div style="display:inline-flex; gap:8px; align-items:center; justify-content:center;">
+3562:                     ${toggleBtn}
+3563:                     <button class="btn-ghost promo-edit-btn" data-id="${p.id}" title="Editar" style="color:var(--primary); border:1px solid var(--border-color); border-radius:8px; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0;">
+3564:                         <i data-lucide="edit" style="width:14px; height:14px;"></i>
+3565:                     </button>
+3566:                     <button class="btn-ghost promo-delete-btn" data-id="${p.id}" data-name="${modName}" title="Eliminar" style="color:var(--danger); border:1px solid var(--border-color); border-radius:8px; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0;">
+3567:                         <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+3568:                     </button>
+3569:                 </div>
+3570:             </td>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

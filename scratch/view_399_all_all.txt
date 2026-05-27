@@ -1,0 +1,51 @@
+Created At: 2026-05-26T11:53:43Z
+Completed At: 2026-05-26T11:53:43Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4698
+Total Bytes: 214057
+Showing lines 4495 to 4560
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4495:         width: 'auto',
+4496:         padding: '1rem',
+4497:     });
+4498: };
+4499: 
+4500: 
+4501:     const ticket = appState.adminTickets.find(t => t.id === ticketId);
+4502:     if (!ticket) return;
+4503: 
+4504:     window.activeChatTicketId = ticketId;
+4505: 
+4506:     const st = TICKET_STATUS_MAP[ticket.status] || TICKET_STATUS_MAP['abierto'];
+4507:     const pr = TICKET_PRIORITY_MAP[ticket.priority] || TICKET_PRIORITY_MAP['normal'];
+4508:     const d = ticket.created_at ? new Date(ticket.created_at) : null;
+4509:     const fullDate = d ? d.toLocaleString('es-CO', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true }) : '—';
+4510: 
+4511:     Swal.fire({
+4512:         title: '🎟️ Detalle y Chat del Ticket',
+4513:         html: `
+4514:             <div style="text-align:left; display:flex; flex-direction:column; gap:1rem; margin-top:1rem; font-family:'Outfit',sans-serif; line-height:1.6;">
+4515:                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+4516:                     <div>
+4517:                         <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Código de Ticket</span>
+4518:                         <div style="font-family:monospace; font-size:1.05rem; font-weight:800; color:var(--primary); margin-top:2px;">#${ticket.id.toUpperCase()}</div>
+4519:           
+<truncated 2151 bytes>
+         <span style="display:inline-block; width:18px; height:18px; border:2px solid var(--text-muted); border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-right:8px; vertical-align:middle;"></span>
+4545:                         Cargando conversación...
+4546:                     </div>
+4547:                 </div>
+4548: 
+4549:                 <!-- Chat Input / Lock Message -->
+4550:                 ${ticket.status === 'cerrado' ? `
+4551:                     <div style="padding:10px 14px; border-radius:10px; border:1px dashed #ef4444; background:rgba(239, 68, 68, 0.08); color:#ef4444; display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:700; justify-content:center;">
+4552:                         <i data-lucide="lock" style="width:14px; height:14px; flex-shrink:0;"></i>
+4553:                         <span>Ticket cerrado. Crea un nuevo ticket para abrir otro chat.</span>
+4554:                     </div>
+4555:                 ` : `
+4556:                     <div style="display:flex; gap:8px; align-items:center;">
+4557:                         <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:0.88rem; outline:none;" />
+4558:                         <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}', 'admin')" style="padding:10px 16px; border-radius:10px; border:none; background:var(--primary); color:white; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:0.85rem; transition: background 0.2s;">
+4559:                             <i data-lucide="send" style="width:14px; height:14px;"></i> Enviar
+4560:                         </button>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

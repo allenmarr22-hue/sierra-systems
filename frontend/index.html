@@ -2,10 +2,25 @@
 <html lang="es" data-theme="light">
 <head>
     <script>
-        // Prevenir parpadeo de tema (FOUC)
+        // Prevenir parpadeo de tema (FOUC) e inicializar favicon dinámico — sin flash
         (function() {
+            var DEFAULT_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2222%22%20fill%3D%22%230f172a%22%2F%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22as-grad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23818cf8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234f46e5%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20font-size%3D%2252%22%20fill%3D%22url(%23as-grad)%22%20font-family%3D%22'Outfit'%2C'Inter'%2Csans-serif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22900%22%3EAS%3C%2Ftext%3E%3C%2Fsvg%3E";
             var theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', theme);
+            try {
+                var logoUrl = localStorage.getItem('as_systems_logo_url');
+                var link = document.createElement('link');
+                link.id = 'dynamic-favicon';
+                link.rel = 'icon';
+                if (logoUrl) {
+                    link.type = logoUrl.startsWith('data:image/svg') || logoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                    link.href = logoUrl;
+                } else {
+                    link.type = 'image/svg+xml';
+                    link.href = DEFAULT_SVG;
+                }
+                document.getElementsByTagName('head')[0].appendChild(link);
+            } catch (e) {}
         })();
     </script>
     <meta charset="UTF-8">
@@ -14,9 +29,15 @@
     <meta name="description" content="Plataforma SaaS de gestión empresarial de alto rendimiento.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 85px;
+        }
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
         /* Rediseño Premium Light Theme para el Portafolio */
         :root {
             --landing-primary: #4f46e5;
@@ -108,27 +129,100 @@
 
         /* Hero Section */
         .hero-section {
-            padding: 10rem 5% 6rem;
+            padding: 5.5rem 5% 4rem;
             text-align: center;
-            background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 40%),
-                        radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.08), transparent 40%);
-            min-height: 80vh;
+            background:
+                radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 40%),
+                radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.08), transparent 40%);
+            min-height: auto;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
+            position: relative;
+            overflow: hidden;
         }
+        /* Subtle dot-grid background */
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(79,70,229,0.08) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: 0;
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
+        }
+        .hero-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+            animation: orb-float 8s ease-in-out infinite;
+        }
+        .hero-orb-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%);
+            top: -100px; right: -100px;
+        }
+        .hero-orb-2 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(139,92,246,0.14) 0%, transparent 70%);
+            bottom: -50px; left: -80px;
+            animation-delay: -4s;
+        }
+        @keyframes orb-float {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+        }
+        .hero-section > *:not(.hero-orb) { position: relative; z-index: 1; }
+        .hero-section > .slideshow-section { position: relative; z-index: 1; width: 100%; }
 
         .badge-pro {
-            display: inline-block;
-            background: rgba(79, 70, 229, 0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(79, 70, 229, 0.08);
             color: var(--landing-primary);
-            padding: 0.5rem 1.2rem;
+            padding: 0.45rem 1.1rem 0.45rem 0.85rem;
             border-radius: 20px;
             font-size: 0.875rem;
             font-weight: 700;
             margin-bottom: 1.5rem;
-            border: 1px solid rgba(79, 70, 229, 0.2);
+            border: 1px solid rgba(79, 70, 229, 0.18);
+            position: relative;
+            overflow: hidden;
+        }
+        .badge-pro::before {
+            content: '';
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--landing-primary);
+            flex-shrink: 0;
+            animation: dot-pulse 2s ease-in-out infinite;
+        }
+        .badge-pro::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+            transform: translateX(-100%);
+            animation: shimmer 3.5s ease-in-out 1s infinite;
+        }
+        @keyframes dot-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(79,70,229,0.5); }
+            50% { opacity: 0.7; transform: scale(0.85); box-shadow: 0 0 0 5px rgba(79,70,229,0); }
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            60%, 100% { transform: translateX(200%); }
+        }
+        /* Hero entrance animations */
+        @keyframes hero-fade-up {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         .hero-title {
@@ -198,6 +292,109 @@
             background: rgba(15, 23, 42, 0.05);
         }
 
+        /* Premium Carousel System — Activo únicamente en modo móvil (≤ 768px) */
+        .carousel-container-premium {
+            position: relative;
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+        
+        /* En PC (Desktop), el catálogo de soluciones se muestra como una grilla fija y centrada, sin scroll ni flechas */
+        @media (min-width: 769px) {
+            .carousel-arrow {
+                display: none !important;
+            }
+            .carousel-track {
+                display: grid !important;
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)) !important;
+                gap: 2.5rem !important;
+                overflow: visible !important;
+                padding: 0 !important;
+            }
+            .carousel-track > .product-card {
+                flex: none !important;
+                max-width: 100% !important;
+            }
+        }
+        
+        /* En Móvil, se convierte en el carrusel responsivo con deslizamiento suave y flechas flotantes */
+        @media (max-width: 768px) {
+            .carousel-track {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                scroll-behavior: smooth;
+                scroll-snap-type: x mandatory;
+                gap: 1.25rem;
+                padding: 0.5rem 1.5rem 1.5rem 1.5rem !important;
+                scrollbar-width: none; /* Firefox */
+                -webkit-overflow-scrolling: touch;
+                align-items: stretch !important; /* Estirar todos los hijos al mismo alto */
+            }
+            .carousel-track::-webkit-scrollbar {
+                display: none; /* Chrome, Safari, Edge */
+            }
+            .carousel-track > div, .carousel-track > article {
+                flex: 0 0 82vw !important;
+                max-width: 82vw !important;
+                scroll-snap-align: center !important;
+                box-sizing: border-box;
+                height: auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .product-card {
+                flex: 1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                padding: 2.25rem 1.75rem !important;
+                height: 100% !important;
+            }
+            .product-actions {
+                margin-top: auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0.75rem !important;
+                width: 100% !important;
+            }
+            .product-actions a {
+                height: 48px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 0.95rem !important;
+                font-weight: 700 !important;
+                border-radius: 12px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                transition: all 0.2s ease !important;
+            }
+            .carousel-arrow {
+                display: flex !important;
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 38px !important;
+                height: 38px !important;
+                border-radius: 50%;
+                z-index: 100 !important;
+                background: rgba(255, 255, 255, 0.95) !important;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+                border: 1px solid rgba(15, 23, 42, 0.12) !important;
+                color: var(--landing-secondary);
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+            .carousel-arrow.prev {
+                left: 8px !important;
+            }
+            .carousel-arrow.next {
+                right: 8px !important;
+            }
+        }
+
         /* Generic Section */
         .section {
             padding: 6rem 5%;
@@ -240,16 +437,37 @@
             gap: 2.5rem;
         }
 
+        .product-badge {
+            align-self: flex-start;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.35rem 0.85rem;
+            border-radius: 30px;
+            margin-bottom: -0.5rem;
+        }
+        .product-badge.green {
+            background: rgba(16, 185, 129, 0.08);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.18);
+        }
+        .product-badge.purple {
+            background: rgba(139, 92, 246, 0.08);
+            color: #8b5cf6;
+            border: 1px solid rgba(139, 92, 246, 0.18);
+        }
+
         .product-card {
             background: var(--landing-surface);
-            border: 1px solid rgba(0,0,0,0.08);
-            border-radius: 24px;
+            border: 1px solid rgba(79, 70, 229, 0.06);
+            border-radius: 28px;
             padding: 2.5rem;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            gap: 1.35rem;
+            box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0,0,0,0.01);
             position: relative;
             overflow: hidden;
             height: 100%;
@@ -257,51 +475,73 @@
         }
 
         .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-            border-color: rgba(79, 70, 229, 0.3);
+            transform: translateY(-8px);
+            box-shadow: 0 30px 60px -15px rgba(79, 70, 229, 0.12), 0 0 0 1px rgba(79, 70, 229, 0.15);
+            border-color: rgba(79, 70, 229, 0.2);
         }
 
         .product-card::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; height: 4px;
+            top: 0; left: 0; right: 0; height: 5px;
             background: linear-gradient(90deg, var(--landing-primary), #8b5cf6);
-            opacity: 0;
-            transition: opacity 0.3s;
+            opacity: 0.85;
+            transition: height 0.3s ease;
         }
 
-        .product-card:hover::before { opacity: 1; }
+        .product-card:hover::before { height: 8px; }
 
         .product-icon {
-            width: 70px;
-            height: 70px;
-            background: rgba(79, 70, 229, 0.1);
+            width: 64px;
+            height: 64px;
+            background: rgba(79, 70, 229, 0.08);
             color: var(--landing-primary);
-            border-radius: 20px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
         }
 
         .product-icon.purple {
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(139, 92, 246, 0.08);
             color: #8b5cf6;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
         }
 
-        .product-icon i { width: 36px; height: 36px; }
-        .product-title { font-size: 1.75rem; font-weight: 800; color: var(--landing-secondary); margin: 0; }
-        .product-desc { color: var(--landing-muted); flex: 1; line-height: 1.6; margin: 0; }
+        .product-icon i { width: 30px; height: 30px; }
+        .product-title { font-size: 1.7rem; font-weight: 800; color: var(--landing-secondary); margin: 0; letter-spacing: -0.01em; }
+        .product-desc { color: var(--landing-muted); flex: 1; line-height: 1.6; margin: 0; font-size: 0.95rem; }
         
-        .price-tag {
-            font-weight: 800;
-            font-size: 2rem;
-            color: var(--landing-secondary);
+        /* Spec tags container */
+        .product-specs {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.25rem;
         }
-        .price-tag span { font-size: 1rem; color: var(--landing-muted); font-weight: 500; }
+        .spec-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: rgba(100, 116, 139, 0.05);
+            color: #475569;
+            padding: 0.2rem 0.55rem;
+            border-radius: 6px;
+            border: 1px solid rgba(100, 116, 139, 0.08);
+        }
+
+        .price-tag {
+            font-weight: 900;
+            font-size: 2.1rem;
+            color: var(--landing-secondary);
+            display: flex;
+            align-items: baseline;
+            gap: 0.35rem;
+        }
+        .price-tag span { font-size: 0.95rem; color: var(--landing-muted); font-weight: 500; }
         
-        .product-actions { display: flex; gap: 1rem; margin-top: auto; }
-        .product-actions a, .product-actions button { flex: 1; justify-content: center; text-align: center; height: 50px; }
+        .product-actions { display: flex; gap: 0.85rem; margin-top: 0.5rem; }
+        .product-actions a, .product-actions button { flex: 1; justify-content: center; text-align: center; height: 48px; }
 
         /* Features/Why Us */
         .features-grid {
@@ -457,21 +697,82 @@
             right: 30px;
             background-color: #25d366;
             color: white;
-            width: 60px;
-            height: 60px;
+            width: 62px;
+            height: 62px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 30px;
             box-shadow: 0 10px 20px rgba(37, 211, 102, 0.4);
             z-index: 1000;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             text-decoration: none;
         }
+        .whatsapp-float::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            background: rgba(37, 211, 102, 0.3);
+            animation: whatsapp-pulse 2s ease-in-out infinite;
+        }
+        @keyframes whatsapp-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.2); opacity: 0; }
+        }
         .whatsapp-float:hover {
-            transform: scale(1.1) translateY(-5px);
-            box-shadow: 0 15px 25px rgba(37, 211, 102, 0.5);
+            transform: scale(1.12) translateY(-5px);
+            box-shadow: 0 20px 35px rgba(37, 211, 102, 0.55);
+        }
+
+        /* Scroll Reveal Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.65s ease, transform 0.65s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+
+        /* Guide cards hover */
+        .guide-card {
+            background: var(--landing-surface);
+            border: 1px solid rgba(0,0,0,0.07);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .guide-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 32px rgba(0,0,0,0.09);
+            border-color: rgba(79,70,229,0.25);
+        }
+        /* Social Proof Bar */
+        .social-proof-bar {
+            background: var(--landing-surface);
+            border-top: 1px solid rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 1.5rem 5%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+        }
+        .proof-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--landing-muted);
+        }
+        .proof-item i {
+            color: #10b981;
+            width: 18px; height: 18px;
         }
 
         /* Responsive */
@@ -483,14 +784,205 @@
         @media (max-width: 768px) {
             .hero-title { font-size: 2.5rem; }
             .hero-subtitle { font-size: 1.1rem; }
-            .hero-actions { flex-direction: column; width: 100%; }
-            .hero-actions .btn-large { width: 100%; justify-content: center; }
+            .hero-actions { flex-direction: column; width: 100%; padding: 0 1.25rem; gap: 1rem !important; }
+            .hero-actions .btn-large { width: 100%; padding: 0.85rem 1.75rem !important; font-size: 1rem !important; justify-content: center; }
             #brand-text-name { display: none; }
             .header-actions .btn-primary-landing { padding: 0.5rem 0.8rem !important; font-size: 0.85rem !important; }
             .mobile-menu-toggle { display: flex !important; }
             .section-title { font-size: 2rem; }
             .hero-stats-container { flex-direction: column; gap: 2rem !important; }
             .hero-stats-divider { display: none !important; }
+
+            /* Hero padding */
+            .hero-section { padding: 6rem 5% 4rem !important; }
+
+            /* Permitir carrusel de productos horizontal eliminando forzado de 1 columna */
+            .product-card { padding: 2rem 1.5rem !important; }
+            .product-title { font-size: 1.4rem !important; }
+
+            /* Features */
+            .features-grid { grid-template-columns: 1fr !important; gap: 1.5rem !important; }
+            .feature-item { gap: 1rem !important; }
+
+            /* Social proof bar */
+            .social-proof-bar { gap: 1.25rem !important; padding: 1.25rem 5% !important; }
+            .proof-item { font-size: 0.82rem !important; }
+
+            /* Guías */
+            .guides-grid { grid-template-columns: 1fr !important; gap: 1.25rem !important; }
+
+            /* FAQ */
+            .faq-question { font-size: 0.95rem !important; padding: 1.25rem !important; }
+
+            /* Secciones */
+            .section { padding: 4rem 5% !important; }
+            .section-alt { padding: 4rem 5% !important; }
+            .section-header { margin-bottom: 2.5rem !important; }
+            .section-subtitle { font-size: 0.95rem !important; }
+
+            /* Footer inline grid → 2 columnas ordenadas para reducir altura */
+            footer > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 2.5rem 1.5rem !important;
+            }
+            footer > div[style*="grid-template-columns"] > div:first-child {
+                grid-column: span 2 !important;
+                margin-bottom: 0.5rem;
+            }
+            .landing-footer { padding: 3rem 5% 2rem !important; }
+            .footer-content { grid-template-columns: 1fr 1fr !important; gap: 2.5rem 1.5rem !important; }
+            .footer-content > div:first-child { grid-column: span 2 !important; }
+
+            /* WhatsApp float button */
+            .whatsapp-float { width: 52px !important; height: 52px !important; bottom: 20px !important; right: 20px !important; }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title { font-size: 2rem !important; line-height: 1.15 !important; }
+            .hero-subtitle { font-size: 1rem !important; }
+            .section-title { font-size: 1.65rem !important; }
+            .price-tag { font-size: 1.7rem !important; }
+            .product-actions { flex-direction: column !important; }
+            .product-actions a, .product-actions button { width: 100% !important; }
+        }
+
+        /* ====== Infinite Single-Image Carousel ====== */
+        .hmarquee-section {
+            width: 100%;
+            margin-top: 3.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .hmarquee-label {
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--landing-muted);
+            margin-bottom: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.2rem;
+        }
+        .hmarquee-label::before, .hmarquee-label::after {
+            content: '';
+            flex: 1;
+            max-width: 120px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.12), transparent);
+        }
+        .hmarquee-viewport {
+            position: relative;
+            overflow: hidden;
+            max-width: 880px;
+            margin: 0 auto;
+            border-radius: 24px;
+            box-shadow: 0 25px 60px -15px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.04);
+            background: #0f172a;
+        }
+        .hmarquee-belt {
+            display: flex;
+            width: 100%;
+            will-change: transform;
+        }
+        .hmarquee-card {
+            width: 100%;
+            height: 480px;
+            flex-shrink: 0;
+            position: relative;
+            background: #1e293b;
+            overflow: hidden;
+        }
+        .hmarquee-card img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: top;
+            display: block;
+            pointer-events: none;
+            user-select: none;
+        }
+        .hmarquee-card-name {
+            position: absolute;
+            bottom: 2rem; left: 2rem;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 0.55rem 1.3rem;
+            border-radius: 30px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+        /* Fade masks hidden for single card design */
+        .hmarquee-fade {
+            display: none;
+        }
+        /* Dot indicators style */
+        .hmarquee-indicators {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        .hmarquee-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .hmarquee-dot.active {
+            width: 24px;
+            border-radius: 4px;
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        /* Arrow buttons — inside viewport */
+        .hmarquee-btn {
+            position: absolute;
+            top: 50%; transform: translateY(-50%);
+            z-index: 10;
+            width: 48px; height: 48px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            color: #0f172a;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .hmarquee-btn:hover {
+            background: var(--landing-primary);
+            color: white;
+            border-color: var(--landing-primary);
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
+        }
+        .hmarquee-btn svg { width: 20px; height: 20px; stroke-width: 2.5; }
+        .hmarquee-btn-prev { left: 24px; }
+        .hmarquee-btn-next { right: 24px; }
+        @media (max-width: 768px) {
+            .hmarquee-viewport { border-radius: 16px; }
+            .hmarquee-card { height: 260px; }
+            .hmarquee-card-name { bottom: 1rem; left: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem; }
+            .hmarquee-indicators { bottom: 1.1rem; right: 1.1rem; }
+            .hmarquee-btn { width: 38px; height: 38px; }
+            .hmarquee-btn svg { width: 16px; height: 16px; }
+            .hmarquee-btn-prev { left: 12px; }
+            .hmarquee-btn-next { right: 12px; }
         }
     </style>
 </head>
@@ -500,7 +992,7 @@
     <header class="landing-header" id="header">
         <a href="#" class="landing-brand">
             <!-- Logo personalizado (se carga dinámicamente) -->
-            <img src="" alt="Logo AS Sierra Systems" class="brand-logo-img" id="custom-logo-img" style="height:42px; width:auto; object-fit:contain; display:none; border-radius:8px;">
+            <img src="" alt="" class="brand-logo-img" id="custom-logo-img" style="height:42px; width:auto; object-fit:contain; display:none; border-radius:8px;">
             <!-- Icono por defecto (visible si no hay logo cargado) -->
             <div class="brand-logo-icon" id="default-logo-icon">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -545,7 +1037,11 @@
 
     <!-- Hero Section -->
     <section class="hero-section" id="inicio">
-        <div class="badge-pro">✦ Plataforma SaaS Nivel Empresarial</div>
+        <!-- Animated background orbs -->
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+
+        <div class="badge-pro">Plataforma SaaS Nivel Empresarial</div>
         <h1 class="hero-title">Automatiza, Gestiona y<br><span>Multiplica tus Ventas</span></h1>
         <p class="hero-subtitle">El ecosistema digital definitivo para empresas que buscan escalar. Herramientas potentes, fáciles de usar y diseñadas para dar resultados desde el primer día.</p>
         <div class="hero-actions">
@@ -558,27 +1054,53 @@
         </div>
 
         <!-- Stats de confianza -->
-        <div class="hero-stats-container" style="display:flex; gap:3rem; margin-top:4rem; justify-content:center; flex-wrap:wrap;">
+        <div class="hero-stats-container" style="display:flex; gap:3rem; margin-top:3rem; justify-content:center; flex-wrap:wrap;">
             <div style="text-align:center;">
-                <div style="font-size:2.2rem; font-weight:900; color:#0f172a;">100%</div>
-                <div style="color:#64748b; font-size:0.9rem;">Implementación Digital</div>
+                <div style="font-size:2.2rem; font-weight:900; background: linear-gradient(135deg,#4f46e5,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">100%</div>
+                <div style="color:#64748b; font-size:0.9rem; margin-top:0.25rem;">Implementación Digital</div>
             </div>
-            <div class="hero-stats-divider" style="width:1px; background:#e2e8f0;"></div>
+            <div class="hero-stats-divider" style="width:1px; background:linear-gradient(to bottom, transparent, #e2e8f0, transparent);"></div>
             <div style="text-align:center;">
-                <div style="font-size:2.2rem; font-weight:900; color:#0f172a;">24/7</div>
-                <div style="color:#64748b; font-size:0.9rem;">Disponibilidad del Sistema</div>
+                <div style="font-size:2.2rem; font-weight:900; background: linear-gradient(135deg,#4f46e5,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">24/7</div>
+                <div style="color:#64748b; font-size:0.9rem; margin-top:0.25rem;">Disponibilidad del Sistema</div>
             </div>
-            <div class="hero-stats-divider" style="width:1px; background:#e2e8f0;"></div>
+            <div class="hero-stats-divider" style="width:1px; background:linear-gradient(to bottom, transparent, #e2e8f0, transparent);"></div>
             <div style="text-align:center;">
-                <div style="font-size:2.2rem; font-weight:900; color:#0f172a;">$0</div>
-                <div style="color:#64748b; font-size:0.9rem;">Costos de Instalación</div>
+                <div style="font-size:2.2rem; font-weight:900; background: linear-gradient(135deg,#4f46e5,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">$0</div>
+                <div style="color:#64748b; font-size:0.9rem; margin-top:0.25rem;">Costo de Instalación</div>
             </div>
         </div>
+
+        <!-- Marquee Infinito de Módulos (Dinámico) -->
+        <div class="hmarquee-section" id="slideshow-section" style="display:none;">
+            <div class="hmarquee-label">Nuestros Módulos en Acción</div>
+            <div class="hmarquee-viewport" id="hmarquee-viewport">
+                <div class="hmarquee-belt" id="hmarquee-belt"></div>
+                <div class="hmarquee-fade hmarquee-fade-l"></div>
+                <div class="hmarquee-fade hmarquee-fade-r"></div>
+                <div class="hmarquee-indicators" id="hmarquee-indicators"></div>
+                <button class="hmarquee-btn hmarquee-btn-prev" id="hmarquee-prev" aria-label="Anterior">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="hmarquee-btn hmarquee-btn-next" id="hmarquee-next" aria-label="Siguiente">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+        </div>
+
     </section>
+
+    <!-- Social Proof Bar -->
+    <div class="social-proof-bar">
+        <div class="proof-item"><i data-lucide="shield-check"></i> SSL Seguro y Encriptado</div>
+        <div class="proof-item"><i data-lucide="zap"></i> Configuración en minutos</div>
+        <div class="proof-item"><i data-lucide="headset"></i> Soporte 24/7 por WhatsApp</div>
+        <div class="proof-item"><i data-lucide="refresh-cw"></i> Sin contratos largos</div>
+    </div>
 
     <!-- Why Us / Features -->
     <section class="section section-alt" id="ventajas">
-        <div class="section-header">
+        <div class="section-header reveal">
             <h2 class="section-title">¿Por qué elegir nuestro sistema?</h2>
             <p class="section-subtitle">No somos solo software, somos tu socio tecnológico. Proveemos la infraestructura que los negocios modernos necesitan para competir y ganar.</p>
         </div>
@@ -616,87 +1138,109 @@
 
     <!-- Products / Portfolio Section -->
     <section class="section" id="soluciones">
-        <div class="section-header">
+        <div class="section-header reveal">
             <h2 class="section-title">Nuestras Soluciones SaaS</h2>
             <p class="section-subtitle">Módulos especializados para diferentes industrias. Empieza con lo que necesitas y expande cuando estés listo.</p>
         </div>
         
-        <div class="products-grid">
-            
-            <!-- Producto Activo: StreetFeed -->
-            <div class="product-card">
-                <div class="product-icon"><i data-lucide="utensils-crossed"></i></div>
-                <h3 class="product-title">StreetFeed Pro</h3>
-                <p class="product-desc">Moderniza tu restaurante con un menú digital interactivo. Tus clientes escanean el QR, añaden al carrito y envían su pedido detallado directo a tu WhatsApp al instante.</p>
-                <div class="price-tag" id="price-streetfeed">$95.000 <span>COP / mes</span></div>
-                
-                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--landing-muted);">
-                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Catálogo ilimitado</li>
-                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Recepción por WhatsApp</li>
-                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Panel administrativo propio</li>
-                </ul>
+        <div class="carousel-container-premium">
+            <button class="carousel-arrow prev" onclick="scrollCarousel('products-grid', 'left')" title="Anterior">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div id="products-grid" class="products-grid carousel-track">
+                <!-- Producto Activo: StreetFeed -->
+                <div class="product-card reveal reveal-delay-1">
+                    <span class="product-badge green">Restaurantes y Cafés</span>
+                    <div class="product-icon" id="icon-streetfeed"><i data-lucide="utensils-crossed"></i></div>
+                    <h3 class="product-title" id="title-streetfeed">StreetFeed Pro</h3>
+                    <p class="product-desc" id="desc-streetfeed">Moderniza tu restaurante con un menú digital interactivo. Tus clientes escanean el QR, añaden al carrito y envían su pedido detallado directo a tu WhatsApp al instante.</p>
+                    
+                    <div class="product-specs">
+                        <span class="spec-tag">QR Dinámico</span>
+                        <span class="spec-tag">Carrito Local</span>
+                        <span class="spec-tag">WhatsApp API</span>
+                    </div>
 
-                <div class="product-actions" style="margin-top: 1.5rem;">
-                    <a href="/modules/order-system/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px;">Ver Demo</a>
-                    <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StreetFeed" class="btn-primary-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px;">Contratar Ahora</a>
+                    <div class="price-tag" id="price-streetfeed">$95.000 <span>COP / mes</span></div>
+                    
+                    <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--landing-muted);">
+                        <li style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Catálogo ilimitado</li>
+                        <li style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Recepción por WhatsApp</li>
+                        <li style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem;"><i data-lucide="check-circle-2" style="color: #10b981; width: 18px;"></i> Panel administrativo propio</li>
+                    </ul>
+
+                    <div class="product-actions" style="margin-top: 1.5rem;">
+                        <a href="/modules/order-system/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important;">Ver Demo</a>
+                        <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StreetFeed" id="action-streetfeed" class="btn-primary-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important;">Contratar Ahora</a>
+                    </div>
+                </div>
+
+                <!-- Producto Activo: StyleSync Pro -->
+                <div class="product-card reveal reveal-delay-2">
+                    <span class="product-badge purple">Salones y Barberías</span>
+                    <div class="product-icon purple" id="icon-agenda"><i data-lucide="scissors"></i></div>
+                    <h3 class="product-title" id="title-agenda">StyleSync Pro</h3>
+                    <p class="product-desc" id="desc-agenda">Sistema integral para dueños de salones de belleza, spas y barberías. Agenda de citas inteligente, control de inventario de productos y reportes de ingresos diarios automáticos.</p>
+                    
+                    <div class="product-specs">
+                        <span class="spec-tag">Agenda 24/7</span>
+                        <span class="spec-tag">Inventario</span>
+                        <span class="spec-tag">Finanzas</span>
+                    </div>
+
+                    <div class="price-tag" id="price-agenda">$135.000 <span>COP / mes</span></div>
+                    
+                    <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--landing-muted);">
+                        <li style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Agenda online 24/7</li>
+                        <li style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Inventario en tiempo real</li>
+                        <li style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Analítica de ganancias</li>
+                    </ul>
+
+                    <div class="product-actions" style="margin-top: 1.5rem;">
+                        <a href="/modules/agenda/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important;">Ver Demo</a>
+                        <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StyleSync%20Pro" id="action-agenda" class="btn-primary-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important; background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important;">Contratar Ahora</a>
+                    </div>
                 </div>
             </div>
-
-            <!-- Producto Activo: StyleSync Pro -->
-            <div class="product-card">
-                <div class="product-icon purple"><i data-lucide="scissors"></i></div>
-                <h3 class="product-title">StyleSync Pro</h3>
-                <p class="product-desc">Sistema integral para dueños de salones de belleza, spas y barberías. Agenda de citas inteligente, control de inventario de productos y reportes de ingresos diarios automáticos.</p>
-                <div class="price-tag" id="price-agenda">$135.000 <span>COP / mes</span></div>
-                
-                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--landing-muted);">
-                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Agenda online 24/7</li>
-                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Inventario en tiempo real</li>
-                    <li style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="check-circle-2" style="color: #8b5cf6; width: 18px;"></i> Analítica de ganancias</li>
-                </ul>
-
-                <div class="product-actions" style="margin-top: 1.5rem;">
-                    <a href="/modules/agenda/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px;">Ver Demo</a>
-                    <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StyleSync%20Pro" class="btn-primary-landing" style="text-decoration:none; display: flex; align-items: center; border-radius: 8px; background: #8b5cf6;">Contratar Ahora</a>
-                </div>
-            </div>
-
+            <button class="carousel-arrow next" onclick="scrollCarousel('products-grid', 'right')" title="Siguiente">
+                <i data-lucide="chevron-right"></i>
+            </button>
         </div>
     </section>
 
     <!-- Help & Guides Section -->
     <section class="section section-alt" id="ayuda">
-        <div class="section-header">
+        <div class="section-header reveal">
             <h2 class="section-title">Centro de Ayuda y Guías</h2>
             <p class="section-subtitle">Todo lo que necesitas saber para sacarle el máximo provecho a nuestra plataforma.</p>
         </div>
 
         <div class="guides-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; max-width: 1200px; margin: 0 auto 4rem;">
-            <div class="guide-card glass" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.3s ease;">
+            <div class="guide-card glass reveal reveal-delay-1" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, opacity 0.65s ease;">
                 <div style="width: 50px; height: 50px; background: rgba(79, 70, 229, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--landing-primary); margin-bottom: 1.5rem;">
                     <i data-lucide="rocket"></i>
                 </div>
                 <h4 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--landing-secondary);">Guía de Inicio Rápido</h4>
                 <p style="color: var(--landing-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Aprende a configurar tu primer negocio y asignar módulos en menos de 5 minutos.</p>
-                <a href="#" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
+                <a href="javascript:void(0)" onclick="showGuideModal('inicio')" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
             </div>
             
-            <div class="guide-card glass" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.3s ease;">
+            <div class="guide-card glass reveal reveal-delay-2" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, opacity 0.65s ease;">
                 <div style="width: 50px; height: 50px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #8b5cf6; margin-bottom: 1.5rem;">
                     <i data-lucide="settings"></i>
                 </div>
                 <h4 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--landing-secondary);">Configuración de Módulos</h4>
                 <p style="color: var(--landing-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Personaliza cada herramienta según las necesidades específicas de tu rubro.</p>
-                <a href="#" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
+                <a href="javascript:void(0)" onclick="showGuideModal('config')" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
             </div>
 
-            <div class="guide-card glass" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.3s ease;">
+            <div class="guide-card glass reveal reveal-delay-3" style="padding: 2rem; border-radius: 20px; text-align: left; transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, opacity 0.65s ease;">
                 <div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #10b981; margin-bottom: 1.5rem;">
                     <i data-lucide="shield-check"></i>
                 </div>
                 <h4 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--landing-secondary);">Seguridad y Accesos</h4>
                 <p style="color: var(--landing-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Mejores prácticas para proteger tu información y la de tus clientes finales.</p>
-                <a href="#" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
+                <a href="javascript:void(0)" onclick="showGuideModal('seguridad')" style="color: var(--landing-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">Leer más <i data-lucide="chevron-right" style="width: 16px;"></i></a>
             </div>
         </div>
         
@@ -723,7 +1267,7 @@
 
             <div class="faq-item">
                 <div class="faq-question">
-                    <span>¿Cómo funciona la integración con WhatsApp en StreetFeed?</span>
+                    <span id="faq-streetfeed-title">¿Cómo funciona la integración con WhatsApp en StreetFeed?</span>
                     <i data-lucide="chevron-down"></i>
                 </div>
                 <div class="faq-answer">
@@ -750,54 +1294,100 @@
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="landing-footer">
-        <div class="footer-content">
+    <!-- Footer Principal -->
+    <footer style="background: #0f172a; color: rgba(255,255,255,0.65); padding: 5rem 5% 0; font-family: 'Outfit', sans-serif;">
+        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 4rem;">
+            <!-- Brand -->
             <div>
-                <div class="footer-brand" id="footer-brand-container">
-                    <div id="footer-logo-icon" style="display: none;">
-                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="#818cf8"/></svg>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;" id="footer-brand-container">
+                    <div id="footer-logo-icon">
+                        <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="#818cf8"/></svg>
                     </div>
-                    <img src="" id="footer-custom-logo" style="height:28px; width:auto; display:none; border-radius:4px; margin-right:8px;">
-                    AS <span>Sierra</span> Systems
+                    <img src="" id="footer-custom-logo" style="height:32px; width:auto; display:none; border-radius:6px;">
+                    <span style="font-size: 1.35rem; font-weight: 800; color: white;">AS <span style="color: #818cf8;">Sierra</span> Systems</span>
                 </div>
-                <p class="footer-desc">Desarrollamos ecosistemas digitales inteligentes para automatizar operaciones y escalar negocios al siguiente nivel. Tecnología de vanguardia a tu alcance.</p>
-                <div style="display: flex; gap: 1rem;">
-                    <a href="#" style="color: white; opacity: 0.7;"><i data-lucide="facebook"></i></a>
-                    <a href="#" style="color: white; opacity: 0.7;"><i data-lucide="instagram"></i></a>
-                    <a href="#" style="color: white; opacity: 0.7;"><i data-lucide="linkedin"></i></a>
+                <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.75rem; max-width: 320px;">Ecosistemas digitales inteligentes para automatizar operaciones y escalar negocios al siguiente nivel.</p>
+                <div style="display: flex; gap: 0.75rem;">
+                    <a href="#" style="width:36px; height:36px; background: rgba(255,255,255,0.07); border-radius: 8px; display:flex; align-items:center; justify-content:center; color: rgba(255,255,255,0.5); transition: all 0.2s; text-decoration:none;" onmouseover="this.style.background='rgba(99,102,241,0.3)';this.style.color='white'" onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='rgba(255,255,255,0.5)'"><i data-lucide="facebook" style="width:18px; height:18px; display:block;"></i></a>
+                    <a href="#" style="width:36px; height:36px; background: rgba(255,255,255,0.07); border-radius: 8px; display:flex; align-items:center; justify-content:center; color: rgba(255,255,255,0.5); transition: all 0.2s; text-decoration:none;" onmouseover="this.style.background='rgba(99,102,241,0.3)';this.style.color='white'" onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='rgba(255,255,255,0.5)'"><i data-lucide="instagram" style="width:18px; height:18px; display:block;"></i></a>
+                    <a href="#" style="width:36px; height:36px; background: rgba(255,255,255,0.07); border-radius: 8px; display:flex; align-items:center; justify-content:center; color: rgba(255,255,255,0.5); transition: all 0.2s; text-decoration:none;" onmouseover="this.style.background='rgba(99,102,241,0.3)';this.style.color='white'" onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='rgba(255,255,255,0.5)'"><i data-lucide="linkedin" style="width:18px; height:18px; display:block;"></i></a>
                 </div>
             </div>
+            <!-- Soluciones -->
             <div>
-                <h4 class="footer-title">Soluciones</h4>
-                <ul class="footer-links">
-                    <li><a href="#soluciones">StreetFeed Pro</a></li>
-                    <li><a href="#soluciones">StyleSync Pro</a></li>
-                    <li><a href="#">Desarrollo a Medida</a></li>
-                    <li><a href="#">Consultoría TI</a></li>
+                <h4 style="color: white; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1.25rem;">Soluciones</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
+                    <li><a href="#soluciones" class="footer-sol-link" data-id="streetfeed" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">StreetFeed Pro</a></li>
+                    <li><a href="#soluciones" class="footer-sol-link" data-id="agenda" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">StyleSync Pro</a></li>
+                    <li><a href="#" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">Desarrollo a Medida</a></li>
+                    <li><a href="#" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">Consultoría TI</a></li>
                 </ul>
             </div>
+            <!-- Soporte -->
             <div>
-                <h4 class="footer-title">Soporte</h4>
-                <ul class="footer-links">
-                    <li><a href="#ayuda">Centro de Ayuda</a></li>
-                    <li><a href="#">Términos y Condiciones</a></li>
-                    <li><a href="#">Política de Privacidad</a></li>
-                    <li><a href="https://wa.me/1234567890" target="_blank" style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="message-circle" style="width: 16px;"></i> Contacto WhatsApp</a></li>
+                <h4 style="color: white; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1.25rem;">Soporte</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
+                    <li><a href="#ayuda" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">Centro de Ayuda</a></li>
+                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">Términos y Condiciones</a></li>
+                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">Política de Privacidad</a></li>
+                    <li><a href="https://wa.me/1234567890" target="_blank" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s; display:flex; align-items:center; gap:0.4rem;" onmouseover="this.style.color='#25d366'" onmouseout="this.style.color='rgba(255,255,255,0.55)'"><i data-lucide="message-circle" style="width: 14px;"></i> WhatsApp</a></li>
                 </ul>
+            </div>
+            <!-- Acceso -->
+            <div>
+                <h4 style="color: white; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1.25rem;">Acceso</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
+                    <li><a href="/client-login.html" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">Portal Clientes</a></li>
+                    <li><a href="/super-admin.html" style="color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.92rem; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">Panel Administrador</a></li>
+                </ul>
+                <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: rgba(255,255,255,0.4);">
+                        <i data-lucide="lock" style="width: 13px; color: #10b981;"></i> SSL Encriptado
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: rgba(255,255,255,0.4);">
+                        <i data-lucide="check-circle" style="width: 13px; color: #6366f1;"></i> Ley 1581 Compliant
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2026 AS Sierra Systems. Todos los derechos reservados.</p>
+        <div style="max-width: 1200px; margin: 0 auto; padding: 1.75rem 0; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <p style="font-size: 0.82rem; color: rgba(255,255,255,0.3);">© 2026 AS Sierra Systems. Todos los derechos reservados.</p>
+            <div style="display: flex; gap: 1.5rem;">
+                <a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: rgba(255,255,255,0.3); font-size: 0.82rem; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">Términos</a>
+                <a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: rgba(255,255,255,0.3); font-size: 0.82rem; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">Privacidad</a>
+            </div>
         </div>
     </footer>
 
     <!-- Botón Flotante WhatsApp -->
-    <a href="https://wa.me/1234567890" target="_blank" class="whatsapp-float" title="Contactar por WhatsApp">
-        <i data-lucide="phone" style="width: 28px; height: 28px;"></i>
+    <a href="https://wa.me/1234567890" target="_blank" class="whatsapp-float" title="Contactar por WhatsApp" aria-label="Contactar por WhatsApp">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="28" height="28">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+        </svg>
     </a>
 
     <script>
+        // Controla el desplazamiento horizontal suave de los carruseles premium de módulos
+        window.scrollCarousel = function(trackId, direction) {
+            const track = document.getElementById(trackId);
+            if (!track) return;
+            
+            // Ancho de una tarjeta + gap aproximado
+            const cardWidth = track.firstElementChild ? track.firstElementChild.offsetWidth + 28 : 378;
+            const scrollAmount = direction === 'left' ? -cardWidth : cardWidth;
+            
+            track.scrollBy({
+                left: scrollAmount,
+                behavior: 'smooth'
+            });
+        };
+
+        // Forzar volver al inicio al recargar la página
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.scrollTo(0, 0);
+
         // Inicializar Iconos
         lucide.createIcons();
 
@@ -840,27 +1430,163 @@
                     const data = await res.json();
                     
                     if (data.config && data.config.logo) {
+                        const logoSrc = data.config.logo;
+                        // Guardar en caché local para inmediatez en próximas recargas
+                        try {
+                            localStorage.setItem('as_systems_logo_url', logoSrc);
+                        } catch(e) {
+                            console.warn("No se pudo escribir logo en localStorage", e.message);
+                        }
+
+                        // Actualizar favicon en pestaña — sin flash: solo actualizar href
+                        let link = document.getElementById('dynamic-favicon');
+                        if (!link) {
+                            link = document.createElement('link');
+                            link.id = 'dynamic-favicon';
+                            link.rel = 'icon';
+                            document.getElementsByTagName('head')[0].appendChild(link);
+                        }
+                        link.type = logoSrc.startsWith('data:image/svg') || logoSrc.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                        link.href = logoSrc;
+
                         // Mostrar imagen personalizada
                         if (defaultIcon && customImg) {
-                            defaultIcon.style.display = 'none';
-                            customImg.src = data.config.logo;
-                            customImg.style.display = 'block';
+                            customImg.onload = () => {
+                                defaultIcon.style.display = 'none';
+                                customImg.style.display = 'block';
+                            };
+                            customImg.onerror = () => {
+                                customImg.style.display = 'none';
+                                defaultIcon.style.display = 'flex';
+                            };
+                            customImg.src = logoSrc;
                         }
                         
                         if (footerDefault && footerCustom) {
-                            footerDefault.style.display = 'none';
-                            footerCustom.src = data.config.logo;
-                            footerCustom.style.display = 'block';
+                            footerCustom.onload = () => {
+                                footerDefault.style.display = 'none';
+                                footerCustom.style.display = 'block';
+                            };
+                            footerCustom.onerror = () => {
+                                footerCustom.style.display = 'none';
+                                footerDefault.style.display = 'flex';
+                            };
+                            footerCustom.src = logoSrc;
                         }
                     }
                     
                     if (data.modules && data.modules.length > 0) {
+                        const promotions = data.promotions || [];
                         data.modules.forEach(mod => {
                             const priceEl = document.getElementById(`price-${mod.id}`);
                             if (priceEl && mod.price) {
-                                priceEl.innerHTML = `${mod.price} <span style="font-size: 1rem; color: var(--landing-muted); font-weight: 500;">COP / mes</span>`;
+                                const basePrice = parseInt(String(mod.price || '').replace(/[^0-9]/g, '')) || 0;
+                                
+                                // Buscar promoción activa para este módulo
+                                const now = new Date();
+                                const activePromo = promotions.find(p => {
+                                    if (p.moduleId !== mod.id || p.status !== 'active') return false;
+                                    const start = new Date(p.startDate);
+                                    const end = new Date(p.endDate);
+                                    return now >= start && now <= end;
+                                });
+
+                                if (activePromo) {
+                                    let promoPrice = basePrice;
+                                    if (activePromo.discountType === 'percentage') {
+                                        promoPrice = Math.round(basePrice * (1 - parseFloat(activePromo.discountValue) / 100));
+                                    } else if (activePromo.discountType === 'fixed_price') {
+                                        promoPrice = Math.round(parseFloat(activePromo.discountValue));
+                                    }
+                                    
+                                    const discountBadge = activePromo.discountType === 'percentage'
+                                        ? `-${activePromo.discountValue}%`
+                                        : `-$ ${(basePrice - promoPrice).toLocaleString('es-CO')}`;
+
+                                    priceEl.innerHTML = `
+                                        <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:1rem;">
+                                            <div style="font-size: 0.95rem; color: var(--landing-muted); text-decoration: line-through; font-weight: 500;">
+                                                $ ${basePrice.toLocaleString('es-CO')} COP/mes
+                                            </div>
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span style="font-size:2.2rem; font-weight:900; color: #00d2ff; line-height:1;">
+                                                    $ ${promoPrice.toLocaleString('es-CO')}
+                                                </span>
+                                                <span style="font-size: 0.82rem; font-weight: 700; background: rgba(0,210,255,0.12); color:#00d2ff; padding:0.25rem 0.6rem; border-radius:6px; white-space:nowrap; letter-spacing:0.02em;">
+                                                    ${discountBadge} OFF
+                                                </span>
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: var(--landing-muted); font-weight: 500;">COP / mes</div>
+                                            <div style="font-size: 0.78rem; color: #00d2ff; font-weight: 700; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                                <i data-lucide="clock" style="width:13px;height:13px;"></i> ¡Oferta por tiempo limitado!
+                                            </div>
+                                        </div>
+                                    `;
+                                } else {
+                                    priceEl.innerHTML = `$ ${basePrice.toLocaleString('es-CO')} <span style="font-size: 1rem; color: var(--landing-muted); font-weight: 500;">COP / mes</span>`;
+                                }
+                            }
+                            
+                            // Asignar fallback inteligente si no tiene imagen y está activo
+                            if (mod.status === 'active' && !mod.image) {
+                                if (mod.id === 'streetfeed') {
+                                    mod.image = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80';
+                                } else if (mod.id === 'agenda') {
+                                    mod.image = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1200&q=80';
+                                } else {
+                                    mod.image = 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80';
+                                }
+                            }
+
+                            // Sincronizar dinámicamente nombre, descripción, icono y link de WhatsApp en la landing page
+                            const titleEl = document.getElementById(`title-${mod.id}`);
+                            if (titleEl && mod.name) {
+                                titleEl.textContent = mod.name;
+                            }
+                            
+                            const descEl = document.getElementById(`desc-${mod.id}`);
+                            if (descEl && mod.desc) {
+                                descEl.textContent = mod.desc;
+                            }
+                            
+                            const iconEl = document.getElementById(`icon-${mod.id}`);
+                            if (iconEl && mod.icon) {
+                                iconEl.innerHTML = `<i data-lucide="${mod.icon}"></i>`;
+                            }
+                            
+                            const actionEl = document.getElementById(`action-${mod.id}`);
+                            if (actionEl && mod.name) {
+                                actionEl.href = `https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20${encodeURIComponent(mod.name)}`;
+                            }
+                            
+                            if (mod.id === 'streetfeed') {
+                                const faqTitleEl = document.getElementById('faq-streetfeed-title');
+                                if (faqTitleEl && mod.name) {
+                                    faqTitleEl.textContent = `¿Cómo funciona la integración con WhatsApp en ${mod.name}?`;
+                                }
                             }
                         });
+
+                        // Guardar módulos en el estado global para uso de modales y guías de ayuda
+                        window.appModules = data.modules;
+
+                        // Sincronizar dinámicamente los enlaces en el footer
+                        document.querySelectorAll('.footer-sol-link').forEach(el => {
+                            const mId = el.getAttribute('data-id');
+                            const m = data.modules.find(x => x.id === mId);
+                            if (m) {
+                                el.textContent = m.name;
+                            }
+                        });
+
+                        // Re-crear los iconos de Lucide dinámicos que se inyectaron
+                        lucide.createIcons();
+
+                        // Generar marquee dinámico con las imágenes de los módulos (los activos siempre tendrán fallback ahora)
+                        const modsWithImage = data.modules.filter(m => m.image && m.status === 'active');
+                        if (modsWithImage.length > 0) {
+                            initMarquee(modsWithImage);
+                        }
                     }
                     
                     if (data.config && data.config.logo) return; // Terminar si hay logo
@@ -897,71 +1623,271 @@
                 });
             }
         });
+
+        // Scroll Reveal Observer
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // ====== INFINITE SINGLE-IMAGE CAROUSEL ENGINE ======
+        function initMarquee(mods) {
+            const section    = document.getElementById('slideshow-section');
+            const belt       = document.getElementById('hmarquee-belt');
+            const viewport   = document.getElementById('hmarquee-viewport');
+            const indicators = document.getElementById('hmarquee-indicators');
+            if (!section || !belt || !mods.length) return;
+
+            const N = mods.length;
+
+            // Helper to build a single card HTML
+            const buildCard = (mod) => `
+                <div class="hmarquee-card">
+                    <img src="${mod.image}" alt="${mod.name}" loading="lazy">
+                    <div class="hmarquee-card-name">${mod.name}</div>
+                </div>`;
+
+            // Build layout with clones: [Last item, Item 0, Item 1, ..., Item N-1, First item]
+            const firstClone = buildCard(mods[0]);
+            const lastClone  = buildCard(mods[N - 1]);
+            const realCards  = mods.map(buildCard).join('');
+            
+            belt.innerHTML = lastClone + realCards + firstClone;
+            section.style.display = 'block';
+
+            // Build Indicators
+            if (indicators) {
+                indicators.innerHTML = mods.map((_, i) => `
+                    <div class="hmarquee-dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>
+                `).join('');
+            }
+
+            let currentIndex = 1; // start at the first real card (index 1)
+            let isTransitioning = false;
+            let timer = null;
+            const INTERVAL_TIME = 4500; // auto-slide interval (4.5s)
+
+            // Function to set the position with or without animation
+            function moveToIndex(index, animate = true) {
+                if (isTransitioning && animate) return;
+                
+                isTransitioning = animate;
+                if (animate) {
+                    belt.style.transition = 'transform 0.65s cubic-bezier(0.25, 1, 0.5, 1)';
+                } else {
+                    belt.style.transition = 'none';
+                }
+                
+                belt.style.transform = `translateX(-${index * 100}%)`;
+                currentIndex = index;
+            }
+
+            // Function to update indicators active state
+            function updateIndicators() {
+                if (!indicators) return;
+                const dots = indicators.querySelectorAll('.hmarquee-dot');
+                
+                // Map the currentIndex to the active real indicator
+                let activeRealIndex = currentIndex - 1;
+                if (currentIndex === 0) {
+                    activeRealIndex = N - 1;
+                } else if (currentIndex === N + 1) {
+                    activeRealIndex = 0;
+                }
+                
+                dots.forEach((dot, idx) => {
+                    if (idx === activeRealIndex) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            }
+
+            // Event listener for transition end to handle infinite snap back/forward
+            belt.addEventListener('transitionend', () => {
+                isTransitioning = false;
+                
+                if (currentIndex === N + 1) {
+                    moveToIndex(1, false);
+                } else if (currentIndex === 0) {
+                    moveToIndex(N, false);
+                }
+                updateIndicators();
+            });
+
+            // Set initial position
+            moveToIndex(1, false);
+
+            // Manual Navigation Handlers
+            const goNext = () => {
+                if (isTransitioning) return;
+                moveToIndex(currentIndex + 1, true);
+                updateIndicators();
+            };
+
+            const goPrev = () => {
+                if (isTransitioning) return;
+                moveToIndex(currentIndex - 1, true);
+                updateIndicators();
+            };
+
+            document.getElementById('hmarquee-next').addEventListener('click', () => {
+                resetTimer();
+                goNext();
+            });
+
+            document.getElementById('hmarquee-prev').addEventListener('click', () => {
+                resetTimer();
+                goPrev();
+            });
+
+            // Click on dots
+            if (indicators) {
+                indicators.addEventListener('click', (e) => {
+                    const dot = e.target.closest('.hmarquee-dot');
+                    if (!dot || isTransitioning) return;
+                    resetTimer();
+                    const targetIndex = parseInt(dot.getAttribute('data-index')) + 1;
+                    moveToIndex(targetIndex, true);
+                    updateIndicators();
+                });
+            }
+
+            // Auto slide functionality
+            function startTimer() {
+                if (timer) clearInterval(timer);
+                timer = setInterval(goNext, INTERVAL_TIME);
+            }
+
+            function stopTimer() {
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+            }
+
+            function resetTimer() {
+                stopTimer();
+                startTimer();
+            }
+
+            startTimer();
+
+            // Pause on hover
+            viewport.addEventListener('mouseenter', stopTimer);
+            viewport.addEventListener('mouseleave', startTimer);
+
+            // Touch Swipe Support
+            let touchStartX = 0;
+            let touchMoveX = 0;
+
+            viewport.addEventListener('touchstart', e => {
+                stopTimer();
+                touchStartX = e.touches[0].clientX;
+            }, { passive: true });
+
+            viewport.addEventListener('touchmove', e => {
+                touchMoveX = e.touches[0].clientX;
+            }, { passive: true });
+
+            viewport.addEventListener('touchend', e => {
+                if (!touchMoveX) return;
+                const dx = touchMoveX - touchStartX;
+                if (Math.abs(dx) > 60) {
+                    if (dx < 0) {
+                        goNext();
+                    } else {
+                        goPrev();
+                    }
+                }
+                touchStartX = 0;
+                touchMoveX = 0;
+                startTimer();
+            });
+        }
+
+        // ====== DYNAMIC HELP GUIDE MODALS ======
+        window.showGuideModal = function(topic) {
+            let title = '';
+            let html = '';
+            let color = '';
+
+            const streetFeedName = (window.appModules?.find(m => m.id === 'streetfeed')?.name) || 'StreetFeed';
+            const styleSyncName = (window.appModules?.find(m => m.id === 'agenda')?.name) || 'StyleSync';
+
+            if (topic === 'inicio') {
+                title = 'Guía de Inicio Rápido 🚀';
+                color = '#4f46e5';
+                html = `
+                    <div style="text-align: left; font-family: 'Outfit', sans-serif; color: #475569; line-height: 1.6; font-size: 0.95rem;">
+                        <p style="margin-bottom: 1rem;">Configura la plataforma en cuestión de minutos siguiendo estos simples pasos:</p>
+                        <ol style="padding-left: 1.25rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <li><strong>Acceso al Portal:</strong> Inicia sesión en tu cuenta con las credenciales enviadas a tu correo corporativo.</li>
+                            <li><strong>Registra tu Negocio:</strong> En el menú de "Negocios", haz clic en "Agregar Negocio" e ingresa el nombre, tipo de rubro y ciudad.</li>
+                            <li><strong>Asigna los Módulos SaaS:</strong> Activa las licencias contratadas (ej. <em>${streetFeedName}</em> o <em>${styleSyncName}</em>) para el negocio creado.</li>
+                            <li><strong>Personaliza y Comparte:</strong> Sube tu logo, define tus datos de contacto y ¡listo! Tus clientes ya pueden interactuar con tus módulos.</li>
+                        </ol>
+                        <div style="background: rgba(79, 70, 229, 0.06); padding: 1rem; border-radius: 12px; border-left: 4px solid #4f46e5;">
+                            <strong>¿Necesitas ayuda extra?</strong> Nuestro soporte técnico en vivo está disponible para guiarte paso a paso por videollamada sin costo adicional.
+                        </div>
+                    </div>
+                `;
+            } else if (topic === 'config') {
+                title = 'Configuración de Módulos ⚙️';
+                color = '#8b5cf6';
+                html = `
+                    <div style="text-align: left; font-family: 'Outfit', sans-serif; color: #475569; line-height: 1.6; font-size: 0.95rem;">
+                        <p style="margin-bottom: 1rem;">El sistema es altamente adaptable. Personaliza la experiencia según tu marca y necesidades:</p>
+                        <ul style="padding-left: 1.25rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; list-style-type: square;">
+                            <li><strong>Marca Blanca (White-label):</strong> Sube tu propio logotipo e isotipo para que reemplace el de AS Sierra en todo el portal del cliente.</li>
+                            <li><strong>Precios y Moneda:</strong> Ajusta los precios de tus productos, costo de domicilio y tarifas de servicios según tus políticas.</li>
+                            <li><strong>Horarios de Atención:</strong> Establece franjas horarias y días de apertura. El sistema cerrará pedidos automáticamente fuera de horario.</li>
+                            <li><strong>Integraciones directas:</strong> Enlaza tu número de WhatsApp para recibir pedidos estructurados al instante de forma automática.</li>
+                        </ul>
+                        <div style="background: rgba(139, 92, 246, 0.06); padding: 1rem; border-radius: 12px; border-left: 4px solid #8b5cf6;">
+                            Todas las configuraciones se aplican en <strong>tiempo real</strong>. Tus clientes verán las actualizaciones al instante en sus dispositivos.
+                        </div>
+                    </div>
+                `;
+            } else if (topic === 'seguridad') {
+                title = 'Seguridad y Accesos 🛡️';
+                color = '#10b981';
+                html = `
+                    <div style="text-align: left; font-family: 'Outfit', sans-serif; color: #475569; line-height: 1.6; font-size: 0.95rem;">
+                        <p style="margin-bottom: 1rem;">La integridad y privacidad de tus datos son nuestra prioridad número uno:</p>
+                        <ul style="padding-left: 1.25rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; list-style-type: disc;">
+                            <li><strong>Cifrado SSL de Extremo a Extremo:</strong> Toda la comunicación y envío de datos entre tus clientes, tu panel y nuestros servidores está completamente encriptada.</li>
+                            <li><strong>Bases de Datos Aisladas y Seguras:</strong> Utilizamos tecnología de Firebase con reglas de seguridad estrictas que impiden accesos no autorizados.</li>
+                            <li><strong>Copias de Seguridad (Backups):</strong> Generamos copias de seguridad automáticas diarias para garantizar la continuidad de tu negocio ante imprevistos.</li>
+                        </ul>
+                        <div style="background: rgba(16, 185, 129, 0.06); padding: 1rem; border-radius: 12px; border-left: 4px solid #10b981;">
+                            Nuestros servidores operan con una disponibilidad garantizada del <strong>99.9% (SLA corporativo)</strong>.
+                        </div>
+                    </div>
+                `;
+            }
+
+            Swal.fire({
+                title: title,
+                html: html,
+                confirmButtonText: 'Entendido, ¡gracias!',
+                confirmButtonColor: color,
+                width: '600px',
+                background: '#ffffff',
+                color: '#0f172a',
+                showCloseButton: true,
+                customClass: {
+                    popup: 'enterprise-terms-modal'
+                }
+            });
+        };
     </script>
-    <!-- FOOTER LEGAL & COMPLIANCE -->
-    <footer style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 4rem 5% 2rem; font-family: 'Outfit', sans-serif;">
-        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 3rem;">
-            <!-- Brand & Mission -->
-            <div>
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-                    <div style="width: 35px; height: 35px; background: #6366f1; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
-                        <i data-lucide="shield-check" style="width: 20px;"></i>
-                    </div>
-                    <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">AS Sierra Systems</span>
-                </div>
-                <p style="color: #64748b; font-size: 0.9rem; line-height: 1.6;">
-                    Soluciones SaaS de alto rendimiento para la transformación digital empresarial. Seguridad, escalabilidad y cumplimiento legal garantizado.
-                </p>
-            </div>
-
-            <!-- Quick Links -->
-            <div>
-                <h4 style="color: #0f172a; font-weight: 700; margin-bottom: 1.5rem;">Plataforma</h4>
-                <ul style="list-style: none; padding: 0; font-size: 0.9rem; line-height: 2;">
-                    <li><a href="#" style="color: #64748b; text-decoration: none;">Inicio</a></li>
-                    <li><a href="#soluciones" style="color: #64748b; text-decoration: none;">Soluciones</a></li>
-                    <li><a href="#" style="color: #64748b; text-decoration: none;">Soporte Técnico</a></li>
-                    <li><a href="client-dashboard.html" style="color: #6366f1; font-weight: 600; text-decoration: none;">Acceso Clientes</a></li>
-                </ul>
-            </div>
-
-            <!-- Legal & Compliance -->
-            <div>
-                <h4 style="color: #0f172a; font-weight: 700; margin-bottom: 1.5rem;">Legal</h4>
-                <ul style="list-style: none; padding: 0; font-size: 0.9rem; line-height: 2;">
-                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: #64748b; text-decoration: none;">Términos de Servicio</a></li>
-                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: #64748b; text-decoration: none;">Política de Privacidad</a></li>
-                    <li><a href="javascript:void(0)" onclick="showGlobalTerms()" style="color: #64748b; text-decoration: none;">Uso de Cookies</a></li>
-                </ul>
-            </div>
-
-            <!-- Trust Badges -->
-            <div>
-                <h4 style="color: #0f172a; font-weight: 700; margin-bottom: 1.5rem;">Certificaciones</h4>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <div style="background: white; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem; filter: grayscale(1); opacity: 0.7;">
-                        <i data-lucide="lock" style="width: 14px; color: #10b981;"></i>
-                        <span style="font-size: 0.75rem; font-weight: 700; color: #0f172a;">SSL SECURE</span>
-                    </div>
-                    <div style="background: white; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem; filter: grayscale(1); opacity: 0.7;">
-                        <i data-lucide="check-circle" style="width: 14px; color: #6366f1;"></i>
-                        <span style="font-size: 0.75rem; font-weight: 700; color: #0f172a;">LEY 1581 COMPLIANT</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div style="max-width: 1200px; margin: 3rem auto 0; padding-top: 2rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <p style="color: #94a3b8; font-size: 0.8rem;">
-                © 2026 AS Sierra Systems. Todos los derechos reservados. Diseñado con altos estándares de seguridad.
-            </p>
-            <div style="display: flex; gap: 1.5rem;">
-                <a href="#" style="color: #94a3b8;"><i data-lucide="linkedin" style="width: 18px;"></i></a>
-                <a href="#" style="color: #94a3b8;"><i data-lucide="twitter" style="width: 18px;"></i></a>
-                <a href="#" style="color: #94a3b8;"><i data-lucide="instagram" style="width: 18px;"></i></a>
-            </div>
-        </div>
-    </footer>
+    <!-- Footer legal eliminado (fusionado con el principal arriba) -->
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="js/consent.js"></script>

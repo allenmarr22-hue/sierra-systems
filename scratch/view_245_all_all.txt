@@ -1,0 +1,60 @@
+Created At: 2026-05-26T11:27:22Z
+Completed At: 2026-05-26T11:27:22Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4259
+Total Bytes: 189734
+Showing lines 4100 to 4259
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4100:             const d = new Date(t.created_at);
+4101:             const day = String(d.getDate()).padStart(2, '0');
+4102:             const month = String(d.getMonth() + 1).padStart(2, '0');
+4103:             const year = d.getFullYear();
+4104:             dateStr = `${day}/${month}-${year}`;
+4105:         }
+4106: 
+4107:         const desc = t.description ? (t.description.length > 40 ? t.description.substring(0, 40) + '…' : t.description) : '—';
+4108:         return `
+4109:             <tr>
+4110:                 <td style="padding:1rem 1.5rem;">
+4111:                     <a href="javascript:void(0)" onclick="viewTicketDetails('${t.id}')" style="font-size:0.78rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver detalles del ticket">
+4112:                         #${String(t.id || '').substring(0, 8).toUpperCase()}
+4113:                     </a>
+4114:                 </td>
+4115:                 <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || '—'}</td>
+4116:                 <td style="padding:1rem 1.5rem; color:var(--text-muted);">${t.module || '—'}</td>
+4117:                 <td style="padding:1rem 1.5rem;">
+4118:                     <span style="font-size:0.78rem; font-weight:700; padding:3px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color};">
+4119:                         ${pr.label}
+4120:                     <
+<truncated 7185 bytes>
+ain); font-size:0.9rem; margin-top:2px;">${ticket.business_name || '—'}</div>
+4231:                     </div>
+4232:                     <div>
+4233:                         <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Módulo Afectado</span>
+4234:                         <div style="font-weight:700; color:var(--text-main); font-size:0.9rem; margin-top:2px;">${ticket.module || '—'}</div>
+4235:                     </div>
+4236:                 </div>
+4237: 
+4238:                 <div>
+4239:                     <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px;">Descripción del Reporte</span>
+4240:                     <div style="background:var(--bg-surface-light); border:1px solid var(--border-color); border-radius:12px; padding:1.1rem 1.25rem; font-size:0.9rem; color:var(--text-main); white-space:pre-wrap; word-break:break-word; max-height:180px; overflow-y:auto; line-height:1.5;">${ticket.description || 'Sin descripción.'}</div>
+4241:                 </div>
+4242: 
+4243:                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:var(--text-muted); border-top:1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;">
+4244:                     <span>Creado el: <strong>${fullDate}</strong></span>
+4245:                 </div>
+4246:             </div>
+4247:         `,
+4248:         background: 'var(--bg-surface)',
+4249:         color: 'var(--text-main)',
+4250:         width: '480px',
+4251:         confirmButtonText: 'Entendido',
+4252:         confirmButtonColor: 'var(--primary)',
+4253:         didOpen: () => {
+4254:             lucide.createIcons();
+4255:         }
+4256:     });
+4257: };
+4258: 
+4259: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

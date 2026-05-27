@@ -1,0 +1,34 @@
+Created At: 2026-05-26T11:59:39Z
+Completed At: 2026-05-26T11:59:39Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4500
+Total Bytes: 208698
+Showing lines 4090 to 4115
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4090:                     <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+4091:                         <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
+4092:                         <span>No se encontraron tickets.</span>
+4093:                     </div>
+4094:                 </td>
+4095:             </tr>`;
+4096:         lucide.createIcons();
+4097:         return;
+4098:     }
+4099: 
+4100:     tbody.innerHTML = list.map(t => {
+4101:         const st   = TICKET_STATUS_MAP[t.status]   || TICKET_STATUS_MAP['abierto'];
+4102:         const pr   = TICKET_PRIORITY_MAP[t.priority] || TICKET_PRIORITY_MAP['normal'];
+4103:         
+4104:         let dateStr = 'â€”';
+4105:         if (t.created_at) {
+4106:             const d = new Date(t.created_at);
+4107:             const day = String(d.getDate()).padStart(2, '0');
+4108:             const month = String(d.getMonth() + 1).padStart(2, '0');
+4109:             const year = d.getFullYear();
+4110:             dateStr = `${day}/${month}/${year}`;
+4111:         }
+4112: 
+4113:         const desc = t.description ? (t.description.length > 40 ? t.description.substring(0, 40) + 'â€¦' : t.description) : 'â€”';
+4114:         return `
+4115:             <tr>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -13,6 +13,19 @@
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const crypto = require('crypto');
+
+// --- HASHING DE CONTRASEÑAS SEGURO ---
+function hashPassword(password) {
+    if (!password) return '';
+    // Si ya parece estar encriptada (formato salt:hash), no volver a encriptar
+    if (password.includes(':') && password.split(':')[0].length === 32) {
+        return password;
+    }
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return `${salt}:${hash}`;
+}
 
 const dataFilePath = path.resolve(__dirname, 'data.json');
 
@@ -120,6 +133,8 @@ async function runMigration() {
         console.log('[Migration] 🛠️ Limpiando tablas anteriores y creando estructura relacional...');
 
         // Eliminar tablas anteriores para evitar tipos de columna incompatibles
+        await pool.query('DROP TABLE IF EXISTS promotions');
+        await pool.query('DROP TABLE IF EXISTS payment_history');
         await pool.query('DROP TABLE IF EXISTS business_modules');
         await pool.query('DROP TABLE IF EXISTS businesses');
         await pool.query('DROP TABLE IF EXISTS modules');
@@ -164,7 +179,23 @@ async function runMigration() {
                 price VARCHAR(50) NOT NULL DEFAULT '$ 0',
                 url VARCHAR(255) NULL,
                 admin_url VARCHAR(255) NULL,
-                video_url VARCHAR(255) NULL
+                video_url VARCHAR(255) NULL,
+                image VARCHAR(255) NULL
+            )
+        `);
+ 
+        // Promociones (Campañas de descuentos)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS promotions (
+                id VARCHAR(50) PRIMARY KEY,
+                module_id VARCHAR(50) NOT NULL,
+                discount_type VARCHAR(20) NOT NULL, -- 'percentage' o 'fixed_price'
+                discount_value DECIMAL(10,2) NOT NULL,
+                start_date VARCHAR(100) NOT NULL,
+                end_date VARCHAR(100) NOT NULL,
+                status VARCHAR(20) DEFAULT 'active', -- 'active' o 'inactive'
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
             )
         `);
 
@@ -195,16 +226,18 @@ async function runMigration() {
             )
         `);
 
-        // Relación muchos a muchos Negocios - Módulos
+        // Relación 1 a N Negocios - Módulos (Instancias/Sucursales)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS business_modules (
+                instance_id VARCHAR(100) PRIMARY KEY,
                 business_id BIGINT NOT NULL,
                 module_id VARCHAR(50) NOT NULL,
+                branch_name VARCHAR(150) NULL,
                 status ENUM('active', 'cancelled') NOT NULL DEFAULT 'active',
+                price_applied DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
                 cancelled_at VARCHAR(100) NULL,
                 access_until VARCHAR(100) NULL,
                 renewal_date VARCHAR(100) NULL,
-                PRIMARY KEY (business_id, module_id),
                 FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
                 FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
             )
@@ -219,6 +252,20 @@ async function runMigration() {
                 icon VARCHAR(100) NULL,
                 color VARCHAR(20) NULL,
                 created_at VARCHAR(100) NOT NULL
+            )
+        `);
+
+        // Historial de Pagos (Ledger Financiero)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS payment_history (
+                id VARCHAR(100) PRIMARY KEY,
+                business_id BIGINT NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                \`desc\` VARCHAR(255) NULL,
+                status VARCHAR(50) NOT NULL,
+                transaction_id VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
             )
         `);
 
@@ -239,7 +286,7 @@ async function runMigration() {
         `, [
             config.companyName || 'AS Sierra Systems',
             config.adminUser || 'admin',
-            config.adminPass || '123456',
+            hashPassword(config.adminPass || '123456'),
             config.adminName || 'Allenmar',
             config.logo || null
         ]);
@@ -248,8 +295,8 @@ async function runMigration() {
         console.log('[Migration] 📤 Migrando módulos...');
         for (const mod of (rawData.modules || [])) {
             await pool.query(`
-                INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url, image)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                     name = VALUES(name),
                     \`desc\` = VALUES(\`desc\`),
@@ -258,7 +305,8 @@ async function runMigration() {
                     price = VALUES(price),
                     url = VALUES(url),
                     admin_url = VALUES(admin_url),
-                    video_url = VALUES(video_url)
+                    video_url = VALUES(video_url),
+                    image = VALUES(image)
             `, [
                 mod.id,
                 mod.name,
@@ -268,7 +316,8 @@ async function runMigration() {
                 mod.price || '$ 0',
                 mod.url || null,
                 mod.adminUrl || null,
-                mod.videoUrl || null
+                mod.videoUrl || null,
+                mod.image || null
             ]);
         }
 
@@ -289,7 +338,7 @@ async function runMigration() {
             `, [
                 userId,
                 user.user,
-                user.pass,
+                hashPassword(user.pass),
                 user.name,
                 user.role || 'Admin',
                 user.status || 'active'
@@ -333,7 +382,7 @@ async function runMigration() {
                 biz.status || 'active',
                 biz.city || null,
                 biz.clientEmail,
-                biz.clientPass,
+                hashPassword(biz.clientPass),
                 biz.avatarUrl || null,
                 billing.gateway_token || null,
                 billing.last_four || null,
@@ -348,28 +397,44 @@ async function runMigration() {
 
             // Migrar relación de módulos activos
             const activeModules = biz.modules || [];
-            for (const modId of activeModules) {
-                const renewalDate = biz.moduleDates && biz.moduleDates[modId] ? biz.moduleDates[modId] : null;
+            for (let i = 0; i < activeModules.length; i++) {
+                // Compatible con versión anterior (array de strings) y nueva (array de objetos)
+                const mod = typeof activeModules[i] === 'string' ? { moduleId: activeModules[i] } : activeModules[i];
+                const modId = mod.moduleId;
+                const instanceId = mod.instanceId || `${biz.id}-${modId}-${i}`;
+                const branchName = mod.branchName || 'Sede Principal';
+                const priceApplied = mod.priceApplied || 0;
+                
+                const renewalDate = biz.moduleDates && biz.moduleDates[modId] ? biz.moduleDates[modId] : (mod.renewalDate || null);
+                
                 await pool.query(`
-                    INSERT INTO business_modules (business_id, module_id, status, renewal_date)
-                    VALUES (?, ?, 'active', ?)
+                    INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
+                    VALUES (?, ?, ?, ?, 'active', ?, ?)
                     ON DUPLICATE KEY UPDATE 
                         status = 'active', 
+                        branch_name = VALUES(branch_name),
+                        price_applied = VALUES(price_applied),
                         renewal_date = VALUES(renewal_date)
-                `, [biz.id, modId, renewalDate]);
+                `, [instanceId, biz.id, modId, branchName, priceApplied, renewalDate]);
             }
 
             // Migrar relación de módulos cancelados (suspendidos)
             const cancelledModules = biz.cancelledModules || [];
-            for (const cm of cancelledModules) {
+            for (let i = 0; i < cancelledModules.length; i++) {
+                const cm = cancelledModules[i];
+                const instanceId = cm.instanceId || `${biz.id}-${cm.id}-cancelled-${i}`;
+                const branchName = cm.branchName || 'Sede Principal';
+                const priceApplied = cm.priceApplied || 0;
+
                 await pool.query(`
-                    INSERT INTO business_modules (business_id, module_id, status, cancelled_at, access_until)
-                    VALUES (?, ?, 'cancelled', ?, ?)
+                    INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
+                    VALUES (?, ?, ?, ?, 'cancelled', ?, ?, ?)
                     ON DUPLICATE KEY UPDATE 
                         status = 'cancelled', 
+                        branch_name = VALUES(branch_name),
                         cancelled_at = VALUES(cancelled_at),
                         access_until = VALUES(access_until)
-                `, [biz.id, cm.id, cm.cancelledAt || null, cm.accessUntil || null]);
+                `, [instanceId, biz.id, cm.id || cm.moduleId, branchName, priceApplied, cm.cancelledAt || null, cm.accessUntil || null]);
             }
         }
 

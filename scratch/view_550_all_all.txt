@@ -1,0 +1,23 @@
+Created At: 2026-05-26T12:05:37Z
+Completed At: 2026-05-26T12:05:37Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4500
+Total Bytes: 208056
+Showing lines 4218 to 4232
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4218:         html: `
+4219:             <div style="font-family:'Outfit',sans-serif; color:var(--text-main);">
+4220: 
+4221:                 <!-- Header pill -->
+4222:                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+4223:                     <div style="display:flex; align-items:center; gap:10px;">
+4224:                         <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🎟️ï¸</div>
+4225:                         <div style="text-align:left;">
+4226:                             <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Ticket de Soporte</div>
+4227:                             <div style="font-family:monospace;font-size:0.95rem;font-weight:900;color:var(--primary);">#${ticket.id.toUpperCase()}</div>
+4228:                         </div>
+4229:                     </div>
+4230:                     <div style="display:flex;gap:6px;align-items:center;">
+4231:                         <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${pr.color}18;color:${pr.color};border:1px solid ${pr.color}33;white-space:nowrap;">${pr.label}</span>
+4232:                         <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${st.bg};color:${st.color};border:1px solid ${st.color}33;white-space:nowrap;">${st.label}</span>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

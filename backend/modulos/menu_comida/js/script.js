@@ -1,3 +1,28 @@
+// ====== AISLAMIENTO MULTI-SEDE (TENANT ISOLATION MONKEY PATCH) ======
+(function() {
+    if (Storage.prototype.getItem.__isPatched) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const instanceId = urlParams.get('instanceId');
+    if (instanceId) {
+        const suffix = `_${instanceId}`;
+        const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+        const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
+        const originalGetItem = Storage.prototype.getItem;
+        const originalSetItem = Storage.prototype.setItem;
+        const originalRemoveItem = Storage.prototype.removeItem;
+        Storage.prototype.getItem = function(key) {
+            return shouldAiso(key) ? originalGetItem.call(this, key + suffix) : originalGetItem.call(this, key);
+        };
+        Storage.prototype.setItem = function(key, value) {
+            return shouldAiso(key) ? originalSetItem.call(this, key + suffix, value) : originalSetItem.call(this, key, value);
+        };
+        Storage.prototype.removeItem = function(key) {
+            return shouldAiso(key) ? originalRemoveItem.call(this, key + suffix) : originalRemoveItem.call(this, key);
+        };
+        Storage.prototype.getItem.__isPatched = true;
+    }
+})();
+
 // Disable browser scroll restoration so page always starts at top
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 

@@ -1,0 +1,31 @@
+Created At: 2026-05-26T11:27:54Z
+Completed At: 2026-05-26T11:27:54Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4259
+Total Bytes: 189734
+Showing lines 198 to 220
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+198: 
+199:         // ==========================================
+200:         // SSE REAL-TIME SYNC
+201:         // ==========================================
+202:         const evtSource = new EventSource('/api/stream');
+203:         evtSource.onmessage = function(event) {
+204:             try {
+205:                 const data = JSON.parse(event.data);
+206:                 if (data.type === 'update') {
+207:                     console.log('Update received via SSE, reloading data...');
+208:                     loadData();
+209:                 }
+210:             } catch (err) {
+211:                 console.error('SSE Error:', err);
+212:             }
+213:         };
+214:     } else {
+215:         localStorage.removeItem('as_auth');
+216:         localStorage.removeItem('as_user');
+217:         localStorage.removeItem('as_admin_token');
+218:         appState.user = null;
+219:         showView('login-view');
+220:         lucide.createIcons();
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

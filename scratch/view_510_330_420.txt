@@ -1,0 +1,82 @@
+Created At: 2026-05-26T12:03:36Z
+Completed At: 2026-05-26T12:03:36Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4500
+Total Bytes: 208056
+Showing lines 4030 to 4200
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4030:  */
+4031: function setTicketFilter(filter) {
+4032:     window._currentTicketFilter = filter;
+4033:     document.querySelectorAll('#ticket-filters .pill').forEach(p => p.classList.remove('active'));
+4034:     const activeBtn = document.querySelector(`#ticket-filters .pill[onclick="setTicketFilter('${filter}')"]`);
+4035:     if (activeBtn) activeBtn.classList.add('active');
+4036:     renderAdminTickets();
+4037: }
+4038: 
+4039: /**
+4040:  * Mapas visuales por estado y prioridad.
+4041:  */
+4042: const TICKET_STATUS_MAP = {
+4043:     abierto:    { label: 'Abierto',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: 'inbox' },
+4044:     en_proceso: { label: 'En Proceso',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: 'loader' },
+4045:     resuelto:   { label: 'Resuelto',    color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: 'check-circle' },
+4046:     cerrado:    { label: 'Cerrado',     color: '#6b7280', bg: 'rgba(107,114,128,0.12)', icon: 'archive' },
+4047: };
+4048: const TICKET_PRIORITY_MAP = {
+4049:     baja:    { label: 'Baja',    color: '#94a3b8' },
+4050:     normal:  { label: 'Normal',  color: '#64748b' },
+4051:     urgente: { label: '🔴 Urgente', color: '#ef4444' },
+4052: };
+4053: 
+4054: /**
+4055:  * Renderiza la tabla de tickets aplicando búsqueda y filtro actual.
+4056:  */
+4057: function renderAdminTickets() {
+4058:     const tbody = document.getElementById('tickets-list');
+4059:     if (!tbody) return;
+4060: 
+4061:     const search = (document.g
+<truncated 6487 bytes>
+an>
+4161:                     </label>
+4162:                 `).join('')}
+4163:             </div>`,
+4164:         background: 'var(--bg-surface)',
+4165:         color: 'var(--text-main)',
+4166:         showCancelButton: true,
+4167:         confirmButtonText: 'Guardar',
+4168:         cancelButtonText: 'Cancelar',
+4169:         confirmButtonColor: 'var(--primary)',
+4170:         preConfirm: () => {
+4171:             const selected = document.querySelector('input[name="ticket-status-pick"]:checked');
+4172:             if (!selected) { Swal.showValidationMessage('Selecciona un estado'); return false; }
+4173:             return selected.value;
+4174:         }
+4175:     });
+4176: 
+4177:     if (!newStatus || newStatus === currentStatus) return;
+4178: 
+4179:     try {
+4180:         const res = await adminFetch(`/api/admin/tickets/${ticketId}/status`, {
+4181:             method: 'PATCH',
+4182:             headers: { 'Content-Type': 'application/json' },
+4183:             body: JSON.stringify({ status: newStatus })
+4184:         });
+4185:         const data = await res.json();
+4186:         if (res.ok && data.success) {
+4187:             // Actualizar estado local sin recargar todo
+4188:             const ticket = appState.adminTickets.find(t => t.id === ticketId);
+4189:             if (ticket) ticket.status = newStatus;
+4190:             renderAdminTickets();
+4191:             updateTicketBadge();
+4192:             showToast(`Ticket actualizado a: ${TICKET_STATUS_MAP[newStatus]?.label || newStatus}`, 'success');
+4193:         } else {
+4194:             showToast(data.error || 'Error al actualizar el ticket', 'error');
+4195:         }
+4196:     } catch (err) {
+4197:         console.error('Error actualizando ticket:', err);
+4198:         showToast('Error de conexión', 'error');
+4199:     }
+4200: }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

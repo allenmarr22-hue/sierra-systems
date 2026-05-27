@@ -1,0 +1,39 @@
+Created At: 2026-05-26T11:47:32Z
+Completed At: 2026-05-26T11:47:32Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4403
+Total Bytes: 196710
+Showing lines 4330 to 4360
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4330:             const bubbleAlign = isMe 
+4331:                 ? 'flex-end' 
+4332:                 : 'flex-start';
+4333:             const borderRadius = isMe
+4334:                 ? '16px 16px 4px 16px'
+4335:                 : '16px 16px 16px 4px';
+4336: 
+4337:             const d = new Date(msg.created_at);
+4338:             const timeStr = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+4339:             const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+4340: 
+4341:             return `
+4342:                 <div style="display: flex; flex-direction: column; align-self: ${bubbleAlign}; max-width: 80%; width: max-content; margin-bottom: 4px;">
+4343:                     <div style="display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; padding: 0 4px; gap: 8px;">
+4344:                         <span>${isMe ? 'Tú' : msg.sender_name}</span>
+4345:                         <span>${dateStr} ${timeStr}</span>
+4346:                     </div>
+4347:                     <div style="background: ${bubbleBg}; border: ${bubbleBorder}; border-radius: ${borderRadius}; color: var(--text-main); padding: 9px 13px; font-size: 0.85rem; line-height: 1.4; word-break: break-word; white-space: pre-wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+4348:                         ${msg.message}
+4349:                     </div>
+4350:                 </div>
+4351:             `;
+4352:         }).join('');
+4353: 
+4354:         container.scrollTop = container.scrollHeight;
+4355:     } catch (err) {
+4356:         console.error('Error cargando chat:', err);
+4357:         container.innerHTML = `
+4358:             <div style="text-align:center; color:#ef4444; font-size:0.85rem; padding:20px 10px;">
+4359:                 Error al cargar la conversación.
+4360:             </div>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

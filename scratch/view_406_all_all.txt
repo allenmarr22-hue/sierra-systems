@@ -1,0 +1,78 @@
+Created At: 2026-05-26T11:54:04Z
+Completed At: 2026-05-26T11:54:05Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4690
+Total Bytes: 213525
+Showing lines 4498 to 4690
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4498: };
+4499: 
+4500: 
+4501: 
+4502: 
+4503:     Swal.fire({
+4504:         title: '🎟️ Detalle y Chat del Ticket',
+4505:         html: `
+4506:             <div style="text-align:left; display:flex; flex-direction:column; gap:1rem; margin-top:1rem; font-family:'Outfit',sans-serif; line-height:1.6;">
+4507:                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+4508:                     <div>
+4509:                         <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Código de Ticket</span>
+4510:                         <div style="font-family:monospace; font-size:1.05rem; font-weight:800; color:var(--primary); margin-top:2px;">#${ticket.id.toUpperCase()}</div>
+4511:                     </div>
+4512:                     <div style="display:flex; gap:0.5rem; align-items:center;">
+4513:                         <span style="font-size:0.72rem; font-weight:700; padding:4px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color}; border:1px solid ${pr.color}33;">
+4514:                             ${pr.label}
+4515:                         </span>
+4516:                         <span style="font-size:0.72rem; font-weight:700; padding:4px 10px; border-radius:20px; background:${st.bg}; color:${st.color}; border:1px solid ${st.color}33;">
+4517:                             ${st.label}
+4518:                         </sp
+<truncated 8159 bytes>
+     console.error('Error cargando chat:', err);
+4644:         container.innerHTML = `
+4645:             <div style="text-align:center; color:#ef4444; font-size:0.85rem; padding:20px 10px;">
+4646:                 Error al cargar la conversación.
+4647:             </div>
+4648:         `;
+4649:     }
+4650: };
+4651: 
+4652: window.sendTicketMessage = async function(ticketId, role) {
+4653:     const input = document.getElementById('chat-message-input');
+4654:     const sendBtn = document.getElementById('chat-send-btn');
+4655:     if (!input || !input.value.trim()) return;
+4656: 
+4657:     const message = input.value.trim();
+4658:     input.disabled = true;
+4659:     if (sendBtn) sendBtn.disabled = true;
+4660: 
+4661:     try {
+4662:         const fetchUrl = `/api/tickets/${ticketId}/messages`;
+4663:         const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+4664:             method: 'POST',
+4665:             headers: { 'Content-Type': 'application/json' },
+4666:             body: JSON.stringify({ message })
+4667:         }) : clientFetch(fetchUrl, {
+4668:             method: 'POST',
+4669:             headers: { 'Content-Type': 'application/json' },
+4670:             body: JSON.stringify({ message })
+4671:         }));
+4672: 
+4673:         if (!res.ok) {
+4674:             const data = await res.json();
+4675:             throw new Error(data.error || 'Error al enviar el mensaje');
+4676:         }
+4677: 
+4678:         input.value = '';
+4679:         await fetchAndRenderChatMessages(ticketId, role);
+4680:     } catch (err) {
+4681:         console.error('Error al enviar mensaje:', err);
+4682:         showToast(err.message || 'Error de conexión', 'error');
+4683:     } finally {
+4684:         input.disabled = false;
+4685:         if (sendBtn) sendBtn.disabled = false;
+4686:         input.focus();
+4687:     }
+4688: };
+4689: 
+4690: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

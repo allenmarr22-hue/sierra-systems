@@ -1,0 +1,60 @@
+Created At: 2026-05-26T05:13:40Z
+Completed At: 2026-05-26T05:13:40Z
+File Path: `file:///C:/Users/Allenmar/.gemini/antigravity/brain/2fe7c9a4-3511-4a4e-9810-101c69e8dd7a/implementation_plan.md`
+Total Lines: 53
+Total Bytes: 3766
+Showing lines 1 to 53
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: # Plan de Implementación — Sistema de Soporte Híbrido Estilo Chat
+2: 
+3: Este plan detalla el diseño e implementación de un sistema de hilos de conversación (chat en tiempo real) dentro de cada ticket de soporte, evitando la acumulación de múltiples tickets para un mismo problema y unificando el seguimiento en un chat interactivo.
+4: 
+5: ---
+6: 
+7: ## 🏗️ Cambios Propuestos
+8: 
+9: ### 1. Base de Datos (`mysql`)
+10: Crearemos una nueva tabla `ticket_messages` en MySQL para almacenar el historial de mensajes de cada ticket de forma ordenada.
+11: 
+12: ```sql
+13: CREATE TABLE IF NOT EXISTS ticket_messages (
+14:     id INT AUTO_INCREMENT PRIMARY KEY,
+15:     ticket_id VARCHAR(60) NOT NULL,
+16:     sender ENUM('client', 'admin') NOT NULL,
+17:     sender_name VARCHAR(150) NOT NULL,
+18:     message TEXT NOT NULL,
+19:     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+20:     FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+21: );
+22: ```
+23: 
+24: ### 2. Backend (`backend/server.js`)
+25: *   **Creación de Tabla**: Al arrancar el servidor, verificaremos y crearemos la tabla `ticket_messages`.
+26: *   **Creación de Ticket (`POST /api/tickets`)**: Al abrir un nuevo ticket, además de insertar en la tabla `tickets`, insertaremos automáticamente la descripción del reporte como el primer mensaje del chat enviado por el cliente.
+27: *   **Obtención de Mensajes (`GET /api/tickets/:id/messages`)**: Endpoint para obtener todos los mensajes de un ticket específico (ordenados cronológicamente).
+28: *   **Envío d
+<truncated 447 bytes>
+stado de tickets.
+32: *   **Modal Interactivo de Chat**: Al pulsar el ID del ticket, se abrirá el modal de "Detalle del Ticket" rediseñado estilo **chat conversacional**:
+33:     *   Una zona con burbujas de diálogo (mensajes del cliente a la izquierda, respuestas del soporte/admin a la derecha).
+34:     *   Un campo de texto en la parte inferior para escribir y enviar un mensaje.
+35:     *   Si el ticket está `'cerrado'`, el campo de texto estará deshabilitado, mostrando una nota: *"Este ticket ha sido cerrado. Por favor, abre uno nuevo si tienes otra consulta."*
+36: *   **Sincronización en Tiempo Real**: Al recibir una notificación SSE, si el modal del ticket actual está abierto, se recargará automáticamente la conversación sin interferir con la navegación del usuario.
+37: 
+38: ### 4. Frontend de Cliente (`frontend/js/client-app.js` y `frontend/client-dashboard.html`)
+39: *   **Tickets Pulsables**: Haremos que el ID del ticket en la tabla "Mis Tickets" del dashboard del cliente sea pulsable.
+40: *   **Modal de Chat para Cliente**: Al pulsarlo, el cliente verá la misma ventana estilo chat, lo que le permitirá responder al soporte y revisar el historial de mensajes de manera interactiva sin tener que abrir nuevos tickets.
+41: 
+42: ---
+43: 
+44: ## 🟢 Plan de Verificación
+45: 
+46: ### Pruebas Automatizadas
+47: *   Ejecución de la suite `node backend/test-apis.js` con soporte para creación y envío de mensajes en el chat de tickets.
+48: 
+49: ### Pruebas Manuales
+50: 1.  **Apertura**: El cliente crea un ticket. Se verifica que el mensaje inicial se cargue correctamente.
+51: 2.  **Conversación**: El administrador abre el ticket, lee el reporte, escribe una respuesta y la envía. El cliente recibe la respuesta en tiempo real en su panel y contesta.
+52: 3.  **Cierre**: El administrador cambia el estado del ticket a "Cerrado". El chat se deshabilita para nuevos mensajes, obligando a abrir uno nuevo si es necesario.
+53: 
+The above content shows the entire, complete file contents of the requested file.

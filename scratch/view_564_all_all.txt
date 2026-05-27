@@ -1,0 +1,21 @@
+Created At: 2026-05-26T12:07:21Z
+Completed At: 2026-05-26T12:07:21Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4502
+Total Bytes: 208270
+Showing lines 4218 to 4230
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4218:         title: '',
+4219:         html: `
+4220:             <div style="font-family:'Outfit',sans-serif; color:var(--text-main);">
+4221: 
+4222:                 <!-- Header pill -->
+4223:                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+4224:                     <div style="display:flex; align-items:center; gap:10px;">
+4225:                         <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🎟️ï¸</div>
+4226:                         <div style="text-align:left;">
+4227:                             <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Ticket de Soporte</div>
+4228:                             <div style="font-family:monospace;font-size:0.95rem;font-weight:900;color:var(--primary);">#${ticket.id.toUpperCase()}</div>
+4229:                         </div>
+4230:                     </div>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

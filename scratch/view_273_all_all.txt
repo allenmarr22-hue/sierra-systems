@@ -1,0 +1,22 @@
+Created At: 2026-05-26T11:28:05Z
+Completed At: 2026-05-26T11:28:05Z
+File Path: `file:///C:/Users/Allenmar/.gemini/antigravity/brain/2fe7c9a4-3511-4a4e-9810-101c69e8dd7a/task.md`
+Total Lines: 19
+Total Bytes: 1468
+Showing lines 1 to 14
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: # Tareas — Sistema de Tickets Estilo Chat Real-Time
+2: 
+3: - [x] `[x]` Actualizaciones del Backend
+4:     - [x] `[x]` Crear tabla `ticket_messages` en MySQL al inicializar el servidor en `backend/server.js`
+5:     - [x] `[x]` Modificar endpoint `POST /api/tickets` para guardar la descripción del ticket como primer mensaje de chat
+6:     - [x] `[x]` Crear endpoint `GET /api/tickets/:id/messages` para obtener el historial de chat de un ticket
+7:     - [x] `[x]` Crear endpoint `POST /api/tickets/:id/messages` para enviar mensajes en el chat de un ticket (Admin y Cliente)
+8: - [ ] `[ ]` Actualizaciones del Frontend Admin (`app.js` & `super-admin.html`)
+9:     - [ ] `[ ]` Cambiar formato de fecha de tickets en el listado a `DD/MM/YYYY`
+10:     - [ ] `[ ]` Implementar función `viewTicketDetails` con diseño estilo chat premium y burbujas de diálogo
+11:     - [ ] `[ ]` Agregar input de envío de mensajes en el modal de chat
+12:     - [ ] `[ ]` Sincronizar recarga del chat en tiempo real al recibir actualización por SSE
+13: - [ ] `[ ]` Actualizaciones del Frontend Cliente (`client-app.js` & `client-dashboard.html`)
+14:     - [ ] `[ ]` Hacer clickable el ID del ticket en la lista del dashboard del cliente
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

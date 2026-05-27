@@ -1,0 +1,72 @@
+Created At: 2026-05-26T11:47:40Z
+Completed At: 2026-05-26T11:47:40Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3918
+Total Bytes: 204938
+Showing lines 3770 to 3918
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3770:                     <div style="padding:10px 14px; border-radius:10px; border:1px dashed #ef4444; background:rgba(239, 68, 68, 0.08); color:#ef4444; display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:700; justify-content:center;">
+3771:                         <i data-lucide="lock" style="width:14px; height:14px; flex-shrink:0;"></i>
+3772:                         <span>Ticket cerrado. Abre un nuevo ticket para iniciar otra consulta.</span>
+3773:                     </div>
+3774:                 ` : `
+3775:                     <div style="display:flex; gap:8px; align-items:center;">
+3776:                         <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:0.88rem; outline:none;" />
+3777:                         <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}', 'client')" style="padding:10px 16px; border-radius:10px; border:none; background:var(--primary); color:white; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:0.85rem; transition: background 0.2s;">
+3778:                             <i data-lucide="send" style="width:14px; height:14px;"></i> Enviar
+3779:                         </button>
+3780:                     </div>
+3781:                 `}
+3782:                 
+3783:                 <div style="display:flex;
+<truncated 4483 bytes>
+nsole.error('Error cargando chat:', err);
+3871:         container.innerHTML = `
+3872:             <div style="text-align:center; color:#ef4444; font-size:0.85rem; padding:20px 10px;">
+3873:                 Error al cargar la conversación.
+3874:             </div>
+3875:         `;
+3876:     }
+3877: };
+3878: 
+3879: window.sendTicketMessage = async function(ticketId, role) {
+3880:     const input = document.getElementById('chat-message-input');
+3881:     const sendBtn = document.getElementById('chat-send-btn');
+3882:     if (!input || !input.value.trim()) return;
+3883: 
+3884:     const message = input.value.trim();
+3885:     input.disabled = true;
+3886:     if (sendBtn) sendBtn.disabled = true;
+3887: 
+3888:     try {
+3889:         const fetchUrl = `/api/tickets/${ticketId}/messages`;
+3890:         const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+3891:             method: 'POST',
+3892:             headers: { 'Content-Type': 'application/json' },
+3893:             body: JSON.stringify({ message })
+3894:         }) : clientFetch(fetchUrl, {
+3895:             method: 'POST',
+3896:             headers: { 'Content-Type': 'application/json' },
+3897:             body: JSON.stringify({ message })
+3898:         }));
+3899: 
+3900:         if (!res.ok) {
+3901:             const data = await res.json();
+3902:             throw new Error(data.error || 'Error al enviar el mensaje');
+3903:         }
+3904: 
+3905:         input.value = '';
+3906:         await fetchAndRenderChatMessages(ticketId, role);
+3907:     } catch (err) {
+3908:         console.error('Error al enviar mensaje:', err);
+3909:         showToast(err.message || 'Error de conexión', 'error');
+3910:     } finally {
+3911:         input.disabled = false;
+3912:         if (sendBtn) sendBtn.disabled = false;
+3913:         input.focus();
+3914:     }
+3915: };
+3916: 
+3917: 
+3918: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,34 @@
+Created At: 2026-05-26T11:28:28Z
+Completed At: 2026-05-26T11:28:28Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3684
+Total Bytes: 192403
+Showing lines 595 to 620
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+595:             baja:    { label: 'Baja',    color: '#94a3b8' },
+596:         };
+597: 
+598:         let html = '';
+599:         tickets.forEach(t => {
+600:             const d = new Date(t.created_at);
+601:             const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+602:             const s = statusMap[t.status] || statusMap.abierto;
+603:             const p = priorityMap[t.priority] || priorityMap.normal;
+604:             html += `
+605:                 <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
+606:                     <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.85rem; color:var(--text-muted);">${t.id}</td>
+607:                     <td style="padding:1rem 1.5rem;">${t.module}</td>
+608:                     <td style="padding:1rem 1.5rem; font-size:0.8rem; color:${p.color}; font-weight:700;">${p.label}</td>
+609:                     <td style="padding:1rem 1.5rem;">
+610:                         <span style="background:${s.bg};color:${s.color};border:1px solid ${s.border};font-weight:700;font-size:0.75rem;padding:0.25rem 0.65rem;border-radius:12px;white-space:nowrap;">${s.label}</span>
+611:                     </td>
+612:                     <td style="padding:1rem 1.5rem; white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${dateStr}</td>
+613:                 </tr>`;
+614:         });
+615:         tbody.innerHTML = html;
+616:     } catch (err) {
+617:         console.error('Error al cargar tickets:', err);
+618:     }
+619: }
+620: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

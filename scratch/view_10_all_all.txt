@@ -1,0 +1,51 @@
+Created At: 2026-05-26T04:39:21Z
+Completed At: 2026-05-26T04:39:21Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/README.md`
+Total Lines: 197
+Total Bytes: 12577
+Showing lines 1 to 197
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: # AS Sierra Systems — Panel de Administración y Facturación
+2: 
+3: Este proyecto es una plataforma administrativa centralizada premium y de alto rendimiento para **AS Sierra Systems**, diseñada para gestionar negocios (clientes), módulos funcionales, facturación recurrente mensual, roles administrativos y notificaciones del sistema en tiempo real. 
+4: 
+5: El sistema está diseñado de forma modular, permitiendo a los clientes autogestionar su perfil y módulos contratados, mientras que los Super Administradores tienen control total sobre la plataforma, los precios, los cobros y la activación/suspensión automatizada de cuentas.
+6: 
+7: ---
+8: 
+9: ## 🏗️ Arquitectura del Sistema
+10: 
+11: La arquitectura está dividida de forma limpia en un frontend de SPA (Single Page Application) tradicional estilizado con CSS moderno y un backend en Node.js/Express sumamente optimizado que cuenta con persistencia de base de datos local y tareas en segundo plano (cron jobs).
+12: 
+13: ```mermaid
+14: graph TD
+15:     subgraph Frontend [Portal del Usuario]
+16:         SA[super-admin.html] -->|Acciones del Super Admin| AppJS[js/app.js]
+17:         CD[client-dashboard.html] -->|Acciones de Autogestión| ClientJS[js/client-app.js]
+18:         CL[client-login.html] -->|Acceso Clientes| ClientJS
+19:     end
+20: 
+21:     subgraph Backend [Servidor Node.js / Express]
+22:         API[backend/server.js] -->|Lectura/Escritura| DB[(backend/data.json)]
+23:         SSE[SSE Stream /api/stream] -->|Sincronización Tiempo Real| AppJS
+24: 
+<truncated 9947 bytes>
+ y principios de diseño**:
+181: 
+182: 1. **Persistencia de Base de Datos (`data.json`)**:
+183:    * El sistema no utiliza un motor SQL/NoSQL externo. La persistencia es un archivo JSON plano (`data.json`) en `backend/`.
+184:    * Cualquier escritura debe ser atómica y ejecutarse llamando a `fs.writeFile` de manera controlada. 
+185:    * Recuerda llamar siempre a `broadcastUpdate()` en el servidor después de guardar cambios en la DB para que los clientes conectados por SSE actualicen su UI en tiempo real de forma inmediata.
+186: 
+187: 2. **Diseño de Interfaz Premium (CSS)**:
+188:    * **No uses Tailwind CSS** a menos que el usuario lo solicite explícitamente. Mantén y complementa `frontend/css/style.css` usando CSS vanilla, variables personalizadas (tokens HSL) y diseños flexibles y fluidos.
+189:    * La interfaz debe verse sumamente profesional: usa bordes redondeados consistentes (`border-radius: 12px` o `16px`), sombras suaves (`box-shadow`), gradientes armónicos y efectos dinámicos en los botones al hacer hover (transiciones de `0.3s ease`).
+190: 
+191: 3. **Ciclo de Suspensión de Negocios**:
+192:    * Si un cobro falla, el cron job cambia `biz.billing.subscription_status = 'suspended'` y `biz.status = 'inactive'`.
+193:    * Al hacer esto, el portal de clientes (`client-dashboard.html`) debe restringir el acceso del usuario, mostrando una pantalla elegante de "Pago Requerido" (como se controla en `client-app.js` mediante la verificación del token en `/api/client/verify`).
+194:    * Al restaurar el pago, asegúrate de devolver `biz.status = 'active'` y `biz.billing.subscription_status = 'active'`.
+195: 
+196: 4. **Wompi y Seguridad de Tarjetas**:
+197:    * **NUNCA** guardes números de tarjeta, fechas de vencimiento o códigos CVC en `data.json` o logs del servidor. En producción, la tokenización la realiza Wompi directamente en el navegador del usuario y solo manejamos el string del token resultante (`gateway_token`).
+The above content shows the entire, complete file contents of the requested file.

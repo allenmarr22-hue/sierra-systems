@@ -1,0 +1,76 @@
+Created At: 2026-05-26T04:39:59Z
+Completed At: 2026-05-26T04:39:59Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3684
+Total Bytes: 192404
+Showing lines 196 to 995
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+196:                     return false;
+197:                 }
+198:             }
+199:         }).then((result) => {
+200:             if (result.isConfirmed) {
+201:                 const { newName, avatarUrl } = result.value;
+202:                 
+203:                 // Update local state and re-render header info
+204:                 const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
+205:                 if (clientBiz) {
+206:                     clientBiz.name = newName;
+207:                     clientBiz.avatarUrl = avatarUrl;
+208:                 }
+209:                 
+210:                 // Immediate UI Update
+211:                 document.getElementById('client-name-display').textContent = newName;
+212:                 const heroName = document.getElementById('hero-client-name');
+213:                 if (heroName) heroName.textContent = newName;
+214:                 
+215:                 const wrap = document.getElementById('client-avatar-wrap');
+216:                 if (wrap) {
+217:                     if (avatarUrl) {
+218:                         wrap.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+219:                     } else {
+220:                         wrap.innerHTML = `<span id="client-avatar">${newName.substring(0, 2).toUpperCase()}</span>`;
+221:                     }
+222:                 }
+223:                 
+224:                 Swal.fire({ icon: 'success', title: 'Perfil actualizado', timer: 2000, showConfirmButton:
+<truncated 38329 bytes>
+y = document.getElementById('profile-email-display');
+959:     if (emailDisplay && clientBiz.clientEmail) emailDisplay.textContent = clientBiz.clientEmail;
+960: 
+961:     if (clientBiz.avatarUrl) {
+962:         const wrap = document.getElementById('client-avatar-wrap');
+963:         if (wrap) wrap.innerHTML = `<img src="${clientBiz.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+964:     }
+965: 
+966:     const accEmailInput = document.getElementById('acc-email');
+967:     if (accEmailInput && clientBiz.clientEmail) accEmailInput.value = clientBiz.clientEmail;
+968: 
+969:     // --- Separar módulos (Instancias / Sucursales) ---
+970:     // Legacy fallback + Nueva estructura
+971:     let rawInstances = clientBiz.moduleInstances || [];
+972:     if (rawInstances.length === 0) {
+973:         // Fallback visual para activos
+974:         const activeInsts = (clientBiz.modules || []).map((mId, i) => ({
+975:             instanceId: `${clientBiz.id}-${mId}-${i}`,
+976:             moduleId: mId,
+977:             branchName: 'Sede Principal',
+978:             status: 'active',
+979:             priceApplied: 0,
+980:             renewalDate: clientBiz.moduleDates ? clientBiz.moduleDates[mId] : null
+981:         }));
+982:         // Fallback visual para cancelados
+983:         const cancelledInsts = (clientBiz.cancelledModules || []).map((cm, i) => ({
+984:             instanceId: `${clientBiz.id}-${cm.id || cm.moduleId}-cancelled-${i}`,
+985:             moduleId: cm.id || cm.moduleId,
+986:             branchName: 'Sede Principal',
+987:             status: 'cancelled',
+988:             priceApplied: 0,
+989:             cancelledAt: cm.cancelledAt,
+990:             accessUntil: cm.accessUntil
+991:         }));
+992:         rawInstances = [...activeInsts, ...cancelledInsts];
+993:     }
+994: 
+995:     const activeMods = rawInstances
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

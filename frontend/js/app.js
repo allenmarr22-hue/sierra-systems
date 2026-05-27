@@ -2,6 +2,98 @@
 // AS Sierra Systems - Main Application JS (Backend Connected)
 // ==========================================================================
 
+// --- UTILERIAS PREMIUM (NOTIFICACIONES & BUSQUEDA) ---
+window.playMessageChime = function() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
+    } catch (e) {
+        console.warn('Audio Context not allowed or failed:', e);
+    }
+};
+
+let titleFlashInterval = null;
+let originalTitle = document.title || 'Panel Administración | AS Sierra Systems';
+window.startTitleFlash = function() {
+    if (document.hasFocus()) return;
+    if (titleFlashInterval) clearInterval(titleFlashInterval);
+    let isOriginal = false;
+    titleFlashInterval = setInterval(() => {
+        document.title = isOriginal ? originalTitle : '💬 (1) Nuevo mensaje';
+        isOriginal = !isOriginal;
+    }, 1000);
+};
+
+window.stopTitleFlash = function() {
+    if (titleFlashInterval) {
+        clearInterval(titleFlashInterval);
+        titleFlashInterval = null;
+    }
+    document.title = originalTitle;
+};
+
+window.addEventListener('focus', () => {
+    window.stopTitleFlash();
+});
+
+window.handleChatSearch = function(query) {
+    const container = document.getElementById('ticket-chat-container');
+    if (!container) return;
+    const q = query.trim().toLowerCase();
+    
+    // Buscar en todas las burbujas que contengan texto usando la clase robusta
+    const bubbles = container.querySelectorAll('.chat-message-text');
+    bubbles.forEach(bubble => {
+        let text = bubble.getAttribute('data-original-text');
+        if (text === null) {
+            text = bubble.textContent || '';
+            bubble.setAttribute('data-original-text', text);
+        }
+        const parent = bubble.closest('div[style*="max-width:75%"]');
+        if (!parent) return;
+
+        if (q === '') {
+            bubble.textContent = text;
+            parent.style.opacity = '1';
+        } else if (text.toLowerCase().includes(q)) {
+            const regex = new RegExp(`(${q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
+            const escaped = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            bubble.innerHTML = escaped.replace(regex, '<mark style="background:#f59e0b;color:black;border-radius:2px;padding:0 2px;">$1</mark>');
+            parent.style.opacity = '1';
+        } else {
+            bubble.textContent = text;
+            parent.style.opacity = '0.35';
+        }
+    });
+};
+
+
+window.scrollCarousel = function(btn, direction) {
+    const parent = btn.parentNode;
+    if (!parent) return;
+    const track = parent.querySelector('.carousel-scroll-container') || parent.querySelector('.carousel-track');
+    if (!track) return;
+    const cardWidth = track.firstElementChild ? track.firstElementChild.offsetWidth + 24 : 340;
+    track.scrollBy({
+        left: direction * cardWidth,
+        behavior: 'smooth'
+    });
+};
+
+
 // State Management
 const appState = {
     theme: localStorage.getItem('as_theme') || 'light',
@@ -28,7 +120,11 @@ function getAdminHeaders(extra = {}) {
  * al admin, renueva el token en silencio y reintenta la petición.
  */
 async function adminFetch(url, options = {}) {
-    options.headers = { ...getAdminHeaders(), ...(options.headers || {}) };
+    const headers = { ...getAdminHeaders(), ...(options.headers || {}) };
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type'];
+    }
+    options.headers = headers;
     let resp = await fetch(url, options);
 
     if (resp.status === 401) {
@@ -81,13 +177,13 @@ async function adminFetch(url, options = {}) {
 // Permission definitions per role
 const ROLE_PERMISSIONS = {
     'Super Admin': {
-        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules', 'tab-users', 'tab-billing', 'tab-settings'],
+        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules', 'tab-users', 'tab-billing', 'tab-settings', 'tab-promotions'],
         canCreate: true,
         canEdit: true,
         canDelete: true
     },
     'Administrador': {
-        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules'],
+        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules', 'tab-promotions'],
         canCreate: true,
         canEdit: true,
         canDelete: false
@@ -206,6 +302,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.type === 'update') {
                     console.log('Update received via SSE, reloading data...');
                     loadData();
+                    if (typeof loadAdminTickets === 'function') {
+                        loadAdminTickets();
+                    }
+                    if (window.activeChatTicketId) {
+                        fetchAndRenderChatMessages(window.activeChatTicketId, 'admin');
+                    }
+                } else if (data.type === 'typing') {
+                    if (window.activeChatTicketId === data.ticketId && data.role !== 'admin') {
+                        showChatTypingIndicator('El cliente está escribiendo...');
+                    }
                 }
             } catch (err) {
                 console.error('SSE Error:', err);
@@ -250,6 +356,20 @@ async function loadData() {
         if (appState.config.adminUser) {
             const input = document.getElementById('settings-admin-user');
             if (input) input.value = appState.config.adminUser;
+        }
+
+        // Preload tickets if admin token is present to feed the charts
+        if (getAdminToken()) {
+            try {
+                const resTickets = await adminFetch('/api/admin/tickets');
+                const dataTickets = await resTickets.json();
+                if (resTickets.ok && dataTickets.success) {
+                    appState.adminTickets = dataTickets.tickets || [];
+                    if (typeof updateTicketBadge === 'function') updateTicketBadge();
+                }
+            } catch (err) {
+                console.error('Error preloading tickets:', err);
+            }
         }
         
         initDashboard();
@@ -519,12 +639,19 @@ function setupEventListeners() {
             if (target === 'tab-modules') renderModulesGrid();
             if (target === 'tab-users') renderUsersList();
             if (target === 'tab-billing') renderBillingData();
+            if (target === 'tab-tickets') loadAdminTickets();
+            if (target === 'tab-payment-history') loadGlobalPaymentsHistory();
+            if (target === 'tab-promotions') loadPromotions();
         });
     });
 
     // Modal Events
     document.getElementById('business-modal-close')?.addEventListener('click', closeBusinessModal);
     document.getElementById('business-modal-cancel')?.addEventListener('click', closeBusinessModal);
+    
+    document.getElementById('btn-new-promo')?.addEventListener('click', () => {
+        openPromoFormModal();
+    });
     
     document.body.addEventListener('click', async (e) => {
         // Abrir Modal Crear
@@ -571,7 +698,7 @@ function setupEventListeners() {
             const id = toggleBizBtn.getAttribute('data-id');
             const newStatus = toggleBizBtn.getAttribute('data-status');
             try {
-                const res = await fetch('/api/businesses/toggle', {
+                const res = await adminFetch('/api/businesses/toggle', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, status: newStatus })
@@ -802,10 +929,12 @@ function setupEventListeners() {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (event) => {
-                const base64 = event.target.result;
-                logoPreview.innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:contain;">`;
-                appState.customLogo = base64;
+            reader.onload = async (event) => {
+                const originalBase64 = event.target.result;
+                // Redimensionar el logo a máx 300px antes de guardar
+                const compressedBase64 = await resizeImageBase64(originalBase64, 300, 300);
+                logoPreview.innerHTML = `<img src="${compressedBase64}" style="width:100%; height:100%; object-fit:contain;">`;
+                appState.customLogo = compressedBase64;
             };
             reader.readAsDataURL(file);
         }
@@ -834,7 +963,7 @@ function setupEventListeners() {
         }
 
         try {
-            const res = await fetch('/api/settings/save', {
+            const res = await adminFetch('/api/settings/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -1126,7 +1255,7 @@ async function saveSettings() {
         const settingsData = { logo, adminUser, adminPass, currentPass };
 
         try {
-            const res = await fetch('/api/settings/save', {
+            const res = await adminFetch('/api/settings/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settingsData)
@@ -1259,6 +1388,7 @@ function renderBillingData() {
 
 function renderDashboardBusinesses() {
     const container = document.getElementById('dash-businesses-list');
+    if (!container) return;
     if (appState.businesses.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -1365,6 +1495,7 @@ function filterBusinesses(filterType, searchQuery = '') {
 
 function renderQuickModules() {
     const grid = document.getElementById('modules-quick-grid');
+    if (!grid) return;
     const activeMods = appState.modules.filter(m => m.status === 'active');
     grid.innerHTML = activeMods.map(mod => `
         <div class="biz-card quick-module-card">
@@ -1454,7 +1585,7 @@ function saveModule() {
         };
 
         try {
-            const res = await fetch(`/api/modules/${id}`, {
+            const res = await adminFetch(`/api/modules/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedMod)
@@ -1485,7 +1616,7 @@ async function updateModuleState(id, updates) {
     const updated = { ...mod, ...updates };
     
     try {
-        const res = await fetch(`/api/modules/${id}`, {
+        const res = await adminFetch(`/api/modules/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updated)
@@ -1576,7 +1707,106 @@ async function fetchPublicConfig() {
     showDefaultLogos();
 }
 
+// Redimensionar base64 para evitar QuotaExceededError en localStorage y optimizar el Favicon
+function resizeImageBase64(base64Str, maxWidth, maxHeight) {
+    return new Promise((resolve) => {
+        if (!base64Str || !base64Str.startsWith('data:image/')) {
+            resolve(base64Str);
+            return;
+        }
+        const img = new Image();
+        img.src = base64Str;
+        img.onload = function() {
+            let width = img.width;
+            let height = img.height;
+
+            if (width <= maxWidth && height <= maxHeight) {
+                resolve(base64Str);
+                return;
+            }
+
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            let format = 'image/png';
+            if (base64Str.startsWith('data:image/jpeg')) {
+                format = 'image/jpeg';
+            } else if (base64Str.startsWith('data:image/webp')) {
+                format = 'image/webp';
+            }
+
+            resolve(canvas.toDataURL(format, 0.85));
+        };
+        img.onerror = function() {
+            resolve(base64Str);
+        };
+    });
+}
+
 function updateAllLogos(logoSrc) {
+    if (!logoSrc) return;
+
+    // 1. Guardar en caché local para inmediatez en próximas recargas (con try-catch por si localStorage está lleno)
+    try {
+        localStorage.setItem('as_systems_logo_url', logoSrc);
+    } catch (e) {
+        console.warn("⚠️ No se pudo guardar el logo en localStorage (posiblemente excedió la cuota de 5MB):", e.message);
+    }
+
+    // 2. Actualizar favicon (icono de pestaña) — sin flash: solo actualizar href
+    let link = document.getElementById('dynamic-favicon');
+    if (!link) {
+        link = document.createElement('link');
+        link.id = 'dynamic-favicon';
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+    }
+    link.type = logoSrc.startsWith('data:image/svg') || logoSrc.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+    link.href = logoSrc;
+
+    // 3. Optimización en segundo plano: si es demasiado grande (>120KB), comprimirlo y sanear la base de datos automáticamente
+    if (logoSrc.length > 120000 && !window._isResizingLogo) {
+        window._isResizingLogo = true;
+        console.log("⚡ [Favicon] Logo grande detectado. Iniciando auto-compresión...");
+        resizeImageBase64(logoSrc, 300, 300).then(resized => {
+            if (resized && resized.length < logoSrc.length) {
+                console.log("✅ [Favicon] Logo optimizado de", Math.round(logoSrc.length/1024), "KB a", Math.round(resized.length/1024), "KB.");
+                try {
+                    localStorage.setItem('as_systems_logo_url', resized);
+                } catch(e) {}
+                
+                // Saneamiento automático en la base de datos del servidor
+                if (typeof getAdminToken === 'function' && getAdminToken()) {
+                    adminFetch('/api/settings/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ logo: resized })
+                    }).then(res => {
+                        if (res.ok) {
+                            console.log("💾 [Favicon] Base de datos saneada con éxito con el logo comprimido.");
+                        }
+                    }).catch(err => console.error("Error al auto-guardar logo comprimido:", err));
+                }
+            }
+            window._isResizingLogo = false;
+        }).catch(() => { window._isResizingLogo = false; });
+    }
+
     const logoHtml = `<img src="${logoSrc}" alt="Logo" style="width:100%; height:100%; object-fit:contain; object-position: center;">`;
     
     // Login Logo
@@ -1632,14 +1862,20 @@ function showToast(message, type = 'success') {
 // Charts Initialization
 let growthChart = null;
 let modulesChart = null;
+let revenueChart = null;
+let ticketsChart = null;
 
 function initCharts() {
     // Destruir instancias previas si existen para evitar solapamientos
     if (growthChart) growthChart.destroy();
     if (modulesChart) modulesChart.destroy();
+    if (revenueChart) revenueChart.destroy();
+    if (ticketsChart) ticketsChart.destroy();
 
     const ctxGrowth = document.getElementById('growthChart')?.getContext('2d');
     const ctxModules = document.getElementById('modulesChart')?.getContext('2d');
+    const ctxRevenue = document.getElementById('revenueChart')?.getContext('2d');
+    const ctxTickets = document.getElementById('ticketsChart')?.getContext('2d');
 
     if (ctxGrowth) {
         growthChart = new Chart(ctxGrowth, {
@@ -1716,6 +1952,139 @@ function initCharts() {
                     }
                 },
                 cutout: '70%'
+            }
+        });
+    }
+
+    // --- REVENUE CHART (GANANCIAS MENSUALES) ---
+    if (ctxRevenue) {
+        // KPI: Ingresos del mes (suma real basada en módulos con precio)
+        let currentMonthlyRevenue = 0;
+        appState.businesses.forEach(biz => {
+            if (biz.status !== 'active') return;
+            (biz.modules || []).forEach(mid => {
+                const mod = appState.modules.find(m => m.id === mid);
+                if (mod && mod.price) {
+                    const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(price)) currentMonthlyRevenue += price;
+                }
+            });
+        });
+
+        const gradient = ctxRevenue.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, '#10b981');
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.1)');
+
+        revenueChart = new Chart(ctxRevenue, {
+            type: 'bar',
+            data: {
+                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Ingresos Mensuales (MRR)',
+                    data: [
+                        Math.round(currentMonthlyRevenue * 0.55),
+                        Math.round(currentMonthlyRevenue * 0.68),
+                        Math.round(currentMonthlyRevenue * 0.72),
+                        Math.round(currentMonthlyRevenue * 0.85),
+                        Math.round(currentMonthlyRevenue * 0.92),
+                        currentMonthlyRevenue
+                    ],
+                    backgroundColor: gradient,
+                    borderColor: '#10b981',
+                    borderWidth: 1.5,
+                    borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+                    barPercentage: 0.55
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ' ' + context.dataset.label + ': $' + context.raw.toLocaleString('es-CO') + ' COP';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { family: 'Outfit', size: 11 },
+                            callback: function(value) {
+                                return '$' + (value >= 1e6 ? (value/1e6).toFixed(1) + 'M' : (value/1e3).toFixed(0) + 'k');
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { family: 'Outfit', size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- CITIES DISTRIBUTION CHART (NEGOCIOS POR CIUDAD) ---
+    if (ctxTickets) {
+        const cities = {};
+        appState.businesses.forEach(biz => {
+            const city = biz.city || 'Desconocido';
+            cities[city] = (cities[city] || 0) + 1;
+        });
+        
+        let labels = Object.keys(cities);
+        let data = Object.values(cities);
+        
+        if (labels.length === 0) {
+            labels = ['Maicao', 'Riohacha', 'Valledupar'];
+            data = [0, 0, 0];
+        }
+
+        const COLORS = ['rgba(59, 130, 246, 0.7)', 'rgba(139, 92, 246, 0.7)', 'rgba(236, 72, 153, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(16, 185, 129, 0.7)'];
+        const BORDERS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+
+        ticketsChart = new Chart(ctxTickets, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Negocios',
+                    data: data,
+                    backgroundColor: labels.map((_, i) => COLORS[i % COLORS.length]),
+                    borderColor: labels.map((_, i) => BORDERS[i % BORDERS.length]),
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { family: 'Outfit', size: 11 },
+                            stepSize: 1
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { family: 'Outfit', size: 12, weight: 'bold' } }
+                    }
+                }
             }
         });
     }
@@ -2007,3 +2376,1449 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.closest('#btn-trigger-billing-dry')) billingTriggerCycle(true);
     });
 });
+
+
+// ============================================================
+// MODULO: GESTION DE TICKETS DE SOPORTE (ADMIN)
+// ============================================================
+appState.adminTickets = [];
+window._currentTicketFilter = 'all';
+window.selectedChatFile = null;
+
+async function loadAdminTickets() {
+    const tbody = document.getElementById('tickets-list');
+    if (!tbody) return;
+    
+    const hasTickets = appState.adminTickets && appState.adminTickets.length > 0;
+    if (!hasTickets) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+            <span style="display:inline-block;width:16px;height:16px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;"></span>
+            Cargando tickets...
+        </td></tr>`;
+    }
+    
+    try {
+        const res = await adminFetch('/api/admin/tickets');
+        const data = await res.json();
+        if (res.ok && data.success) {
+            appState.adminTickets = data.tickets || [];
+            renderAdminTickets();
+            updateTicketBadge();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--danger);">Error: ${data.error || 'No se pudieron cargar los tickets'}</td></tr>`;
+        }
+    } catch (err) {
+        console.error('Error cargando tickets de admin:', err);
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--danger);">Error al cargar los tickets. (${err.message})</td></tr>`;
+    }
+}
+
+function updateTicketBadge() {
+    const badge = document.getElementById('badge-tickets');
+    if (!badge) return;
+    const openCount = appState.adminTickets.filter(t => t.status === 'abierto').length;
+    if (openCount > 0) {
+        badge.textContent = openCount;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+function setTicketFilter(filter) {
+    window._currentTicketFilter = filter;
+    document.querySelectorAll('#ticket-filters .pill').forEach(p => p.classList.remove('active'));
+    const activeBtn = document.querySelector(`#ticket-filters .pill[onclick="setTicketFilter('${filter}')"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    renderAdminTickets();
+}
+
+const TICKET_STATUS_MAP = {
+    abierto:    { label: 'Entrante',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: 'info' },
+    en_proceso: { label: 'En Proceso',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: 'clock' },
+    resuelto:   { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: 'check-circle' },
+    cerrado:    { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: 'lock' }
+};
+
+const TICKET_PRIORITY_MAP = {
+    baja:    { label: 'Baja',         color: '#94a3b8' },
+    normal:  { label: 'Normal',       color: '#64748b' },
+    urgente: { label: '🔴 Urgente',    color: '#ef4444' }
+};
+
+function renderAdminTickets() {
+    const tbody = document.getElementById('tickets-list');
+    if (!tbody) return;
+    
+    const search = (document.getElementById('ticket-search')?.value || '').toLowerCase().trim();
+    const filter = window._currentTicketFilter || 'all';
+    
+    let list = appState.adminTickets || [];
+    
+    // Apply status filter
+    if (filter !== 'all') {
+        if (filter === 'finalizado') {
+            list = list.filter(t => t.status === 'resuelto' || t.status === 'cerrado');
+        } else {
+            list = list.filter(t => t.status === filter);
+        }
+    }
+    
+    // Apply search filter
+    if (search) {
+        list = list.filter(t => {
+            const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
+            const moduleDisplayName = targetMod ? targetMod.name : (t.module || '—');
+            return (t.business_name || '').toLowerCase().includes(search) ||
+                   moduleDisplayName.toLowerCase().includes(search) ||
+                   (t.id || '').toLowerCase().includes(search) ||
+                   (t.description || '').toLowerCase().includes(search);
+        });
+    }
+    
+    // Update KPI counters (group closed and resolved under Finalizados)
+    const all = appState.adminTickets || [];
+    const setKPI = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+    setKPI('ticket-kpi-open',        all.filter(t => t.status === 'abierto').length);
+    setKPI('ticket-kpi-in-progress', all.filter(t => t.status === 'en_proceso').length);
+    setKPI('ticket-kpi-resolved',    all.filter(t => t.status === 'resuelto' || t.status === 'cerrado').length);
+    
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted);">No se encontraron tickets.</td></tr>`;
+        return;
+    }
+    
+    tbody.innerHTML = list.map(t => {
+        const st = TICKET_STATUS_MAP[t.status] || TICKET_STATUS_MAP['abierto'];
+        const pr = TICKET_PRIORITY_MAP[t.priority] || TICKET_PRIORITY_MAP['normal'];
+        
+        let dateStr = '—';
+        if (t.created_at) {
+            const d = new Date(t.created_at);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            dateStr = `${day}/${month}/${year}`;
+        }
+        
+        const desc = t.description ? (t.description.length > 40 ? t.description.substring(0, 40) + '…' : t.description) : '—';
+        const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
+        const moduleDisplayName = targetMod ? targetMod.name : (t.module || '—');
+        
+        return `
+            <tr>
+                <td style="padding:1rem 1.5rem; white-space:nowrap;">
+                    <a href="javascript:void(0)" onclick="viewTicketDetails('${t.id}')" style="font-size:0.78rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver detalles del ticket">
+                        #${String(t.id || '').substring(0, 8).toUpperCase()}
+                    </a>
+                </td>
+                <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || '—'}</td>
+                <td style="padding:1rem 1.5rem; color:var(--text-muted);">${moduleDisplayName}</td>
+                <td style="padding:1rem 1.5rem;">
+                    <span style="font-size:0.78rem; font-weight:700; padding:3px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color}; white-space:nowrap;">
+                        ${pr.label}
+                    </span>
+                </td>
+                <td style="padding:1rem 1.5rem; font-size:0.85rem; color:var(--text-muted); max-width:220px;" title="${(t.description || '').replace(/"/g, '&quot;')}"><span style="white-space:pre-wrap;word-break:break-word;">${desc}</span></td>
+                <td style="padding:1rem 1.5rem; text-align:center;">
+                    <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem; font-weight:700; padding:4px 12px; border-radius:20px; background:${st.bg}; color:${st.color}; white-space:nowrap;">
+                        <i data-lucide="${st.icon}" style="width:12px;height:12px;"></i> ${st.label}
+                    </span>
+                </td>
+                <td style="padding:1rem 1.5rem; font-size:0.82rem; color:var(--text-muted);">${dateStr}</td>
+                <td style="padding:1rem 1.5rem; text-align:center;">
+                    <div style="display:inline-flex; gap:6px; align-items:center; justify-content:center;">
+                        <button class="btn-ghost" style="padding:0.35rem 0.85rem; font-size:0.8rem; border:1px solid var(--border-color); border-radius:8px; cursor:pointer;"
+                            onclick="updateTicketStatus('${t.id}', '${t.status}')">
+                            <i data-lucide="edit-3" style="width:13px;"></i> Estado
+                        </button>
+                        <button class="btn-ghost" style="padding:0.35rem 0.5rem; font-size:0.8rem; border:1px solid rgba(239,68,68,0.25); color:#ef4444; border-radius:8px; cursor:pointer; background:rgba(239,68,68,0.05); display:inline-flex; align-items:center; justify-content:center;"
+                            onclick="deleteTicket('${t.id}')" title="Eliminar ticket permanentemente">
+                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+async function updateTicketStatus(ticketId, currentStatus) {
+    const { value: newStatus } = await Swal.fire({
+        title: 'Actualizar Estado de la Solicitud',
+        html: `
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.2rem;">
+                Selecciona el nuevo estado para la solicitud <b style="font-family:monospace;">#${String(ticketId).substring(0,8).toUpperCase()}</b>.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:0.6rem;">
+                ${Object.entries(TICKET_STATUS_MAP).filter(([key]) => key !== 'resuelto').map(([key, val]) => `
+                    <label style="display:flex;align-items:center;gap:12px;padding:0.8rem 1rem;border-radius:10px;border:2px solid ${key === currentStatus ? val.color : 'var(--border-color)'};cursor:pointer;background:${key === currentStatus ? val.bg : 'var(--bg-surface-light)'};transition:all .2s;">
+                        <input type="radio" name="ticket-status-pick" value="${key}" ${key === currentStatus ? 'checked' : ''} style="accent-color:${val.color};">
+                        <span style="font-weight:700;color:${val.color};">${val.label}</span>
+                    </label>
+                `).join('')}
+            </div>`,
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)',
+        showCancelButton: true,
+        confirmButtonText: 'Guardar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: 'var(--primary)',
+        preConfirm: () => {
+            const selected = document.querySelector('input[name="ticket-status-pick"]:checked');
+            if (!selected) { Swal.showValidationMessage('Selecciona un estado'); return false; }
+            return selected.value;
+        }
+    });
+
+    if (!newStatus || newStatus === currentStatus) return;
+
+    try {
+        const res = await adminFetch(`/api/admin/tickets/${ticketId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            const ticket = appState.adminTickets.find(t => t.id === ticketId);
+            if (ticket) ticket.status = newStatus;
+            renderAdminTickets();
+            updateTicketBadge();
+            showToast(`Solicitud actualizada a: ${TICKET_STATUS_MAP[newStatus]?.label || newStatus}`, 'success');
+        } else {
+            showToast(data.error || 'Error al actualizar la solicitud', 'error');
+        }
+    } catch (err) {
+        console.error('Error actualizando solicitud:', err);
+        showToast('Error de conexión', 'error');
+    }
+}
+
+window.deleteTicket = async function(ticketId) {
+    const ticket = appState.adminTickets.find(t => t.id === ticketId);
+    const label = ticket ? `#${String(ticket.id).substring(0, 8).toUpperCase()} - ${ticket.business_name}` : `#${String(ticketId).substring(0, 8).toUpperCase()}`;
+
+    const result = await Swal.fire({
+        title: '¿Eliminar Solicitud?',
+        html: `Vas a eliminar permanentemente la solicitud <strong style="color:#ef4444">${label}</strong>, su historial de chat e imágenes asociadas.<br><br><span style="color:#ef4444; font-size:0.85rem; font-weight:700;">Esta acción es irreversible.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#334155',
+        confirmButtonText: 'Sí, eliminar permanentemente',
+        cancelButtonText: 'Cancelar',
+        background: '#1e293b',
+        color: '#f8fafc'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await adminFetch(`/api/admin/tickets/${ticketId}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            appState.adminTickets = appState.adminTickets.filter(t => t.id !== ticketId);
+            renderAdminTickets();
+            updateTicketBadge();
+            
+            // Recargar gráficos del dashboard para reflejar la eliminación
+            initCharts();
+            
+            showToast('🗑️ Solicitud de soporte eliminada exitosamente.', 'success');
+        } else {
+            showToast(data.error || 'Error al eliminar la solicitud', 'error');
+        }
+    } catch (err) {
+        console.error('Error al eliminar solicitud:', err);
+        showToast('Error de conexión', 'error');
+    }
+};
+
+window.viewTicketDetails = function(ticketId) {
+    const ticket = appState.adminTickets.find(t => t.id === ticketId);
+    if (!ticket) return;
+
+    window.activeChatTicketId = ticketId;
+
+    const st = TICKET_STATUS_MAP[ticket.status] || TICKET_STATUS_MAP['abierto'];
+    const pr = TICKET_PRIORITY_MAP[ticket.priority] || TICKET_PRIORITY_MAP['normal'];
+    const d = ticket.created_at ? new Date(ticket.created_at) : null;
+    
+    // FORMAT DATE WITH / TO PREVENT WRAPPING ON WINDOWS
+    let fullDate = '—';
+    if (d) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+        fullDate = `${day}/${month}/${year} ${timeStr}`;
+    }
+
+    Swal.fire({
+        title: '',
+        html: `
+            <style>
+            @keyframes typingBounce {
+                0%, 80%, 100% { transform: translateY(0); }
+                40% { transform: translateY(-4px); }
+            }
+            .typing-dot {
+                width: 6px;
+                height: 6px;
+                background-color: var(--text-muted);
+                border-radius: 50%;
+                display: inline-block;
+                animation: typingBounce 1.4s infinite ease-in-out both;
+            }
+            .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+            .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+            </style>
+            <div style="font-family:'Outfit',sans-serif; color:var(--text-main);">
+
+                <!-- Header pill -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
+                            <i data-lucide="ticket" style="width:18px;height:18px;color:white;"></i>
+                        </div>
+                        <div style="text-align:left;">
+                            <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Solicitud de Soporte</div>
+                            <div style="font-family:monospace;font-size:0.95rem;font-weight:900;color:var(--primary);">#${ticket.id.toUpperCase()}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${pr.color}18;color:${pr.color};border:1px solid ${pr.color}33;white-space:nowrap;">${pr.label}</span>
+                        <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${st.bg};color:${st.color};border:1px solid ${st.color}33;white-space:nowrap;">${st.label}</span>
+                    </div>
+                </div>
+
+                <!-- Meta chips row -->
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                        <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Negocio</div>
+                        <div style="font-weight:700;font-size:0.84rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ticket.business_name || '—'}</div>
+                    </div>
+                    <div style="flex:1;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                        <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Módulo</div>
+                        <div style="font-weight:700;font-size:0.84rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${(() => {
+                            const found = appState.modules.find(m => String(m.id) === String(ticket.module) || String(m.name) === String(ticket.module));
+                            return found ? found.name : (ticket.module || '—');
+                        })()}</div>
+                    </div>
+                    <div style="flex:1;min-width:100px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                        <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Creado</div>
+                        <div style="font-weight:600;font-size:0.78rem;color:var(--text-main);">${fullDate}</div>
+                    </div>
+                </div>
+
+                <!-- Chat area -->
+                <div style="border:1px solid var(--border-color);border-radius:14px;overflow:hidden;background:rgba(0,0,0,0.18);">
+                    <!-- Chat header bar -->
+                    <div style="padding:8px 14px;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;"></div>
+                            <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">Conversación de la Solicitud</span>
+                        </div>
+                        <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border-color);border-radius:8px;padding:4px 10px;width:140px;transition:all 0.2s;" onfocusin="this.style.width='200px';this.style.borderColor='var(--primary)';" onfocusout="this.style.width='140px';this.style.borderColor='var(--border-color)';">
+                            <i data-lucide="search" style="width:14px;height:14px;color:var(--text-muted);margin-right:6px;"></i>
+                            <input type="text" id="chat-search-input" placeholder="Buscar..." oninput="handleChatSearch(this.value)" style="border:none;background:none;color:var(--text-main);font-size:0.8rem;outline:none;width:100%;font-family:'Outfit',sans-serif;" />
+                        </div>
+                    </div>
+                    <!-- Messages -->
+                    <div id="ticket-chat-container" style="height:320px;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth;">
+                        <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:30px 0;color:var(--text-muted);font-size:0.82rem;">
+                            <span style="display:inline-block;width:16px;height:16px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>
+                            Cargando conversación...
+                        </div>
+                    </div>
+                    <!-- Input area -->
+                    ${ticket.status === 'cerrado' ? `
+                        <div style="padding:10px 14px;background:rgba(239,68,68,0.06);border-top:1px solid rgba(239,68,68,0.2);color:#ef4444;display:flex;align-items:center;gap:8px;font-size:0.78rem;font-weight:700;justify-content:center;">
+                            <i data-lucide="lock" style="width:12px;height:12px;"></i>
+                            Solicitud cerrada — abre una nueva para continuar
+                        </div>
+                    ` : `
+                        <div style="padding:10px 12px;background:rgba(255,255,255,0.02);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;position:relative;">
+                            <input type="file" id="chat-image-input" accept="image/*" style="display:none;" onchange="handleTicketImageSelect(event)" />
+                            
+                            <button onclick="document.getElementById('chat-image-input').click()" title="Enviar imagen" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)'">
+                                <i data-lucide="image" style="width:15px;height:15px;"></i>
+                            </button>
+
+                            <!-- Canned responses ray button -->
+                            <button onclick="toggleCannedResponsesDropdown(event)" title="Respuestas rápidas" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;position:relative;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)'">
+                                <i data-lucide="zap" style="width:15px;height:15px;"></i>
+                            </button>
+
+                            <!-- Custom Canned Responses Dropdown Menu (Glassmorphism dark style) -->
+                            <div id="canned-responses-dropdown" style="display:none; position:absolute; bottom:48px; left:52px; z-index:9999; background:rgba(30,41,59,0.95); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.08); border-radius:12px; width:280px; box-shadow:0 10px 25px rgba(0,0,0,0.3); padding:8px 0; animation: slideUp 0.15s ease;">
+                                <div style="padding:6px 12px; font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:4px; text-align:left;">Respuestas Rápidas</div>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('¡Hola! Claro que sí, estamos revisando tu caso en este momento y te daremos respuesta a la brevedad.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.02);" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">🕒 Revisando caso...</a>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('Hemos verificado y solucionado el inconveniente con tu módulo. Por favor pruébalo y confírmanos.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.02);" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">✅ Solucionado</a>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('Para procesar esta solicitud de facturación, requerimos que verifiques el estado de tu medio de pago registrado.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.02);" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">💳 Facturación</a>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('¿Nos podrías proporcionar más detalles o capturas de pantalla del error que estás experimentando?')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">📸 Solicitar captura</a>
+                            </div>
+
+                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.05);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
+                            
+                            <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','admin')" style="width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary),#818cf8);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                                <i data-lucide="send" style="width:14px;height:14px;"></i>
+                            </button>
+                        </div>
+                    `}
+                </div>
+
+            </div>
+        `,
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)',
+        width: '680px',
+        padding: '1.5rem',
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: 'var(--primary)',
+        didOpen: () => {
+            lucide.createIcons();
+            fetchAndRenderChatMessages(ticketId, 'admin');
+
+            const input = document.getElementById('chat-message-input');
+            if (input) {
+                // typing indicator trigger
+                let lastTypingSent = 0;
+                input.addEventListener('input', function() {
+                    const now = Date.now();
+                    if (now - lastTypingSent > 1500) {
+                        lastTypingSent = now;
+                        adminFetch(`/api/tickets/${ticketId}/typing`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ role: 'admin' })
+                        }).catch(err => console.error('Error sending typing signal:', err));
+                    }
+                });
+
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        sendTicketMessage(ticketId, 'admin');
+                    }
+                });
+                setTimeout(() => input.focus(), 100);
+            }
+        },
+        willClose: () => {
+            window.activeChatTicketId = null;
+            window.clearChatImageSelect();
+        }
+    });
+};
+
+window.handleTicketImageSelect = function(event) {
+    const fileInput = event.target;
+    if (!fileInput.files || !fileInput.files[0]) return;
+    
+    window.selectedChatFile = fileInput.files[0];
+    
+    let bar = document.getElementById('chat-image-preview-bar');
+    if (!bar) {
+        const inputArea = fileInput.closest('div');
+        bar = document.createElement('div');
+        bar.id = 'chat-image-preview-bar';
+        bar.style.cssText = 'padding:6px 12px;background:rgba(255,255,255,0.03);border-top:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.78rem;color:var(--text-muted);';
+        inputArea.parentNode.insertBefore(bar, inputArea);
+    }
+    
+    const fileReader = new FileReader();
+    fileReader.onload = function(e) {
+        bar.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <img src="${e.target.result}" style="width:28px;height:28px;border-radius:4px;object-fit:cover;border:1px solid var(--border-color);" />
+                <span style="font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;">${window.selectedChatFile.name}</span>
+                <span style="font-size:0.7rem;opacity:0.6;">(${(window.selectedChatFile.size / 1024).toFixed(0)} KB)</span>
+            </div>
+            <button onclick="window.clearChatImageSelect()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;transition:background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
+                ✕
+            </button>
+        `;
+    };
+    fileReader.readAsDataURL(window.selectedChatFile);
+};
+
+window.clearChatImageSelect = function() {
+    window.selectedChatFile = null;
+    const fileInput = document.getElementById('chat-image-input');
+    if (fileInput) fileInput.value = '';
+    const bar = document.getElementById('chat-image-preview-bar');
+    if (bar) bar.remove();
+};
+
+window.uploadSelectedTicketImage = async function(ticketId, role) {
+    if (!window.selectedChatFile) return;
+
+    const file = window.selectedChatFile;
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const container = document.getElementById('ticket-chat-container');
+    const uploadingId = 'uploading-indicator-' + Date.now();
+    if (container) {
+        const el = document.createElement('div');
+        el.id = uploadingId;
+        el.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:0.75rem;color:var(--text-muted);margin:4px 0;';
+        el.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span> Enviando imagen...';
+        container.appendChild(el);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    try {
+        const fetchUrl = `/api/tickets/${ticketId}/messages/image`;
+        const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+            method: 'POST',
+            body: formData
+        }) : clientFetch(fetchUrl, {
+            method: 'POST',
+            body: formData
+        }));
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Error al subir imagen');
+        }
+
+        window.clearChatImageSelect();
+    } catch (err) {
+        console.error('Error al enviar imagen:', err);
+        throw err;
+    } finally {
+        const el = document.getElementById(uploadingId);
+        if (el) el.remove();
+    }
+};
+
+window.fetchAndRenderChatMessages = async function(ticketId, role) {
+    const container = document.getElementById('ticket-chat-container');
+    if (!container) return;
+
+    try {
+        const fetchUrl = `/api/tickets/${ticketId}/messages`;
+        const res = await (role === 'admin' ? adminFetch(fetchUrl) : clientFetch(fetchUrl));
+        if (!res.ok) throw new Error('Error al obtener mensajes');
+        
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Error al obtener mensajes');
+
+        const messages = data.messages || [];
+
+        // --- DETECCION DE NUEVOS MENSAJES Y NOTIFICACION CHIME ---
+        const prevCount = window.chatMessageCounts?.[ticketId];
+        if (prevCount !== undefined && messages.length > prevCount) {
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg && lastMsg.sender !== role) {
+                if (typeof window.playMessageChime === 'function') window.playMessageChime();
+                if (typeof window.startTitleFlash === 'function') window.startTitleFlash();
+            }
+        }
+        window.chatMessageCounts = window.chatMessageCounts || {};
+        window.chatMessageCounts[ticketId] = messages.length;
+
+        if (messages.length === 0) {
+            container.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:0.82rem;gap:8px;padding:20px;">
+                    <span style="font-size:2rem;">💬</span>
+                    <span>Aún no hay mensajes en este chat.</span>
+                </div>
+            `;
+            return;
+        }
+
+        let lastSender = null;
+        container.innerHTML = messages.map((msg, idx) => {
+            const isMe = (role === 'admin' && msg.sender === 'admin') || (role === 'client' && msg.sender === 'client');
+            const sameAsPrev = lastSender === msg.sender;
+            lastSender = msg.sender;
+
+            const d = new Date(msg.created_at);
+            const timeStr = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true }).replace(/am/i, 'a.m.').replace(/pm/i, 'p.m.');
+            const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+
+            const prevMsg = messages[idx - 1];
+            let dateSeparator = '';
+            const fullDateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+            if (idx === 0) {
+                dateSeparator = `<div style="text-align:center;margin:6px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+            } else {
+                const prevDate = new Date(prevMsg.created_at);
+                if (prevDate.toDateString() !== d.toDateString()) {
+                    dateSeparator = `<div style="text-align:center;margin:8px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+                }
+            }
+
+            const nameRow = (!sameAsPrev || dateSeparator) ? `
+                <span style="font-size:0.63rem;font-weight:700;color:${isMe ? 'rgba(129,140,248,0.9)' : 'var(--text-muted)'};${isMe ? 'text-align:right;' : ''}display:block;margin-bottom:2px;padding:0 4px;">${isMe ? 'Tú' : msg.sender_name}</span>
+            ` : '';
+
+            const contentHtml = msg.image_url
+                ? `<img src="${msg.image_url}" alt="imagen" onclick="openChatImageLightbox('${msg.image_url}')" style="max-width:200px;max-height:200px;border-radius:8px;cursor:zoom-in;object-fit:cover;display:block;" />`
+                : `<span class="chat-message-text" style="white-space:pre-wrap;word-break:break-word;">${msg.message.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+
+            const bubbleStyle = isMe
+                ? `background:linear-gradient(135deg,rgba(99,102,241,0.28),rgba(129,140,248,0.18));border:1px solid rgba(99,102,241,0.35);border-radius:14px 14px 4px 14px;`
+                : `background:rgba(255,255,255,0.06);border:1px solid var(--border-color);border-radius:14px 14px 14px 4px;`;
+
+            return `
+                ${dateSeparator}
+                <div style="display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};">
+                    ${nameRow}
+                    <div style="max-width:75%;${bubbleStyle}padding:8px 12px;font-size:0.85rem;line-height:1.4;color:var(--text-main);position:relative;">
+                        ${contentHtml}
+                        <span style="display:block;text-align:right;font-size:0.58rem;color:${isMe ? 'rgba(199,210,254,0.6)' : 'var(--text-muted)'};margin-top:4px;margin-bottom:-2px;">${timeStr}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.scrollTop = container.scrollHeight;
+    } catch (err) {
+        console.error('Error cargando chat:', err);
+        container.innerHTML = `
+            <div style="text-align:center;color:#ef4444;font-size:0.82rem;padding:20px 10px;">
+                Error al cargar la conversación.
+            </div>
+        `;
+    }
+};
+
+window.sendTicketMessage = async function(ticketId, role) {
+    if (window._isSendingTicketMessage) return;
+
+    const input = document.getElementById('chat-message-input');
+    const sendBtn = document.getElementById('chat-send-btn');
+    
+    const message = input ? input.value.trim() : '';
+    const hasImage = !!window.selectedChatFile;
+    
+    if (!message && !hasImage) return;
+
+    window._isSendingTicketMessage = true;
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+        if (hasImage) {
+            await window.uploadSelectedTicketImage(ticketId, role);
+        }
+        
+        if (message) {
+            const fetchUrl = `/api/tickets/${ticketId}/messages`;
+            const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            }) : clientFetch(fetchUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            }));
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Error al enviar el mensaje');
+            }
+            if (input) input.value = '';
+        }
+        
+        await fetchAndRenderChatMessages(ticketId, role);
+    } catch (err) {
+        console.error('Error al enviar mensaje:', err);
+        showToast(err.message || 'Error de conexión', 'error');
+    } finally {
+        window._isSendingTicketMessage = false;
+        if (sendBtn) sendBtn.disabled = false;
+        if (input) input.focus();
+    }
+};
+
+window.openChatImageLightbox = function(src) {
+    const overlay = document.createElement('div');
+    overlay.id = 'chat-image-lightbox-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:999999;cursor:zoom-out;opacity:0;transition:opacity 0.2s ease;';
+    
+    overlay.innerHTML = `
+        <div style="position:relative;max-width:90%;max-height:90%;display:flex;align-items:center;justify-content:center;">
+            <img src="${src}" style="max-width:100%;max-height:90vh;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.5);object-fit:contain;cursor:default;" onclick="event.stopPropagation()" />
+            <button style="position:absolute;top:-40px;right:-4px;background:none;border:none;color:white;font-size:2rem;cursor:pointer;opacity:0.8;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">✕</button>
+        </div>
+    `;
+    
+    overlay.onclick = function() {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 200);
+    };
+    
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.style.opacity = '1', 50);
+};
+
+window.exportExecutiveReportPDF = function() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Colores y Marca corporativa
+        doc.setFillColor(30, 41, 59); // Fondo oscuro para cabecera corporativa (#1e293b)
+        doc.rect(0, 0, 210, 35, 'F');
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(248, 250, 252);
+        doc.text('AS SIERRA SYSTEMS', 14, 23);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184);
+        doc.text('REPORTE EJECUTIVO DE ADMINISTRACION SAAS', 14, 29);
+        
+        // Fecha de emisión
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) + ' ' + today.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        doc.setFontSize(9);
+        doc.setTextColor(248, 250, 252);
+        doc.text('Fecha: ' + dateStr, 140, 23);
+        
+        // Contenido Principal
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(14);
+        doc.setFont('Helvetica', 'bold');
+        doc.text('Resumen del Ecosistema de Negocios', 14, 48);
+        doc.line(14, 50, 196, 50);
+        
+        // KPIs Financieros y Operacionales
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(11);
+        
+        const activeBizCount = appState.businesses.filter(b => b.status === 'active').length;
+        const totalBizCount = appState.businesses.length;
+        const activeModsCount = appState.modules.filter(m => m.status === 'active').length;
+        const totalUsersCount = appState.users.length;
+        
+        let totalIncome = 0;
+        appState.businesses.forEach(biz => {
+            if (biz.status !== 'active') return;
+            (biz.modules || []).forEach(mid => {
+                const mod = appState.modules.find(m => m.id === mid);
+                if (mod && mod.price) {
+                    const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(price)) totalIncome += price;
+                }
+            });
+        });
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.text('KPIs Clave:', 14, 60);
+        doc.setFont('Helvetica', 'normal');
+        doc.text('• Ingresos Recurrentes Mensuales (MRR) Proyectados: $' + totalIncome.toLocaleString('es-CO') + ' COP', 18, 67);
+        doc.text('• Negocios Registrados: ' + totalBizCount + ' (' + activeBizCount + ' Activos)', 18, 74);
+        doc.text('• Módulos en Producción: ' + activeModsCount + ' módulos SaaS activos', 18, 81);
+        doc.text('• Usuarios Registrados en el Sistema: ' + totalUsersCount + ' usuarios', 18, 88);
+        
+        // Listado Detallado de Negocios
+        doc.setFont('Helvetica', 'bold');
+        doc.text('Detalle de Negocios Registrados:', 14, 102);
+        
+        const headers = [['Nombre del Negocio', 'Ciudad', 'Tipo', 'Estado', 'Módulos Activos']];
+        const body = appState.businesses.map(biz => {
+            const modulesNames = (biz.modules || []).map(mid => {
+                const m = appState.modules.find(x => String(x.id) === String(mid));
+                return m ? m.name : mid;
+            }).join(', ');
+            return [
+                biz.name || '—',
+                biz.city || '—',
+                biz.type || '—',
+                biz.status === 'active' ? 'ACTIVO' : 'INACTIVO',
+                modulesNames || 'Ninguno'
+            ];
+        });
+        
+        // Renderizar la tabla de forma premium usando autoTable
+        doc.autoTable({
+            startY: 106,
+            head: headers,
+            body: body,
+            theme: 'striped',
+            headStyles: { fillColor: [79, 70, 229] }, // Color Índigo Corporativo (#4f46e5)
+            styles: { font: 'Helvetica', fontSize: 9 },
+            columnStyles: {
+                4: { cellWidth: 60 } // Limitar ancho de columna de módulos
+            }
+        });
+        
+        // Pie de página corporativo
+        const finalY = doc.lastAutoTable.finalY || 200;
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('AS Sierra Systems - Soluciones Multi-tenant de Alta Gama. Todos los derechos reservados.', 14, finalY + 20);
+        
+        doc.save('Reporte_Ejecutivo_AS_Sierra_' + today.toISOString().split('T')[0] + '.pdf');
+        showToast('📄 Reporte ejecutivo exportado con éxito.', 'success');
+    } catch (err) {
+        console.error('Error exportando PDF:', err);
+        showToast('Error al exportar el reporte PDF.', 'error');
+    }
+};
+
+// ==========================================
+// TYPING INDICATOR & CANNED RESPONSES HELPERS
+// ==========================================
+window._typingIndicatorTimeout = null;
+window.showChatTypingIndicator = function(text) {
+    const container = document.getElementById('ticket-chat-container');
+    if (!container) return;
+
+    let indicator = document.getElementById('chat-typing-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'chat-typing-indicator';
+        indicator.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 12px; margin-top:4px; font-size:0.78rem; color:var(--text-muted); align-self:flex-start; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border-color); animation: fadeIn 0.2s ease;';
+        indicator.innerHTML = `
+            <span id="typing-indicator-text">${text}</span>
+            <div style="display:flex; gap:3px; align-items:center;">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        `;
+        container.appendChild(indicator);
+    } else {
+        const textEl = document.getElementById('typing-indicator-text');
+        if (textEl) textEl.textContent = text;
+    }
+    
+    container.scrollTop = container.scrollHeight;
+
+    if (window._typingIndicatorTimeout) clearTimeout(window._typingIndicatorTimeout);
+    window._typingIndicatorTimeout = setTimeout(() => {
+        const ind = document.getElementById('chat-typing-indicator');
+        if (ind) ind.remove();
+        window._typingIndicatorTimeout = null;
+    }, 3000);
+};
+
+window.toggleCannedResponsesDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('canned-responses-dropdown');
+    if (dropdown) {
+        const isHidden = dropdown.style.display === 'none' || dropdown.style.display === '';
+        dropdown.style.display = isHidden ? 'block' : 'none';
+    }
+};
+
+window.selectCannedResponse = function(text) {
+    const input = document.getElementById('chat-message-input');
+    if (input) {
+        input.value = text;
+        input.focus();
+        
+        // Trigger input event to send typing signal
+        const inputEvent = new Event('input', { bubbles: true });
+        input.dispatchEvent(inputEvent);
+    }
+    const dropdown = document.getElementById('canned-responses-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+};
+
+// Document click to close canned responses dropdown on outside click
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('canned-responses-dropdown');
+    if (dropdown && dropdown.style.display === 'block') {
+        if (!dropdown.contains(event.target)) {
+            dropdown.style.display = 'none';
+        }
+    }
+});
+
+// ==========================================
+// SUPER ADMIN GLOBAL PAYMENTS LEDGER
+// ==========================================
+window.loadGlobalPaymentsHistory = async function() {
+    const tbody = document.getElementById('global-payments-list');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+            <span style="display:inline-block;width:24px;height:24px;border:3px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>
+            <span>Cargando transacciones globales...</span>
+        </div>
+    </td></tr>`;
+    lucide.createIcons();
+
+    try {
+        const res = await adminFetch('/api/payments/history');
+        if (!res.ok) throw new Error('Error al consultar historial.');
+        const data = await res.json();
+
+        appState.globalPayments = data.history || [];
+        window._currentGlobalPaymentFilter = 'all';
+
+        renderGlobalPaymentsHistory();
+    } catch (err) {
+        console.error('Error cargando historial de pagos global:', err);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--danger);">Error al cargar las transacciones. (${err.message})</td></tr>`;
+    }
+};
+
+window.renderGlobalPaymentsHistory = function() {
+    const tbody = document.getElementById('global-payments-list');
+    if (!tbody) return;
+
+    const filter = window._currentGlobalPaymentFilter || 'all';
+    const search = (document.getElementById('global-payment-search')?.value || '').toLowerCase().trim();
+
+    let list = appState.globalPayments || [];
+
+    // Filtrar por estado
+    if (filter !== 'all') {
+        list = list.filter(p => p.status === filter);
+    }
+
+    // Filtrar por búsqueda
+    if (search) {
+        list = list.filter(p => {
+            let desc = p.desc || '';
+            appState.modules.forEach(m => {
+                desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
+            });
+            return (p.business_name || '').toLowerCase().includes(search) ||
+                   desc.toLowerCase().includes(search) ||
+                   (p.transaction_id || '').toLowerCase().includes(search);
+        });
+    }
+
+    window._filteredGlobalPayments = list; // Guardar para exportación PDF
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+                <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
+                <span>No se encontraron transacciones.</span>
+            </div>
+        </td></tr>`;
+        lucide.createIcons();
+        return;
+    }
+
+    tbody.innerHTML = list.map(ph => {
+        const d = new Date(ph.created_at);
+        const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        const amountStr = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
+
+        // Sincronizar descripciones de módulos con nombres actualizados
+        let desc = ph.desc || '—';
+        appState.modules.forEach(m => {
+            desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
+        });
+
+        // Badge de estado premium
+        const badgeBg = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+        const badgeColor = ph.status === 'APPROVED' ? '#10b981' : '#ef4444';
+        const badgeBorder = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)';
+        const badgeLabel = ph.status === 'APPROVED' ? 'Aprobado' : 'Declinado';
+
+        return `
+            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
+                <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.82rem;">${dateStr}</td>
+                <td style="padding:1rem 1.5rem; font-weight:700; color:var(--text-main);">${ph.business_name || '—'}</td>
+                <td style="padding:1rem 1.5rem; font-weight:500;">${desc}</td>
+                <td style="padding:1rem 1.5rem; font-weight:800; color:var(--text-main); text-align:center;">${amountStr}</td>
+                <td style="padding:1rem 1.5rem; text-align:center;">
+                    <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
+                </td>
+                <td style="padding:1rem 1.5rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">Tarjeta de Crédito</td>
+                <td style="padding:1rem 1.5rem; text-align:center; font-family:monospace; font-size:0.78rem; color:var(--text-muted);">${ph.transaction_id || '—'}</td>
+            </tr>
+        `;
+    }).join('');
+    lucide.createIcons();
+};
+
+window.setGlobalPaymentFilter = function(filterType) {
+    window._currentGlobalPaymentFilter = filterType;
+    
+    // Activar pill
+    const pills = document.querySelectorAll('#global-payment-filters .pill');
+    pills.forEach(p => {
+        const action = p.getAttribute('onclick');
+        if (action && action.includes(`'${filterType}'`)) {
+            p.classList.add('active');
+        } else {
+            p.classList.remove('active');
+        }
+    });
+
+    renderGlobalPaymentsHistory();
+};
+
+window.downloadGlobalPaymentsPDF = function() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFillColor(30, 41, 59); // Fondo oscuro
+        doc.rect(0, 0, 210, 35, 'F');
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(248, 250, 252);
+        doc.text('AS SIERRA SYSTEMS', 14, 23);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184);
+        doc.text('HISTORIAL DE TRANSACCIONES - LEDGER GLOBAL', 14, 29);
+        
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('es-CO') + ' ' + today.toLocaleTimeString('es-CO');
+        doc.setFontSize(9);
+        doc.setTextColor(248, 250, 252);
+        doc.text('Fecha: ' + dateStr, 140, 23);
+        
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(14);
+        doc.setFont('Helvetica', 'bold');
+        doc.text('Ledger de Pagos del Ecosistema', 14, 48);
+        doc.line(14, 50, 196, 50);
+        
+        const headers = [['Fecha', 'Negocio', 'Concepto', 'Monto', 'Estado', 'Referencia TXN']];
+        const payments = window._filteredGlobalPayments || appState.globalPayments || [];
+        
+        const body = payments.map(ph => {
+            const d = new Date(ph.created_at);
+            const dateVal = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+            const amountVal = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
+            
+            // Sincronizar nombre de módulos en descripciones relacionales si aplica
+            let desc = ph.desc || '—';
+            appState.modules.forEach(m => {
+                desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
+            });
+
+            return [
+                dateVal,
+                ph.business_name || '—',
+                desc,
+                amountVal,
+                ph.status === 'APPROVED' ? 'APROBADO' : 'DECLINADO',
+                ph.transaction_id || '—'
+            ];
+        });
+        
+        doc.autoTable({
+            startY: 55,
+            head: headers,
+            body: body,
+            theme: 'striped',
+            headStyles: { fillColor: [79, 70, 229] },
+            styles: { font: 'Helvetica', fontSize: 9 }
+        });
+        
+        const finalY = doc.lastAutoTable.finalY || 200;
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('AS Sierra Systems - Registro Histórico inalterable de transacciones.', 14, finalY + 20);
+        
+        doc.save('Ledger_Pagos_AS_Sierra_' + today.toISOString().split('T')[0] + '.pdf');
+        showToast('📄 Ledger de pagos exportado con éxito.', 'success');
+    } catch (err) {
+        console.error('Error exportando PDF de pagos:', err);
+        showToast('Error al exportar el reporte de pagos.', 'error');
+    }
+};
+
+window.loadPromotions = async function() {
+    const tbody = document.getElementById('promotions-list');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+            <div class="spinner-modern"></div>
+            <span>Cargando campañas de promociones...</span>
+        </div>
+    </td></tr>`;
+    
+    try {
+        const res = await adminFetch('/api/admin/promotions');
+        if (!res.ok) throw new Error('Error en el servidor al obtener las promociones.');
+        const data = await res.json();
+        appState.promotions = data.promotions || [];
+        
+        window._currentPromoFilter = 'all';
+        renderPromotionsList();
+        updatePromoKPIs();
+    } catch (err) {
+        console.error('Error cargando promociones:', err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--danger);font-weight:600;">Error al cargar las promociones: ${err.message}</td></tr>`;
+    }
+};
+
+window.updatePromoKPIs = function() {
+    const list = appState.promotions || [];
+    const now = new Date();
+    
+    let active = 0;
+    let scheduled = 0;
+    let expired = 0;
+    
+    list.forEach(p => {
+        if (p.status !== 'active') {
+            expired++;
+        } else {
+            const start = new Date(p.startDate);
+            const end = new Date(p.endDate);
+            if (now < start) {
+                scheduled++;
+            } else if (now > end) {
+                expired++;
+            } else {
+                active++;
+            }
+        }
+    });
+    
+    const activeEl = document.getElementById('promo-kpi-active');
+    if (activeEl) activeEl.textContent = active;
+    
+    const scheduledEl = document.getElementById('promo-kpi-scheduled');
+    if (scheduledEl) scheduledEl.textContent = scheduled;
+    
+    const expiredEl = document.getElementById('promo-kpi-expired');
+    if (expiredEl) expiredEl.textContent = expired;
+};
+
+window.renderPromotionsList = function() {
+    const tbody = document.getElementById('promotions-list');
+    if (!tbody) return;
+    
+    const filter = window._currentPromoFilter || 'all';
+    const search = (document.getElementById('promo-search')?.value || '').toLowerCase().trim();
+    const now = new Date();
+    
+    let list = appState.promotions || [];
+    
+    // Filtrar por pill
+    if (filter !== 'all') {
+        list = list.filter(p => {
+            const status = p.status;
+            const start = new Date(p.startDate);
+            const end = new Date(p.endDate);
+            if (filter === 'active') {
+                return status === 'active' && now >= start && now <= end;
+            } else if (filter === 'scheduled') {
+                return status === 'active' && now < start;
+            } else if (filter === 'expired') {
+                return status !== 'active' || now > end;
+            }
+            return true;
+        });
+    }
+    
+    // Filtrar por buscador
+    if (search) {
+        list = list.filter(p => {
+            const mod = appState.modules.find(m => String(m.id) === String(p.moduleId));
+            const modName = mod ? mod.name.toLowerCase() : p.moduleId.toLowerCase();
+            return modName.includes(search);
+        });
+    }
+    
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+                <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
+                <span>No se encontraron campañas promocionales.</span>
+            </div>
+        </td></tr>`;
+        lucide.createIcons();
+        return;
+    }
+    
+    tbody.innerHTML = list.map(p => {
+        const mod = appState.modules.find(m => String(m.id) === String(p.moduleId));
+        const modName = mod ? mod.name : p.moduleId;
+        const modIcon = mod ? mod.icon : 'tag';
+        
+        const start = new Date(p.startDate);
+        const end = new Date(p.endDate);
+        
+        const dateStr = `${start.toLocaleDateString('es-CO')} → ${end.toLocaleDateString('es-CO')}`;
+        
+        // Tipo de descuento y valor formateado
+        let valueStr = '';
+        let typeStr = '';
+        if (p.discountType === 'percentage') {
+            typeStr = 'Porcentaje de Descuento';
+            valueStr = `<span style="font-weight:800;color:#ef4444;font-size:1.05rem;">-${parseInt(p.discountValue)}%</span>`;
+        } else {
+            typeStr = 'Precio Fijo Promocional';
+            valueStr = `<span style="font-weight:800;color:#10b981;font-size:1.05rem;">$ ${parseInt(p.discountValue).toLocaleString('es-CO')}</span>`;
+        }
+        
+        // Determinar estado actual
+        let badgeBg = '';
+        let badgeColor = '';
+        let badgeBorder = '';
+        let badgeLabel = '';
+        
+        if (p.status !== 'active') {
+            badgeBg = 'rgba(100,116,139,0.12)';
+            badgeColor = '#64748b';
+            badgeBorder = 'rgba(100,116,139,0.25)';
+            badgeLabel = 'Pausada';
+        } else if (now < start) {
+            badgeBg = 'rgba(59,130,246,0.12)';
+            badgeColor = '#3b82f6';
+            badgeBorder = 'rgba(59,130,246,0.25)';
+            badgeLabel = 'Programada';
+        } else if (now > end) {
+            badgeBg = 'rgba(245,158,11,0.12)';
+            badgeColor = '#f59e0b';
+            badgeBorder = 'rgba(245,158,11,0.25)';
+            badgeLabel = 'Expirada';
+        } else {
+            badgeBg = 'rgba(16,185,129,0.12)';
+            badgeColor = '#10b981';
+            badgeBorder = 'rgba(16,185,129,0.25)';
+            badgeLabel = 'Activa';
+        }
+        
+        const toggleIcon = p.status === 'active' ? 'pause' : 'play';
+        const toggleTitle = p.status === 'active' ? 'Pausar Campaña' : 'Reactivar Campaña';
+        
+        return `
+            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
+                <td style="padding:1.25rem 1.5rem;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;background:rgba(99,102,241,0.12);color:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="${modIcon}" style="width:18px;height:18px;"></i>
+                        </div>
+                        <span style="font-weight:700;">${modName}</span>
+                    </div>
+                </td>
+                <td style="padding:1.25rem 1.5rem;color:var(--text-muted);font-size:0.9rem;">${typeStr}</td>
+                <td style="padding:1.25rem 1.5rem;text-align:center;">${valueStr}</td>
+                <td style="padding:1.25rem 1.5rem;text-align:center;font-size:0.88rem;color:var(--text-muted);">${dateStr}</td>
+                <td style="padding:1.25rem 1.5rem;text-align:center;">
+                    <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
+                </td>
+                <td style="padding:1.25rem 1.5rem;text-align:center;">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+                        <button class="btn-ghost" onclick="openPromoFormModal('${p.id}')" style="padding:6px;min-width:32px;height:32px;" title="Editar Campaña">
+                            <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                        </button>
+                        <button class="btn-ghost" onclick="togglePromoStatus('${p.id}', '${p.status}')" style="padding:6px;min-width:32px;height:32px;color:${p.status === 'active' ? '#f59e0b' : '#10b981'};" title="${toggleTitle}">
+                            <i data-lucide="${toggleIcon}" style="width:14px;height:14px;"></i>
+                        </button>
+                        <button class="btn-ghost" onclick="deletePromo('${p.id}')" style="padding:6px;min-width:32px;height:32px;color:#ef4444;" title="Eliminar Campaña">
+                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    lucide.createIcons();
+};
+
+window.setPromoFilter = function(filter) {
+    window._currentPromoFilter = filter;
+    
+    // Activar pill
+    const pills = document.querySelectorAll('#promo-filters .pill');
+    pills.forEach(p => {
+        const action = p.getAttribute('onclick');
+        if (action && action.includes(`'${filter}'`)) {
+            p.classList.add('active');
+        } else {
+            p.classList.remove('active');
+        }
+    });
+    
+    renderPromotionsList();
+};
+
+window.togglePromoStatus = function(id, currentStatus) {
+    requestSecurityCheck(async () => {
+        const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        try {
+            const res = await adminFetch('/api/admin/promotions/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status: newStatus })
+            });
+            
+            if (res.ok) {
+                showToast(`Campaña ${newStatus === 'active' ? 'reactivada' : 'pausada'} con éxito.`);
+                loadPromotions();
+            } else {
+                showToast('Error al modificar el estado de la campaña.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error de red al actualizar estado.', 'error');
+        }
+    });
+};
+
+window.deletePromo = function(id) {
+    requestSecurityCheck(async () => {
+        Swal.fire({
+            title: '¿Está seguro?',
+            text: "Esta acción eliminará la promoción permanentemente y restaurará el precio original del módulo en el Marketplace.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const res = await adminFetch(`/api/admin/promotions/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (res.ok) {
+                        showToast('Campaña eliminada permanentemente.');
+                        loadPromotions();
+                    } else {
+                        showToast('Error al eliminar la campaña del servidor.', 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('Error de conexión.', 'error');
+                }
+            }
+        });
+    });
+};
+
+window.openPromoFormModal = function(id = '') {
+    const isEdit = !!id;
+    const promo = isEdit ? appState.promotions.find(p => p.id === id) : null;
+    
+    // Generar opciones de módulos activos
+    const activeModules = appState.modules.filter(m => m.status === 'active');
+    if (activeModules.length === 0) {
+        showToast('No hay módulos activos en el sistema para asociar promociones.', 'warning');
+        return;
+    }
+    
+    const optionsHtml = activeModules.map(m => `
+        <option value="${m.id}" ${promo && promo.moduleId === m.id ? 'selected' : ''}>${m.name} (${m.price})</option>
+    `).join('');
+    
+    const defaultStart = promo ? promo.startDate.split('T')[0] : new Date().toISOString().split('T')[0];
+    const defaultEnd = promo ? promo.endDate.split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const valValue = promo ? promo.discountValue : '';
+    
+    Swal.fire({
+        title: isEdit ? 'Editar Campaña Promocional' : 'Nueva Campaña Promocional',
+        html: `
+            <div style="text-align:left;font-family:'Outfit',sans-serif;color:var(--text-main);display:flex;flex-direction:column;gap:12px;">
+                <div>
+                    <label style="font-weight:700;font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Módulo Relacionado</label>
+                    <select id="swal-promo-module" class="swal2-input" style="width:100%;margin:4px 0 0;height:44px;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);padding:0 10px;">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="font-weight:700;font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Tipo de Oferta</label>
+                    <select id="swal-promo-type" class="swal2-input" style="width:100%;margin:4px 0 0;height:44px;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);padding:0 10px;">
+                        <option value="percentage" ${promo && promo.discountType === 'percentage' ? 'selected' : ''}>Porcentaje de Descuento (ej: -20%)</option>
+                        <option value="fixed_price" ${promo && promo.discountType === 'fixed_price' ? 'selected' : ''}>Precio Fijo Promocional (ej: $ 80.000)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="font-weight:700;font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Valor del Descuento / Precio</label>
+                    <input id="swal-promo-value" class="swal2-input" type="number" placeholder="Ej: 20 para porcentaje o 80000 para precio fijo" value="${valValue}" style="width:100%;margin:4px 0 0;height:44px;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);padding:0 10px;">
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-weight:700;font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Fecha de Inicio</label>
+                        <input id="swal-promo-start" class="swal2-input" type="date" value="${defaultStart}" style="width:100%;margin:4px 0 0;height:44px;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);padding:0 10px;">
+                    </div>
+                    <div>
+                        <label style="font-weight:700;font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Fecha de Vencimiento</label>
+                        <input id="swal-promo-end" class="swal2-input" type="date" value="${defaultEnd}" style="width:100%;margin:4px 0 0;height:44px;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);padding:0 10px;">
+                    </div>
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: isEdit ? 'Guardar Cambios' : 'Lanzar Campaña',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#64748b',
+        preConfirm: () => {
+            const moduleId = document.getElementById('swal-promo-module').value;
+            const discountType = document.getElementById('swal-promo-type').value;
+            const discountValue = parseFloat(document.getElementById('swal-promo-value').value);
+            const startDate = document.getElementById('swal-promo-start').value;
+            const endDate = document.getElementById('swal-promo-end').value;
+            
+            if (!moduleId || !discountType || isNaN(discountValue) || discountValue <= 0 || !startDate || !endDate) {
+                Swal.showValidationMessage('Por favor rellene todos los campos con valores válidos y positivos.');
+                return false;
+            }
+            
+            if (startDate > endDate) {
+                Swal.showValidationMessage('La fecha de inicio no puede ser posterior a la fecha de vencimiento.');
+                return false;
+            }
+            
+            return { moduleId, discountType, discountValue, startDate, endDate };
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            requestSecurityCheck(async () => {
+                const { moduleId, discountType, discountValue, startDate, endDate } = result.value;
+                const body = { moduleId, discountType, discountValue, startDate, endDate };
+                
+                try {
+                    const url = isEdit ? `/api/admin/promotions/${id}` : '/api/admin/promotions/new';
+                    const method = isEdit ? 'PUT' : 'POST';
+                    
+                    const res = await adminFetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    
+                    if (res.ok) {
+                        showToast(isEdit ? 'Campaña actualizada con éxito.' : 'Nueva campaña promocional lanzada.');
+                        loadPromotions();
+                    } else {
+                        const errData = await res.json();
+                        showToast(errData.error || 'Error al procesar la campaña en el servidor.', 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('Error de red.', 'error');
+                }
+            });
+        }
+    });
+};

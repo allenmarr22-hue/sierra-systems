@@ -1,0 +1,68 @@
+Created At: 2026-05-26T05:02:09Z
+Completed At: 2026-05-26T05:02:09Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4185
+Total Bytes: 185110
+Showing lines 4126 to 4185
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4126:     lucide.createIcons();
+4127: }
+4128: 
+4129: /**
+4130:  * Abre un modal de Swal para cambiar el estado de un ticket.
+4131:  */
+4132: async function updateTicketStatus(ticketId, currentStatus) {
+4133:     const { value: newStatus } = await Swal.fire({
+4134:         title: 'Actualizar Estado del Ticket',
+4135:         html: `
+4136:             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.2rem;">
+4137:                 Selecciona el nuevo estado para el ticket <b style="font-family:monospace;">#${String(ticketId).substring(0,8).toUpperCase()}</b>.
+4138:             </p>
+4139:             <div style="display:flex;flex-direction:column;gap:0.6rem;">
+4140:                 ${Object.entries(TICKET_STATUS_MAP).map(([key, val]) => `
+4141:                     <label style="display:flex;align-items:center;gap:12px;padding:0.8rem 1rem;border-radius:10px;border:2px solid ${key === currentStatus ? val.color : 'var(--border-color)'};cursor:pointer;background:${key === currentStatus ? val.bg : 'var(--bg-surface-light)'};transition:all .2s;">
+4142:                         <input type="radio" name="ticket-status-pick" value="${key}" ${key === currentStatus ? 'checked' : ''} style="accent-color:${val.color};">
+4143:                         <span style="font-weight:700;color:${val.color};">${val.label}</span>
+4144:                     </label>
+4145:                 `).join('')}
+4146:             </div>`,
+4147:         background: 'var(--bg-surface)',
+4148:         color: 'var(--text-main)',
+4149:         showCancelButton: true,
+4150:         confirmButtonText: 'Guardar',
+4151:         cancelButtonText: 'Cancelar',
+4152:         confirmButtonColor: 'var(--primary)',
+4153:         preConfirm: () => {
+4154:             const selected = document.querySelector('input[name="ticket-status-pick"]:checked');
+4155:             if (!selected) { Swal.showValidationMessage('Selecciona un estado'); return false; }
+4156:             return selected.value;
+4157:         }
+4158:     });
+4159: 
+4160:     if (!newStatus || newStatus === currentStatus) return;
+4161: 
+4162:     try {
+4163:         const res = await adminFetch(`/api/admin/tickets/${ticketId}/status`, {
+4164:             method: 'PATCH',
+4165:             headers: { 'Content-Type': 'application/json' },
+4166:             body: JSON.stringify({ status: newStatus })
+4167:         });
+4168:         const data = await res.json();
+4169:         if (res.ok && data.success) {
+4170:             // Actualizar estado local sin recargar todo
+4171:             const ticket = appState.adminTickets.find(t => t.id === ticketId);
+4172:             if (ticket) ticket.status = newStatus;
+4173:             renderAdminTickets();
+4174:             updateTicketBadge();
+4175:             showToast(`Ticket actualizado a: ${TICKET_STATUS_MAP[newStatus]?.label || newStatus}`, 'success');
+4176:         } else {
+4177:             showToast(data.error || 'Error al actualizar el ticket', 'error');
+4178:         }
+4179:     } catch (err) {
+4180:         console.error('Error actualizando ticket:', err);
+4181:         showToast('Error de conexión', 'error');
+4182:     }
+4183: }
+4184: 
+4185: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

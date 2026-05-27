@@ -1,0 +1,44 @@
+Created At: 2026-05-26T11:27:38Z
+Completed At: 2026-05-26T11:27:39Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4259
+Total Bytes: 189734
+Showing lines 240 to 275
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+240:     // Mostrar cargadores de shimmer premium mientras se obtienen los datos
+241:     const modGrid = document.getElementById('modules-grid');
+242:     const bizGrid = document.getElementById('businesses-grid');
+243:     const shimmerHTML = Array(3).fill(`
+244:         <div class="shimmer-card">
+245:             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+246:                 <div class="shimmer-circle"></div>
+247:                 <div class="shimmer-bar short" style="height: 24px; border-radius: 12px;"></div>
+248:             </div>
+249:             <div class="shimmer-bar medium" style="margin-top: 1rem; height: 20px;"></div>
+250:             <div class="shimmer-bar long" style="height: 14px;"></div>
+251:             <div class="shimmer-bar long" style="height: 14px;"></div>
+252:             <div class="shimmer-button"></div>
+253:         </div>
+254:     `).join('');
+255:     
+256:     if (modGrid && modGrid.innerHTML.trim() === '') modGrid.innerHTML = shimmerHTML;
+257:     if (bizGrid && bizGrid.innerHTML.trim() === '') bizGrid.innerHTML = shimmerHTML;
+258: 
+259:     try {
+260:         const res = await adminFetch(`/api/data?t=${Date.now()}`);
+261:         const data = await res.json();
+262:         appState.businesses = data.businesses || [];
+263:         appState.modules = data.modules || [];
+264:         appState.users = data.users || [];
+265:         appState.config = data.config || {};
+266: 
+267:         if (appState.config.adminUser) {
+268:             const input = document.getElementById('settings-admin-user');
+269:             if (input) input.value = appState.config.adminUser;
+270:         }
+271:         
+272:         initDashboard();
+273:         initCharts();
+274:         applyRolePermissions();
+275: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

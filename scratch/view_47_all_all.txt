@@ -1,0 +1,82 @@
+Created At: 2026-05-26T04:40:03Z
+Completed At: 2026-05-26T04:40:03Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4177
+Total Bytes: 184479
+Showing lines 3378 to 4177
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3378:         
+3379:         const row = document.createElement('div');
+3380:         row.style.marginBottom = '0.55rem';
+3381:         row.style.borderBottom = '1px solid rgba(255,255,255,0.03)';
+3382:         row.style.paddingBottom = '0.4rem';
+3383:         row.style.display = 'flex';
+3384:         row.style.justifyContent = 'space-between';
+3385:         row.style.alignItems = 'flex-start';
+3386:         row.style.gap = '1.5rem';
+3387:         
+3388:         row.innerHTML = `
+3389:             <div style="flex: 1; line-height: 1.4;">
+3390:                 <span style="color: #4b5563; font-weight: bold; font-size: 0.8rem;">[${dateStr} ${timeStr}]</span>
+3391:                 <span style="color: ${tagColor}; font-weight: bold; margin-left: 0.5rem; letter-spacing: 0.02em;">[${titleUpper}]</span>
+3392:                 <span style="color: #cbd5e1; margin-left: 0.5rem;">${log.desc}</span>
+3393:             </div>
+3394:             <div style="font-size: 0.72rem; color: #334155; white-space: nowrap; user-select: none;">API ok</div>
+3395:         `;
+3396:         terminal.appendChild(row);
+3397:     });
+3398: }
+3399: 
+3400: // ====== SHORTCUTS: ESCAPE PARA CERRAR Y ENTER PARA CONFIRMAR MODALES ======
+3401: document.addEventListener('keydown', (e) => {
+3402:     const activeModal = document.querySelector('.modal-overlay:not(.hidden)');
+3403:     if (!activeModal) return;
+3404: 
+3405:     if (e.key === 'Escape') {
+3406:         e.preventDefault();
+3407:         const closeBtn = activeModal.querySelector('.mo
+<truncated 40489 bytes>
+l.color};">${val.label}</span>
+4136:                     </label>
+4137:                 `).join('')}
+4138:             </div>`,
+4139:         background: 'var(--bg-surface)',
+4140:         color: 'var(--text-main)',
+4141:         showCancelButton: true,
+4142:         confirmButtonText: 'Guardar',
+4143:         cancelButtonText: 'Cancelar',
+4144:         confirmButtonColor: 'var(--primary)',
+4145:         preConfirm: () => {
+4146:             const selected = document.querySelector('input[name="ticket-status-pick"]:checked');
+4147:             if (!selected) { Swal.showValidationMessage('Selecciona un estado'); return false; }
+4148:             return selected.value;
+4149:         }
+4150:     });
+4151: 
+4152:     if (!newStatus || newStatus === currentStatus) return;
+4153: 
+4154:     try {
+4155:         const res = await adminFetch(`/api/admin/tickets/${ticketId}/status`, {
+4156:             method: 'PATCH',
+4157:             headers: { 'Content-Type': 'application/json' },
+4158:             body: JSON.stringify({ status: newStatus })
+4159:         });
+4160:         const data = await res.json();
+4161:         if (res.ok && data.success) {
+4162:             // Actualizar estado local sin recargar todo
+4163:             const ticket = appState.adminTickets.find(t => t.id === ticketId);
+4164:             if (ticket) ticket.status = newStatus;
+4165:             renderAdminTickets();
+4166:             updateTicketBadge();
+4167:             showToast(`Ticket actualizado a: ${TICKET_STATUS_MAP[newStatus]?.label || newStatus}`, 'success');
+4168:         } else {
+4169:             showToast(data.error || 'Error al actualizar el ticket', 'error');
+4170:         }
+4171:     } catch (err) {
+4172:         console.error('Error actualizando ticket:', err);
+4173:         showToast('Error de conexión', 'error');
+4174:     }
+4175: }
+4176: 
+4177: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

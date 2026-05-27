@@ -1,0 +1,75 @@
+Created At: 2026-05-26T04:46:14Z
+Completed At: 2026-05-26T04:46:14Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4177
+Total Bytes: 184482
+Showing lines 3700 to 3880
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3700:     }
+3701: 
+3702:     // Toggle pausar/activar
+3703:     const toggleBtn = ev.target.closest('.promo-toggle-btn');
+3704:     if (toggleBtn) {
+3705:         const { id, status } = toggleBtn.dataset;
+3706:         try {
+3707:             const res = await adminFetch('/api/admin/promotions/toggle', {
+3708:                 method: 'POST',
+3709:                 headers: { 'Content-Type': 'application/json' },
+3710:                 body: JSON.stringify({ id, status })
+3711:             });
+3712:             const data = await res.json();
+3713:             if (res.ok) {
+3714:                 showToast(status === 'active' ? '▶️ Campaña reactivada.' : '⏸️ Campaña pausada.', 'success');
+3715:                 await loadPromotions();
+3716:             } else { showToast(data.error || 'Error.', 'error'); }
+3717:         } catch (err) { showToast('Error de red.', 'error'); }
+3718:     }
+3719: 
+3720:     // Eliminar campaña
+3721:     const deletePromoBtn = ev.target.closest('.promo-delete-btn');
+3722:     if (deletePromoBtn) {
+3723:         const { id, name } = deletePromoBtn.dataset;
+3724:         const result = await Swal.fire({
+3725:             title: '¿Eliminar Campaña?',
+3726:             html: `<p style="color:var(--text-muted);">La campaña de descuento para <b>${name}</b> se eliminará permanentemente.</p>`,
+3727:             icon: 'warning',
+3728:             background: 'var(--bg-surface)',
+3729:             color: 'var(--text-main)',
+3730:             showCancelButton: true,
+3731:     
+<truncated 6742 bytes>
+.value;
+3848:                 const discountType = document.getElementById('promo-type').value;
+3849:                 const discountValue = parseFloat(document.getElementById('promo-value').value);
+3850:                 const startDate = document.getElementById('promo-start').value;
+3851:                 const endDate = document.getElementById('promo-end').value;
+3852:                 if (!moduleId || isNaN(discountValue) || discountValue <= 0 || !startDate || !endDate) {
+3853:                     Swal.showValidationMessage('Completa todos los campos correctamente.');
+3854:                     return false;
+3855:                 }
+3856:                 if (new Date(startDate) >= new Date(endDate)) {
+3857:                     Swal.showValidationMessage('La fecha de fin debe ser posterior al inicio.');
+3858:                     return false;
+3859:                 }
+3860:                 return { moduleId, discountType, discountValue, startDate: new Date(startDate).toISOString(), endDate: new Date(endDate).toISOString() };
+3861:             }
+3862:         });
+3863: 
+3864:         if (!isConfirmed || !formValues) return;
+3865: 
+3866:         try {
+3867:             const res = await adminFetch(`/api/admin/promotions/${id}`, {
+3868:                 method: 'PUT',
+3869:                 headers: { 'Content-Type': 'application/json' },
+3870:                 body: JSON.stringify(formValues)
+3871:             });
+3872:             const data = await res.json();
+3873:             if (res.ok) {
+3874:                 showToast('💾 Campaña actualizada con éxito.', 'success');
+3875:                 await loadPromotions();
+3876:             } else {
+3877:                 showToast(data.error || 'Error al actualizar la promoción.', 'error');
+3878:             }
+3879:         } catch (err) { showToast('Error de red.', 'error'); }
+3880:     }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

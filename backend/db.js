@@ -11,6 +11,30 @@
 const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+
+// --- HASHING DE CONTRASEÑAS SEGURO ---
+function hashPassword(password) {
+    if (!password) return '';
+    // Si ya parece estar encriptada (formato salt:hash), no volver a encriptar
+    if (password.includes(':') && password.split(':')[0].length === 32) {
+        return password;
+    }
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedValue) {
+    if (!storedValue) return false;
+    if (!storedValue.includes(':')) {
+        // Fallback para contraseñas de texto plano
+        return password === storedValue;
+    }
+    const [salt, originalHash] = storedValue.split(':');
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return hash === originalHash;
+}
 
 // --- 1. CARGAR VARIABLES DE ENTORNO DESDE .ENV MANUALMENTE ---
 function loadEnv() {
@@ -72,7 +96,191 @@ try {
     console.error('[DB] ❌ Error inicializando pool de base de datos:', err.message);
 }
 
-// --- 3. METODOS DE LA BASE DE DATOS RELACIONAL ---
+// --- 3. INICIALIZACIÓN DE TABLAS (AUTO-MIGRACIÓN AL ARRANCAR) ---
+
+/**
+ * Crea todas las tablas necesarias si no existen.
+ * Se ejecuta al arrancar el servidor para garantizar que la BD esté lista.
+ */
+async function initializeDatabase() {
+    if (!pool) {
+        console.error('[DB] ❌ No hay pool de conexión disponible. Omitiendo inicialización de tablas.');
+        return;
+    }
+    try {
+        console.log('[DB] 🛠️ Inicializando estructura de base de datos...');
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS system_config (
+                id INT PRIMARY KEY DEFAULT 1,
+                company_name VARCHAR(150) NOT NULL DEFAULT 'AS Sierra Systems',
+                admin_user VARCHAR(100) NOT NULL DEFAULT 'admin',
+                admin_pass VARCHAR(255) NOT NULL DEFAULT '123456',
+                admin_name VARCHAR(150) NOT NULL DEFAULT 'Allenmar',
+                logo LONGTEXT NULL,
+                CONSTRAINT chk_single_row CHECK (id = 1)
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id BIGINT PRIMARY KEY,
+                user VARCHAR(100) NOT NULL UNIQUE,
+                pass VARCHAR(255) NOT NULL,
+                name VARCHAR(150) NOT NULL,
+                role VARCHAR(100) NOT NULL DEFAULT 'Admin',
+                status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS modules (
+                id VARCHAR(50) PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                \`desc\` TEXT NULL,
+                icon VARCHAR(100) NULL,
+                status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+                price VARCHAR(50) NOT NULL DEFAULT '$ 0',
+                url VARCHAR(255) NULL,
+                admin_url VARCHAR(255) NULL,
+                video_url VARCHAR(255) NULL,
+                image VARCHAR(255) NULL
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS businesses (
+                id BIGINT PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                type VARCHAR(100) NOT NULL,
+                status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+                city VARCHAR(100) NULL,
+                client_email VARCHAR(150) NOT NULL UNIQUE,
+                client_pass VARCHAR(255) NOT NULL,
+                avatar_url VARCHAR(255) NULL,
+                gateway_token VARCHAR(255) NULL,
+                last_four VARCHAR(4) NULL,
+                card_brand VARCHAR(50) NULL,
+                subscription_status ENUM('pending', 'active', 'suspended', 'cancelled') NOT NULL DEFAULT 'pending',
+                next_billing_date DATE NULL,
+                last_payment_date VARCHAR(100) NULL,
+                last_payment_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                last_failed_attempt VARCHAR(100) NULL,
+                last_transaction_id VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS business_modules (
+                instance_id VARCHAR(100) PRIMARY KEY,
+                business_id BIGINT NOT NULL,
+                module_id VARCHAR(50) NOT NULL,
+                branch_name VARCHAR(150) NULL,
+                status ENUM('active', 'cancelled') NOT NULL DEFAULT 'active',
+                price_applied DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                cancelled_at VARCHAR(100) NULL,
+                access_until VARCHAR(100) NULL,
+                renewal_date VARCHAR(100) NULL,
+                FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+                FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                id BIGINT PRIMARY KEY,
+                title VARCHAR(150) NOT NULL,
+                \`desc\` TEXT NOT NULL,
+                icon VARCHAR(100) NULL,
+                color VARCHAR(20) NULL,
+                created_at VARCHAR(100) NOT NULL
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS payment_history (
+                id VARCHAR(100) PRIMARY KEY,
+                business_id BIGINT NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                \`desc\` VARCHAR(255) NULL,
+                status VARCHAR(50) NOT NULL,
+                transaction_id VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS promotions (
+                id VARCHAR(50) PRIMARY KEY,
+                module_id VARCHAR(50) NOT NULL,
+                discount_type VARCHAR(20) NOT NULL,
+                discount_value DECIMAL(10,2) NOT NULL,
+                start_date VARCHAR(100) NOT NULL,
+                end_date VARCHAR(100) NOT NULL,
+                status VARCHAR(20) DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS support_tickets (
+                id VARCHAR(100) PRIMARY KEY,
+                business_id BIGINT NOT NULL,
+                business_name VARCHAR(150) NOT NULL,
+                module_id VARCHAR(50) NULL,
+                module_name VARCHAR(150) NULL,
+                subject VARCHAR(255) NOT NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'open',
+                priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+                created_at VARCHAR(100) NOT NULL,
+                updated_at VARCHAR(100) NOT NULL,
+                resolved_at VARCHAR(100) NULL,
+                FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS ticket_messages (
+                id VARCHAR(100) PRIMARY KEY,
+                ticket_id VARCHAR(100) NOT NULL,
+                role VARCHAR(20) NOT NULL,
+                text TEXT NOT NULL,
+                image_url VARCHAR(500) NULL,
+                created_at VARCHAR(100) NOT NULL,
+                FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
+            )
+        `);
+
+        // Insertar configuración inicial si no existe
+        await pool.query(`
+            INSERT IGNORE INTO system_config (id, company_name, admin_user, admin_pass, admin_name)
+            VALUES (1, 'AS Sierra Systems', 'admin', '123456', 'Allenmar')
+        `);
+
+        // Insertar módulos por defecto si no existen
+        const defaultModules = [
+            { id: 'streetfeed', name: 'StreetFeed Pro', desc: 'Menú digital y pedidos por WhatsApp', icon: 'utensils', price: '$ 95.000', status: 'active' },
+            { id: 'agenda', name: 'StyleSync Pro', desc: 'Sistema de citas y agenda para salones y estéticas', icon: 'calendar', price: '$ 140.000', status: 'active' }
+        ];
+        for (const mod of defaultModules) {
+            await pool.query(`
+                INSERT IGNORE INTO modules (id, name, \`desc\`, icon, status, price)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [mod.id, mod.name, mod.desc, mod.icon, mod.status, mod.price]);
+        }
+
+        console.log('[DB] ✅ Base de datos inicializada correctamente.');
+    } catch (err) {
+        console.error('[DB] ❌ Error durante la inicialización de la base de datos:', err.message);
+        // No lanzar el error — el servidor debe seguir arrancando aunque falle la migración
+    }
+}
+
+// --- 4. METODOS DE LA BASE DE DATOS RELACIONAL ---
 
 /**
  * Reconstruye el árbol JSON completo equivalente a data.json
@@ -107,7 +315,8 @@ async function getCompleteState() {
             price: m.price,
             url: m.url,
             adminUrl: m.admin_url,
-            videoUrl: m.video_url
+            videoUrl: m.video_url,
+            image: m.image
         }));
 
         // 3.3. Consultar Usuarios
@@ -142,17 +351,36 @@ async function getCompleteState() {
             const activeModules = [];
             const cancelledModules = [];
             const moduleDates = {};
+            const moduleInstances = [];
 
             for (const mr of modRows) {
+                // Populate the detailed instances array
+                moduleInstances.push({
+                    instanceId: mr.instance_id,
+                    moduleId: mr.module_id,
+                    branchName: mr.branch_name || 'Sede Principal',
+                    status: mr.status,
+                    priceApplied: parseFloat(mr.price_applied) || 0,
+                    renewalDate: mr.renewal_date,
+                    cancelledAt: mr.cancelled_at,
+                    accessUntil: mr.access_until
+                });
+
                 if (mr.status === 'active') {
-                    activeModules.push(mr.module_id);
-                    if (mr.renewal_date) {
+                    if (!activeModules.includes(mr.module_id)) {
+                        activeModules.push(mr.module_id);
+                    }
+                    // For legacy support: keep the first renewal date found
+                    if (mr.renewal_date && !moduleDates[mr.module_id]) {
                         moduleDates[mr.module_id] = mr.renewal_date;
                     }
                 } else if (mr.status === 'cancelled') {
+                    // Legacy support
+                    const targetMod = dbModules.find(dm => dm.id === mr.module_id);
+                    const moduleName = targetMod ? targetMod.name : mr.module_id;
                     cancelledModules.push({
                         id: mr.module_id,
-                        name: mr.module_id === 'streetfeed' ? 'StreetFeed Pro' : (mr.module_id === 'agenda' ? 'StyleSync Pro' : mr.module_id),
+                        name: moduleName,
                         cancelledAt: mr.cancelled_at,
                         accessUntil: mr.access_until
                     });
@@ -165,6 +393,7 @@ async function getCompleteState() {
                 type: b.type,
                 status: b.status,
                 modules: activeModules,
+                moduleInstances: moduleInstances,
                 city: b.city,
                 clientEmail: b.client_email,
                 clientPass: b.client_pass,
@@ -185,12 +414,25 @@ async function getCompleteState() {
             });
         }
 
+        // 3.6. Consultar Promociones
+        const [promoRows] = await pool.query('SELECT * FROM promotions ORDER BY created_at DESC');
+        const dbPromotions = promoRows.map(p => ({
+            id: p.id,
+            moduleId: p.module_id,
+            discountType: p.discount_type,
+            discountValue: parseFloat(p.discount_value) || 0,
+            startDate: p.start_date,
+            endDate: p.end_date,
+            status: p.status
+        }));
+
         return {
             config: dbConfig,
             businesses: dbBusinesses,
             modules: dbModules,
             users: dbUsers,
-            notifications: dbNotifications
+            notifications: dbNotifications,
+            promotions: dbPromotions
         };
     } catch (err) {
         console.error('[DB] Error construyendo estado JSON completo:', err.message);
@@ -239,8 +481,8 @@ async function saveCompleteState(db) {
             }
             for (const mod of db.modules) {
                 await connection.query(`
-                    INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url, image)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE 
                         name = VALUES(name),
                         \`desc\` = VALUES(\`desc\`),
@@ -249,10 +491,11 @@ async function saveCompleteState(db) {
                         price = VALUES(price),
                         url = VALUES(url),
                         admin_url = VALUES(admin_url),
-                        video_url = VALUES(video_url)
+                        video_url = VALUES(video_url),
+                        image = VALUES(image)
                 `, [
                     mod.id, mod.name, mod.desc || null, mod.icon || null, mod.status || 'active',
-                    mod.price || '$ 0', mod.url || null, mod.adminUrl || null, mod.videoUrl || null
+                    mod.price || '$ 0', mod.url || null, mod.adminUrl || null, mod.videoUrl || null, mod.image || null
                 ]);
             }
         }
@@ -353,23 +596,77 @@ async function saveCompleteState(db) {
                 await connection.query('DELETE FROM business_modules WHERE business_id = ?', [biz.id]);
 
                 // Activos
+                const moduleInstances = biz.moduleInstances || [];
+                // Compatibilidad con biz.modules si moduleInstances está vacío pero modules no
                 const activeModules = biz.modules || [];
-                for (const modId of activeModules) {
-                    const renewalDate = biz.moduleDates && biz.moduleDates[modId] ? biz.moduleDates[modId] : null;
-                    await connection.query(`
-                        INSERT INTO business_modules (business_id, module_id, status, renewal_date)
-                        VALUES (?, ?, 'active', ?)
-                    `, [biz.id, modId, renewalDate]);
+                
+                if (moduleInstances.length > 0) {
+                    for (const mod of moduleInstances) {
+                        if (mod.status === 'active') {
+                            await connection.query(`
+                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
+                                VALUES (?, ?, ?, ?, 'active', ?, ?)
+                            `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.renewalDate]);
+                        } else if (mod.status === 'cancelled') {
+                            await connection.query(`
+                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
+                                VALUES (?, ?, ?, ?, 'cancelled', ?, ?, ?)
+                            `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.cancelledAt || null, mod.accessUntil || null]);
+                        }
+                    }
+                } else {
+                    // Legacy fallback
+                    for (let i = 0; i < activeModules.length; i++) {
+                        const modId = activeModules[i];
+                        const instanceId = `${biz.id}-${modId}-${i}`;
+                        const renewalDate = biz.moduleDates && biz.moduleDates[modId] ? biz.moduleDates[modId] : null;
+                        await connection.query(`
+                            INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
+                            VALUES (?, ?, ?, 'Sede Principal', 'active', 0, ?)
+                        `, [instanceId, biz.id, modId, renewalDate]);
+                    }
+                    
+                    const cancelledModules = biz.cancelledModules || [];
+                    for (let i = 0; i < cancelledModules.length; i++) {
+                        const cm = cancelledModules[i];
+                        const instanceId = `${biz.id}-${cm.id || cm.moduleId}-cancelled-${i}`;
+                        await connection.query(`
+                            INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
+                            VALUES (?, ?, ?, 'Sede Principal', 'cancelled', 0, ?, ?)
+                        `, [instanceId, biz.id, cm.id || cm.moduleId, cm.cancelledAt || null, cm.accessUntil || null]);
+                    }
                 }
+            }
+        }
 
-                // Cancelados (Suspendidos temporales)
-                const cancelledModules = biz.cancelledModules || [];
-                for (const cm of cancelledModules) {
-                    await connection.query(`
-                        INSERT INTO business_modules (business_id, module_id, status, cancelled_at, access_until)
-                        VALUES (?, ?, 'cancelled', ?, ?)
-                    `, [biz.id, cm.id, cm.cancelledAt || null, cm.accessUntil || null]);
-                }
+        // 6. Sincronizar Promociones
+        if (db.promotions) {
+            const promoIds = db.promotions.map(p => p.id);
+            if (promoIds.length > 0) {
+                await connection.query('DELETE FROM promotions WHERE id NOT IN (?)', [promoIds]);
+            } else {
+                await connection.query('DELETE FROM promotions');
+            }
+            for (const promo of db.promotions) {
+                await connection.query(`
+                    INSERT INTO promotions (id, module_id, discount_type, discount_value, start_date, end_date, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE 
+                        module_id = VALUES(module_id),
+                        discount_type = VALUES(discount_type),
+                        discount_value = VALUES(discount_value),
+                        start_date = VALUES(start_date),
+                        end_date = VALUES(end_date),
+                        status = VALUES(status)
+                `, [
+                    promo.id,
+                    promo.moduleId,
+                    promo.discountType,
+                    promo.discountValue,
+                    promo.startDate,
+                    promo.endDate,
+                    promo.status || 'active'
+                ]);
             }
         }
 
@@ -418,20 +715,28 @@ async function updateSystemConfig(fields) {
 
 // --- USUARIOS ---
 async function findUser(username, password) {
-    const [rows] = await pool.query('SELECT * FROM users WHERE user = ? AND pass = ? AND status = "active"', [username, password]);
-    return rows[0] || null;
+    const [rows] = await pool.query('SELECT * FROM users WHERE user = ? AND status = "active"', [username]);
+    const user = rows[0] || null;
+    if (user && verifyPassword(password, user.pass)) {
+        return user;
+    }
+    return null;
 }
 
 async function findMasterUser(username, password) {
-    const [rows] = await pool.query('SELECT * FROM system_config WHERE admin_user = ? AND admin_pass = ? AND id = 1', [username, password]);
-    return rows[0] || null;
+    const [rows] = await pool.query('SELECT * FROM system_config WHERE admin_user = ? AND id = 1', [username]);
+    const config = rows[0] || null;
+    if (config && verifyPassword(password, config.admin_pass)) {
+        return config;
+    }
+    return null;
 }
 
 async function createUser(user) {
     const id = user.id || Date.now() + Math.floor(Math.random() * 1000);
     await pool.query(
         'INSERT INTO users (id, user, pass, name, role, status) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, user.user, user.pass, user.name, user.role || 'Admin', user.status || 'active']
+        [id, user.user, hashPassword(user.pass), user.name, user.role || 'Admin', user.status || 'active']
     );
     return id;
 }
@@ -445,7 +750,11 @@ async function updateUser(id, fields) {
     for (const key of keys) {
         if (['user', 'pass', 'name', 'role', 'status'].includes(key)) {
             sets.push(`${key} = ?`);
-            values.push(fields[key]);
+            if (key === 'pass') {
+                values.push(hashPassword(fields[key]));
+            } else {
+                values.push(fields[key]);
+            }
         }
     }
     if (sets.length === 0) return;
@@ -498,7 +807,8 @@ async function updateModule(id, fields) {
             price: 'price',
             url: 'url',
             adminUrl: 'admin_url',
-            videoUrl: 'video_url'
+            videoUrl: 'video_url',
+            image: 'image'
         };
         const sets = [];
         const values = [];
@@ -513,8 +823,8 @@ async function updateModule(id, fields) {
         }
     } else {
         await pool.query(
-            'INSERT INTO modules (id, name, `desc`, icon, status, price, url, admin_url, video_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, fields.name, fields.desc || null, fields.icon || null, fields.status || 'active', fields.price || '$ 0', fields.url || null, fields.adminUrl || null, fields.videoUrl || null]
+            'INSERT INTO modules (id, name, `desc`, icon, status, price, url, admin_url, video_url, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, fields.name, fields.desc || null, fields.icon || null, fields.status || 'active', fields.price || '$ 0', fields.url || null, fields.adminUrl || null, fields.videoUrl || null, fields.image || null]
         );
     }
 }
@@ -524,13 +834,16 @@ async function getBusinesses() {
     const [rows] = await pool.query('SELECT * FROM businesses ORDER BY id DESC');
     return rows;
 }
-
 async function findBusinessByClientCredentials(email, password) {
     const [rows] = await pool.query(
-        'SELECT * FROM businesses WHERE LOWER(client_email) = LOWER(?) AND client_pass = ?',
-        [email, password]
+        'SELECT * FROM businesses WHERE LOWER(client_email) = LOWER(?)',
+        [email]
     );
-    return rows[0] || null;
+    const biz = rows[0] || null;
+    if (biz && verifyPassword(password, biz.client_pass)) {
+        return biz;
+    }
+    return null;
 }
 
 async function findBusinessById(id) {
@@ -561,7 +874,7 @@ async function createBusiness(biz) {
             last_payment_date, last_payment_amount, last_failed_attempt, last_transaction_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-        id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.clientEmail, biz.clientPass, biz.avatarUrl || null,
+        id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.clientEmail, hashPassword(biz.clientPass), biz.avatarUrl || null,
         billing.gateway_token || null, billing.last_four || null, billing.card_brand || null, billing.subscription_status || 'pending',
         billing.next_billing_date || null, billing.last_payment_date || null, billing.last_payment_amount || 0.00,
         billing.last_failed_attempt || null, billing.last_transaction_id || null
@@ -595,7 +908,11 @@ async function updateBusiness(id, fields) {
     for (const key of keys) {
         if (mapping[key]) {
             sets.push(`${mapping[key]} = ?`);
-            values.push(fields[key]);
+            if (key === 'clientPass') {
+                values.push(hashPassword(fields[key]));
+            } else {
+                values.push(fields[key]);
+            }
         }
     }
 
@@ -702,6 +1019,9 @@ async function renewBusinessModule(businessId, moduleId, newRenewalDate) {
 // --- EXPORTAR ---
 module.exports = {
     pool,
+    hashPassword,
+    verifyPassword,
+    initializeDatabase,
     getCompleteState,
     saveCompleteState,
     

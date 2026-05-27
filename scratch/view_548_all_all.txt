@@ -1,0 +1,29 @@
+Created At: 2026-05-26T12:05:32Z
+Completed At: 2026-05-26T12:05:32Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4500
+Total Bytes: 208056
+Showing lines 155 to 175
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+155:     const nameEl = document.getElementById('sidebar-username');
+156:     const roleEl = document.querySelector('.user-role');
+157:     const avatarEl = document.getElementById('sidebar-avatar');
+158:     const topbarAvatar = document.getElementById('topbar-avatar');
+159:     const initials = (appState.user?.name || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+160: 
+161:     if (nameEl) nameEl.textContent = appState.user?.name || 'Usuario';
+162: 
+163:     if (roleEl) {
+164:         if (role === 'Super Admin') {
+165:             if (nameEl) nameEl.style.display = 'none'; // Solo escondemos el de Super Admin para que no se repita
+166:             roleEl.innerHTML = '<span style="color: #ffd700; font-weight: bold; font-size: 0.85rem; white-space: nowrap;">💎 Super Admin 💎</span>';
+167:         } else {
+168:             if (nameEl) nameEl.style.display = 'block'; // Para los demás roles, mostramos el nombre normal
+169:             roleEl.textContent = role;
+170:         }
+171:     }
+172:     if (avatarEl) avatarEl.textContent = initials;
+173:     if (topbarAvatar) topbarAvatar.textContent = initials;
+174: 
+175:     // Show read-only banner for Soporte
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

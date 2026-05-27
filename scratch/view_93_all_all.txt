@@ -1,0 +1,49 @@
+Created At: 2026-05-26T04:46:17Z
+Completed At: 2026-05-26T04:46:17Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4177
+Total Bytes: 184482
+Showing lines 3520 to 3565
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3520:         let statusBadge;
+3521:         if (st === 'active') {
+3522:             statusBadge = `<span class="status-badge" style="background:var(--success-bg); color:var(--success); border-color:var(--success-border); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="check-circle" style="width:11px;"></i> Activa</span>`;
+3523:         } else if (st === 'scheduled') {
+3524:             statusBadge = `<span class="status-badge" style="background:rgba(59,130,246,0.1); color:#3b82f6; border-color:rgba(59,130,246,0.2); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="calendar" style="width:11px;"></i> Programada</span>`;
+3525:         } else if (st === 'paused') {
+3526:             statusBadge = `<span class="status-badge" style="background:rgba(245,158,11,0.1); color:#f59e0b; border-color:rgba(245,158,11,0.2); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="pause" style="width:11px;"></i> Pausada</span>`;
+3527:         } else {
+3528:             statusBadge = `<span class="status-badge" style="background:var(--error-bg); color:var(--danger); border-color:var(--error-border); display:inline-flex; align-items:center; gap:4px;"><i data-lucide="clock" style="width:11px;"></i> Expirada</span>`;
+3529:         }
+3530: 
+3531:         const toggleBtn = p.status === 'active'
+3532:             ? `<button class="btn-ghost promo-toggle-btn" data-id="${p.id}" data-status="inactive" style="padding:0.35rem 0.7rem; font-size:0.78rem;"><i data-lucide="pause" style="
+<truncated 651 bytes>
+         <i data-lucide="${mod?.icon || 'package'}" style="width:16px; color:var(--primary);"></i>
+3540:                     </div>
+3541:                     <div>
+3542:                         <div style="font-weight:700; font-size:0.9rem;">${modName}</div>
+3543:                         <div style="font-size:0.75rem; color:var(--text-muted);">ID: ${p.moduleId}</div>
+3544:                     </div>
+3545:                 </div>
+3546:             </td>
+3547:             <td style="padding:1rem 1.5rem;">${typeLabel}</td>
+3548:             <td style="padding:1rem 1.5rem; text-align:center;">${discountDisplay}</td>
+3549:             <td style="padding:1rem 1.5rem; text-align:center; font-size:0.85rem; line-height:1.6;">
+3550:                 <span style="color:var(--text-muted);">Inicio:</span> <strong>${startFmt}</strong><br>
+3551:                 <span style="color:var(--text-muted);">Fin:</span> <strong>${endFmt}</strong>
+3552:             </td>
+3553:             <td style="padding:1rem 1.5rem; text-align:center;">${statusBadge}</td>
+3554:             <td style="padding:1rem 1.5rem; text-align:center;">
+3555:                 <div style="display:inline-flex; gap:6px; align-items:center;">
+3556:                     ${toggleBtn}
+3557:                     <button class="btn-ghost promo-edit-btn" data-id="${p.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem; color:var(--primary);"><i data-lucide="edit" style="width:13px;"></i> Editar</button>
+3558:                     <button class="btn-ghost promo-delete-btn" data-id="${p.id}" data-name="${modName}" style="padding:0.35rem 0.7rem; font-size:0.78rem; color:var(--danger);"><i data-lucide="trash-2" style="width:13px;"></i> Eliminar</button>
+3559:                 </div>
+3560:             </td>
+3561:         </tr>`;
+3562:     }).join('');
+3563: 
+3564:     lucide.createIcons();
+3565: };
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

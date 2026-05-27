@@ -1,0 +1,31 @@
+Created At: 2026-05-26T11:56:02Z
+Completed At: 2026-05-26T11:56:02Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 4223
+Total Bytes: 222359
+Showing lines 3988 to 4010
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3988:         if (sendBtn) sendBtn.disabled = false;
+3989:         if (msgInput) msgInput.disabled = false;
+3990:     }
+3991: };
+3992: 
+3993: window.openChatImageLightbox = function(src) {
+3994:     Swal.fire({
+3995:         html: `<img src="${src}" style="max-width:100%;max-height:80vh;border-radius:10px;object-fit:contain;" />`,
+3996:         background: 'rgba(0,0,0,0.92)',
+3997:         showConfirmButton: false,
+3998:         showCloseButton: true,
+3999:         width: 'auto',
+4000:         padding: '1rem',
+4001:     });
+4002: };
+4003: 
+4004:     const sessionRaw = sessionStorage.getItem('clientSession');
+4005:     if (!sessionRaw) {
+4006:         window.location.href = '/client-login.html';
+4007:         return;
+4008:     }
+4009:     const session = JSON.parse(sessionRaw);
+4010:     options.headers = options.headers || {};
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,44 @@
+Created At: 2026-05-26T12:05:09Z
+Completed At: 2026-05-26T12:05:09Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 4004
+Total Bytes: 216808
+Showing lines 230 to 265
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+230: 
+231:     // ==========================================
+232:     // SSE REAL-TIME SYNC
+233:     // ==========================================
+234:     const evtSource = new EventSource('/api/stream');
+235:     evtSource.onmessage = function(event) {
+236:         try {
+237:             const data = JSON.parse(event.data);
+238:             if (data.type === 'update') {
+239:                 console.log('Update received via SSE, reloading data...');
+240:                 loadData();
+241:                 if (typeof loadMyTickets === 'function') {
+242:                     loadMyTickets();
+243:                 }
+244:                 if (window.activeChatTicketId) {
+245:                     fetchAndRenderChatMessages(window.activeChatTicketId, 'client');
+246:                 }
+247:             }
+248:         } catch (err) {
+249:             console.error('SSE Error:', err);
+250:         }
+251:     };
+252: 
+253:     // Billing button (attached after DOM is ready)
+254:     document.querySelectorAll('#tab-billing button').forEach(btn => {
+255:         btn.addEventListener('click', () => showPaymentForm());
+256:     });
+257: 
+258:     // Video Guide Button
+259:     document.getElementById('btn-video-guide')?.addEventListener('click', () => {
+260:         const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
+261:         if (!clientBiz || !clientBiz.modules || clientBiz.modules.length === 0) {
+262:             Swal.fire({
+263:                 title: 'Aviso',
+264:                 text: 'No tienes módulos activos actualmente.',
+265:                 icon: 'info',
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

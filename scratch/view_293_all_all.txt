@@ -1,0 +1,43 @@
+Created At: 2026-05-26T11:28:32Z
+Completed At: 2026-05-26T11:28:32Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3684
+Total Bytes: 192403
+Showing lines 3650 to 3684
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3650:     } else {
+3651:         prevBtn.classList.remove('hidden');
+3652:     }
+3653:     
+3654:     if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 5) {
+3655:         nextBtn.classList.add('hidden');
+3656:     } else {
+3657:         nextBtn.classList.remove('hidden');
+3658:     }
+3659: };
+3660: 
+3661: /**
+3662:  * Inicializa todos los carruseles premium en pantalla
+3663:  */
+3664: window.initAllCarousels = function() {
+3665:     setTimeout(() => {
+3666:         document.querySelectorAll('.carousel-scroll-container').forEach(container => {
+3667:             window.updateCarouselArrows(container);
+3668:             if (!container.dataset.carouselInit) {
+3669:                 container.dataset.carouselInit = 'true';
+3670:                 container.addEventListener('scroll', () => window.updateCarouselArrows(container));
+3671:             }
+3672:         });
+3673:     }, 100);
+3674: };
+3675: 
+3676: // Escuchar los eventos de scroll para actualizar las flechas de carrusel automáticamente
+3677: document.addEventListener('scroll', function(e) {
+3678:     if (e.target.classList && e.target.classList.contains('carousel-scroll-container')) {
+3679:         window.updateCarouselArrows(e.target);
+3680:     }
+3681: }, true);
+3682: 
+3683: 
+3684: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

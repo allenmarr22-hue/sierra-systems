@@ -1,0 +1,81 @@
+Created At: 2026-05-26T12:03:43Z
+Completed At: 2026-05-26T12:03:43Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4500
+Total Bytes: 208056
+Showing lines 4200 to 4500
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4200: }
+4201: 
+4202: /**
+4203:  * Abre un modal de Swal con detalles completos del ticket y el chat conversacional.
+4204:  */
+4205: window.viewTicketDetails = function(ticketId) {
+4206:     const ticket = appState.adminTickets.find(t => t.id === ticketId);
+4207:     if (!ticket) return;
+4208: 
+4209:     window.activeChatTicketId = ticketId;
+4210: 
+4211:     const st = TICKET_STATUS_MAP[ticket.status] || TICKET_STATUS_MAP['abierto'];
+4212:     const pr = TICKET_PRIORITY_MAP[ticket.priority] || TICKET_PRIORITY_MAP['normal'];
+4213:     const d = ticket.created_at ? new Date(ticket.created_at) : null;
+4214:     const fullDate = d ? d.toLocaleString('es-CO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true }) : '—';
+4215: 
+4216:     Swal.fire({
+4217:         title: '',
+4218:         html: `
+4219:             <div style="font-family:'Outfit',sans-serif; color:var(--text-main);">
+4220: 
+4221:                 <!-- Header pill -->
+4222:                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+4223:                     <div style="display:flex; align-items:center; gap:10px;">
+4224:                         <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🎟️ï¸</div>
+4225:                         <div style="text-align:left;">
+42
+<truncated 16054 bytes>
+el.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span> Enviando imagen...';
+4457:         container.appendChild(el);
+4458:         container.scrollTop = container.scrollHeight;
+4459:     }
+4460: 
+4461:     try {
+4462:         const fetchUrl = `/api/tickets/${ticketId}/messages/image`;
+4463:         const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+4464:             method: 'POST',
+4465:             body: formData
+4466:         }) : clientFetch(fetchUrl, {
+4467:             method: 'POST',
+4468:             body: formData
+4469:         }));
+4470: 
+4471:         if (!res.ok) {
+4472:             const data = await res.json();
+4473:             throw new Error(data.error || 'Error al subir imagen');
+4474:         }
+4475: 
+4476:         fileInput.value = '';
+4477:         await fetchAndRenderChatMessages(ticketId, role);
+4478:     } catch (err) {
+4479:         console.error('Error al enviar imagen:', err);
+4480:         showToast(err.message || 'Error al enviar imagen', 'error');
+4481:     } finally {
+4482:         const el = document.getElementById(uploadingId);
+4483:         if (el) el.remove();
+4484:         if (sendBtn) sendBtn.disabled = false;
+4485:         if (msgInput) msgInput.disabled = false;
+4486:     }
+4487: };
+4488: 
+4489: window.openChatImageLightbox = function(src) {
+4490:     Swal.fire({
+4491:         html: `<img src="${src}" style="max-width:100%;max-height:80vh;border-radius:10px;object-fit:contain;" />`,
+4492:         background: 'rgba(0,0,0,0.92)',
+4493:         showConfirmButton: false,
+4494:         showCloseButton: true,
+4495:         width: 'auto',
+4496:         padding: '1rem',
+4497:     });
+4498: };
+4499: 
+4500: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

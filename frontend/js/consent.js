@@ -4,10 +4,19 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Solo mostrar si NO ha aceptado previamente
-    if (!localStorage.getItem('as_sierra_consent')) {
-        setTimeout(showConsentBanner, 2000);
+    // El banner de privacidad solo debe aparecer en la página de inicio principal
+    const path = window.location.pathname;
+    const isLandingPage = path === '/' || path === '/index.html' || path.endsWith('/index.html') || path === '';
+    
+    if (!isLandingPage) {
+        return; // Detener si estamos en paneles de administración u otras páginas
     }
+
+    // Para pruebas: Eliminamos el valor guardado para asegurar que salga en CADA refresco.
+    localStorage.removeItem('as_sierra_consent');
+    
+    // Mostramos el banner más rápido (en 800ms) para que sea evidente en las pruebas.
+    setTimeout(showConsentBanner, 800);
 });
 
 function showConsentBanner() {

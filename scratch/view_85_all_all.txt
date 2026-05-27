@@ -1,0 +1,69 @@
+Created At: 2026-05-26T04:46:02Z
+Completed At: 2026-05-26T04:46:02Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4177
+Total Bytes: 184482
+Showing lines 620 to 680
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+620:         const deleteUserBtn = e.target.closest('.delete-user-btn');
+621:         if (deleteUserBtn) {
+622:             deleteUser(Number(deleteUserBtn.getAttribute('data-id')));
+623:         }
+624: 
+625:         // Dropdowns Global Handler
+626:         const toggleBtnDrop = e.target.closest('.dropdown-toggle');
+627:         if (toggleBtnDrop) {
+628:             const dropdown = toggleBtnDrop.closest('.dropdown');
+629:             const isActive = dropdown.classList.contains('active');
+630:             document.querySelectorAll('.dropdown.active').forEach(el => el.classList.remove('active'));
+631:             if (!isActive) dropdown.classList.add('active');
+632:         } else {
+633:             if (!e.target.closest('.dropdown-menu')) {
+634:                 document.querySelectorAll('.dropdown.active').forEach(el => el.classList.remove('active'));
+635:             }
+636:         }
+637: 
+638:         // Toggle Negocio
+639:         const toggleBizBtn = e.target.closest('.toggle-biz-btn');
+640:         if (toggleBizBtn) {
+641:             const id = toggleBizBtn.getAttribute('data-id');
+642:             const newStatus = toggleBizBtn.getAttribute('data-status');
+643:             try {
+644:                 const res = await adminFetch('/api/businesses/toggle', {
+645:                     method: 'POST',
+646:                     headers: { 'Content-Type': 'application/json' },
+647:                     body: JSON.stringify({ id, status: newStatus })
+648:                 });
+649:                 if (res.ok) {
+650:                     showToast(`Negocio ${newStatus === 'active' ? 'activado' : 'desactivado'}`);
+651:                     loadData();
+652:                 }
+653:             } catch (err) { showToast('Error al cambiar estado', 'error'); }
+654:             const dropdown = toggleBizBtn.closest('.dropdown');
+655:             if (dropdown) dropdown.classList.remove('active');
+656:         }
+657: 
+658:         // Edit Negocio
+659:         const editBtn = e.target.closest('.edit-biz-btn');
+660:         if (editBtn) {
+661:             const id = editBtn.dataset.id;
+662:             openBusinessModal(id);
+663:             const dropdown = editBtn.closest('.dropdown');
+664:             if (dropdown) dropdown.classList.remove('active');
+665:         }
+666: 
+667:         // Delete Negocio Trigger
+668:         const deleteBtn = e.target.closest('.delete-biz-btn');
+669:         if (deleteBtn) {
+670:             const id = deleteBtn.dataset.id;
+671:             document.getElementById('delete-biz-id').value = id;
+672:             document.getElementById('delete-modal').classList.remove('hidden');
+673:             const dropdown = deleteBtn.closest('.dropdown');
+674:             if (dropdown) dropdown.classList.remove('active');
+675:         }
+676: 
+677:         // Credenciales Negocio
+678:         const credBtn = e.target.closest('.cred-biz-btn');
+679:         if (credBtn) {
+680:             const id = credBtn.dataset.id;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

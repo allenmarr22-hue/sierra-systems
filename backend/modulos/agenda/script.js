@@ -1,4 +1,75 @@
+// ====== AISLAMIENTO MULTI-SEDE (TENANT ISOLATION MONKEY PATCH) ======
+(function() {
+    if (Storage.prototype.getItem.__isPatched) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const instanceId = urlParams.get('instanceId');
+    if (instanceId) {
+        const suffix = `_${instanceId}`;
+        const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+        const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
+        const originalGetItem = Storage.prototype.getItem;
+        const originalSetItem = Storage.prototype.setItem;
+        const originalRemoveItem = Storage.prototype.removeItem;
+        Storage.prototype.getItem = function(key) {
+            return shouldAiso(key) ? originalGetItem.call(this, key + suffix) : originalGetItem.call(this, key);
+        };
+        Storage.prototype.setItem = function(key, value) {
+            return shouldAiso(key) ? originalSetItem.call(this, key + suffix, value) : originalSetItem.call(this, key, value);
+        };
+        Storage.prototype.removeItem = function(key) {
+            return shouldAiso(key) ? originalRemoveItem.call(this, key + suffix) : originalRemoveItem.call(this, key);
+        };
+        Storage.prototype.getItem.__isPatched = true;
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
+    window.applyClientTheme = function(themeName) {
+        const root = document.documentElement;
+        const themes = {
+            rose: { accent: '#A05D6B', bg: '#FFF4F7', rgb: '160, 93, 107', hover: '#B87E8C', dark: '#804350' },
+            blue: { accent: '#2D4F6C', bg: '#F0F4F8', rgb: '45, 79, 108', hover: '#3D6487', dark: '#1B3347' },
+            green: { accent: '#2E5A44', bg: '#F0F6F3', rgb: '46, 90, 68', hover: '#3E775A', dark: '#1D3D2D' },
+            gold: { accent: '#6B4F3E', bg: '#F9F6F2', rgb: '107, 79, 62', hover: '#856450', dark: '#4C372A' },
+            lavender: { accent: '#8E7CC3', bg: '#F5F3FA', rgb: '142, 124, 195', hover: '#A493D6', dark: '#6A58A1' },
+            orange: { accent: '#E67E22', bg: '#FFF8F2', rgb: '230, 126, 34', hover: '#F39C12', dark: '#D35400' },
+            cyan: { accent: '#3498DB', bg: '#F2F8FC', rgb: '52, 152, 219', hover: '#5DADE2', dark: '#1A5276' },
+            purple: { accent: '#7D3C98', bg: '#F8F2FC', rgb: '125, 60, 152', hover: '#9B59B6', dark: '#4A235A' },
+            maroon: { accent: '#922B21', bg: '#FDEDEC', rgb: '146, 43, 33', hover: '#C0392B', dark: '#78281F' },
+            slate: { accent: '#34495E', bg: '#EAECEE', rgb: '52, 73, 94', hover: '#5D6D7E', dark: '#1A252F' },
+            
+            emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133', hover: '#1ABC9C', dark: '#0E6251' },
+            mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96', hover: '#2ECC71', dark: '#196F3D' },
+            teal: { accent: '#117A65', bg: '#E8F6F3', rgb: '17, 122, 101', hover: '#148F77', dark: '#0B5345' },
+            olive: { accent: '#7D6608', bg: '#FEFDE8', rgb: '125, 102, 8', hover: '#9A7D0A', dark: '#4F4105' },
+            mustard: { accent: '#B7950B', bg: '#FEFDF0', rgb: '183, 149, 11', hover: '#D4AC0D', dark: '#7D6608' },
+            terracotta: { accent: '#A04000', bg: '#FDF5E6', rgb: '160, 64, 0', hover: '#BA4A00', dark: '#6E2C00' },
+            coral: { accent: '#D35400', bg: '#FDF2E9', rgb: '211, 84, 0', hover: '#E67E22', dark: '#873600' },
+            sand: { accent: '#A08A75', bg: '#F9F6F0', rgb: '160, 138, 117', hover: '#BCA893', dark: '#735F4C' },
+            coffee: { accent: '#5D4037', bg: '#F6F2F0', rgb: '93, 64, 55', hover: '#7D564C', dark: '#3E2723' },
+            plum: { accent: '#6C3483', bg: '#F5EEF8', rgb: '108, 52, 131', hover: '#8E44AD', dark: '#4A235A' },
+            orchid: { accent: '#8E44AD', bg: '#F4ECF7', rgb: '142, 68, 173', hover: '#9B59B6', dark: '#5B2C6F' },
+            magenta: { accent: '#C0392B', bg: '#FDEDEC', rgb: '192, 57, 43', hover: '#D98880', dark: '#641E16' },
+            rosewood: { accent: '#78281F', bg: '#FAF2F2', rgb: '120, 40, 31', hover: '#922B21', dark: '#4A1510' },
+            navy: { accent: '#1B4F72', bg: '#EAF2F8', rgb: '27, 79, 114', hover: '#2874A6', dark: '#0E2F44' },
+            peacock: { accent: '#21618C', bg: '#EBF5FB', rgb: '33, 97, 140', hover: '#2E86C1', dark: '#154360' },
+            indigo: { accent: '#2874A6', bg: '#EAF2F8', rgb: '40, 116, 166', hover: '#5499C7', dark: '#1B4F72' },
+            charcoal: { accent: '#455A64', bg: '#ECEFF1', rgb: '69, 90, 100', hover: '#607D8B', dark: '#263238' },
+            sakura: { accent: '#E8A7B5', bg: '#FFF3F5', rgb: '232, 167, 181', hover: '#F0C0C8', dark: '#B86675' },
+            wine: { accent: '#780820', bg: '#FCF2F4', rgb: '120, 8, 32', hover: '#961D36', dark: '#480210' },
+            amber: { accent: '#D68910', bg: '#FEF9E7', rgb: '214, 137, 16', hover: '#F5B041', dark: '#7E5109' }
+        };
+        const theme = themes[themeName] || themes.rose;
+        root.style.setProperty('--color-accent', theme.accent);
+        root.style.setProperty('--color-accent-hover', theme.hover);
+        root.style.setProperty('--color-dark-pink', theme.dark);
+        root.style.setProperty('--color-bg', theme.bg);
+        root.style.setProperty('--accent-rgb', theme.rgb);
+    };
+
+    const cachedTheme = localStorage.getItem('margarita_client_theme') || 'rose';
+    window.applyClientTheme(cachedTheme);
+
     // SOPORTE DE HORA 12H (AM/PM)
     window.formatTime12h = function(timeStr) {
         if (!timeStr || timeStr === 'Hora N/A') return "Hora N/A";
@@ -115,6 +186,133 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.dynamic-brand-text').forEach(el => { el.innerText = name; });
         const yearSpan = document.getElementById('current-year-footer');
         if(yearSpan) yearSpan.innerText = new Date().getFullYear();
+
+        // 1. Actualizar título de la pestaña
+        document.title = `${name} | Agenda de Citas`;
+
+        // 2. Aplicar Logo de la Marca en Navbar y Footer y como favicon
+        const logoUrl = localStorage.getItem('margarita_logo_url');
+        
+        if (logoUrl) {
+            let link = document.getElementById('dynamic-favicon');
+            if (!link) {
+                link = document.createElement('link');
+                link.id = 'dynamic-favicon';
+                link.rel = 'icon';
+                document.getElementsByTagName('head')[0].appendChild(link);
+            }
+            if (logoUrl.startsWith('data:image/svg') || logoUrl.endsWith('.svg')) {
+                link.type = 'image/svg+xml';
+            } else {
+                link.type = 'image/png';
+            }
+            link.href = logoUrl;
+        }
+        
+        // Navbar Logo Anchor
+        const logoAnchor = document.getElementById('logo-anchor');
+        if (logoAnchor) {
+            const imgEl = logoAnchor.querySelector('img');
+            const iconEl = logoAnchor.querySelector('#logo-icon');
+            const textEl = logoAnchor.querySelector('#logo-text');
+            
+            if (textEl && textEl.innerText !== name) {
+                textEl.innerText = name;
+            }
+            
+            if (logoUrl) {
+                if (imgEl) {
+                    if (imgEl.getAttribute('src') !== logoUrl) {
+                        imgEl.src = logoUrl;
+                    }
+                } else {
+                    const img = document.createElement('img');
+                    img.src = logoUrl;
+                    img.style.cssText = "height: 38px; max-width: 120px; object-fit: contain; border-radius: 6px; margin-right: 10px; vertical-align: middle; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;";
+                    if (iconEl) {
+                        iconEl.parentNode.replaceChild(img, iconEl);
+                    } else if (textEl) {
+                        logoAnchor.insertBefore(img, textEl);
+                    } else {
+                        logoAnchor.innerHTML = `<img src="${logoUrl}" style="height: 38px; max-width: 120px; object-fit: contain; border-radius: 6px; margin-right: 10px; vertical-align: middle; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;"> <span class="dynamic-brand-text" id="logo-text">${name}</span><span id="logo-dot">.</span>`;
+                    }
+                }
+            } else {
+                if (imgEl) {
+                    const icon = document.createElement('i');
+                    icon.className = "fas fa-crown";
+                    icon.id = "logo-icon";
+                    icon.style.cssText = "color: var(--color-accent); margin-right: 8px;";
+                    imgEl.parentNode.replaceChild(icon, imgEl);
+                } else if (!iconEl && textEl) {
+                    const icon = document.createElement('i');
+                    icon.className = "fas fa-crown";
+                    icon.id = "logo-icon";
+                    icon.style.cssText = "color: var(--color-accent); margin-right: 8px;";
+                    logoAnchor.insertBefore(icon, textEl);
+                } else if (!iconEl && !imgEl) {
+                    logoAnchor.innerHTML = `<i class="fas fa-crown" id="logo-icon" style="color: var(--color-accent); margin-right: 8px;"></i><span class="dynamic-brand-text" id="logo-text">${name}</span><span id="logo-dot">.</span>`;
+                }
+            }
+        }
+
+        // Footer Logo Container
+        const footerLogoContainer = document.getElementById('footer-logo-container');
+        if (footerLogoContainer) {
+            const imgEl = footerLogoContainer.querySelector('img');
+            const iconEl = footerLogoContainer.querySelector('#footer-logo-icon');
+            const textEl = footerLogoContainer.querySelector('#footer-logo-text');
+            
+            if (textEl && textEl.innerText !== name) {
+                textEl.innerText = name;
+            }
+            
+            if (logoUrl) {
+                if (imgEl) {
+                    if (imgEl.getAttribute('src') !== logoUrl) {
+                        imgEl.src = logoUrl;
+                    }
+                } else {
+                    const img = document.createElement('img');
+                    img.src = logoUrl;
+                    img.style.cssText = "height: 45px; max-width: 140px; object-fit: contain; border-radius: 6px; margin-right: 10px; vertical-align: middle; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;";
+                    if (iconEl) {
+                        iconEl.parentNode.replaceChild(img, iconEl);
+                    } else if (textEl) {
+                        footerLogoContainer.insertBefore(img, textEl);
+                    } else {
+                        footerLogoContainer.innerHTML = `<img src="${logoUrl}" style="height: 45px; max-width: 140px; object-fit: contain; border-radius: 6px; margin-right: 10px; vertical-align: middle; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;"> <span class="dynamic-brand-text" id="footer-logo-text">${name}</span><span id="footer-logo-dot">.</span>`;
+                    }
+                }
+            } else {
+                if (imgEl) {
+                    const icon = document.createElement('i');
+                    icon.className = "fas fa-crown";
+                    icon.id = "footer-logo-icon";
+                    icon.style.cssText = "color: var(--color-accent); margin-right: 8px;";
+                    imgEl.parentNode.replaceChild(icon, imgEl);
+                } else if (!iconEl && textEl) {
+                    const icon = document.createElement('i');
+                    icon.className = "fas fa-crown";
+                    icon.id = "footer-logo-icon";
+                    icon.style.cssText = "color: var(--color-accent); margin-right: 8px;";
+                    footerLogoContainer.insertBefore(icon, textEl);
+                } else if (!iconEl && !imgEl) {
+                    footerLogoContainer.innerHTML = `<i class="fas fa-crown" id="footer-logo-icon" style="color: var(--color-accent); margin-right: 8px;"></i><span class="dynamic-brand-text" id="footer-logo-text">${name}</span><span id="footer-logo-dot">.</span>`;
+                }
+            }
+        }
+
+        // 2. Aplicar Foto de Portada / Hero Background
+        const heroUrl = localStorage.getItem('margarita_hero_url');
+        const heroElement = document.querySelector('.hero');
+        if (heroElement) {
+            if (heroUrl) {
+                heroElement.style.backgroundImage = `linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(var(--accent-rgb),0.3) 100%), url('${heroUrl}')`;
+            } else {
+                heroElement.style.backgroundImage = `linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(var(--accent-rgb),0.3) 100%), url('hero-bg.png')`;
+            }
+        }
     };
     window.applyPublicWhatsappLinks = function() {
         const savedWa = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
@@ -250,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     (JSON.stringify(cloudModelGal) !== localModelGalBefore);
 
                 if (dataChanged) {
-                    console.log("ðŸ”„ Cambios detectados en la nube. Re-renderizando instantáneamente...");
+                    console.log("🔄 Cambios detectados en la nube. Re-renderizando instantáneamente...");
                     if (window.renderDynamicContent) window.renderDynamicContent();
                     if (window.renderPublicGallery) window.renderPublicGallery();
                     // Al haber cambios reales en los datos, forzamos re-chequeo de promos
@@ -260,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log("✨ Los datos locales están al día. Cero pestañeo.");
                     // Chequeo normal (respetando la sesión) si los datos no cambiaron
                     if (window._sync_listeners_attached) {
-                        console.log("âš ï¸ Saltando reconexión: Listeners ya activos.");
+                        console.log("⚠️ï¸ Saltando reconexión: Listeners ya activos.");
                         return;
                     }
                     
@@ -270,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.listenToCollection('especialistas_v2', (data) => {
                             const localStr = localStorage.getItem('margarita_specialists') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
-                                console.log("ðŸ‘¥ [Sync Live] Especialistas actualizados...");
+                                console.log("👥 [Sync Live] Especialistas actualizados...");
                                 localStorage.setItem('margarita_specialists', JSON.stringify(data));
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
@@ -279,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.listenToCollection('servicios_v2', (data) => {
                             const localStr = localStorage.getItem('margarita_services') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
-                                console.log("ðŸ’‡ [Sync Live] Servicios actualizados...");
+                                console.log("💇 [Sync Live] Servicios actualizados...");
                                 localStorage.setItem('margarita_services', JSON.stringify(data));
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
@@ -288,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.listenToCollection('categorias_v2', (data) => {
                             const localStr = localStorage.getItem('margarita_categories') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
-                                console.log("ðŸ“‚ [Sync Live] Categorías actualizadas...");
+                                console.log("📂 [Sync Live] Categorías actualizadas...");
                                 localStorage.setItem('margarita_categories', JSON.stringify(data));
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
@@ -297,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.listenToCollection('galeria_v2', (data) => {
                             const localStr = localStorage.getItem('margarita_gallery') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
-                                console.log("ðŸ“¸ [Sync Live] Galería actualizada...");
+                                console.log("📸 [Sync Live] Galería actualizada...");
                                 localStorage.setItem('margarita_gallery', JSON.stringify(data));
                                 if (window.renderPublicGallery) window.renderPublicGallery();
                             }
@@ -341,6 +539,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (data.site_name) localStorage.setItem('margarita_site_name', data.site_name);
                             if (data.whatsapp) localStorage.setItem('margarita_whatsapp_number', data.whatsapp);
                             if (data.social) localStorage.setItem('margarita_social_links', JSON.stringify(data.social));
+                            if (data.theme) {
+                                localStorage.setItem('margarita_client_theme', data.theme);
+                                window.applyClientTheme(data.theme);
+                            }
+                            if (data.logo_url !== undefined) {
+                                if (data.logo_url) localStorage.setItem('margarita_logo_url', data.logo_url);
+                                else localStorage.removeItem('margarita_logo_url');
+                            }
+                            if (data.hero_url !== undefined) {
+                                if (data.hero_url) localStorage.setItem('margarita_hero_url', data.hero_url);
+                                else localStorage.removeItem('margarita_hero_url');
+                            }
                             
                             applyPublicDynamicBranding();
                             applyPublicWhatsappLinks();
@@ -369,6 +579,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.log("🔄 Service Galleries actualizadas en vivo");
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
+                        }
+                    });
+
+                    // Listener para configuración de Burbuja Pro
+                    window.listenToDoc('config_v2', 'promo_bubble_cfg', (data) => {
+                        if (data) {
+                            try {
+                                const current = localStorage.getItem('margarita_promo_bubble_cfg');
+                                if (JSON.stringify(data) !== current) {
+                                    localStorage.setItem('margarita_promo_bubble_cfg', JSON.stringify(data));
+                                    if (typeof updatePromoBubbleUI === 'function') updatePromoBubbleUI();
+                                }
+                            } catch(e) {}
                         }
                     });
                 }
@@ -651,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const sectionId = `servicios-${cat.id}`;
             const catServices = services.filter(s => s.cat === (cat.id || cat.name.toLowerCase()));
             
-            // ðŸŽ² Dynamic Category Image (Random from uploaded services)
+            // 🎲 Dynamic Category Image (Random from uploaded services)
             let catImg = "https://images.unsplash.com/photo-1522338140262-f46f5913618a?auto=format&fit=crop&q=80&w=300"; // Fallback hair
             if(cat.id === 'unas') catImg = "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80&w=300";
             if(cat.id === 'cejas') catImg = "https://images.unsplash.com/photo-1587900438138-660c238b1eb7?auto=format&fit=crop&q=80&w=300";
@@ -941,7 +1164,7 @@ document.addEventListener('keydown', (e) => {
         document.querySelectorAll('.prev-btn-specialty, .next-btn-specialty').forEach(el => {
             el.style.opacity = '1';
         });
-        console.log('ðŸ”„ All carousels ready with delegation');
+        console.log('🔄 All carousels ready with delegation');
     }
 
 window.updateCartBadge = function() {
@@ -1056,6 +1279,7 @@ window.addToCart = function(serviceName, servicePrice, serviceImg, category, bas
         
         window.renderCart();
         window.updateCartBadge();
+        showToast("¡Servicio actualizado en tu paquete!", "success");
         return;
     }
 
@@ -1082,13 +1306,7 @@ window.addToCart = function(serviceName, servicePrice, serviceImg, category, bas
         setTimeout(() => { floatBtn.style.transform = 'scale(1)'; }, 300);
     }
 
-    // Open the cart automatically so the user knows it was added!
-    setTimeout(() => {
-        const cartDrawer = document.getElementById('cart-drawer');
-        if (cartDrawer && cartDrawer.style.display !== 'block') {
-            window.toggleCart();
-        }
-    }, 150);
+    showToast("¡Servicio añadido al paquete con éxito!", "success");
 }
 
 window.clearAllServicesTime = function() {
@@ -1533,8 +1751,9 @@ window.sendCartToWhatsApp = async function() {
 
     // Asignar los especialistas definitivos y calcular duraciones reales
     const dbServices = JSON.parse(localStorage.getItem('margarita_services') || '[]');
+    const businessName = localStorage.getItem('margarita_site_name') || "Margarita Studio";
     cart.forEach(item => {
-        item._finalSpecialist = item.specialist === "Sin preferencia" ? "Margarita Studio" : item.specialist;
+        item._finalSpecialist = item.specialist === "Sin preferencia" ? businessName : item.specialist;
         
         // Calcular duración real buscando en la base de datos de servicios
         let d = 60;
@@ -1857,9 +2076,10 @@ window.sendCartToWhatsApp = async function() {
 
     // Build WhatsApp message
     const savedWa = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
+    const businessName = localStorage.getItem('margarita_site_name') || "Margarita Studio";
     let cleanNum = savedWa.replace(/\D/g, '');
     const waNumber = cleanNum.length === 10 ? "57" + cleanNum : cleanNum;
-    let waText = encodeURIComponent(`Hola Margarita Studio!\n\n*Mi Nombre:* ${name}\n*Celular:* ${phone}\n\nQuiero agendar los siguientes servicios:\n`);
+    let waText = encodeURIComponent(`Hola ${businessName}!\n\n*Mi Nombre:* ${name}\n*Celular:* ${phone}\n\nQuiero agendar los siguientes servicios:\n`);
     
     // --- NUEVO REDONDEO DE PRECIO (REUSANDO VALORES CALCULADOS) ---
     // (promos, categoriesList, normalize ya declarados arriba)
@@ -2030,6 +2250,35 @@ window.showConfirm = function(message, onConfirm) {
 
 // Promotions & Announcements Logic
 let promoInterval = null;
+
+// --- Burbuja Pro: aplica la cajita SVG y animación configurada en el admin ---
+function updatePromoBubbleUI() {
+    const bubble = document.querySelector('.promo-gift-bubble');
+    if (!bubble) return;
+
+    let cfg = {};
+    try { cfg = JSON.parse(localStorage.getItem('margarita_promo_bubble_cfg') || '{}'); } catch(e) {}
+
+    const animId   = cfg.anim    || 'anim-3d-spinner'; // default: 3D Spinner
+    const svgMarkup = cfg.iconSvg || '';
+
+    // Aplicar SVG si existe, o mantener el ícono font-awesome original
+    if (svgMarkup) {
+        bubble.innerHTML = svgMarkup;
+        // Ajustar tamaño del SVG para que encaje
+        const svgEl = bubble.querySelector('svg');
+        if (svgEl) { svgEl.style.width = '54px'; svgEl.style.height = '54px'; }
+    }
+
+    // Quitar todas las clases de animación previas y aplicar la elegida
+    const ALL_ANIMS = [
+        'anim-3d-spinner','anim-atomic-heart','anim-magnetic','anim-elastic',
+        'anim-orbital','anim-glitch','anim-solar','anim-cosmic',
+        'anim-radar','anim-flip-glide','anim-vortex','anim-cosmic-bounce'
+    ];
+    bubble.classList.remove(...ALL_ANIMS);
+    bubble.classList.add(animId);
+}
 
 function checkPromotions(force = false, isUserClick = false) {
     // Guard: Evitar doble apertura si ya está visible o si ya se mostró (y no es forzado)
@@ -2753,6 +3002,7 @@ function resetZoomButton() {
 }
 
 // Ejecutar chequeo de promos al final, con todo ya definido
+if (typeof updatePromoBubbleUI === 'function') updatePromoBubbleUI();
 if (typeof checkPromotions === 'function') checkPromotions(false);
 
 // --- Global ESCAPE Handler for UI ---
@@ -2903,7 +3153,8 @@ window.selectSlot = function(time, date) {
     const timeToMins = (t) => { if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
     const minsToTime = (m) => { const h=Math.floor(m/60); const mm=m%60; return `${h.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}`; };
 
-    let chosenSpec = "Margarita Studio";
+    const businessName = localStorage.getItem('margarita_site_name') || "Margarita Studio";
+    let chosenSpec = businessName;
     
     const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
     // Buscamos un profesional que pueda hacer todo el bloque
@@ -4024,6 +4275,10 @@ window.addEventListener('storage', (e) => {
         console.log("♻️ [RealTime] Cambio detectado en base de datos. Actualizando...");
         if (window.renderDynamicContent) window.renderDynamicContent();
         if (window.populateManualCategories) window.populateManualCategories();
+    }
+    // Actualizar burbuja flotante cuando el admin cambia la configuración Pro
+    if (e.key === 'margarita_promo_bubble_cfg') {
+        if (typeof updatePromoBubbleUI === 'function') updatePromoBubbleUI();
     }
 });
 

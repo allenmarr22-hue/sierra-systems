@@ -2,10 +2,25 @@
 <html lang="es" data-theme="light">
 <head>
     <script>
-        // Prevenir parpadeo de tema (FOUC)
+        // Prevenir parpadeo de tema (FOUC) e inicializar favicon dinámico — sin flash
         (function() {
+            var DEFAULT_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2222%22%20fill%3D%22%230f172a%22%2F%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22as-grad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23818cf8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234f46e5%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20font-size%3D%2252%22%20fill%3D%22url(%23as-grad)%22%20font-family%3D%22'Outfit'%2C'Inter'%2Csans-serif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22900%22%3EAS%3C%2Ftext%3E%3C%2Fsvg%3E";
             var theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', theme);
+            try {
+                var logoUrl = localStorage.getItem('as_systems_logo_url');
+                var link = document.createElement('link');
+                link.id = 'dynamic-favicon';
+                link.rel = 'icon';
+                if (logoUrl) {
+                    link.type = logoUrl.startsWith('data:image/svg') || logoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                    link.href = logoUrl;
+                } else {
+                    link.type = 'image/svg+xml';
+                    link.href = DEFAULT_SVG;
+                }
+                document.getElementsByTagName('head')[0].appendChild(link);
+            } catch (e) {}
         })();
     </script>
     <meta charset="UTF-8">
@@ -18,6 +33,8 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -104,6 +121,10 @@
                 <i data-lucide="grid-2x2"></i>
                 <span>Módulos</span>
             </button>
+            <button class="nav-btn" data-tab="tab-promotions" data-roles="Super Admin,Administrador">
+                <i data-lucide="tag"></i>
+                <span>Promociones</span>
+            </button>
 
             <div class="nav-section-label" id="nav-label-gestion">Gestión</div>
             <button class="nav-btn" data-tab="tab-users" data-roles="Super Admin">
@@ -113,6 +134,16 @@
             <button class="nav-btn" data-tab="tab-billing" data-roles="Super Admin">
                 <i data-lucide="credit-card"></i>
                 <span>Facturación</span>
+            </button>
+            <button class="nav-btn" data-tab="tab-payment-history" data-roles="Super Admin">
+                <i data-lucide="receipt"></i>
+                <span>Historial de Pagos</span>
+            </button>
+
+            <button class="nav-btn" data-tab="tab-tickets" data-roles="Super Admin,Administrador,Soporte">
+                <i data-lucide="ticket"></i>
+                <span>Soporte</span>
+                <span class="nav-badge hidden" id="badge-tickets">0</span>
             </button>
 
             <div class="nav-section-label">Sistema</div>
@@ -152,6 +183,27 @@
                 </div>
             </div>
             <div class="topbar-right">
+                <!-- Selector de Acentos Premium -->
+                <div class="accent-menu" id="accent-menu-wrap">
+                    <button class="topbar-btn accent-trigger" id="accent-trigger-btn" title="Personalizar color de marca">
+                        <i data-lucide="palette"></i>
+                    </button>
+                    <div class="accent-dropdown" id="accent-dropdown-menu">
+                        <button class="accent-option active" data-accent-val="indigo">
+                            <span class="accent-dot dot-indigo"></span> Indigo (Default)
+                        </button>
+                        <button class="accent-option" data-accent-val="cyan">
+                            <span class="accent-dot dot-cyan"></span> Cyan (Midnight)
+                        </button>
+                        <button class="accent-option" data-accent-val="emerald">
+                            <span class="accent-dot dot-emerald"></span> Emerald (Prestige)
+                        </button>
+                        <button class="accent-option" data-accent-val="orange">
+                            <span class="accent-dot dot-orange"></span> Sunset (Flare)
+                        </button>
+                    </div>
+                </div>
+
                 <button class="topbar-btn" id="theme-toggle-btn" title="Cambiar tema">
                     <i data-lucide="sun"></i>
                 </button>
@@ -183,6 +235,9 @@
                     <h2 class="page-title">Dashboard</h2>
                     <p class="page-subtitle" id="dash-greeting">Bienvenido al panel de control</p>
                 </div>
+                <button class="btn-primary" onclick="exportExecutiveReportPDF()" style="background:#10b981; border:none; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="file-text"></i> Exportar Reporte PDF
+                </button>
             </div>
 
             <!-- KPI Cards -->
@@ -240,33 +295,84 @@
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            <!-- Businesses List Preview -->
-            <div class="section-card">
-                <div class="section-card-header">
-                    <h3>Negocios Registrados</h3>
-                    <button class="btn-ghost" data-tab-link="tab-businesses">Ver todos <i data-lucide="arrow-right"></i></button>
+        <!-- CHARTS SECTION ROW 2 -->
+        <div class="charts-grid" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="biz-card" style="padding: 1.5rem;">
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
+                    <i data-lucide="bar-chart-3" style="color: #10b981;"></i> Ganancias Mensuales
+                </h3>
+                <div style="height: 300px; position: relative; width: 100%;">
+                    <canvas id="revenueChart"></canvas>
                 </div>
-                <div id="dash-businesses-list">
-                    <div class="empty-state">
-                        <div class="empty-icon"><i data-lucide="building-2"></i></div>
-                        <h4>Aún no hay negocios</h4>
-                        <p>Comienza agregando tu primer negocio cliente al sistema.</p>
-                        <button class="btn-primary" id="btn-add-first-business">
-                            <i data-lucide="plus"></i> Agregar Primer Negocio
-                        </button>
+            </div>
+            <div class="biz-card" style="padding: 1.5rem;">
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
+                    <i data-lucide="map-pin" style="color: #3b82f6;"></i> Negocios por Ciudad
+                </h3>
+                <div style="height: 300px; position: relative; width: 100%;">
+                    <canvas id="ticketsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIMULATOR AND SERVER HEALTH GRID (PRO SaaS features) -->
+        <div class="charts-grid" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <!-- MRR Growth Simulator -->
+            <div class="biz-card glass-card" style="padding: 1.75rem;">
+                <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
+                    <i data-lucide="calculator" style="color: var(--primary);"></i> Simulador de Proyecciones MRR
+                </h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+                    Ajusta el porcentaje de crecimiento mensual para proyectar la evolución de tus Ingresos Mensuales Recurrentes (MRR) a 12 meses.
+                </p>
+                <div class="simulator-slider-wrap">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700;">
+                        <span>Crecimiento Mensual:</span>
+                        <span id="simulator-percentage-val" style="color: var(--primary); font-variant-numeric: tabular-nums;">+15% mensual</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="15" class="simulator-slider" id="mrr-growth-slider">
+                </div>
+                <div style="display: flex; gap: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">MRR Actual</div>
+                        <div id="sim-mrr-current" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">$0</div>
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Impacto Proyectado (12m)</div>
+                        <div id="sim-mrr-projected" style="font-size: 1.4rem; font-weight: 800; color: #10b981; font-variant-numeric: tabular-nums;">$0</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Modules Quick View -->
-            <div class="section-card">
-                <div class="section-card-header">
-                    <h3>Módulos del Sistema</h3>
-                    <button class="btn-ghost" data-tab-link="tab-modules">Administrar <i data-lucide="arrow-right"></i></button>
+            <!-- Server & DB Health Monitor -->
+            <div class="biz-card glass-card" style="padding: 1.75rem;">
+                <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
+                    <i data-lucide="activity" style="color: #10b981;"></i> Salud del Servidor & API
+                </h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+                    Monitoreo en tiempo real de la base de datos principal, latencia de solicitudes API y salud de servicios del ecosistema SaaS.
+                </p>
+                <div class="console-panel">
+                    <div class="console-row">
+                        <span>Base de Datos MySQL:</span>
+                        <span class="console-green" id="server-db-status"><i data-lucide="circle-dot" style="width:12px; display:inline-block; vertical-align:middle; margin-right:3px;"></i> ONLINE</span>
+                    </div>
+                    <div class="console-row">
+                        <span>Latencia de API:</span>
+                        <span id="server-api-latency" style="color: #38bdf8; font-variant-numeric: tabular-nums;">24 ms</span>
+                    </div>
+                    <div class="console-row">
+                        <span>Uptime del Sistema:</span>
+                        <span class="console-green">99.98%</span>
+                    </div>
+                    <div class="console-row">
+                        <span>Servicio de Pagos (Wompi Mock):</span>
+                        <span class="console-green">OPERATIVO</span>
+                    </div>
                 </div>
-                <div class="modules-quick-grid" id="modules-quick-grid"></div>
             </div>
+        </div>
+
         </section>
 
         <!-- ===== TAB: NEGOCIOS ===== -->
@@ -311,11 +417,16 @@
                     <h2 class="page-title">Módulos</h2>
                     <p class="page-subtitle">Catálogo de aplicaciones de AS Sierra Systems</p>
                 </div>
-                <button class="btn-primary" id="btn-new-module">
-                    <i data-lucide="plus"></i> Nuevo Módulo
+            </div>
+            <div class="carousel-container-outer" style="margin-top: 1.5rem;">
+                <button class="carousel-nav-btn prev-btn hidden" onclick="scrollCarousel(this, -1)">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <div id="modules-grid" class="modules-grid carousel-scroll-container"></div>
+                <button class="carousel-nav-btn next-btn" onclick="scrollCarousel(this, 1)">
+                    <i data-lucide="chevron-right"></i>
                 </button>
             </div>
-            <div id="modules-grid" class="modules-grid"></div>
         </section>
 
         <!-- ===== TAB: USUARIOS ===== -->
@@ -357,12 +468,8 @@
                     <p class="page-subtitle">Suscripciones y pagos de clientes</p>
                 </div>
                 <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
-                    <span id="billing-mode-badge" style="font-size:0.75rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.3rem 0.8rem; border-radius:20px; font-weight:700;">⚡ MODO SIMULADO</span>
-                    <button class="btn-ghost" id="btn-trigger-billing-dry">
-                        <i data-lucide="eye"></i> Ver cobros de hoy
-                    </button>
-                    <button class="btn-primary" id="btn-trigger-billing">
-                        <i data-lucide="zap"></i> Disparar Ciclo
+                    <button class="btn-primary" style="font-weight:600;" onclick="downloadGlobalBillingPDF()">
+                        <i data-lucide="file-text"></i> Reporte Global (PDF)
                     </button>
                 </div>
             </div>
@@ -401,9 +508,17 @@
             <div class="section-card" style="padding: 0; overflow: hidden; margin-top: 1.5rem;">
                 <div class="section-card-header" style="padding: 1.5rem 1.5rem 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <h3>Estado de Suscripciones por Negocio</h3>
-                    <div class="search-box" style="margin-bottom: 0;">
-                        <i data-lucide="search"></i>
-                        <input type="text" id="billing-search" placeholder="Buscar negocio..." oninput="renderBillingTab()">
+                    <div class="search-filter-bar" style="margin-bottom: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div class="search-wrap" style="max-width: 300px;">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="billing-search" placeholder="Buscar negocio..." oninput="renderBillingTab()">
+                        </div>
+                        <div class="filter-pills" id="billing-filters">
+                            <button class="pill active" onclick="setBillingFilter('all')">Todos</button>
+                            <button class="pill" onclick="setBillingFilter('active')">Activos</button>
+                            <button class="pill" onclick="setBillingFilter('pending')">Pendientes / Próximos</button>
+                            <button class="pill" onclick="setBillingFilter('suspended')">Suspendidos</button>
+                        </div>
                     </div>
                 </div>
                 <div style="overflow-x:auto;">
@@ -426,18 +541,275 @@
             </div>
         </section>
 
-        <!-- ===== TAB: REPORTES ===== -->
-        <section id="tab-reports" class="tab-content hidden">
-            <div class="page-header">
+        <!-- ===== TAB: HISTORIAL DE PAGOS GLOBAL ===== -->
+        <section id="tab-payment-history" class="tab-content hidden">
+            <div class="page-header" style="flex-wrap:wrap; gap:1rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 class="page-title">Reportes</h2>
-                    <p class="page-subtitle">Analítica y estadísticas del sistema</p>
+                    <h2 class="page-title">Historial de Pagos</h2>
+                    <p class="page-subtitle">Ledger Financiero — Registro histórico inalterable de todos los cobros, renovaciones y transacciones de los clientes.</p>
+                </div>
+                <div>
+                    <button class="btn-primary" style="font-weight:600; display:flex; align-items:center; gap:0.5rem;" onclick="downloadGlobalPaymentsPDF()">
+                        <i data-lucide="file-text"></i> Exportar Ledger (PDF)
+                    </button>
                 </div>
             </div>
-            <div class="coming-soon-card">
-                <i data-lucide="bar-chart-3"></i>
-                <h3>Módulo en Desarrollo</h3>
-                <p>Los reportes de analítica estarán disponibles pronto.</p>
+
+            <!-- ===== HISTORIAL DE PAGOS GLOBAL CARD ===== -->
+            <div class="section-card" style="padding: 0; overflow: hidden;">
+                <div class="section-card-header" style="padding: 1.5rem 1.5rem 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
+                            <i data-lucide="receipt" style="color: var(--primary);"></i> Transacciones Recientes
+                        </h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Consulta detalles de facturación de Wompi, aprobaciones e intentos declinados.</p>
+                    </div>
+                    <div class="search-filter-bar" style="margin-bottom: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div class="search-wrap" style="max-width: 300px;">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="global-payment-search" placeholder="Buscar por negocio o descripción..." oninput="renderGlobalPaymentsHistory()">
+                        </div>
+                        <div class="filter-pills" id="global-payment-filters">
+                            <button class="pill active" onclick="setGlobalPaymentFilter('all')">Todos</button>
+                            <button class="pill" onclick="setGlobalPaymentFilter('APPROVED')">Aprobados</button>
+                            <button class="pill" onclick="setGlobalPaymentFilter('DECLINED')">Fallidos / Declinados</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="global-payments-table">
+                        <thead>
+                            <tr>
+                                <th style="padding: 1rem 1.5rem;">Fecha</th>
+                                <th style="padding: 1rem 1.5rem;">Negocio</th>
+                                <th style="padding: 1rem 1.5rem;">Concepto</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Monto</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Estado</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Método</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Referencia / TXN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="global-payments-list">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                                        <i data-lucide="inbox" style="width: 32px; height: 32px; opacity: 0.5;"></i>
+                                        <div>Cargando historial de pagos...</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== TAB: PROMOCIONES (CAMPAÑAS DE DESCUENTOS) ===== -->
+        <section id="tab-promotions" class="tab-content hidden">
+            <div class="page-header" style="flex-wrap:wrap; gap:1rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 class="page-title">Campañas y Promociones</h2>
+                    <p class="page-subtitle">Configura ofertas y precios con descuento por tiempo limitado en tus módulos del sistema.</p>
+                </div>
+                <div>
+                    <button class="btn-primary" style="font-weight:600; display:flex; align-items:center; gap:0.5rem;" id="btn-new-promo">
+                        <i data-lucide="tag"></i> Nueva Promoción
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Grid -->
+            <div class="kpi-grid" style="margin-bottom: 2rem;">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-purple"><i data-lucide="percent"></i></div>
+                    <div class="kpi-info">
+                        <div class="kpi-value" id="promo-kpi-active">0</div>
+                        <div class="kpi-label">Campañas Activas</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-blue"><i data-lucide="calendar"></i></div>
+                    <div class="kpi-info">
+                        <div class="kpi-value" id="promo-kpi-scheduled">0</div>
+                        <div class="kpi-label">Campañas Programadas</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-orange"><i data-lucide="clock"></i></div>
+                    <div class="kpi-info">
+                        <div class="kpi-value" id="promo-kpi-expired">0</div>
+                        <div class="kpi-label">Campañas Expiradas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List Table Card -->
+            <div class="section-card" style="padding: 0; overflow: hidden;">
+                <div class="section-card-header" style="padding: 1.5rem 1.5rem 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
+                            <i data-lucide="tags" style="color: var(--primary);"></i> Catálogo de Campañas Activas
+                        </h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Administra y suspende de forma manual las ofertas activas en el Marketplace de tus clientes.</p>
+                    </div>
+                    <div class="search-filter-bar" style="margin-bottom: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div class="search-wrap" style="max-width: 300px;">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="promo-search" placeholder="Buscar por módulo..." oninput="renderPromotionsList()">
+                        </div>
+                        <div class="filter-pills" id="promo-filters">
+                            <button class="pill active" onclick="setPromoFilter('all')">Todas</button>
+                            <button class="pill" onclick="setPromoFilter('active')">Activas</button>
+                            <button class="pill" onclick="setPromoFilter('scheduled')">Programadas</button>
+                            <button class="pill" onclick="setPromoFilter('expired')">Expiradas</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="promotions-table">
+                        <thead>
+                            <tr>
+                                <th style="padding: 1rem 1.5rem;">Módulo</th>
+                                <th style="padding: 1rem 1.5rem;">Tipo de Oferta</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Descuento / Valor</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Vigencia (Inicio → Fin)</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Estado</th>
+                                <th style="padding: 1rem 1.5rem; text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promotions-list">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                                        <i data-lucide="inbox" style="width: 32px; height: 32px; opacity: 0.5;"></i>
+                                        <div>Cargando campañas de promociones...</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== TAB: REPORTES (AUDITORÍA & ANALÍTICA DE EVENTOS) ===== -->
+        <section id="tab-reports" class="tab-content hidden">
+            <div class="page-header" style="margin-bottom: 2rem;">
+                <div>
+                    <h2 class="page-title">Historial de Auditoría</h2>
+                    <p class="page-subtitle">Monitoreo en tiempo real de operaciones, cobros y accesos del sistema SaaS.</p>
+                </div>
+                <button class="btn-ghost" id="btn-clear-audit-logs" style="border: 1px solid var(--border-color); color: var(--danger); padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="trash-2" style="width: 16px;"></i> Limpiar Notificaciones
+                </button>
+            </div>
+
+            <!-- Audit Filtering and Search -->
+            <div class="biz-card glass-card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <!-- Filter Pills -->
+                    <div class="audit-filter-bar" id="audit-level-filters">
+                        <button class="audit-pill active" data-audit-filter="all">Todos los Eventos</button>
+                        <button class="audit-pill" data-audit-filter="Acceso"><span class="accent-dot dot-cyan" style="display:inline-block; vertical-align:middle; margin-right:6px; width:8px; height:8px;"></span> Accesos</button>
+                        <button class="audit-pill" data-audit-filter="Cobro"><span class="accent-dot dot-emerald" style="display:inline-block; vertical-align:middle; margin-right:6px; width:8px; height:8px;"></span> Pagos / Cobros</button>
+                        <button class="audit-pill" data-audit-filter="Modificación"><span class="accent-dot dot-orange" style="display:inline-block; vertical-align:middle; margin-right:6px; width:8px; height:8px;"></span> Operaciones</button>
+                    </div>
+                    <!-- Search Field -->
+                    <div class="search-wrap" style="margin: 0; min-width: 280px; display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem 1rem; background: var(--bg-surface-light);">
+                        <i data-lucide="search" style="width: 18px; color: var(--text-muted); margin-right: 8px;"></i>
+                        <input type="text" id="audit-log-search" placeholder="Filtrar por palabra clave..." style="background: none; border: none; outline: none; color: var(--text); width: 100%; font-family: var(--font-family); font-size: 0.88rem;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal Console Logs Panel -->
+            <div class="console-panel" style="min-height: 400px; max-height: 600px; overflow-y: auto; padding: 1.5rem; border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 12px; background: #070b13; font-family: monospace; font-size: 0.85rem;" id="audit-logs-terminal">
+                <div style="color: #64748b;">[SISTEMA] Inicializando consola de auditoría... Listo.</div>
+            </div>
+        </section>
+
+        <!-- ===== TAB: TICKETS / SOPORTE ===== -->
+        <section id="tab-tickets" class="tab-content hidden">
+            <div class="page-header" style="flex-wrap:wrap; gap:1rem; margin-bottom:2rem; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h2 class="page-title">Solicitudes de Soporte</h2>
+                    <p class="page-subtitle">Gestiona, filtra y resuelve las solicitudes de soporte de tus clientes.</p>
+                </div>
+            </div>
+
+            <!-- KPIs Tickets -->
+            <div class="kpi-grid" style="margin-bottom:2rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-blue"><i data-lucide="inbox"></i></div>
+                    <div class="kpi-info">
+                        <div class="kpi-value" id="ticket-kpi-open">0</div>
+                        <div class="kpi-label">Entrantes</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-orange"><i data-lucide="loader"></i></div>
+                    <div class="kpi-info">
+                        <div class="kpi-value" id="ticket-kpi-in-progress">0</div>
+                        <div class="kpi-label">En Proceso</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-green"><i data-lucide="check-circle"></i></div>
+                    <div class="kpi-info">
+                        <div class="kpi-value" id="ticket-kpi-resolved">0</div>
+                        <div class="kpi-label">Finalizados</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Solicitudes -->
+            <div class="section-card" style="padding:0; overflow:hidden;">
+                <div class="section-card-header" style="padding:1.5rem 1.5rem 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                    <div>
+                        <h3 style="font-size:1.25rem; font-weight:800; margin:0 0 0.25rem; display:flex; align-items:center; gap:8px; color:var(--text-main);">
+                            <i data-lucide="ticket" style="color:#f59e0b;"></i> Listado de Solicitudes
+                        </h3>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Filtra y actualiza el estado de cada solicitud de soporte.</p>
+                    </div>
+                    <div class="search-filter-bar" style="margin-bottom:0; width:100%; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                        <div class="search-wrap" style="max-width:300px;">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="ticket-search" placeholder="Buscar por negocio o módulo..." oninput="renderAdminTickets()">
+                        </div>
+                        <div class="filter-pills" id="ticket-filters">
+                            <button class="pill active" onclick="setTicketFilter('all')">Todos</button>
+                            <button class="pill" onclick="setTicketFilter('abierto')">Entrantes</button>
+                            <button class="pill" onclick="setTicketFilter('en_proceso')">En Proceso</button>
+                            <button class="pill" onclick="setTicketFilter('finalizado')">Finalizados</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="tickets-table">
+                        <thead>
+                            <tr>
+                                <th style="padding:1rem 1.5rem; white-space:nowrap;">ID Solicitud</th>
+                                <th style="padding:1rem 1.5rem;">Negocio</th>
+                                <th style="padding:1rem 1.5rem;">Módulo</th>
+                                <th style="padding:1rem 1.5rem;">Prioridad</th>
+                                <th style="padding:1rem 1.5rem;">Descripción</th>
+                                <th style="padding:1rem 1.5rem; text-align:center;">Estado</th>
+                                <th style="padding:1rem 1.5rem;">Fecha</th>
+                                <th style="padding:1rem 1.5rem; text-align:center;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tickets-list">
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
+                                    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                                        <i data-lucide="inbox" style="width:32px; height:32px; opacity:0.5;"></i>
+                                        <div>Cargando solicitudes...</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
@@ -769,6 +1141,24 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- IMAGEN DEL MÓDULO -->
+                <div class="form-group-modern">
+                    <label>IMAGEN DEL MÓDULO (CAPTURA DE PANTALLA)</label>
+                    <p class="field-hint-modern" style="margin-bottom:0.75rem;">Se mostrará en el carrusel de la página principal. Recomendado: 1200×680 px, formato horizontal.</p>
+                    <div id="mod-image-preview-wrap" style="width:100%; height:180px; border-radius:12px; border:2px dashed var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:0.75rem; position:relative; cursor:pointer;" onclick="document.getElementById('mod-image-input').click()">
+                        <img id="mod-image-preview" src="" alt="Preview" style="width:100%; height:100%; object-fit:cover; object-position:top; display:none; border-radius:10px;">
+                        <div id="mod-image-placeholder" style="text-align:center; color:var(--text-muted); pointer-events:none;">
+                            <i data-lucide="image-plus" style="width:36px; height:36px; margin-bottom:0.5rem; opacity:0.4;"></i>
+                            <p style="font-size:0.85rem; opacity:0.6;">Haz clic para seleccionar una imagen</p>
+                        </div>
+                        <button type="button" id="mod-image-remove" onclick="event.stopPropagation(); removeModuleImage()" style="display:none; position:absolute; top:8px; right:8px; background:rgba(239,68,68,0.85); color:white; border:none; border-radius:8px; padding:4px 10px; font-size:0.8rem; cursor:pointer; z-index:2;">
+                            <i data-lucide="trash-2" style="width:14px; height:14px;"></i> Quitar
+                        </button>
+                    </div>
+                    <input type="file" id="mod-image-input" accept="image/*" style="display:none;">
+                    <input type="hidden" id="mod-image-base64">
+                </div>
             </div>
             
             <div class="modal-actions-modern">
@@ -824,8 +1214,8 @@
     </div>
 </div>
 
-<script src="js/app.js"></script>
-<script src="js/consent.js"></script>
+<script src="js/app.js?v=20260527.18"></script>
+<script src="js/consent.js?v=20260527.18"></script>
 
 </body>
 </html>

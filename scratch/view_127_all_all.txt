@@ -1,0 +1,27 @@
+Created At: 2026-05-26T04:51:07Z
+Completed At: 2026-05-26T04:51:07Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4185
+Total Bytes: 185106
+Showing lines 3550 to 3568
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3550:                 <span style="color:var(--text-muted);">Inicio:</span> <strong>${startFmt}</strong><br>
+3551:                 <span style="color:var(--text-muted);">Fin:</span> <strong>${endFmt}</strong>
+3552:             </td>
+3553:             <td style="padding:1rem 1.5rem; text-align:center;">${statusBadge}</td>
+3554:             <td style="padding:1rem 1.5rem; text-align:center;">
+3555:                 <div style="display:inline-flex; gap:8px; align-items:center; justify-content:center;">
+3556:                     ${toggleBtn}
+3557:                     <button class="btn-ghost promo-edit-btn" data-id="${p.id}" style="padding:0.35rem 0.75rem; font-size:0.78rem; color:var(--primary); border:1px solid var(--border-color); border-radius:8px; display:inline-flex; align-items:center; gap:4px; height:32px;">
+3558:                         <i data-lucide="edit" style="width:13px; height:13px;"></i> Editar
+3559:                     </button>
+3560:                     <button class="btn-ghost promo-delete-btn" data-id="${p.id}" data-name="${modName}" style="padding:0.35rem 0.75rem; font-size:0.78rem; color:var(--danger); border:1px solid var(--border-color); border-radius:8px; display:inline-flex; align-items:center; gap:4px; height:32px;">
+3561:                         <i data-lucide="trash-2" style="width:13px; height:13px;"></i> Eliminar
+3562:                     </button>
+3563:                 </div>
+3564:             </td>
+3565:         </tr>`;
+3566:     }).join('');
+3567: 
+3568:     lucide.createIcons();
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

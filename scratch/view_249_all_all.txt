@@ -1,0 +1,54 @@
+Created At: 2026-05-26T11:27:27Z
+Completed At: 2026-05-26T11:27:27Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4259
+Total Bytes: 189734
+Showing lines 195 to 240
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+195:     if (localStorage.getItem('as_auth') === 'true' && appState.user) {
+196:         showView('dashboard-view');
+197:         loadData();
+198: 
+199:         // ==========================================
+200:         // SSE REAL-TIME SYNC
+201:         // ==========================================
+202:         const evtSource = new EventSource('/api/stream');
+203:         evtSource.onmessage = function(event) {
+204:             try {
+205:                 const data = JSON.parse(event.data);
+206:                 if (data.type === 'update') {
+207:                     console.log('Update received via SSE, reloading data...');
+208:                     loadData();
+209:                 }
+210:             } catch (err) {
+211:                 console.error('SSE Error:', err);
+212:             }
+213:         };
+214:     } else {
+215:         localStorage.removeItem('as_auth');
+216:         localStorage.removeItem('as_user');
+217:         localStorage.removeItem('as_admin_token');
+218:         appState.user = null;
+219:         showView('login-view');
+220:         lucide.createIcons();
+221:     }
+222: 
+223:     // Fetch logo configuration unconditionally
+224:     fetchPublicConfig();
+225: 
+226:     setupEventListeners();
+227: });
+228: 
+229: // ====================== SECURITY GATEKEEPER (GLOBAL) ======================
+230: // Must be global so saveModule(), saveUser(), saveSettings() can call it
+231: function requestSecurityCheck(callback) {
+232:     window._securityCallback = callback;
+233:     document.getElementById('security-pass-input').value = '';
+234:     document.getElementById('security-error-msg').classList.add('hidden');
+235:     document.getElementById('security-modal').classList.remove('hidden');
+236:     document.getElementById('security-pass-input').focus();
+237: }
+238: 
+239: async function loadData() {
+240:     // Mostrar cargadores de shimmer premium mientras se obtienen los datos
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

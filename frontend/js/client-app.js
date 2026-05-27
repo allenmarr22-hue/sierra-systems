@@ -1,7 +1,111 @@
 // ====================== CONFIGURACIÓN ======================
+// --- UTILERIAS PREMIUM (NOTIFICACIONES & BUSQUEDA) ---
+window.playMessageChime = function() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
+    } catch (e) {
+        console.warn('Audio Context not allowed or failed:', e);
+    }
+};
+
+let titleFlashInterval = null;
+let originalTitle = document.title || 'Panel Cliente | AS Sierra Systems';
+window.startTitleFlash = function() {
+    if (document.hasFocus()) return;
+    if (titleFlashInterval) clearInterval(titleFlashInterval);
+    let isOriginal = false;
+    titleFlashInterval = setInterval(() => {
+        document.title = isOriginal ? originalTitle : '💬 (1) Nuevo mensaje';
+        isOriginal = !isOriginal;
+    }, 1000);
+};
+
+window.stopTitleFlash = function() {
+    if (titleFlashInterval) {
+        clearInterval(titleFlashInterval);
+        titleFlashInterval = null;
+    }
+    document.title = originalTitle;
+};
+
+window.addEventListener('focus', () => {
+    window.stopTitleFlash();
+});
+
+window.handleChatSearch = function(query) {
+    const container = document.getElementById('ticket-chat-container');
+    if (!container) return;
+    const q = query.trim().toLowerCase();
+    
+    // Buscar en todas las burbujas que contengan texto usando la clase robusta
+    const bubbles = container.querySelectorAll('.chat-message-text');
+    bubbles.forEach(bubble => {
+        let text = bubble.getAttribute('data-original-text');
+        if (text === null) {
+            text = bubble.textContent || '';
+            bubble.setAttribute('data-original-text', text);
+        }
+        const parent = bubble.closest('div[style*="max-width:75%"]');
+        if (!parent) return;
+
+        if (q === '') {
+            bubble.textContent = text;
+            parent.style.opacity = '1';
+        } else if (text.toLowerCase().includes(q)) {
+            const regex = new RegExp(`(${q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
+            const escaped = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            bubble.innerHTML = escaped.replace(regex, '<mark style="background:#f59e0b;color:black;border-radius:2px;padding:0 2px;">$1</mark>');
+            parent.style.opacity = '1';
+        } else {
+            bubble.textContent = text;
+            parent.style.opacity = '0.35';
+        }
+    });
+};
+
+
+window.scrollCarousel = function(btn, direction) {
+    const parent = btn.parentNode;
+    if (!parent) return;
+    const track = parent.querySelector('.carousel-scroll-container') || parent.querySelector('.carousel-track');
+    if (!track) return;
+    const cardWidth = track.firstElementChild ? track.firstElementChild.offsetWidth + 24 : 340;
+    track.scrollBy({
+        left: direction * cardWidth,
+        behavior: 'smooth'
+    });
+};
+
+
+function getActivePromo(moduleId) {
+    if (!appState.promotions) return null;
+    const now = new Date().toISOString();
+    return appState.promotions.find(p => 
+        String(p.moduleId) === String(moduleId) &&
+        p.status === 'active' &&
+        now >= p.startDate &&
+        now <= p.endDate
+    );
+}
+
+
 let CLIENT_ID = null; // Se asigna dinámicamente desde la sesión
 const WHATSAPP_NUMBER = '573001234567'; // Número de ventas de AS Sierra Systems
-let appState = { businesses: [], modules: [], notifications: [] };
+let appState = { businesses: [], modules: [], notifications: [], promotions: [] };
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Verificar sesión antes de mostrar nada
@@ -219,6 +323,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     await loadData();
+    if (typeof loadMyTickets === 'function') {
+        await loadMyTickets();
+    }
 
     // ==========================================
     // SSE REAL-TIME SYNC
@@ -230,6 +337,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (data.type === 'update') {
                 console.log('Update received via SSE, reloading data...');
                 loadData();
+                if (typeof loadMyTickets === 'function') {
+                    loadMyTickets();
+                }
+                if (window.activeChatTicketId) {
+                    fetchAndRenderChatMessages(window.activeChatTicketId, 'client');
+                }
+            } else if (data.type === 'typing') {
+                if (window.activeChatTicketId === data.ticketId && data.role !== 'client') {
+                    showChatTypingIndicator('Soporte está escribiendo...');
+                }
             }
         } catch (err) {
             console.error('SSE Error:', err);
@@ -367,7 +484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }).then((result) => {
             if (result.isConfirmed) {
                 const { mod, desc, priority } = result.value;
-                const msg = encodeURIComponent(`🎟️ NUEVO TICKET\nMódulo: ${mod}\nPrioridad: ${priority.toUpperCase()}\n\n${desc}`);
+                const msg = encodeURIComponent(`🎫 NUEVO TICKET\nMódulo: ${mod}\nPrioridad: ${priority.toUpperCase()}\n\n${desc}`);
                 // Enviar por WhatsApp y mostrar confirmación
                 window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
                 Swal.fire({
@@ -464,6 +581,7 @@ async function loadData() {
         appState.businesses = data.businesses || [];
         appState.modules = data.modules || [];
         appState.notifications = data.notifications || [];
+        appState.promotions = data.promotions || [];
 
         renderDashboard();
     } catch (error) {
@@ -495,6 +613,15 @@ function renderDashboard() {
 
     const emailDisplay = document.getElementById('profile-email-display');
     if (emailDisplay && clientBiz.clientEmail) emailDisplay.textContent = clientBiz.clientEmail;
+
+    // Mostrar correo del cliente en la tarjeta de soporte
+    const supportEmailSpan = document.getElementById('support-client-email');
+    if (supportEmailSpan && clientBiz.clientEmail) supportEmailSpan.textContent = clientBiz.clientEmail;
+    const supportEmailLink = document.getElementById('support-email-link');
+    if (supportEmailLink && clientBiz.clientEmail) {
+        const subject = encodeURIComponent('Solicitud de Soporte — ' + (clientBiz.name || clientBiz.clientEmail));
+        supportEmailLink.href = `mailto:soporte@assierrasystems.com?subject=${subject}&cc=${encodeURIComponent(clientBiz.clientEmail)}`;
+    }
 
     if (clientBiz.avatarUrl) {
         const wrap = document.getElementById('client-avatar-wrap');
@@ -729,10 +856,44 @@ function renderDashboard() {
     if (mktGrid) {
         if (availableMods.length > 0) {
             mktGrid.innerHTML = availableMods.map((mod, i) => {
-                const priceVal = parseInt(String(mod.price || '').replace(/\D/g, ''));
-                const priceDisplay = (!isNaN(priceVal) && priceVal > 0)
-                    ? `$ ${priceVal.toLocaleString('es-CO')} COP/mes` : 'Cotizar';
-                const badge = i === 0 ? '<div class="marketplace-badge">⭐ POPULAR</div>' : '';
+                const activePromo = getActivePromo(mod.id);
+                const basePriceVal = parseInt(String(mod.price || '').replace(/\D/g, ''));
+                let finalPriceDisplay = '';
+                let priceHtml = '';
+                let discountBadge = '';
+
+                if (activePromo && !isNaN(basePriceVal) && basePriceVal > 0) {
+                    let promoPriceVal = basePriceVal;
+                    if (activePromo.discountType === 'percentage') {
+                        promoPriceVal = Math.round(basePriceVal * (1 - parseFloat(activePromo.discountValue) / 100));
+                    } else if (activePromo.discountType === 'fixed_price') {
+                        promoPriceVal = Math.round(parseFloat(activePromo.discountValue));
+                    }
+                    
+                    const formattedOriginal = `$ ${basePriceVal.toLocaleString('es-CO')} COP`;
+                    const formattedPromo = `$ ${promoPriceVal.toLocaleString('es-CO')} COP/mes`;
+                    finalPriceDisplay = formattedPromo;
+                    
+                    priceHtml = `
+                        <div style="display:flex; flex-direction:column; gap:0.25rem; margin:1.25rem 0 1rem;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:0.88rem; text-decoration:line-through; color:var(--text-muted); font-weight:600;">${formattedOriginal}</span>
+                                <span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
+                                    -${activePromo.discountType === 'percentage' ? activePromo.discountValue + '%' : 'Descuento'}
+                                </span>
+                            </div>
+                            <div style="font-weight:800; font-size:1.6rem; color:#f59e0b; text-shadow:0 0 10px rgba(245,158,11,0.2);">${formattedPromo}</div>
+                        </div>
+                    `;
+                    discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🔥 OFERTA</div>`;
+                } else {
+                    const priceDisplay = (!isNaN(basePriceVal) && basePriceVal > 0)
+                        ? `$ ${basePriceVal.toLocaleString('es-CO')} COP/mes` : 'Cotizar';
+                    finalPriceDisplay = priceDisplay;
+                    priceHtml = `<div style="font-weight:800; font-size:1.5rem; color:var(--text); margin:1.5rem 0 1rem;">${priceDisplay}</div>`;
+                }
+
+                const badge = i === 0 && !activePromo ? '<div class="marketplace-badge">⭐ POPULAR</div>' : (discountBadge || '');
                 return `
                 <div class="biz-card" style="border:1px solid rgba(79,70,229,0.2); position:relative; overflow:hidden; display:flex; flex-direction:column;">
                     ${badge}
@@ -743,15 +904,15 @@ function renderDashboard() {
                     </div>
                     <h3 class="module-title" style="margin-top:1rem; font-size:1.2rem;">${mod.name}</h3>
                     <p class="module-desc" style="flex:1;">${mod.desc || ''}</p>
-                    <div style="font-weight:800; font-size:1.5rem; color:var(--text); margin:1.5rem 0 1rem;">${priceDisplay}</div>
+                    ${priceHtml}
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <button class="btn-primary btn-adquirir"
-                            data-mod-name="${mod.name}" data-mod-price="${priceDisplay}"
+                            data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
                             style="width:100%; justify-content:center; background:#8b5cf6; border:none; box-shadow:0 4px 14px 0 rgba(139,92,246,0.39);">
                             <i data-lucide="shopping-cart"></i> Adquirir Módulo
                         </button>
                         <button class="btn-ghost btn-demo"
-                            data-mod-name="${mod.name}"
+                            data-mod-id="${mod.id}" data-mod-name="${mod.name}"
                             style="width:100%; justify-content:center; border:1px solid rgba(139,92,246,0.3);">
                             <i data-lucide="play-circle" style="width:15px;"></i> Ver Demo
                         </button>
@@ -766,7 +927,7 @@ function renderDashboard() {
             });
             document.querySelectorAll('.btn-demo').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    handleDemo(e.currentTarget.getAttribute('data-mod-name'));
+                    handleDemo(e.currentTarget.getAttribute('data-mod-id'), e.currentTarget.getAttribute('data-mod-name'));
                 });
             });
         } else {
@@ -787,7 +948,151 @@ function renderDashboard() {
     if (elMonthly) elMonthly.textContent = monthlyTotal > 0 ? `$ ${monthlyTotal.toLocaleString('es-CO')} COP` : '—';
 
     lucide.createIcons();
+    initClientCharts();
 }
+
+// ====================== DYNAMIC CLIENT CHARTS (FINTECH PREMIUM) ======================
+let clientBillingChart = null;
+let clientUsageChart = null;
+
+function initClientCharts() {
+    if (clientBillingChart) clientBillingChart.destroy();
+    if (clientUsageChart) clientUsageChart.destroy();
+
+    const ctxBilling = document.getElementById('clientBillingChart')?.getContext('2d');
+    const ctxUsage = document.getElementById('clientUsageChart')?.getContext('2d');
+
+    const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+    if (!clientBiz) return;
+
+    // Calcular costos activos
+    const activeMods = (clientBiz.modules || []).map(mid =>
+        appState.modules.find(m => String(m.id) === String(mid))
+    ).filter(Boolean);
+
+    const monthlyTotal = activeMods.reduce((sum, mod) => {
+        const price = parseInt(String(mod.price || '').replace(/\D/g, ''), 10);
+        return sum + (isNaN(price) ? 0 : price);
+    }, 0);
+
+    // 1. Line Chart: Consumo y Proyección Mensual
+    if (ctxBilling) {
+        // Crear gradiente premium fintech
+        const gradient = ctxBilling.createLinearGradient(0, 0, 0, 220);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+        gradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.15)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+        // Historial simulado + proyección basada en el total mensual actual
+        const val4 = Math.round(monthlyTotal * 0.8);
+        const val5 = monthlyTotal;
+        const val6 = Math.round(monthlyTotal * 1.2); // Proyección futura de crecimiento
+
+        const dataPoints = monthlyTotal > 0 
+            ? [Math.round(monthlyTotal * 0.4), Math.round(monthlyTotal * 0.6), Math.round(monthlyTotal * 0.6), val4, val5, val6]
+            : [0, 0, 0, 0, 0, 0];
+
+        clientBillingChart = new Chart(ctxBilling, {
+            type: 'line',
+            data: {
+                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun (Proy)'],
+                datasets: [{
+                    label: 'Consumo COP',
+                    data: dataPoints,
+                    borderColor: '#6366f1',
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#6366f1',
+                    pointHoverRadius: 7,
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#6366f1',
+                    pointHoverBorderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { family: 'Outfit', size: 12 },
+                        bodyFont: { family: 'Outfit', size: 12 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return `Consumo: $ ${context.parsed.y.toLocaleString('es-CO')} COP`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { 
+                            color: '#94a3b8', 
+                            font: { family: 'Outfit', size: 10 },
+                            callback: function(value) {
+                                return `$ ${(value / 1000).toFixed(0)}k`;
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { family: 'Outfit', size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Doughnut Chart: Distribución de Módulos por Sede
+    if (ctxUsage) {
+        const labels = activeMods.map(m => m.name);
+        const data = activeMods.map(() => 1); // Peso uniforme para distribución
+        
+        const COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#f97316'];
+        
+        clientUsageChart = new Chart(ctxUsage, {
+            type: 'doughnut',
+            data: {
+                labels: labels.length > 0 ? labels : ['Ninguno'],
+                datasets: [{
+                    data: data.length > 0 ? data : [1],
+                    backgroundColor: labels.length > 0 
+                        ? labels.map((_, i) => COLORS[i % COLORS.length])
+                        : ['rgba(255,255,255,0.05)'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#94a3b8',
+                            padding: 14,
+                            font: { family: 'Outfit', size: 11 },
+                            boxWidth: 10,
+                            borderRadius: 4
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+}
+
 
 // ====================== ACCIONES ======================
 
@@ -1360,13 +1665,14 @@ async function handleRenewal(modId, modName, modPrice) {
 }
 
 /** Demo: redirige o informa */
-function handleDemo(modName) {
+function handleDemo(modId, modName) {
     const demoUrls = {
-        'PDFTools Pro': '/modules/pdftools/index.html',
-        'Sierra POS': null,
-        'StyleSync Pro': '/modules/agenda/index.html',
+        'pdftools': '/modules/pdftools/index.html',
+        'pos': null,
+        'agenda': '/modules/agenda/index.html',
+        'streetfeed': '/modules/order-system/index.html'
     };
-    const url = demoUrls[modName];
+    const url = demoUrls[String(modId).toLowerCase()];
     if (url) {
         window.open(url, '_blank');
     } else {
@@ -1561,6 +1867,14 @@ window.switchTab = function(tabId) {
     const targetTab = document.getElementById(tabId);
     if (targetTab) {
         targetTab.classList.remove('hidden');
+    }
+
+    if (tabId === 'tab-support' && typeof loadMyTickets === 'function') {
+        loadMyTickets();
+    }
+
+    if (tabId === 'tab-client-payment-history' && typeof loadPaymentHistory === 'function') {
+        loadPaymentHistory();
     }
 
     if (window.innerWidth <= 768) {
@@ -2200,3 +2514,732 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.closest('#btn-add-card')) openAddCardModal();
     });
 });
+
+// ============================================================
+// MODULO DE TICKETS DE SOPORTE - PORTAL CLIENTE
+// ============================================================
+
+async function clientFetch(url, options = {}) {
+    const sessionRaw = sessionStorage.getItem('clientSession');
+    if (!sessionRaw) {
+        window.location.href = '/client-login.html';
+        return;
+    }
+    const session = JSON.parse(sessionRaw);
+    const headers = { 
+        'Authorization': `Bearer ${session.token}`,
+        ...(options.headers || {})
+    };
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type'];
+    }
+    options.headers = headers;
+    return fetch(url, options);
+}
+
+appState.clientTickets = [];
+window.selectedChatFile = null;
+
+async function loadMyTickets() {
+    const tbody = document.getElementById('client-tickets-body');
+    if (!tbody) return;
+    
+    const hasTickets = appState.clientTickets && appState.clientTickets.length > 0;
+    if (!hasTickets) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+            <span style="display:inline-block;width:16px;height:16px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;"></span>
+            Cargando tickets...
+        </td></tr>`;
+    }
+    
+    try {
+        const res = await clientFetch('/api/tickets/my');
+        const data = await res.json();
+        if (res.ok && data.success) {
+            appState.clientTickets = data.tickets || [];
+            renderClientTickets();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--danger);">Error: ${data.error || 'No se pudieron cargar los tickets'}</td></tr>`;
+        }
+    } catch (err) {
+        console.error('Error cargando tickets de cliente:', err);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--danger);">Error al cargar los tickets. (${err.message})</td></tr>`;
+    }
+}
+
+function renderClientTickets() {
+    const tbody = document.getElementById('client-tickets-body');
+    if (!tbody) return;
+    
+    const tickets = appState.clientTickets || [];
+    if (tickets.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
+                <span>Aún no has creado ningún ticket de soporte.</span>
+            </div>
+        </td></tr>`;
+        lucide.createIcons();
+        return;
+    }
+
+    const statusMap = {
+        abierto:    { label: 'Entrante',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' },
+        en_proceso: { label: 'En Proceso',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
+        resuelto:   { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+        cerrado:    { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+    };
+    const priorityMap = {
+        normal:  { label: 'Normal',  color: '#64748b' },
+        urgente: { label: '🔴 Urgente', color: '#ef4444' },
+        baja:    { label: 'Baja',    color: '#94a3b8' },
+    };
+
+    tbody.innerHTML = tickets.map(t => {
+        const d = new Date(t.created_at);
+        const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        const s = statusMap[t.status] || statusMap.abierto;
+        const p = priorityMap[t.priority] || priorityMap.normal;
+        const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
+        const moduleDisplayName = targetMod ? targetMod.name : (t.module || '—');
+        return `
+            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
+                <td style="padding:1rem 1.5rem;">
+                    <a href="javascript:void(0)" onclick="viewClientTicketDetails('${t.id}')" style="font-size:0.82rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver conversación">
+                        #${String(t.id || '').substring(0, 8).toUpperCase()}
+                    </a>
+                </td>
+                <td style="padding:1rem 1.5rem;">${moduleDisplayName}</td>
+                <td style="padding:1rem 1.5rem; font-size:0.8rem; color:${p.color}; font-weight:700;">${p.label}</td>
+                <td style="padding:1rem 1.5rem;">
+                    <span style="background:${s.bg};color:${s.color};border:1px solid ${s.border};font-weight:700;font-size:0.75rem;padding:0.25rem 0.65rem;border-radius:12px;white-space:nowrap;">${s.label}</span>
+                </td>
+                <td style="padding:1rem 1.5rem; white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${dateStr}</td>
+            </tr>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+window.viewClientTicketDetails = function(ticketId) {
+    if (!appState.clientTickets) return;
+    const ticket = appState.clientTickets.find(t => t.id === ticketId);
+    if (!ticket) return;
+
+    window.activeChatTicketId = ticketId;
+
+    const statusMap = {
+        abierto:    { label: 'Entrante',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' },
+        en_proceso: { label: 'En Proceso',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
+        resuelto:   { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+        cerrado:    { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+    };
+    const priorityMap = {
+        normal:  { label: 'Normal',       color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
+        urgente: { label: '\uD83D\uDD34 Urgente', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+        baja:    { label: 'Baja',         color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+    };
+
+    const st = statusMap[ticket.status] || statusMap['abierto'];
+    const pr = priorityMap[ticket.priority] || priorityMap['normal'];
+    const d = ticket.created_at ? new Date(ticket.created_at) : null;
+    let fullDate = '—';
+    if (d) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+        fullDate = `${day}/${month}/${year}  -  ${timeStr}`;
+    }
+
+    Swal.fire({
+        title: '',
+        html: `
+            <style>
+            @keyframes typingBounce {
+                0%, 80%, 100% { transform: translateY(0); }
+                40% { transform: translateY(-4px); }
+            }
+            .typing-dot {
+                width: 6px;
+                height: 6px;
+                background-color: var(--text-muted);
+                border-radius: 50%;
+                display: inline-block;
+                animation: typingBounce 1.4s infinite ease-in-out both;
+            }
+            .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+            .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+            </style>
+            <div style="font-family:'Outfit',sans-serif; color:var(--text-main);">
+
+                <!-- Header -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
+                            <i data-lucide="ticket" style="width:18px;height:18px;color:white;"></i>
+                        </div>
+                        <div style="text-align:left;">
+                            <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Solicitud de Soporte</div>
+                            <div style="font-family:monospace;font-size:0.95rem;font-weight:900;color:var(--primary);">#${ticket.id.toUpperCase()}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${pr.bg};color:${pr.color};border:1px solid ${pr.color}33;white-space:nowrap;">${pr.label}</span>
+                        <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${st.bg};color:${st.color};border:1px solid ${st.color}33;white-space:nowrap;">${st.label}</span>
+                    </div>
+                </div>
+
+                <!-- Meta chips -->
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                        <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Módulo</div>
+                        <div style="font-weight:700;font-size:0.84rem;color:var(--text-main);">${(() => {
+                            const found = appState.modules.find(m => String(m.id) === String(ticket.module) || String(m.name) === String(ticket.module));
+                            return found ? found.name : (ticket.module || '—');
+                        })()}</div>
+                    </div>
+                    <div style="flex:1;min-width:100px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                        <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Creado</div>
+                        <div style="font-weight:600;font-size:0.78rem;color:var(--text-main);">${fullDate}</div>
+                    </div>
+                </div>
+
+                <!-- Chat area -->
+                <div style="border:1px solid var(--border-color);border-radius:14px;overflow:hidden;background:rgba(0,0,0,0.18);">
+                    <div style="padding:8px 14px;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;"></div>
+                            <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">Chat con Soporte</span>
+                        </div>
+                        <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border-color);border-radius:8px;padding:4px 10px;width:140px;transition:all 0.2s;" onfocusin="this.style.width='200px';this.style.borderColor='var(--primary)';" onfocusout="this.style.width='140px';this.style.borderColor='var(--border-color)';">
+                            <i data-lucide="search" style="width:14px;height:14px;color:var(--text-muted);margin-right:6px;"></i>
+                            <input type="text" id="chat-search-input" placeholder="Buscar..." oninput="handleChatSearch(this.value)" style="border:none;background:none;color:var(--text-main);font-size:0.8rem;outline:none;width:100%;font-family:'Outfit',sans-serif;" />
+                        </div>
+                    </div>
+                    <div id="ticket-chat-container" style="height:320px;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth;">
+                        <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:30px 0;color:var(--text-muted);font-size:0.82rem;">
+                            <span style="display:inline-block;width:16px;height:16px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>
+                            Cargando conversación...
+                        </div>
+                    </div>
+                    ${ticket.status === 'cerrado' ? `
+                        <div style="padding:10px 14px;background:rgba(239,68,68,0.06);border-top:1px solid rgba(239,68,68,0.2);color:#ef4444;display:flex;align-items:center;gap:8px;font-size:0.78rem;font-weight:700;justify-content:center;">
+                            <i data-lucide="lock" style="width:12px;height:12px;"></i>
+                            Solicitud cerrada — abre una nueva para continuar
+                        </div>
+                    ` : `
+                        <div style="padding:10px 12px;background:rgba(255,255,255,0.02);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;">
+                            <input type="file" id="chat-image-input" accept="image/*" style="display:none;" onchange="handleTicketImageSelect(event)" />
+                            <button onclick="document.getElementById('chat-image-input').click()" title="Enviar imagen" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)'">
+                                <i data-lucide="image" style="width:15px;height:15px;"></i>
+                            </button>
+                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.05);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
+                            <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','client')" style="width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary),#818cf8);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                                <i data-lucide="send" style="width:14px;height:14px;"></i>
+                            </button>
+                        </div>
+                    `}
+                </div>
+
+            </div>
+        `,
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)',
+        width: '680px',
+        padding: '1.5rem',
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: 'var(--primary)',
+        didOpen: () => {
+            lucide.createIcons();
+            fetchAndRenderChatMessages(ticketId, 'client');
+
+            const input = document.getElementById('chat-message-input');
+            if (input) {
+                // typing indicator trigger
+                let lastTypingSent = 0;
+                input.addEventListener('input', function() {
+                    const now = Date.now();
+                    if (now - lastTypingSent > 1500) {
+                        lastTypingSent = now;
+                        clientFetch(`/api/tickets/${ticketId}/typing`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ role: 'client' })
+                        }).catch(err => console.error('Error sending typing signal:', err));
+                    }
+                });
+
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        sendTicketMessage(ticketId, 'client');
+                    }
+                });
+                setTimeout(() => input.focus(), 100);
+            }
+        },
+        willClose: () => {
+            window.activeChatTicketId = null;
+            window.clearChatImageSelect();
+        }
+    });
+};
+
+window.handleTicketImageSelect = function(event) {
+    const fileInput = event.target;
+    if (!fileInput.files || !fileInput.files[0]) return;
+    
+    window.selectedChatFile = fileInput.files[0];
+    
+    let bar = document.getElementById('chat-image-preview-bar');
+    if (!bar) {
+        const inputArea = fileInput.closest('div');
+        bar = document.createElement('div');
+        bar.id = 'chat-image-preview-bar';
+        bar.style.cssText = 'padding:6px 12px;background:rgba(255,255,255,0.03);border-top:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.78rem;color:var(--text-muted);';
+        inputArea.parentNode.insertBefore(bar, inputArea);
+    }
+    
+    const fileReader = new FileReader();
+    fileReader.onload = function(e) {
+        bar.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <img src="${e.target.result}" style="width:28px;height:28px;border-radius:4px;object-fit:cover;border:1px solid var(--border-color);" />
+                <span style="font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;">${window.selectedChatFile.name}</span>
+                <span style="font-size:0.7rem;opacity:0.6;">(${(window.selectedChatFile.size / 1024).toFixed(0)} KB)</span>
+            </div>
+            <button onclick="window.clearChatImageSelect()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;transition:background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
+                ✕
+            </button>
+        `;
+    };
+    fileReader.readAsDataURL(window.selectedChatFile);
+};
+
+window.clearChatImageSelect = function() {
+    window.selectedChatFile = null;
+    const fileInput = document.getElementById('chat-image-input');
+    if (fileInput) fileInput.value = '';
+    const bar = document.getElementById('chat-image-preview-bar');
+    if (bar) bar.remove();
+};
+
+window.uploadSelectedTicketImage = async function(ticketId, role) {
+    if (!window.selectedChatFile) return;
+
+    const file = window.selectedChatFile;
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const container = document.getElementById('ticket-chat-container');
+    const uploadingId = 'uploading-indicator-' + Date.now();
+    if (container) {
+        const el = document.createElement('div');
+        el.id = uploadingId;
+        el.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:0.75rem;color:var(--text-muted);margin:4px 0;';
+        el.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span> Enviando imagen...';
+        container.appendChild(el);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    try {
+        const fetchUrl = `/api/tickets/${ticketId}/messages/image`;
+        const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+            method: 'POST',
+            body: formData
+        }) : clientFetch(fetchUrl, {
+            method: 'POST',
+            body: formData
+        }));
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Error al subir imagen');
+        }
+
+        window.clearChatImageSelect();
+    } catch (err) {
+        console.error('Error al enviar imagen:', err);
+        throw err;
+    } finally {
+        const el = document.getElementById(uploadingId);
+        if (el) el.remove();
+    }
+};
+
+window.fetchAndRenderChatMessages = async function(ticketId, role) {
+    const container = document.getElementById('ticket-chat-container');
+    if (!container) return;
+
+    try {
+        const fetchUrl = `/api/tickets/${ticketId}/messages`;
+        const res = await (role === 'admin' ? adminFetch(fetchUrl) : clientFetch(fetchUrl));
+        if (!res.ok) throw new Error('Error al obtener mensajes');
+        
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Error al obtener mensajes');
+
+        const messages = data.messages || [];
+
+        // --- DETECCION DE NUEVOS MENSAJES Y NOTIFICACION CHIME ---
+        const prevCount = window.chatMessageCounts?.[ticketId];
+        if (prevCount !== undefined && messages.length > prevCount) {
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg && lastMsg.sender !== role) {
+                if (typeof window.playMessageChime === 'function') window.playMessageChime();
+                if (typeof window.startTitleFlash === 'function') window.startTitleFlash();
+            }
+        }
+        window.chatMessageCounts = window.chatMessageCounts || {};
+        window.chatMessageCounts[ticketId] = messages.length;
+
+        if (messages.length === 0) {
+            container.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:0.82rem;gap:8px;padding:20px;">
+                    <span style="font-size:2rem;">💬</span>
+                    <span>Aún no hay mensajes en este chat.</span>
+                </div>
+            `;
+            return;
+        }
+
+        let lastSender = null;
+        container.innerHTML = messages.map((msg, idx) => {
+            const isMe = (role === 'admin' && msg.sender === 'admin') || (role === 'client' && msg.sender === 'client');
+            const sameAsPrev = lastSender === msg.sender;
+            lastSender = msg.sender;
+
+            const d = new Date(msg.created_at);
+            const timeStr = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true }).replace(/am/i, 'a.m.').replace(/pm/i, 'p.m.');
+            const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+
+            const prevMsg = messages[idx - 1];
+            let dateSeparator = '';
+            const fullDateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+            if (idx === 0) {
+                dateSeparator = `<div style="text-align:center;margin:6px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+            } else {
+                const prevDate = new Date(prevMsg.created_at);
+                if (prevDate.toDateString() !== d.toDateString()) {
+                    dateSeparator = `<div style="text-align:center;margin:8px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+                }
+            }
+
+            const nameRow = (!sameAsPrev || dateSeparator) ? `
+                <span style="font-size:0.63rem;font-weight:700;color:${isMe ? 'rgba(129,140,248,0.9)' : 'var(--text-muted)'};${isMe ? 'text-align:right;' : ''}display:block;margin-bottom:2px;padding:0 4px;">${isMe ? 'Tú' : msg.sender_name}</span>
+            ` : '';
+
+            const contentHtml = msg.image_url
+                ? `<img src="${msg.image_url}" alt="imagen" onclick="openChatImageLightbox('${msg.image_url}')" style="max-width:200px;max-height:200px;border-radius:8px;cursor:zoom-in;object-fit:cover;display:block;" />`
+                : `<span class="chat-message-text" style="white-space:pre-wrap;word-break:break-word;">${msg.message.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+
+            const bubbleStyle = isMe
+                ? `background:linear-gradient(135deg,rgba(99,102,241,0.28),rgba(129,140,248,0.18));border:1px solid rgba(99,102,241,0.35);border-radius:14px 14px 4px 14px;`
+                : `background:rgba(255,255,255,0.06);border:1px solid var(--border-color);border-radius:14px 14px 14px 4px;`;
+
+            return `
+                ${dateSeparator}
+                <div style="display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};">
+                    ${nameRow}
+                    <div style="max-width:75%;${bubbleStyle}padding:8px 12px;font-size:0.85rem;line-height:1.4;color:var(--text-main);position:relative;">
+                        ${contentHtml}
+                        <span style="display:block;text-align:right;font-size:0.58rem;color:${isMe ? 'rgba(199,210,254,0.6)' : 'var(--text-muted)'};margin-top:4px;margin-bottom:-2px;">${timeStr}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.scrollTop = container.scrollHeight;
+    } catch (err) {
+        console.error('Error cargando chat:', err);
+        container.innerHTML = `
+            <div style="text-align:center;color:#ef4444;font-size:0.82rem;padding:20px 10px;">
+                Error al cargar la conversación.
+            </div>
+        `;
+    }
+};
+
+window.sendTicketMessage = async function(ticketId, role) {
+    if (window._isSendingTicketMessage) return;
+
+    const input = document.getElementById('chat-message-input');
+    const sendBtn = document.getElementById('chat-send-btn');
+    
+    const message = input ? input.value.trim() : '';
+    const hasImage = !!window.selectedChatFile;
+    
+    if (!message && !hasImage) return;
+
+    window._isSendingTicketMessage = true;
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+        if (hasImage) {
+            await window.uploadSelectedTicketImage(ticketId, role);
+        }
+        
+        if (message) {
+            const fetchUrl = `/api/tickets/${ticketId}/messages`;
+            const res = await (role === 'admin' ? adminFetch(fetchUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            }) : clientFetch(fetchUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            }));
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Error al enviar el mensaje');
+            }
+            if (input) input.value = '';
+        }
+        
+        await fetchAndRenderChatMessages(ticketId, role);
+    } catch (err) {
+        console.error('Error al enviar mensaje:', err);
+        showToast(err.message || 'Error de conexión', 'error');
+    } finally {
+        window._isSendingTicketMessage = false;
+        if (sendBtn) sendBtn.disabled = false;
+        if (input) input.focus();
+    }
+};
+
+window.openChatImageLightbox = function(src) {
+    const overlay = document.createElement('div');
+    overlay.id = 'chat-image-lightbox-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:999999;cursor:zoom-out;opacity:0;transition:opacity 0.2s ease;';
+    
+    overlay.innerHTML = `
+        <div style="position:relative;max-width:90%;max-height:90%;display:flex;align-items:center;justify-content:center;">
+            <img src="${src}" style="max-width:100%;max-height:90vh;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.5);object-fit:contain;cursor:default;" onclick="event.stopPropagation()" />
+            <button style="position:absolute;top:-40px;right:-4px;background:none;border:none;color:white;font-size:2rem;cursor:pointer;opacity:0.8;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">✕</button>
+        </div>
+    `;
+    
+    overlay.onclick = function() {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 200);
+    };
+    
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.style.opacity = '1', 50);
+};
+
+// ==========================================
+// TYPING INDICATOR HELPER
+// ==========================================
+window._typingIndicatorTimeout = null;
+window.showChatTypingIndicator = function(text) {
+    const container = document.getElementById('ticket-chat-container');
+    if (!container) return;
+
+    let indicator = document.getElementById('chat-typing-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'chat-typing-indicator';
+        indicator.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 12px; margin-top:4px; font-size:0.78rem; color:var(--text-muted); align-self:flex-start; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border-color); animation: fadeIn 0.2s ease;';
+        indicator.innerHTML = `
+            <span id="typing-indicator-text">${text}</span>
+            <div style="display:flex; gap:3px; align-items:center;">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        `;
+        container.appendChild(indicator);
+    } else {
+        const textEl = document.getElementById('typing-indicator-text');
+        if (textEl) textEl.textContent = text;
+    }
+    
+    container.scrollTop = container.scrollHeight;
+
+    if (window._typingIndicatorTimeout) clearTimeout(window._typingIndicatorTimeout);
+    window._typingIndicatorTimeout = setTimeout(() => {
+        const ind = document.getElementById('chat-typing-indicator');
+        if (ind) ind.remove();
+        window._typingIndicatorTimeout = null;
+    }, 3000);
+};
+
+// ==========================================
+// CLIENT PAYMENT HISTORY & PDF EXPORT
+// ==========================================
+window.loadPaymentHistory = async function() {
+    const tbody = document.getElementById('client-payment-history-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+            <span style="display:inline-block;width:24px;height:24px;border:3px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>
+            <span>Cargando transacciones relacionales...</span>
+        </div>
+    </td></tr>`;
+    lucide.createIcons();
+
+    let session;
+    try { session = JSON.parse(sessionStorage.getItem('clientSession') || '{}'); } catch { session = {}; }
+    if (!session.token) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--danger);">Sesión expirada. Por favor inicia sesión.</td></tr>`;
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/client/payments', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${session.token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al obtener transacciones.');
+
+        appState.clientPayments = data.history || [];
+
+        if (appState.clientPayments.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+                    <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
+                    <span>Aún no se registran pagos en el sistema relacional.</span>
+                </div>
+            </td></tr>`;
+            lucide.createIcons();
+            return;
+        }
+
+        tbody.innerHTML = appState.clientPayments.map(ph => {
+            const d = new Date(ph.created_at);
+            const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+            const amountStr = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
+
+            // Alinear descripciones de módulos antiguos/IDs a nombres actualizados de módulos
+            let desc = ph.desc || '—';
+            appState.modules.forEach(m => {
+                desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
+            });
+
+            // Badge de estado premium fintech glassmorphic
+            const badgeBg = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+            const badgeColor = ph.status === 'APPROVED' ? '#10b981' : '#ef4444';
+            const badgeBorder = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)';
+            const badgeLabel = ph.status === 'APPROVED' ? 'Aprobado' : 'Fallido';
+
+            return `
+                <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
+                    <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.85rem;">${dateStr}</td>
+                    <td style="padding:1rem 1.5rem; font-weight:600;">${desc}</td>
+                    <td style="padding:1rem 1.5rem; font-weight:800; color:var(--text-main);">${amountStr}</td>
+                    <td style="padding:1rem 1.5rem;">
+                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
+                    </td>
+                    <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${ph.transaction_id || '—'}</td>
+                </tr>
+            `;
+        }).join('');
+        lucide.createIcons();
+
+    } catch (err) {
+        console.error('Error cargando historial de pagos del cliente:', err);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--danger);">Error al cargar las transacciones. (${err.message})</td></tr>`;
+    }
+};
+
+window.downloadClientPaymentsPDF = function() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFillColor(30, 41, 59);
+        doc.rect(0, 0, 210, 35, 'F');
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(248, 250, 252);
+        doc.text('AS SIERRA SYSTEMS', 14, 23);
+        
+        const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
+        const bizName = clientBiz ? clientBiz.name : 'Mi Negocio';
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`HISTORIAL DE PAGOS - ${bizName.toUpperCase()}`, 14, 29);
+        
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('es-CO') + ' ' + today.toLocaleTimeString('es-CO');
+        doc.setFontSize(9);
+        doc.setTextColor(248, 250, 252);
+        doc.text('Fecha: ' + dateStr, 140, 23);
+        
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(14);
+        doc.setFont('Helvetica', 'bold');
+        doc.text('Mi Registro de Transacciones', 14, 48);
+        doc.line(14, 50, 196, 50);
+        
+        const headers = [['Fecha', 'Concepto', 'Monto', 'Estado', 'Referencia TXN']];
+        const payments = appState.clientPayments || [];
+        
+        const body = payments.map(ph => {
+            const d = new Date(ph.created_at);
+            const dateVal = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+            const amountVal = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
+            
+            let desc = ph.desc || '—';
+            appState.modules.forEach(m => {
+                desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
+            });
+
+            return [
+                dateVal,
+                desc,
+                amountVal,
+                ph.status === 'APPROVED' ? 'APROBADO' : 'DECLINADO',
+                ph.transaction_id || '—'
+            ];
+        });
+        
+        doc.autoTable({
+            startY: 55,
+            head: headers,
+            body: body,
+            theme: 'striped',
+            headStyles: { fillColor: [79, 70, 229] },
+            styles: { font: 'Helvetica', fontSize: 9 }
+        });
+        
+        const finalY = doc.lastAutoTable.finalY || 200;
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('AS Sierra Systems - Comprobante de registro de transacciones.', 14, finalY + 20);
+        
+        doc.save(`Historial_Pagos_${bizName.replace(/\s+/g, '_')}_${today.toISOString().split('T')[0]}.pdf`);
+        Swal.fire({
+            icon: 'success',
+            title: '¡Reporte Generado!',
+            text: 'Tu historial de pagos ha sido descargado en PDF.',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)',
+            confirmButtonColor: '#10b981'
+        });
+    } catch (err) {
+        console.error('Error exportando PDF de pagos cliente:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el reporte en PDF.',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)'
+        });
+    }
+};
+

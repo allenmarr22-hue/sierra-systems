@@ -1,3 +1,28 @@
+// ====== AISLAMIENTO MULTI-SEDE (TENANT ISOLATION MONKEY PATCH) ======
+(function() {
+    if (Storage.prototype.getItem.__isPatched) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const instanceId = urlParams.get('instanceId');
+    if (instanceId) {
+        const suffix = `_${instanceId}`;
+        const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+        const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
+        const originalGetItem = Storage.prototype.getItem;
+        const originalSetItem = Storage.prototype.setItem;
+        const originalRemoveItem = Storage.prototype.removeItem;
+        Storage.prototype.getItem = function(key) {
+            return shouldAiso(key) ? originalGetItem.call(this, key + suffix) : originalGetItem.call(this, key);
+        };
+        Storage.prototype.setItem = function(key, value) {
+            return shouldAiso(key) ? originalSetItem.call(this, key + suffix, value) : originalSetItem.call(this, key, value);
+        };
+        Storage.prototype.removeItem = function(key) {
+            return shouldAiso(key) ? originalRemoveItem.call(this, key + suffix) : originalRemoveItem.call(this, key);
+        };
+        Storage.prototype.getItem.__isPatched = true;
+    }
+})();
+
 // Backend Firebase Config (Proyecto: margaritasmitbeautystudio)
 window.normalizeText = function(s) {
     return s ? s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
@@ -218,17 +243,6 @@ window.getCategoryName = getCategoryName;
 // ----------------------------------------------------
 let syncRetries = 0;
 window.syncAdminReady = async function() {
-    if (!window.loadListFromCloud) {
-        syncRetries++;
-        if (syncRetries > 40) { // ~20 segundos
-            console.error("❌ Error Crítico: No se pudo conectar con Firebase. Revisa tu conexión.");
-            showToast("Error de conexión con la nube. Trabajando en modo local.", "error");
-            return;
-        }
-        console.log("⏳ Esperando a Firebase para sincronizar (" + syncRetries + "/40)...");
-        setTimeout(window.syncAdminReady, 500); 
-        return;
-    }
     
     // Guarda de seguridad para evitar múltiples sincronizaciones paralelas
     if (window._admin_sync_active) return;
@@ -362,10 +376,13 @@ window.syncAdminReady = async function() {
             if (cloudMeta.admin_user) localStorage.setItem('margarita_admin_user', cloudMeta.admin_user);
             if (cloudMeta.admin_pass) localStorage.setItem('margarita_admin_pass', cloudMeta.admin_pass);
             if (cloudMeta.admin_email) localStorage.setItem('margarita_admin_email', cloudMeta.admin_email);
-            // Identidad del negocio
+            // Identidad del negocio y recursos multimedia
             if (cloudMeta.site_name) localStorage.setItem('margarita_site_name', cloudMeta.site_name);
             if (cloudMeta.admin_gender) localStorage.setItem('margarita_admin_gender', cloudMeta.admin_gender);
             if (cloudMeta.whatsapp_number) localStorage.setItem('margarita_whatsapp_number', cloudMeta.whatsapp_number);
+            if (cloudMeta.logo_url) localStorage.setItem('margarita_logo_url', cloudMeta.logo_url);
+            if (cloudMeta.hero_url) localStorage.setItem('margarita_hero_url', cloudMeta.hero_url);
+            if (cloudMeta.admin_bg) localStorage.setItem('margarita_admin_bg', cloudMeta.admin_bg);
             // Redes sociales
             if (cloudMeta.social_links) localStorage.setItem('margarita_social_links', JSON.stringify(cloudMeta.social_links));
             // Tema visual
@@ -542,7 +559,7 @@ window.syncAdminReady = async function() {
         // Listener para Metadatos (Tema y Seguridad)
         if (window.listenToDoc) {
             window.listenToDoc('config_v2', 'admin_meta', (data) => {
-                if (data) {
+                if (data && !window._isSavingSettings) {
                     let changedUI = false;
                     
                     if (data.theme && data.theme !== localStorage.getItem('margarita_admin_theme')) {
@@ -550,10 +567,12 @@ window.syncAdminReady = async function() {
                         if (window.applyTheme) window.applyTheme(data.theme, true);
                     }
                     
-                    const fields = ['site_name', 'admin_gender', 'whatsapp_number', 'admin_user', 'admin_pass', 'admin_email'];
+                    const fields = ['site_name', 'admin_gender', 'whatsapp_number', 'admin_user', 'admin_pass', 'admin_email', 'logo_url', 'hero_url', 'admin_bg'];
                     fields.forEach(f => {
-                        if (data[f] && data[f] !== localStorage.getItem(`margarita_${f}`)) {
-                            localStorage.setItem(`margarita_${f}`, data[f]);
+                        const cloudVal = data[f] || '';
+                        const localVal = localStorage.getItem(`margarita_${f}`) || '';
+                        if (cloudVal !== localVal) {
+                            localStorage.setItem(`margarita_${f}`, cloudVal);
                             changedUI = true;
                         }
                     });
@@ -1168,6 +1187,9 @@ if(addCatBtn) {
 
 // Tab Navigation Logic
 window.showTab = function(tabId, element) {
+    // Resetear scroll global al inicio para evitar que la cabecera quede oculta al bloquear el scroll
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
@@ -4719,7 +4741,7 @@ function _doRenderAgenda() {
                 groupMap[apt.groupId].push(apt);
             } else {
                 // Sin grupo: Creamos un grupo de un solo elemento con ID único
-                const singleGId = `nogroup-${apt.id || apt.originalIndex || index}`;
+                const singleGId = `nogroup-${apt.id ? apt.id : (apt.originalIndex !== undefined ? apt.originalIndex : index)}`;
                 groupMap[singleGId] = [apt];
                 groupedAgenda.push(groupMap[singleGId]);
             }
@@ -4728,7 +4750,7 @@ function _doRenderAgenda() {
         groupedAgenda.forEach((group, gIndex) => {
             const isRemindersTray = currentAgendaTray === 'reminders';
             if (isRemindersTray) {
-                const gId = group[0].groupId || `nogroup-${group[0].id ? group[0].id : group[0].originalIndex}`;
+                const gId = group[0].groupId || `nogroup-${group[0].id ? group[0].id : (group[0].originalIndex !== undefined ? group[0].originalIndex : '')}`;
                 const clientName = group[0].name || 'Sin Nombre';
                 const clientPhone = group[0].phone || '';
                 const cleanPhone = clientPhone.toString().replace(/\D/g,'');
@@ -4807,7 +4829,7 @@ function _doRenderAgenda() {
             }
 
             const isMulti = group.length > 1;
-            const gId = group[0].groupId || `nogroup-${group[0].id ? group[0].id : group[0].originalIndex}`;
+            const gId = group[0].groupId || `nogroup-${group[0].id ? group[0].id : (group[0].originalIndex !== undefined ? group[0].originalIndex : '')}`;
             const isGroupPaid = group.some(a => a.paid === 'full');
             const isGroupPartial = group.some(a => a.paid === 'partial');
             
@@ -5234,10 +5256,11 @@ window.sendReminderWhatsApp = function(index, isMaintenance = false) {
     
     const docName = apt.specialist || 'Margarita Smit';
     const clientName = (apt.name || 'hermosa').split(' ')[0]; // Solo primer nombre para calidez
+    const businessName = localStorage.getItem('margarita_site_name') || 'Margaritasmit';
     
     let msg = "";
     if (isMaintenance || currentAgendaTray === 'reminders') {
-        msg = `✨ *Cuidado de tus Uñas* ✨\n\n¡Hola, ${clientName}! 👋🏼\n\nTe escribimos de *Margarita Smit Beauty* para saludarte y recordarte que ya es tiempo de consentir tus uñas con un mantenimiento o un nuevo diseño. 💅🏼✨\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`;
+        msg = `✨ *Cuidado de tus Uñas* ✨\n\n¡Hola, ${clientName}! 👋🏼\n\nTe escribimos de *${businessName}* para saludarte y recordarte que ya es tiempo de consentir tus uñas con un mantenimiento o un nuevo diseño. 💅🏼✨\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`;
         
         // --- Registro de Último Recordatorio ---
         try {
@@ -5265,7 +5288,7 @@ window.sendReminderWhatsApp = function(index, isMaintenance = false) {
         // ----------------------------------------
         
     } else {
-        msg = `✨ *Recordatorio de Cita* ✨\n\n¡Hola, ${clientName}! 👋🏼\n\nTe escribimos de *Margarita Smit Beauty* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* ${apt.service || 'Belleza'}\n⏰ *Hora:* ${timeLabel}\n👩🏻‍🎨 *Especialista:* ${docName}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`;
+        msg = `✨ *Recordatorio de Cita* ✨\n\n¡Hola, ${clientName}! 👋🏼\n\nTe escribimos de *${businessName}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* ${apt.service || 'Belleza'}\n⏰ *Hora:* ${timeLabel}\n👩🏻‍🎨 *Especialista:* ${docName}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`;
     }
     
     const url = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(msg)}`;
@@ -5313,7 +5336,7 @@ window.updateAptStatus = function(index, newStatus) {
             
             // UI OPTIMISTA Individual
             // UI OPTIMISTA Individual - Usar la misma lógica de ID que el render
-            const gId = targetApt.groupId || `nogroup-${targetApt.id ? targetApt.id : index}`;
+            const gId = targetApt.groupId || `nogroup-${targetApt.id ? targetApt.id : (targetApt.originalIndex !== undefined ? targetApt.originalIndex : index)}`;
             const card = document.querySelector(`[data-group-id="${gId}"]`);
             if (card) {
                card.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
@@ -5528,13 +5551,37 @@ window.deleteAppointment = function(index) {
     const areYouSure = gender === 'Femenino' ? '¿Segura' : '¿Seguro';
     let agenda = JSON.parse(localStorage.getItem('margarita_appointments')) || [];
     const targetApt = agenda[index];
+    if (!targetApt) return;
+
     // LÓGICA CORRECTA:
     // - COMBO: eliminar TODO el grupo junto (precio único indivisible)
     // - PAQUETE (package): eliminar individualmente (cada servicio tiene precio propio)
-    const isCombo = targetApt && targetApt.groupId && targetApt.promoType === 'combo' && agenda.filter(a => a.groupId === targetApt.groupId).length > 1;
+    const isCombo = targetApt.groupId && targetApt.promoType === 'combo' && agenda.filter(a => a.groupId === targetApt.groupId).length > 1;
     const msg = isCombo ? `${areYouSure} que quieres borrar el Combo completo?` : `${areYouSure} que quieres borrar esta cita?`;
 
     showConfirm(msg, () => {
+        window._isUpdatingLocal = true; // ACTIVAR BLOQUEO
+
+        // UI OPTIMISTA: Animación de salida sin refrescar la lista completa (evita parpadeos)
+        const gId = targetApt.groupId || `nogroup-${targetApt.id ? targetApt.id : (targetApt.originalIndex !== undefined ? targetApt.originalIndex : index)}`;
+        const card = document.querySelector(`[data-group-id="${gId}"]`);
+        if (card) {
+            card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-10px) scale(0.98)';
+            setTimeout(() => {
+                card.remove();
+                // Si la bandeja queda vacía, inyectar mensaje informativo
+                const listContainer = document.getElementById('agenda-list-container');
+                if (listContainer && !listContainer.querySelector('.glass-module')) {
+                    listContainer.innerHTML = `<div style="text-align:center; padding:50px 20px; color:#999; font-weight:500;">
+                        <i class="far fa-calendar-times" style="font-size:3rem; color:var(--color-accent); opacity:0.3; margin-bottom:15px; display:block;"></i>
+                        No hay citas registradas en esta bandeja.
+                    </div>`;
+                }
+            }, 300);
+        }
+
         if (isCombo) {
             agenda = agenda.filter(a => a.groupId !== targetApt.groupId);
         } else {
@@ -5542,12 +5589,19 @@ window.deleteAppointment = function(index) {
         }
         localStorage.setItem('margarita_appointments', JSON.stringify(agenda));
         
-        // Sync to Firestore (Robust Cloud)
+        // Actualizar contadores de alerta de forma inmediata
+        if (window.updateBadges) window.updateBadges();
+
+        // Sync to Firestore (Robust Cloud) en segundo plano
         if (window.saveListToCloud) {
             window.saveListToCloud('citas_v2', agenda);
         }
 
-        renderAgenda();
+        // Liberar bloqueo de actualización de fondo
+        setTimeout(() => {
+            window._isUpdatingLocal = false;
+        }, 1000);
+
         showToast(isCombo ? 'Combo eliminado.' : 'Cita eliminada.');
     });
 }
@@ -7802,8 +7856,9 @@ window.saveClosureSettings = function() {
 // ----------------------------------------------------
 // CONFIGURACIÓN Y AJUSTES DEL SISTEMA
 // ----------------------------------------------------
-window.syncAdminMetaToCloud = function(silent = false) {
+window.syncAdminMetaToCloud = async function(silent = false) {
     if (!window.saveDataToCloud) return;
+
     const meta = {
         theme: localStorage.getItem('margarita_admin_theme') || 'rose',
         site_name: localStorage.getItem('margarita_site_name') || 'Margaritasmit',
@@ -7812,113 +7867,257 @@ window.syncAdminMetaToCloud = function(silent = false) {
         admin_user: localStorage.getItem('margarita_admin_user') || 'admin',
         admin_pass: localStorage.getItem('margarita_admin_pass') || '12345',
         admin_email: localStorage.getItem('margarita_admin_email') || 'ejemplo@correo.com',
-        social_links: JSON.parse(localStorage.getItem('margarita_social_links') || '{"insta":"","tiktok":"","face":""}')
+        social_links: JSON.parse(localStorage.getItem('margarita_social_links') || '{"insta":"","tiktok":"","face":""}'),
+        logo_url: localStorage.getItem('margarita_logo_url') || '',
+        hero_url: localStorage.getItem('margarita_hero_url') || '',
+        admin_bg: localStorage.getItem('margarita_admin_bg') || ''
     };
-    window.saveDataToCloud('config_v2', 'admin_meta', meta);
+    await window.saveDataToCloud('config_v2', 'admin_meta', meta);
     
     // Cloud Sync: Guardar la parte pública en 'general' para los clientes
     const publicMeta = {
         site_name: meta.site_name,
         whatsapp: meta.whatsapp_number,
-        social: meta.social_links
+        social: meta.social_links,
+        theme: meta.theme,
+        logo_url: meta.logo_url,
+        hero_url: meta.hero_url
     };
-    window.saveDataToCloud('config_v2', 'general', publicMeta);
+    await window.saveDataToCloud('config_v2', 'general', publicMeta);
 
     if (!silent) console.log("☁️ [Nube] Ajustes de Administrador y Públicos guardados.");
 };
 
-window.saveIdentity = function() {
+window.saveIdentity = async function() {
+    window._isSavingSettings = true; // Activar protección contra sobreescrituras en segundo plano
     const name = document.getElementById('settings-site-name').value.trim();
     const gender = document.getElementById('settings-admin-gender').value;
-    if(!name && document.getElementById('settings-site-name').dataset.active === 'true') {
-        return showToast("El nombre no puede estar vacío.", "error");
-    }
+    const waNum = document.getElementById('settings-site-whatsapp').value.trim();
     
-    // Solo guardar si se habilitó el campo
-    if(document.getElementById('settings-site-name').dataset.active === 'true') {
-        localStorage.setItem('margarita_site_name', name);
+    if(!name) {
+        return showToast("El nombre del negocio no puede estar vacío.", "error");
     }
-    
-    if(document.getElementById('settings-admin-gender').dataset.active === 'true') {
-        localStorage.setItem('margarita_admin_gender', gender);
+    if(!waNum) {
+        return showToast("El teléfono de reservas no puede estar vacío.", "error");
     }
-    
-    if(document.getElementById('settings-site-whatsapp').dataset.active === 'true') {
-        const waNum = document.getElementById('settings-site-whatsapp').value.trim();
-        localStorage.setItem('margarita_whatsapp_number', waNum);
-        localStorage.setItem('margarita_salon_trigger', Date.now()); // Notificar a la web
-    }
-    
+
+    localStorage.setItem('margarita_site_name', name);
+    localStorage.setItem('margarita_admin_gender', gender);
+    localStorage.setItem('margarita_whatsapp_number', waNum);
+    localStorage.setItem('margarita_salon_trigger', Date.now()); // Notificar a la web
+
+    const uploadFileHelper = function(inputEl, cloudFileName, maxWidth = 1200, maxHeight = 1200) {
+        return new Promise((resolve) => {
+            if (inputEl && inputEl.files && inputEl.files[0]) {
+                const file = inputEl.files[0];
+                if (file.size > 10 * 1024 * 1024) { // Subir límite ya que redimensionamos en canvas
+                    showToast(`Imagen muy pesada. El máximo permitido es 10MB.`, "error");
+                    resolve(null);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const originalBase64 = e.target.result;
+                    const compressedBase64 = await resizeImageBase64(originalBase64, maxWidth, maxHeight);
+                    resolve({ base64: compressedBase64, url: compressedBase64 });
+                };
+                reader.readAsDataURL(file);
+            } else {
+                resolve(null);
+            }
+        });
+    };
+
+    // 1. Procesar Fondo de Inicio de Sesión
     const bgInput = document.getElementById('settings-admin-bg');
-    if (bgInput.dataset.active === 'true' && bgInput.files && bgInput.files[0]) {
-        const file = bgInput.files[0];
-        if(file.size > 2 * 1024 * 1024) {
-            return showToast("La imagen es muy pesada. Máximo 2MB idealmente.", "error");
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            localStorage.setItem('margarita_admin_bg', e.target.result);
-            document.getElementById('settings-admin-bg-preview').src = e.target.result;
-            document.getElementById('settings-admin-bg-preview').style.display = 'block';
-            applyDynamicBranding();
-            toggleIdentityEdit(null); // Reset
-            showToast("¡Identidad y fondo actualizados!", "success");
-        };
-        reader.readAsDataURL(file);
-    } else {
-        applyDynamicBranding();
-        toggleIdentityEdit(null); // Reset
-        showToast("¡Identidad actualizada!", "success");
+    const bgRes = await uploadFileHelper(bgInput, 'salon_login_bg', 1600, 1600);
+    if (bgRes) {
+        localStorage.setItem('margarita_admin_bg', bgRes.url);
+        document.getElementById('settings-admin-bg-preview').src = bgRes.url;
+        document.getElementById('settings-admin-bg-preview').style.display = 'block';
     }
+
+    // 2. Procesar Logo de la Marca (Máx 300px para ser ligero y compatible con Favicon)
+    const logoInput = document.getElementById('settings-site-logo');
+    const logoRes = await uploadFileHelper(logoInput, 'salon_logo', 300, 300);
+    if (logoRes) {
+        localStorage.setItem('margarita_logo_url', logoRes.url);
+        _showSavedPreview('settings-site-logo-preview', logoRes.url);
+    }
+
+    // 3. Procesar Foto de Portada / Hero
+    const heroInput = document.getElementById('settings-site-hero');
+    const heroRes = await uploadFileHelper(heroInput, 'salon_hero', 1200, 1200);
+    if (heroRes) {
+        localStorage.setItem('margarita_hero_url', heroRes.url);
+        _showSavedPreview('settings-site-hero-preview', heroRes.url);
+    }
+
+    applyDynamicBranding();
+    
+    // Limpiar campos de archivo por comodidad
+    if (bgInput) bgInput.value = '';
+    if (logoInput) logoInput.value = '';
+    if (heroInput) heroInput.value = '';
+
+    showToast("¡Identidad y medios actualizados con éxito!", "success");
     
     // Guardar en la nube
-    window.syncAdminMetaToCloud(true);
+    await window.syncAdminMetaToCloud(true);
+    
+    // Liberar protección después de sincronizar con éxito (3 segundos es sumamente seguro)
+    setTimeout(() => {
+        window._isSavingSettings = false;
+    }, 3000);
 };
 
 window.toggleIdentityEdit = function(field) {
-    const allInputs = document.querySelectorAll('.identity-input');
-    const allBtns = document.getElementById('settings-block-identidad').querySelectorAll('.sec-edit-btn');
+    // Stub kept for backward compatibility (no longer needed as fields are always editable)
+};
 
-    if (!field) {
-        allInputs.forEach(el => {
-            el.disabled = true;
-            el.style.background = '#f8f9fa';
-            el.dataset.active = 'false';
-        });
-        allBtns.forEach(el => {
-            el.innerHTML = '<i class="fas fa-edit"></i> Editar';
-            el.style.color = 'var(--color-dark-pink)';
-        });
-        return;
-    }
-
-    const currentInput = document.getElementById(`settings-admin-${field}`) || document.getElementById(`settings-site-${field}`);
-    const currentBtn = event.currentTarget;
-    const isActive = currentInput.dataset.active === 'true';
-
-    if (isActive) {
-        window.toggleIdentityEdit(null);
-    } else {
-        // Habilitar este campo
-        currentInput.disabled = false;
-        currentInput.style.background = '#fff';
-        currentInput.dataset.active = 'true';
-        currentInput.focus();
-        currentBtn.innerHTML = '<i class="fas fa-times"></i> Cancelar';
-        currentBtn.style.color = '#777';
+window.previewImageLocal = function(inputEl, previewId) {
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+    if (inputEl.files && inputEl.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            // Ocultar el ícono de placeholder
+            const icon = preview.parentElement && preview.parentElement.querySelector('.premium-placeholder-icon');
+            if (icon) icon.style.display = 'none';
+        };
+        reader.readAsDataURL(inputEl.files[0]);
     }
 };
 
+// Redimensionar base64 para evitar QuotaExceededError en localStorage y hacer que el favicon funcione en Chrome/Edge
+function resizeImageBase64(base64Str, maxWidth, maxHeight) {
+    return new Promise((resolve) => {
+        if (!base64Str || !base64Str.startsWith('data:image/')) {
+            resolve(base64Str);
+            return;
+        }
+        const img = new Image();
+        img.src = base64Str;
+        img.onload = function() {
+            let width = img.width;
+            let height = img.height;
+
+            if (width <= maxWidth && height <= maxHeight) {
+                resolve(base64Str); // No es necesario redimensionar
+                return;
+            }
+
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            let format = 'image/png';
+            if (base64Str.startsWith('data:image/jpeg')) {
+                format = 'image/jpeg';
+            } else if (base64Str.startsWith('data:image/webp')) {
+                format = 'image/webp';
+            }
+
+            resolve(canvas.toDataURL(format, 0.85));
+        };
+        img.onerror = function() {
+            resolve(base64Str); // Fallback
+        };
+    });
+}
+
+// Helper para mostrar imagen guardada y ocultar el placeholder
+function _showSavedPreview(previewId, src) {
+    const preview = document.getElementById(previewId);
+    if (preview && src) {
+        preview.src = src;
+        preview.style.display = 'block';
+        const icon = preview.parentElement && preview.parentElement.querySelector('.premium-placeholder-icon');
+        if (icon) icon.style.display = 'none';
+    }
+}
+
+
 function applyDynamicBranding() {
     const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+    const customLogo = localStorage.getItem('margarita_logo_url');
+
+    // Auto-optimizar logos gigantescos existentes en el navegador
+    if (customLogo && customLogo.startsWith('data:image/') && customLogo.length > 120000) {
+        console.log("⚡ [Favicon] Logo grande detectado en localStorage. Optimizándolo para reactivar el icono de pestaña...");
+        resizeImageBase64(customLogo, 300, 300).then(resized => {
+            if (resized && resized.length < customLogo.length) {
+                localStorage.setItem('margarita_logo_url', resized);
+                console.log("✅ [Favicon] Logo optimizado de", Math.round(customLogo.length/1024), "KB a", Math.round(resized.length/1024), "KB.");
+                // Forzar actualización inmediata
+                applyDynamicBranding();
+            }
+        });
+    }
+
+    // 1. Actualizar título de la pestaña
+    document.title = `Panel Administrativo | ${name}`;
+
+    // 2. Actualizar favicon (icono de pestaña) — sin flash: solo actualizar href
+    if (customLogo) {
+        let link = document.getElementById('dynamic-favicon');
+        if (!link) {
+            link = document.createElement('link');
+            link.id = 'dynamic-favicon';
+            link.rel = 'icon';
+            document.getElementsByTagName('head')[0].appendChild(link);
+        }
+        if (customLogo.startsWith('data:image/svg') || customLogo.endsWith('.svg')) {
+            link.type = 'image/svg+xml';
+        } else {
+            link.type = 'image/png';
+        }
+        link.href = customLogo;
+    }
+
     document.querySelectorAll('.dynamic-brand-name').forEach(el => {
-        el.innerHTML = `${name}<span>.</span> Admin`;
+        const expectedHTML = `<a href="admin.html" style="text-decoration: none; color: inherit;">${name}<span>.</span> Admin</a>`;
+        if (el.innerHTML !== expectedHTML) {
+            el.innerHTML = expectedHTML;
+        }
     });
 
     const customBg = localStorage.getItem('margarita_admin_bg');
     const authSection = document.getElementById('auth-section');
     if (authSection && customBg) {
-        authSection.style.backgroundImage = `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('${customBg}')`;
+        const expectedBg = `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url("${customBg.replace(/"/g, '\\"')}")`;
+        const currentBg = authSection.style.backgroundImage.replace(/'/g, '"');
+        const checkBg = expectedBg.replace(/'/g, '"');
+        if (currentBg !== checkBg) {
+            authSection.style.backgroundImage = expectedBg;
+        }
+    }
+
+    const sidebarLogoContainer = document.getElementById('admin-sidebar-logo-container');
+    if (sidebarLogoContainer) {
+        if (customLogo) {
+            // Forzar actualización siempre añadiendo cache-buster para URLs remotas
+            const freshSrc = customLogo.startsWith('data:') ? customLogo : (customLogo + (customLogo.includes('?') ? '&' : '?') + 't=' + Date.now());
+            sidebarLogoContainer.innerHTML = `<img src="${freshSrc}" style="width: 42px; height: 42px; object-fit: contain; border-radius: 8px; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;">`;
+        } else {
+            sidebarLogoContainer.innerHTML = `<i class="fas fa-crown" id="admin-sidebar-logo-icon"></i>`;
+        }
     }
 
     // Notificar a la web pública
@@ -7926,59 +8125,7 @@ function applyDynamicBranding() {
 }
 
 window.toggleSecurityEdit = function(field) {
-    const allInputs = document.querySelectorAll('.sec-input');
-    const allBtns = document.querySelectorAll('.sec-edit-btn');
-    const valBox = document.getElementById('sec-validation-box');
-
-    if (!field) {
-        // Reset everything (Cancelar / Después de guardar)
-        allInputs.forEach(el => {
-            el.disabled = true;
-            el.style.background = '#f8f9fa';
-            el.value = '';
-            el.dataset.active = 'false';
-        });
-        allBtns.forEach(el => {
-            el.innerHTML = '<i class="fas fa-edit"></i> Editar';
-            el.style.color = 'var(--color-dark-pink)';
-            el.style.visibility = 'visible'; // Mostrar todos
-        });
-        valBox.style.display = 'none';
-        document.getElementById('settings-current-pass').value = '';
-        return;
-    }
-
-    const currentInput = document.getElementById(`settings-admin-${field}`);
-    const currentBtn = document.getElementById(`sec-edit-${field}`);
-    const isActive = currentInput.dataset.active === 'true';
-
-    if (isActive) {
-        // Si ya está activo, lo cancelamos
-        window.toggleSecurityEdit(null);
-    } else {
-        // Activar solo este campo
-        allInputs.forEach(el => {
-            el.disabled = true;
-            el.style.background = '#f8f9fa';
-            el.value = '';
-            el.dataset.active = 'false';
-        });
-        allBtns.forEach(el => {
-            if (el.id !== `sec-edit-${field}`) {
-                el.style.visibility = 'hidden'; // Ocultar los botones de los otros campos
-            } else {
-                el.innerHTML = '<i class="fas fa-times"></i> Cancelar';
-                el.style.color = '#e74c3c';
-            }
-        });
-
-        currentInput.dataset.active = 'true';
-        currentInput.disabled = false;
-        currentInput.style.background = '#ffffff';
-        currentInput.focus();
-
-        valBox.style.display = 'block';
-    }
+    // Stub kept for backward compatibility (no longer needed as fields are always editable)
 };
 
 window.saveSecurityDetails = function() {
@@ -7989,30 +8136,39 @@ window.saveSecurityDetails = function() {
 
     const storedUser = localStorage.getItem('margarita_admin_user') || 'admin';
     const storedPass = localStorage.getItem('margarita_admin_pass') || '12345';
+    const storedExpensePass = localStorage.getItem('margarita_expense_pass') || '';
 
-    if(!currentVerify) return showToast("Ingresa tu contraseña actual para confirmar.", "error");
-    if(currentVerify !== storedPass) return showToast("Contraseña actual incorrecta.", "error");
+    if (!newUser) return showToast("El usuario de acceso no puede estar vacío.", "error");
+    if (!currentVerify) return showToast("Ingresa tu contraseña actual para confirmar los cambios.", "error");
+    if (currentVerify !== storedPass) return showToast("Contraseña actual incorrecta.", "error");
     
     // Verificar si realmente se editó algo
-    if (!newUser && !newPass && !newExpensePass) {
-        return showToast("No ingresaste ningún dato nuevo.", "error");
+    const isUserChanged = (newUser !== storedUser);
+    const isPassChanged = (newPass.length > 0);
+    const isExpensePassChanged = (newExpensePass !== storedExpensePass);
+
+    if (!isUserChanged && !isPassChanged && !isExpensePassChanged) {
+        return showToast("No has realizado ningún cambio.", "error");
     }
 
-    if (newUser) {
+    if (isUserChanged) {
         localStorage.setItem('margarita_admin_user', newUser);
     }
-    if (newPass) {
-        if(newPass.length < 5) return showToast("La clave debe tener al menos 5 caracteres.", "error");
+    if (isPassChanged) {
+        if (newPass.length < 5) return showToast("La nueva clave debe tener al menos 5 caracteres.", "error");
         localStorage.setItem('margarita_admin_pass', newPass);
     }
-    if (newExpensePass) {
-        if(newExpensePass.length < 4) return showToast("La clave de la libreta debe tener al menos 4 caracteres.", "error");
+    if (isExpensePassChanged) {
         localStorage.setItem('margarita_expense_pass', newExpensePass);
     }
 
     showToast("Datos de acceso actualizados correctamente.", "success");
-    window.toggleSecurityEdit(null); // Resetea toda la UI
-    loadCurrentSettings(); // Refrescar placeholder
+    
+    // Limpiar claves por seguridad
+    document.getElementById('settings-admin-pass').value = '';
+    document.getElementById('settings-current-pass').value = '';
+    
+    loadCurrentSettings(); // Refrescar placeholders e inputs
     
     // Guardar claves y usuarios en la nube globalmente
     window.syncAdminMetaToCloud(true);
@@ -8039,17 +8195,26 @@ function loadCurrentSettings() {
     document.getElementById('settings-admin-gender').value = localStorage.getItem('margarita_admin_gender') || "Femenino";
     document.getElementById('settings-site-whatsapp').value = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
     
+    const bgInput = document.getElementById('settings-admin-bg');
     const customBg = localStorage.getItem('margarita_admin_bg');
-    if (customBg) {
-        const preview = document.getElementById('settings-admin-bg-preview');
-        if(preview) {
-            preview.src = customBg;
-            preview.style.display = 'block';
-        }
+    if (customBg && (!bgInput || !bgInput.files || bgInput.files.length === 0)) {
+        _showSavedPreview('settings-admin-bg-preview', customBg);
+    }
+
+    const logoInput = document.getElementById('settings-site-logo');
+    const customLogo = localStorage.getItem('margarita_logo_url');
+    if (customLogo && (!logoInput || !logoInput.files || logoInput.files.length === 0)) {
+        _showSavedPreview('settings-site-logo-preview', customLogo);
+    }
+
+    const heroInput = document.getElementById('settings-site-hero');
+    const customHero = localStorage.getItem('margarita_hero_url');
+    if (customHero && (!heroInput || !heroInput.files || heroInput.files.length === 0)) {
+        _showSavedPreview('settings-site-hero-preview', customHero);
     }
     
     document.getElementById('settings-admin-user').value = localStorage.getItem('margarita_admin_user') || 'admin';
-    document.getElementById('settings-admin-pass').value = localStorage.getItem('margarita_admin_pass') || '12345';
+    document.getElementById('settings-admin-pass').value = '';
     document.getElementById('settings-admin-expense-pass').value = localStorage.getItem('margarita_expense_pass') || '';
     
     const social = JSON.parse(localStorage.getItem('margarita_social_links') || '{}');
@@ -8083,18 +8248,25 @@ window.showSettingsBlock = function(blockId) {
     document.querySelectorAll('.settings-nav-btn').forEach(el => el.classList.remove('active'));
     
     // Mostrar el seleccionado
-    document.getElementById('settings-block-' + blockId).classList.add('active');
+    const blockEl = document.getElementById('settings-block-' + blockId);
+    if (blockEl) blockEl.classList.add('active');
     
     // Marcar botón activo
-    const index = ['identidad', 'seguridad', 'diseno', 'redes'].indexOf(blockId);
-    if(index !== -1) {
-        document.querySelectorAll('.settings-nav-btn')[index].classList.add('active');
+    const allBlocks = ['identidad', 'seguridad', 'diseno', 'redes', 'multimedia', 'promo-bubble'];
+    const index = allBlocks.indexOf(blockId);
+    if (index !== -1) {
+        const btns = document.querySelectorAll('.settings-nav-btn');
+        if (btns[index]) btns[index].classList.add('active');
+    }
+
+    // Renderizar panel de Burbuja Pro al abrirlo
+    if (blockId === 'promo-bubble') {
+        if (typeof renderAgendaPromoConfig === 'function') renderAgendaPromoConfig();
     }
 };
 
-window.applyTheme = function(themeName, silent = false) {
-    const root = document.documentElement;
-    const themes = {
+window.getThemesMap = function() {
+    return {
         rose: { accent: '#A05D6B', bg: '#FCF8F5', rgb: '160, 93, 107' },
         blue: { accent: '#2D4F6C', bg: '#F4F7F9', rgb: '45, 79, 108' },
         green: { accent: '#2E5A44', bg: '#F4F9F6', rgb: '46, 90, 68' },
@@ -8104,10 +8276,160 @@ window.applyTheme = function(themeName, silent = false) {
         cyan: { accent: '#3498DB', bg: '#F4F9FC', rgb: '52, 152, 219' },
         purple: { accent: '#7D3C98', bg: '#F8F4F9', rgb: '125, 60, 152' },
         maroon: { accent: '#922B21', bg: '#FCF5F4', rgb: '146, 43, 33' },
-        slate: { accent: '#34495E', bg: '#F4F6F7', rgb: '52, 73, 94' }
+        slate: { accent: '#34495E', bg: '#F4F6F7', rgb: '52, 73, 94' },
+        
+        emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133' },
+        mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96' },
+        teal: { accent: '#117A65', bg: '#E8F6F3', rgb: '17, 122, 101' },
+        olive: { accent: '#7D6608', bg: '#FEFDE8', rgb: '125, 102, 8' },
+        mustard: { accent: '#B7950B', bg: '#FEFDF0', rgb: '183, 149, 11' },
+        terracotta: { accent: '#A04000', bg: '#FDF5E6', rgb: '160, 64, 0' },
+        coral: { accent: '#D35400', bg: '#FDF2E9', rgb: '211, 84, 0' },
+        sand: { accent: '#A08A75', bg: '#F9F6F0', rgb: '160, 138, 117' },
+        coffee: { accent: '#5D4037', bg: '#F6F2F0', rgb: '93, 64, 55' },
+        plum: { accent: '#6C3483', bg: '#F5EEF8', rgb: '108, 52, 131' },
+        orchid: { accent: '#8E44AD', bg: '#F4ECF7', rgb: '142, 68, 173' },
+        magenta: { accent: '#C0392B', bg: '#FDEDEC', rgb: '192, 57, 43' },
+        rosewood: { accent: '#78281F', bg: '#FAF2F2', rgb: '120, 40, 31' },
+        navy: { accent: '#1B4F72', bg: '#EAF2F8', rgb: '27, 79, 114' },
+        peacock: { accent: '#21618C', bg: '#EBF5FB', rgb: '33, 97, 140' },
+        indigo: { accent: '#2874A6', bg: '#EAF2F8', rgb: '40, 116, 166' },
+        charcoal: { accent: '#455A64', bg: '#ECEFF1', rgb: '69, 90, 100' },
+        sakura: { accent: '#E8A7B5', bg: '#FFF3F5', rgb: '232, 167, 181' },
+        wine: { accent: '#780820', bg: '#FCF2F4', rgb: '120, 8, 32' },
+        amber: { accent: '#D68910', bg: '#FEF9E7', rgb: '214, 137, 16' }
     };
+};
+
+window.renderThemeSelector = function() {
+    const grid = document.getElementById('theme-selector-grid');
+    if (!grid) return;
     
+    const themeNames = {
+        rose: 'Rosa Seda',
+        blue: 'Azul Pizarra',
+        green: 'Verde Bosque',
+        gold: 'Tierra Café',
+        lavender: 'Lavanda',
+        orange: 'Naranja',
+        cyan: 'Cyan Hielo',
+        purple: 'Púrpura',
+        maroon: 'Granate',
+        slate: 'Oscuro',
+        emerald: 'Esmeralda',
+        mint: 'Menta Suave',
+        teal: 'Teal Luxe',
+        olive: 'Oliva Premium',
+        mustard: 'Mostaza Real',
+        terracotta: 'Terracota',
+        coral: 'Coral Cálido',
+        sand: 'Arena Desierto',
+        coffee: 'Café Mocha',
+        plum: 'Ciruela Luxe',
+        orchid: 'Orquídea',
+        magenta: 'Fucsia Luxe',
+        rosewood: 'Madera Rosa',
+        navy: 'Azul Marino',
+        peacock: 'Azul Real',
+        indigo: 'Indigo Místico',
+        charcoal: 'Gris Carbón',
+        sakura: 'Sakura Pastel',
+        wine: 'Vino Tinto',
+        amber: 'Ámbar Dorado'
+    };
+
+    const themes = window.getThemesMap();
+    const currentTheme = localStorage.getItem('margarita_admin_theme') || 'rose';
+    
+    grid.innerHTML = '';
+    
+    Object.keys(themes).forEach(key => {
+        const theme = themes[key];
+        const displayName = themeNames[key] || key.toUpperCase();
+        const isActive = currentTheme === key;
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => {
+            window.applyTheme(key);
+            window.renderThemeSelector();
+        };
+        
+        btn.style.cssText = `
+            background: #fff;
+            border: ${isActive ? '2.5px solid ' + theme.accent : '2.5px solid rgba(0,0,0,0.06)'};
+            border-radius: 18px;
+            padding: 15px 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+            box-shadow: ${isActive ? '0 8px 25px rgba(' + theme.rgb + ', 0.18)' : '0 4px 15px rgba(0,0,0,0.02)'};
+            position: relative;
+            transform: ${isActive ? 'translateY(-2px)' : 'none'};
+            outline: none;
+        `;
+        
+        btn.onmouseover = () => {
+            btn.style.borderColor = theme.accent;
+            btn.style.transform = 'translateY(-4px)';
+            btn.style.boxShadow = `0 10px 25px rgba(${theme.rgb}, 0.25)`;
+        };
+        btn.onmouseout = () => {
+            if (!isActive) {
+                btn.style.borderColor = 'rgba(0,0,0,0.06)';
+                btn.style.transform = 'none';
+                btn.style.boxShadow = '0 4px 15px rgba(0,0,0,0.02)';
+            } else {
+                btn.style.borderColor = theme.accent;
+                btn.style.transform = 'translateY(-2px)';
+                btn.style.boxShadow = `0 8px 25px rgba(${theme.rgb}, 0.18)`;
+            }
+        };
+        
+        const colorCircle = document.createElement('div');
+        colorCircle.style.cssText = `
+            width: 35px;
+            height: 35px;
+            background: ${theme.accent};
+            border-radius: 50%;
+            border: 3px solid ${isActive ? '#fff' : '#f9f9f9'};
+            box-shadow: 0 5px 15px rgba(${theme.rgb}, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        `;
+        if (isActive) {
+            colorCircle.innerHTML = '<i class="fas fa-check" style="font-size:0.75rem;"></i>';
+        }
+        
+        const label = document.createElement('span');
+        label.innerText = displayName;
+        label.style.cssText = `
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: ${isActive ? theme.accent : '#555'};
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        `;
+        
+        btn.appendChild(colorCircle);
+        btn.appendChild(label);
+        grid.appendChild(btn);
+    });
+};
+
+window.applyTheme = function(themeName, silent = false) {
+    const root = document.documentElement;
+    const themes = window.getThemesMap();
     const theme = themes[themeName] || themes.rose;
+    
     root.style.setProperty('--color-accent', theme.accent);
     root.style.setProperty('--gold-primary', theme.accent);
     root.style.setProperty('--color-dark-pink', theme.accent);
@@ -8117,7 +8439,6 @@ window.applyTheme = function(themeName, silent = false) {
     localStorage.setItem('margarita_admin_theme', themeName);
     if (!silent) {
         showToast(`Tema aplicado: ${themeName.toUpperCase()}`, 'success');
-        // Sincronizar tema a la nube de Pi a Pa
         if (window.syncAdminMetaToCloud) {
             window.syncAdminMetaToCloud(true);
         }
@@ -8129,6 +8450,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Aplicar tema guardado
     const savedTheme = localStorage.getItem('margarita_admin_theme') || 'rose';
     if(savedTheme !== 'rose') applyTheme(savedTheme, true); // true = no toast on load
+    if (window.renderThemeSelector) window.renderThemeSelector();
 
     initKeyboardShortcuts();
     
@@ -8538,7 +8860,7 @@ window.setPaymentStatus = function(index, status) {
     const isCombo = targetApt.groupId && agenda.filter(a => a.groupId === targetApt.groupId).length > 1;
 
     // UI OPTIMISTA: Cambios visuales instantáneos en toda la tarjeta del grupo
-    const gId = targetApt.groupId || `nogroup-${targetApt.id ? targetApt.id : index}`;
+    const gId = targetApt.groupId || `nogroup-${targetApt.id ? targetApt.id : (targetApt.originalIndex !== undefined ? targetApt.originalIndex : index)}`;
     const card = document.querySelector(`[data-group-id="${gId}"]`);
     
     if (card) {
@@ -8956,4 +9278,135 @@ window.saveAdvancedTimeConfig = function() {
     
     document.getElementById('maintConfigModal').classList.remove('show');
     showToast('<i class="fas fa-check-circle"></i> Ciclos de mantenimiento actualizados.');
+};
+
+// ============================================================
+// BURBUJA PRO — Configurador de Animaciones (StyleSync / Agenda)
+// ============================================================
+
+const AGENDA_PROMO_BOXES = [
+    { id: 'promo-box-1',  name: 'Roja Clásica',    svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#e53935" stroke="#b71c1c" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#ef9a9a" stroke="#b71c1c" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#c62828"/><rect x="8" y="22" width="44" height="4" fill="#c62828"/><path d="M30 18 Q20 10 14 14 Q8 18 12 22 Q18 22 30 18Z" fill="#ff5252"/><path d="M30 18 Q40 10 46 14 Q52 18 48 22 Q42 22 30 18Z" fill="#ff5252"/><circle cx="30" cy="18" r="3" fill="#ffcdd2"/></svg>` },
+    { id: 'promo-box-2',  name: 'Dorada Lujo',     svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#f9a825" stroke="#f57f17" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#fff9c4" stroke="#f57f17" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#f57f17"/><rect x="8" y="22" width="44" height="4" fill="#f57f17"/><path d="M30 18 Q20 8 13 13 Q7 18 11 23 Q18 22 30 18Z" fill="#ffd54f"/><path d="M30 18 Q40 8 47 13 Q53 18 49 23 Q42 22 30 18Z" fill="#ffd54f"/><circle cx="30" cy="18" r="3.5" fill="#fff176"/></svg>` },
+    { id: 'promo-box-3',  name: 'Turquesa Gala',   svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#00897b" stroke="#004d40" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#b2dfdb" stroke="#004d40" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#00695c"/><rect x="8" y="22" width="44" height="4" fill="#00695c"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#4db6ac"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#4db6ac"/><circle cx="30" cy="18" r="3" fill="#e0f2f1"/></svg>` },
+    { id: 'promo-box-4',  name: 'Índigo Real',     svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#3949ab" stroke="#1a237e" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#c5cae9" stroke="#1a237e" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#283593"/><rect x="8" y="22" width="44" height="4" fill="#283593"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#7986cb"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#7986cb"/><circle cx="30" cy="18" r="3" fill="#e8eaf6"/></svg>` },
+    { id: 'promo-box-5',  name: 'Rosa Perlado',    svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#d81b60" stroke="#880e4f" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#fce4ec" stroke="#880e4f" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#ad1457"/><rect x="8" y="22" width="44" height="4" fill="#ad1457"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#f48fb1"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#f48fb1"/><circle cx="30" cy="18" r="3" fill="#fce4ec"/></svg>` },
+    { id: 'promo-box-6',  name: 'Esmeralda',       svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#2e7d32" stroke="#1b5e20" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#c8e6c9" stroke="#1b5e20" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#1b5e20"/><rect x="8" y="22" width="44" height="4" fill="#1b5e20"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#66bb6a"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#66bb6a"/><circle cx="30" cy="18" r="3" fill="#e8f5e9"/></svg>` },
+    { id: 'promo-box-7',  name: 'Naranja Flame',   svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#e65100" stroke="#bf360c" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#ffe0b2" stroke="#bf360c" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#bf360c"/><rect x="8" y="22" width="44" height="4" fill="#bf360c"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#ff8a65"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#ff8a65"/><circle cx="30" cy="18" r="3" fill="#fff3e0"/></svg>` },
+    { id: 'promo-box-8',  name: 'Violeta Magic',   svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#6a1b9a" stroke="#4a148c" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#e1bee7" stroke="#4a148c" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#4a148c"/><rect x="8" y="22" width="44" height="4" fill="#4a148c"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#ce93d8"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#ce93d8"/><circle cx="30" cy="18" r="3" fill="#f3e5f5"/></svg>` },
+    { id: 'promo-box-9',  name: 'Cian Neon',       svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#006064" stroke="#004d40" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#b2ebf2" stroke="#004d40" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#00838f"/><rect x="8" y="22" width="44" height="4" fill="#00838f"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#4dd0e1"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#4dd0e1"/><circle cx="30" cy="18" r="3" fill="#e0f7fa"/></svg>` },
+    { id: 'promo-box-10', name: 'Gris Titanio',    svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#455a64" stroke="#263238" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#cfd8dc" stroke="#263238" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#263238"/><rect x="8" y="22" width="44" height="4" fill="#263238"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#90a4ae"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#90a4ae"/><circle cx="30" cy="18" r="3" fill="#eceff1"/></svg>` },
+    { id: 'promo-box-11', name: 'Coral Sunset',    svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#ff5722" stroke="#bf360c" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#fbe9e7" stroke="#bf360c" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#dd2c00"/><rect x="8" y="22" width="44" height="4" fill="#dd2c00"/><path d="M30 18 Q22 6 14 11 Q8 18 13 23 Q20 21 30 18Z" fill="#ffab91"/><path d="M30 18 Q38 6 46 11 Q52 18 47 23 Q40 21 30 18Z" fill="#ffab91"/><circle cx="30" cy="17" r="4" fill="#fbe9e7"/></svg>` },
+    { id: 'promo-box-12', name: 'Azul Zafiro',     svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#1565c0" stroke="#0d47a1" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#bbdefb" stroke="#0d47a1" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#0d47a1"/><rect x="8" y="22" width="44" height="4" fill="#0d47a1"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#64b5f6"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#64b5f6"/><circle cx="30" cy="18" r="3" fill="#e3f2fd"/></svg>` },
+    { id: 'promo-box-13', name: 'Lima Fresco',     svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#558b2f" stroke="#33691e" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#f1f8e9" stroke="#33691e" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#33691e"/><rect x="8" y="22" width="44" height="4" fill="#33691e"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#aed581"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#aed581"/><circle cx="30" cy="18" r="3" fill="#f1f8e9"/></svg>` },
+    { id: 'promo-box-14', name: 'Blanco Cristal',  svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#fff" stroke="#9e9e9e" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#bdbdbd"/><rect x="8" y="22" width="44" height="4" fill="#bdbdbd"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#e0e0e0"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#e0e0e0"/><circle cx="30" cy="18" r="3" fill="#fff"/></svg>` },
+    { id: 'promo-box-15', name: 'Fucsia Noche',    svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#ad1457" stroke="#880e4f" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#fce4ec" stroke="#880e4f" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#880e4f"/><rect x="8" y="22" width="44" height="4" fill="#880e4f"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#f06292"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#f06292"/><circle cx="30" cy="18" r="3" fill="#fce4ec"/></svg>` },
+    { id: 'promo-box-16', name: 'Café Premium',    svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#4e342e" stroke="#3e2723" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#d7ccc8" stroke="#3e2723" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#3e2723"/><rect x="8" y="22" width="44" height="4" fill="#3e2723"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#a1887f"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#a1887f"/><circle cx="30" cy="18" r="3" fill="#efebe9"/></svg>` },
+    { id: 'promo-box-17', name: 'Aqua Marina',     svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#0277bd" stroke="#01579b" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#b3e5fc" stroke="#01579b" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#01579b"/><rect x="8" y="22" width="44" height="4" fill="#01579b"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#4fc3f7"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#4fc3f7"/><circle cx="30" cy="18" r="3" fill="#e1f5fe"/></svg>` },
+    { id: 'promo-box-18', name: 'Ámbar Vintage',   svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#ff8f00" stroke="#e65100" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#fff8e1" stroke="#e65100" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#e65100"/><rect x="8" y="22" width="44" height="4" fill="#e65100"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#ffca28"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#ffca28"/><circle cx="30" cy="18" r="3" fill="#fff8e1"/></svg>` },
+    { id: 'promo-box-19', name: 'Champán Dorado',  svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#c8a951" stroke="#9a7b2f" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#fdf5dc" stroke="#9a7b2f" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#9a7b2f"/><rect x="8" y="22" width="44" height="4" fill="#9a7b2f"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#e8c96a"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#e8c96a"/><circle cx="30" cy="18" r="3" fill="#fff9e6"/></svg>` },
+    { id: 'promo-box-20', name: 'Bronce Antiguo',  svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#d7ccc8" stroke="#5d4037" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#5d4037"/><rect x="8" y="22" width="44" height="4" fill="#5d4037"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#bcaaa4"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#bcaaa4"/><circle cx="30" cy="18" r="3" fill="#efebe9"/></svg>` },
+    { id: 'promo-box-21', name: 'Lavanda Real',    svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#7c4dff" stroke="#4a148c" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#ede7f6" stroke="#4a148c" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#4527a0"/><rect x="8" y="22" width="44" height="4" fill="#4527a0"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#b39ddb"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#b39ddb"/><circle cx="30" cy="18" r="3" fill="#ede7f6"/></svg>` },
+    { id: 'promo-box-22', name: 'Obsidiana',       svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#212121" stroke="#000" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#616161" stroke="#000" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#757575"/><rect x="8" y="22" width="44" height="4" fill="#757575"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#9e9e9e"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#9e9e9e"/><circle cx="30" cy="18" r="3" fill="#e0e0e0"/></svg>` },
+    { id: 'promo-box-23', name: 'Platino',         svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#90a4ae" stroke="#546e7a" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#cfd8dc" stroke="#546e7a" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#546e7a"/><rect x="8" y="22" width="44" height="4" fill="#546e7a"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#b0bec5"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#b0bec5"/><circle cx="30" cy="18" r="3" fill="#fff"/></svg>` },
+    { id: 'promo-box-24', name: 'Verde Noche',     svg: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="26" width="44" height="26" rx="3" fill="#1b5e20" stroke="#0a3d0a" stroke-width="1.5"/><rect x="8" y="18" width="44" height="10" rx="2" fill="#c8e6c9" stroke="#0a3d0a" stroke-width="1.2"/><rect x="27" y="18" width="6" height="34" fill="#0a3d0a"/><rect x="8" y="22" width="44" height="4" fill="#0a3d0a"/><path d="M30 18 Q20 8 13 13 Q8 18 12 22 Q18 22 30 18Z" fill="#388e3c"/><path d="M30 18 Q40 8 47 13 Q52 18 48 22 Q42 22 30 18Z" fill="#388e3c"/><circle cx="30" cy="18" r="3" fill="#e8f5e9"/></svg>` }
+];
+
+const AGENDA_PROMO_ANIMS = [
+    { id: 'anim-3d-spinner',    name: '3D Spinner' },
+    { id: 'anim-atomic-heart',  name: 'Latido Atómico' },
+    { id: 'anim-magnetic',      name: 'Magnetismo' },
+    { id: 'anim-elastic',       name: 'Gelatina' },
+    { id: 'anim-orbital',       name: 'Órbita Solar' },
+    { id: 'anim-glitch',        name: 'Glitch Pro' },
+    { id: 'anim-solar',         name: 'Solar Flare' },
+    { id: 'anim-cosmic',        name: 'Deriva Cósmica' },
+    { id: 'anim-radar',         name: 'Pulso Radar' },
+    { id: 'anim-flip-glide',    name: 'Flip & Glide' },
+    { id: 'anim-vortex',        name: 'Vórtice Cuántico' },
+    { id: 'anim-cosmic-bounce', name: 'Rebote Cósmico' }
+];
+
+// Almacenamiento temporal para la sesión actual de config
+let _agendaPromoCfg = {
+    icon: null,
+    iconSvg: null,
+    anim: null
+};
+
+function renderAgendaPromoConfig() {
+    const iconGrid = document.getElementById('agenda-promo-icon-selector');
+    const animGrid = document.getElementById('agenda-promo-anim-selector');
+    const preview  = document.getElementById('promo-bubble-preview');
+    if (!iconGrid || !animGrid) return;
+
+    // Cargar config guardada
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('margarita_promo_bubble_cfg') || '{}'); } catch(e) {}
+    const currentIcon = _agendaPromoCfg.icon || saved.icon || 'promo-box-1';
+    const currentAnim = _agendaPromoCfg.anim || saved.anim || 'anim-3d-spinner';
+
+    // Render cajas
+    iconGrid.innerHTML = AGENDA_PROMO_BOXES.map(box => `
+        <div class="promo-svg-box ${box.id === currentIcon ? 'active' : ''}"
+             title="${box.name}"
+             onclick="setAgendaPromoIcon('${box.id}')">
+            ${box.svg}
+            <span class="promo-box-label">${box.name}</span>
+        </div>
+    `).join('');
+
+    // Render animaciones
+    animGrid.innerHTML = AGENDA_PROMO_ANIMS.map(a => `
+        <div class="promo-anim-card ${a.id === currentAnim ? 'active' : ''}"
+             onclick="setAgendaPromoAnim('${a.id}')">${a.name}</div>
+    `).join('');
+
+    // Actualizar preview
+    if (preview) {
+        const box = AGENDA_PROMO_BOXES.find(b => b.id === currentIcon);
+        preview.innerHTML = box ? box.svg : '<i class="fas fa-gift"></i>';
+        // Quitar todas las clases de animación anteriores y aplicar la actual
+        AGENDA_PROMO_ANIMS.forEach(a => preview.classList.remove(a.id));
+        preview.classList.add(currentAnim);
+        preview.style.cssText = 'font-size:2.8rem; display:flex; align-items:center; justify-content:center; width:70px; height:70px;';
+    }
+}
+
+window.setAgendaPromoIcon = function(id) {
+    _agendaPromoCfg.icon = id;
+    const box = AGENDA_PROMO_BOXES.find(b => b.id === id);
+    if (box) _agendaPromoCfg.iconSvg = box.svg;
+    renderAgendaPromoConfig();
+};
+
+window.setAgendaPromoAnim = function(id) {
+    _agendaPromoCfg.anim = id;
+    renderAgendaPromoConfig();
+};
+
+window.savePromoBubbleConfig = async function() {
+    const saved = {};
+    try { Object.assign(saved, JSON.parse(localStorage.getItem('margarita_promo_bubble_cfg') || '{}')); } catch(e) {}
+
+    const cfg = {
+        icon:    _agendaPromoCfg.icon    || saved.icon    || 'promo-box-1',
+        iconSvg: _agendaPromoCfg.iconSvg || saved.iconSvg || '',
+        anim:    _agendaPromoCfg.anim    || saved.anim    || 'anim-3d-spinner'
+    };
+
+    try {
+        localStorage.setItem('margarita_promo_bubble_cfg', JSON.stringify(cfg));
+    } catch(e) { console.warn('LocalStorage lleno, no se pudo guardar config de burbuja.'); }
+
+    // Notificar a la web pública
+    try { localStorage.setItem('margarita_salon_trigger', Date.now()); } catch(e) {}
+
+    // Sincronizar a la nube dentro del documento admin_meta ampliado
+    if (window.saveDataToCloud) {
+        try {
+            await window.saveDataToCloud('config_v2', 'promo_bubble_cfg', cfg);
+        } catch(e) { console.warn('No se pudo sincronizar burbuja a la nube:', e); }
+    }
+
+    showToast('<i class="fas fa-gift"></i> Burbuja Pro configurada y guardada.', 'success');
 };

@@ -1,0 +1,39 @@
+Created At: 2026-05-26T12:19:38Z
+Completed At: 2026-05-26T12:19:38Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 2010
+Total Bytes: 86981
+Showing lines 1980 to 2010
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1980:                 ? `👁️ Dry-run completo: ${data.processed} negocios analizados (sin cobros reales).`
+1981:                 : `⚡ Ciclo ejecutado: ${data.charged} cobros exitosos, ${data.failed} fallidos.`;
+1982:             showToast(msg, 'success');
+1983:             if (!dryRun) { await loadData(); renderBillingTab(); }
+1984:         } else {
+1985:             showToast('❌ Error ejecutando ciclo: ' + (data.message || data.error || 'Error desconocido'), 'error');
+1986:         }
+1987:     } catch (e) {
+1988:         showToast('❌ Error de red al disparar ciclo.', 'error');
+1989:     }
+1990: }
+1991: 
+1992: 
+1993: // ── Registrar event listeners del tab de facturación ──────────────────────────
+1994: document.addEventListener('DOMContentLoaded', () => {
+1995:     // Re-renderizar cada vez que se activa el tab de Facturación
+1996:     document.querySelectorAll('[data-tab]').forEach(btn => {
+1997:         btn.addEventListener('click', () => {
+1998:             if (btn.dataset.tab === 'tab-billing') {
+1999:                 setTimeout(renderBillingTab, 50);
+2000:             }
+2001:         });
+2002:     });
+2003: 
+2004:     // Botón "Disparar Ciclo"
+2005:     document.addEventListener('click', e => {
+2006:         if (e.target.closest('#btn-trigger-billing')) billingTriggerCycle(false);
+2007:         if (e.target.closest('#btn-trigger-billing-dry')) billingTriggerCycle(true);
+2008:     });
+2009: });
+2010: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

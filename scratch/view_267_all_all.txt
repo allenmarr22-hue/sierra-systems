@@ -1,0 +1,29 @@
+Created At: 2026-05-26T11:27:52Z
+Completed At: 2026-05-26T11:27:52Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4259
+Total Bytes: 189734
+Showing lines 4095 to 4115
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4095:         const st   = TICKET_STATUS_MAP[t.status]   || TICKET_STATUS_MAP['abierto'];
+4096:         const pr   = TICKET_PRIORITY_MAP[t.priority] || TICKET_PRIORITY_MAP['normal'];
+4097:         
+4098:         let dateStr = '—';
+4099:         if (t.created_at) {
+4100:             const d = new Date(t.created_at);
+4101:             const day = String(d.getDate()).padStart(2, '0');
+4102:             const month = String(d.getMonth() + 1).padStart(2, '0');
+4103:             const year = d.getFullYear();
+4104:             dateStr = `${day}/${month}-${year}`;
+4105:         }
+4106: 
+4107:         const desc = t.description ? (t.description.length > 40 ? t.description.substring(0, 40) + '…' : t.description) : '—';
+4108:         return `
+4109:             <tr>
+4110:                 <td style="padding:1rem 1.5rem;">
+4111:                     <a href="javascript:void(0)" onclick="viewTicketDetails('${t.id}')" style="font-size:0.78rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver detalles del ticket">
+4112:                         #${String(t.id || '').substring(0, 8).toUpperCase()}
+4113:                     </a>
+4114:                 </td>
+4115:                 <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || '—'}</td>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,58 @@
+Created At: 2026-05-26T12:12:03Z
+Completed At: 2026-05-26T12:12:03Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4502
+Total Bytes: 208266
+Showing lines 4100 to 4300
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4100: 
+4101:     tbody.innerHTML = list.map(t => {
+4102:         const st   = TICKET_STATUS_MAP[t.status]   || TICKET_STATUS_MAP['abierto'];
+4103:         const pr   = TICKET_PRIORITY_MAP[t.priority] || TICKET_PRIORITY_MAP['normal'];
+4104:         
+4105:         let dateStr = '—';
+4106:         if (t.created_at) {
+4107:             const d = new Date(t.created_at);
+4108:             const day = String(d.getDate()).padStart(2, '0');
+4109:             const month = String(d.getMonth() + 1).padStart(2, '0');
+4110:             const year = d.getFullYear();
+4111:             dateStr = `${day}/${month}/${year}`;
+4112:         }
+4113: 
+4114:         const desc = t.description ? (t.description.length > 40 ? t.description.substring(0, 40) + '…' : t.description) : '—';
+4115:         return `
+4116:             <tr>
+4117:                 <td style="padding:1rem 1.5rem;">
+4118:                     <a href="javascript:void(0)" onclick="viewTicketDetails('${t.id}')" style="font-size:0.78rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver detalles del ticket">
+4119:                         #${String(t.id || '').substring(0, 8).toUpperCase()}
+4120:                     </a>
+4121:                 </td>
+4122:                 <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || '—'}</td>
+4123:                 <td style="padding:1rem 1.5r
+<truncated 12134 bytes>
+102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)'">
+4277:                                 <i data-lucide="image" style="width:15px;height:15px;"></i>
+4278:                             </button>
+4279:                             <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.05);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
+4280:                             <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','admin')" style="width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary),#818cf8);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+4281:                                 <i data-lucide="send" style="width:14px;height:14px;"></i>
+4282:                             </button>
+4283:                         </div>
+4284:                     `}
+4285:                 </div>
+4286: 
+4287:             </div>
+4288:         `,
+4289:         background: 'var(--bg-surface)',
+4290:         color: 'var(--text-main)',
+4291:         width: '680px',
+4292:         padding: '1.5rem',
+4293:         showConfirmButton: true,
+4294:         confirmButtonText: 'Cerrar',
+4295:         confirmButtonColor: 'var(--primary)',
+4296:         didOpen: () => {
+4297:             lucide.createIcons();
+4298:             fetchAndRenderChatMessages(ticketId, 'admin');
+4299: 
+4300:             const input = document.getElementById('chat-message-input');
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

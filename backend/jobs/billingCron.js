@@ -48,18 +48,20 @@ function addDays(dateStr, days) {
 
 /**
  * Calcula el monto mensual de un negocio sumando los precios
- * de sus módulos activos.
+ * aplicados a cada una de sus sucursales (instancias activas).
  */
-function calculateMonthlyAmount(business, allModules) {
+function calculateMonthlyAmount(business) {
     let total = 0;
-    const activeModules = business.modules || [];
-    for (const modId of activeModules) {
-        const mod = allModules.find(m => m.id === modId);
-        if (mod && mod.price) {
-            // Extraer solo el número del precio (ej: "$ 95.000" → 95000)
-            const priceNum = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-            if (!isNaN(priceNum)) total += priceNum;
+    const moduleInstances = business.moduleInstances || [];
+    for (const mod of moduleInstances) {
+        if (mod.status === 'active') {
+            const priceNum = parseFloat(mod.priceApplied) || 0;
+            total += priceNum;
         }
+    }
+    // Fallback legacy por si acaso
+    if (moduleInstances.length === 0 && business.modules && business.modules.length > 0) {
+        // En un mundo ideal esto ya no pasa gracias a db.js
     }
     return total;
 }
@@ -83,86 +85,119 @@ async function runBillingCycle(dryRun = false) {
     let charged = 0;
     let failed = 0;
 
-    // Filtrar negocios activos con token guardado y fecha de corte hoy
-    const businessesToCharge = (db.businesses || []).filter(biz => {
+    const allModules = db.modules || [];
+
+    for (const biz of (db.businesses || [])) {
         const billing = biz.billing;
-        if (!billing) return false;
-        if (!billing.gateway_token) return false; // Sin tarjeta guardada
-        if (billing.subscription_status === 'cancelled') return false;
-        if (!billing.next_billing_date) return false;
-        return billing.next_billing_date.slice(0, 10) === today;
-    });
+        if (!billing || !billing.gateway_token || billing.subscription_status === 'cancelled') continue;
 
-    console.log(`[BillingCron] Negocios a cobrar hoy: ${businessesToCharge.length}`);
+        const activeInstances = biz.moduleInstances ? biz.moduleInstances.filter(m => m.status === 'active') : [];
+        let amountDue = 0;
+        let instancesToRenew = [];
 
-    for (const biz of businessesToCharge) {
-        processed++;
-        const billing = biz.billing;
-        const monthlyAmount = calculateMonthlyAmount(biz, db.modules || []);
-
-        if (monthlyAmount === 0) {
-            console.log(`[BillingCron] ⚠️  ${biz.name}: monto $0, omitiendo.`);
-            continue;
+        // Identificar qué sucursales vencen hoy (o ya vencieron)
+        for (const mod of activeInstances) {
+            const expDateStr = mod.renewalDate;
+            if (!expDateStr) continue;
+            const expDate = expDateStr.slice(0, 10);
+            if (expDate <= today) {
+                const priceNum = parseFloat(mod.priceApplied) || 0;
+                if (priceNum > 0) {
+                    amountDue += priceNum;
+                    instancesToRenew.push(mod.instanceId);
+                }
+            }
         }
 
-        console.log(`[BillingCron] Procesando: ${biz.name} — $${monthlyAmount.toLocaleString('es-CO')} COP`);
+        if (amountDue === 0) continue; // No hay sucursales por cobrar hoy
+
+        processed++;
+        console.log(`[BillingCron] Procesando: ${biz.name} — $${amountDue.toLocaleString('es-CO')} COP por ${instancesToRenew.length} sucursales.`);
 
         if (dryRun) {
-            console.log(`[BillingCron] [DRY RUN] Se habría cobrado $${monthlyAmount.toLocaleString('es-CO')} COP.`);
+            console.log(`[BillingCron] [DRY RUN] Se habría cobrado $${amountDue.toLocaleString('es-CO')} COP.`);
             continue;
         }
 
-        // Convertir a centavos (Wompi usa centavos)
-        const amountInCents = monthlyAmount * 100;
-
+        const amountInCents = amountDue * 100;
         const result = await PaymentService.chargeWithToken(
             billing.gateway_token,
             amountInCents,
-            `Suscripción mensual AS Sierra Systems — ${biz.name}`
+            `Renovación de sucursales (${instancesToRenew.length}) — ${biz.name}`
         );
 
-        // Actualizar el negocio según el resultado
         const bizInDb = db.businesses.find(b => b.id === biz.id);
         if (!bizInDb.billing) bizInDb.billing = {};
 
         if (result.ok) {
             charged++;
             bizInDb.billing.subscription_status = 'active';
-            bizInDb.status = 'active'; // Restaura el acceso si estaba suspendido
+            bizInDb.status = 'active'; 
             bizInDb.billing.last_payment_date = new Date().toISOString();
-            bizInDb.billing.last_payment_amount = monthlyAmount;
-            bizInDb.billing.next_billing_date = addDays(today, 30);
+            bizInDb.billing.last_payment_amount = amountDue;
             bizInDb.billing.last_transaction_id = result.transactionId;
 
-            console.log(`[BillingCron] ✅ ${biz.name}: Cobro exitoso. TXN: ${result.transactionId}. Próximo corte: ${bizInDb.billing.next_billing_date}`);
+            // Actualizar solo las fechas de las sucursales cobradas (+30 días desde HOY)
+            if (bizInDb.moduleInstances) {
+                for (const mod of bizInDb.moduleInstances) {
+                    if (instancesToRenew.includes(mod.instanceId)) {
+                        mod.renewalDate = addDays(today, 30);
+                    }
+                }
+            }
 
-            // Notificación interna de pago exitoso
+            // Registrar en historial de pagos SQL directo (Cron Automático)
+            await dbHelper.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                biz.id,
+                amountDue,
+                `Renovación de sucursales (${instancesToRenew.length}) — ${biz.name}`,
+                'APPROVED',
+                result.transactionId
+            ]);
+
+            console.log(`[BillingCron] ✅ ${biz.name}: Cobro exitoso. TXN: ${result.transactionId}.`);
+
             if (!db.notifications) db.notifications = [];
             db.notifications.unshift({
                 id: Date.now() + Math.random(),
                 time: new Date().toISOString(),
                 type: 'success',
-                message: `✅ Pago de suscripción recibido: ${biz.name} — $${monthlyAmount.toLocaleString('es-CO')} COP`,
+                message: `✅ Pago recibido: ${biz.name} — $${amountDue.toLocaleString('es-CO')} COP (${instancesToRenew.length} sucursales)`,
             });
         } else {
             failed++;
             bizInDb.billing.subscription_status = 'suspended';
-            bizInDb.status = 'inactive'; // Suspende el negocio completo (páginas públicas y panel)
+            bizInDb.status = 'inactive'; 
             bizInDb.billing.last_failed_attempt = new Date().toISOString();
+
+            // Registrar en historial de pagos como fallido SQL directo
+            await dbHelper.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                biz.id,
+                amountDue,
+                `Intento Renovación Fallida — Renovación de sucursales (${instancesToRenew.length}) — ${biz.name}`,
+                'DECLINED',
+                null
+            ]);
 
             console.log(`[BillingCron] ❌ ${biz.name}: Cobro fallido — ${result.message}`);
 
-            // Notificación interna de fallo
             if (!db.notifications) db.notifications = [];
             db.notifications.unshift({
                 id: Date.now() + Math.random(),
                 time: new Date().toISOString(),
                 type: 'error',
-                message: `❌ Pago fallido: ${biz.name} — ${result.message}. Suscripción suspendida.`,
+                message: `❌ Pago fallido: ${biz.name} — ${result.message}. Negocio suspendido.`,
             });
         }
 
-        // Mantener máximo 50 notificaciones
         if (db.notifications.length > 50) db.notifications = db.notifications.slice(0, 50);
     }
 

@@ -1,0 +1,44 @@
+Created At: 2026-05-26T11:59:26Z
+Completed At: 2026-05-26T11:59:26Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 4004
+Total Bytes: 217533
+Showing lines 1080 to 1120
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1080:                 const renewalDate = rawDate ? new Date(rawDate).toLocaleDateString('es-CO') : 'Contactar Admin';
+1081:                 
+1082:                 // Determinar si estÃ¡ vencido
+1083:                 const isExpired = rawDate && (new Date(rawDate).getTime() <= Date.now());
+1084: 
+1085:                 const badgeHtml = `
+1086:                 <div style="position:absolute; top:1.5rem; right:1.5rem; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+1087:                     ${appState.isSuspended
+1088:                         ? `<div class="status-badge" style="background:rgba(239, 68, 68, 0.12); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.25); font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">ðŸ”’ Suspendido</div>`
+1089:                         : (isExpired 
+1090:                             ? `<div class="status-badge" style="background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger-border); font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">âš ï¸ Pago Vencido</div>`
+1091:                             : `<div class="status-badge active" style="background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">Activo</div>`)}
+1092:                     <div style="font-size:0.7
+<truncated 921 bytes>
+sExpired ? 'var(--danger-border)' : 'var(--success-border)');
+1100:                 const dateTextColor = appState.isSuspended ? '#ef4444' : (isExpired ? 'var(--danger)' : 'var(--success)');
+1101:                 const dateTextLabel = appState.isSuspended ? 'Factura vencida:' : (isExpired ? 'Vencido el:' : 'PrÃ³xima renovaciÃ³n:');
+1102:                 
+1103:                 // Formatear precio
+1104:                 const priceVal = parseFloat(mod.priceApplied) || parseInt(String(mod.price || '').replace(/[^0-9]/g, '')) || 0;
+1105:                 const priceDisplay = (priceVal > 0) ? `$ ${priceVal.toLocaleString('es-CO')} COP/mes` : 'Consultar';
+1106: 
+1107:                 let actionsHtml = '';
+1108:                 if (appState.isSuspended) {
+1109:                     actionsHtml = `
+1110:                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
+1111:                             <button class="btn-primary" onclick="showSuspensionAlert()" style="width:100%; justify-content:center; background:#ef4444; border-color:#ef4444; padding:0.75rem; box-shadow: 0 4px 12px rgba(239,68,68,0.25);">
+1112:                                 <i data-lucide="lock" style="width:16px;"></i> ðŸ”’ Servicio Suspendido
+1113:                             </button>
+1114:                             <button class="btn-ghost" onclick="switchTab('tab-billing')" style="width:100%; justify-content:center; font-size:0.82rem; padding:0.5rem; border-color:rgba(239, 68, 68, 0.3); color:#ef4444;">
+1115:                                 <i data-lucide="credit-card" style="width:14px;"></i> Pagar en FacturaciÃ³n
+1116:                             </button>
+1117:                         </div>
+1118:                     `;
+1119:                 } else if (isExpired) {
+1120:                     actionsHtml = `
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

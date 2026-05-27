@@ -2,9 +2,25 @@
 <html lang="es" data-theme="dark">
 <head>
     <script>
+        // Prevenir parpadeo de tema (FOUC) e inicializar favicon dinámico — sin flash
         (function() {
+            var DEFAULT_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2222%22%20fill%3D%22%230f172a%22%2F%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22as-grad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23818cf8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234f46e5%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20font-size%3D%2252%22%20fill%3D%22url(%23as-grad)%22%20font-family%3D%22'Outfit'%2C'Inter'%2Csans-serif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22900%22%3EAS%3C%2Ftext%3E%3C%2Fsvg%3E";
             var theme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', theme);
+            try {
+                var logoUrl = localStorage.getItem('as_systems_logo_url');
+                var link = document.createElement('link');
+                link.id = 'dynamic-favicon';
+                link.rel = 'icon';
+                if (logoUrl) {
+                    link.type = logoUrl.startsWith('data:image/svg') || logoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                    link.href = logoUrl;
+                } else {
+                    link.type = 'image/svg+xml';
+                    link.href = DEFAULT_SVG;
+                }
+                document.getElementsByTagName('head')[0].appendChild(link);
+            } catch (e) {}
         })();
     </script>
     <meta charset="UTF-8">
@@ -43,19 +59,34 @@
         .brand-panel::before {
             content: '';
             position: absolute;
-            top: -100px; left: -100px;
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            top: -80px; left: -80px;
+            width: 550px; height: 550px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 65%);
             border-radius: 50%;
+            animation: orb-pulse 7s ease-in-out infinite;
         }
 
         .brand-panel::after {
             content: '';
             position: absolute;
-            bottom: -50px; right: -50px;
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+            bottom: -60px; right: -60px;
+            width: 450px; height: 450px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.16) 0%, transparent 65%);
             border-radius: 50%;
+            animation: orb-pulse 9s ease-in-out infinite reverse;
+        }
+
+        @keyframes orb-pulse {
+            0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.8; }
+            50% { transform: scale(1.1) translate(10px, -10px); opacity: 1; }
+        }
+
+        /* Floating particles */
+        .particles-canvas {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .brand-logo {
@@ -63,7 +94,12 @@
             align-items: center;
             gap: 1rem;
             margin-bottom: 3rem;
-            z-index: 1;
+            z-index: 2;
+            position: relative;
+        }
+        .brand-tagline, .brand-desc, .brand-features {
+            position: relative;
+            z-index: 2;
         }
         .brand-logo-icon {
             width: 48px; height: 48px;
@@ -187,10 +223,11 @@
         }
         .form-input:focus {
             border-color: #6366f1;
-            background: rgba(30, 41, 59, 0.9);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            background: rgba(30, 41, 59, 0.95);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.1);
         }
         .form-input::placeholder { color: #475569; }
+        .form-input.valid { border-color: rgba(16, 185, 129, 0.5); }
 
         .toggle-pass-btn {
             position: absolute;
@@ -209,7 +246,8 @@
         .btn-login {
             width: 100%;
             padding: 1rem;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%);
+            background-size: 200% 100%;
             color: white;
             border: none;
             border-radius: 10px;
@@ -222,12 +260,32 @@
             justify-content: center;
             gap: 0.5rem;
             margin-top: 1.75rem;
-            transition: all 0.2s ease;
-            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.45);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-login::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa, #6366f1);
+            background-size: 300% 300%;
+            border-radius: 12px;
+            z-index: -1;
+            animation: gradient-shift 4s ease infinite;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .btn-login:hover::after { opacity: 1; }
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 18px 35px -5px rgba(99, 102, 241, 0.6);
+            background-position: 100% 0;
         }
         .btn-login:disabled {
             opacity: 0.6;
@@ -235,6 +293,25 @@
             transform: none;
         }
         .btn-login i { width: 20px; height: 20px; }
+
+        /* Entrance animations */
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slide-in-left {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .brand-logo { animation: slide-in-left 0.6s ease both; }
+        .brand-tagline { animation: slide-in-left 0.7s ease 0.1s both; }
+        .brand-desc { animation: slide-in-left 0.8s ease 0.2s both; }
+        .brand-features { animation: slide-in-left 0.9s ease 0.3s both; }
+        .login-header { animation: slide-up 0.6s ease 0.15s both; }
+        .form-group { animation: slide-up 0.6s ease 0.25s both; }
+        .form-group:nth-child(2) { animation-delay: 0.32s; }
+        .btn-login { animation: slide-up 0.6s ease 0.4s both; }
+        .login-footer { animation: slide-up 0.6s ease 0.5s both; }
 
         .login-footer {
             text-align: center;
@@ -288,8 +365,15 @@
 
     <!-- PANEL IZQUIERDO: BRAND -->
     <div class="brand-panel">
+        <!-- Animated particles -->
+        <canvas class="particles-canvas" id="particles-canvas"></canvas>
+
+        <!-- Floating decorative shapes -->
+        <div style="position:absolute; top:20%; right:10%; width:60px; height:60px; border:1px solid rgba(99,102,241,0.2); border-radius:14px; transform:rotate(15deg); animation:float-shape 6s ease-in-out infinite; z-index:0;"></div>
+        <div style="position:absolute; bottom:25%; left:8%; width:40px; height:40px; border:1px solid rgba(139,92,246,0.2); border-radius:50%; animation:float-shape 8s ease-in-out infinite 2s; z-index:0;"></div>
+        <div style="position:absolute; top:60%; right:15%; width:24px; height:24px; background:rgba(99,102,241,0.1); border-radius:6px; transform:rotate(30deg); animation:float-shape 5s ease-in-out infinite 1s; z-index:0;"></div>
         <div class="brand-logo">
-            <img src="" alt="Logo AS Sierra Systems" id="custom-logo-img" style="height:48px; width:auto; object-fit:contain; display:none; border-radius:8px;">
+            <img src="" alt="" id="custom-logo-img" style="height:48px; width:auto; object-fit:contain; display:none; border-radius:8px;">
             <div class="brand-logo-icon" id="default-logo-icon" style="background: transparent; padding: 0;">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                     <path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="url(#grad1)"/>
@@ -379,20 +463,124 @@
     </div>
 
     <script>
+        // Add float-shape keyframes
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            @keyframes float-shape {
+                0%, 100% { transform: translateY(0px) rotate(15deg); }
+                50% { transform: translateY(-14px) rotate(22deg); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
         lucide.createIcons();
 
+        // Particle animation on canvas
+        const canvas = document.getElementById('particles-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            const panel = canvas.parentElement;
+            canvas.width = panel.offsetWidth;
+            canvas.height = panel.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const PARTICLE_COUNT = 45;
+        const COLORS = ['rgba(99,102,241,', 'rgba(139,92,246,', 'rgba(167,139,250,'];
+
+        function createParticle() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: Math.random() * 2 + 0.8,
+                vx: (Math.random() - 0.5) * 0.35,
+                vy: (Math.random() - 0.5) * 0.35,
+                color: COLORS[Math.floor(Math.random() * COLORS.length)],
+                alpha: Math.random() * 0.5 + 0.15
+            };
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(createParticle());
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 90) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(99,102,241,${0.08 * (1 - dist / 90)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = p.color + p.alpha + ')';
+                ctx.fill();
+            });
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // Dynamic config loader
         async function loadDynamicConfig() {
             try {
                 const res = await fetch('/api/settings');
                 if (res.ok) {
                     const data = await res.json();
                     if (data.config && data.config.logo) {
+                        const logoSrc = data.config.logo;
+                        // Guardar en caché local para inmediatez en próximas recargas
+                        try {
+                            localStorage.setItem('as_systems_logo_url', logoSrc);
+                        } catch(e) {
+                            console.warn("No se pudo escribir logo en localStorage", e.message);
+                        }
+
+                        // Actualizar favicon en pestaña — sin flash: solo actualizar href
+                        let link = document.getElementById('dynamic-favicon');
+                        if (!link) {
+                            link = document.createElement('link');
+                            link.id = 'dynamic-favicon';
+                            link.rel = 'icon';
+                            document.getElementsByTagName('head')[0].appendChild(link);
+                        }
+                        link.type = logoSrc.startsWith('data:image/svg') || logoSrc.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                        link.href = logoSrc;
+
+                        // Actualizar logo visual en la tarjeta de login
                         const defaultIcon = document.getElementById('default-logo-icon');
                         const customImg = document.getElementById('custom-logo-img');
                         if (defaultIcon && customImg) {
-                            defaultIcon.style.display = 'none';
-                            customImg.src = data.config.logo;
-                            customImg.style.display = 'block';
+                            customImg.onload = () => {
+                                defaultIcon.style.display = 'none';
+                                customImg.style.display = 'block';
+                            };
+                            customImg.onerror = () => {
+                                customImg.style.display = 'none';
+                                defaultIcon.style.display = 'flex';
+                            };
+                            customImg.src = logoSrc;
                         }
                     }
                 }
@@ -415,6 +603,19 @@
                 icon.setAttribute('data-lucide', 'eye');
             }
             lucide.createIcons();
+        });
+
+        // Email validation micro-feedback
+        document.getElementById('login-email').addEventListener('blur', function() {
+            const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailReg.test(this.value.trim())) {
+                this.classList.add('valid');
+            } else {
+                this.classList.remove('valid');
+            }
+        });
+        document.getElementById('login-email').addEventListener('focus', function() {
+            this.classList.remove('valid');
         });
 
         // Handle login

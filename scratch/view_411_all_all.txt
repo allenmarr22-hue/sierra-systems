@@ -1,0 +1,26 @@
+Created At: 2026-05-26T11:54:17Z
+Completed At: 2026-05-26T11:54:17Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4687
+Total Bytes: 213456
+Showing lines 4493 to 4510
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4493:         showConfirmButton: false,
+4494:         showCloseButton: true,
+4495:         width: 'auto',
+4496:         padding: '1rem',
+4497:     });
+4498: };
+4499: 
+4500: 
+4501: 
+4502:         html: `
+4503:             <div style="text-align:left; display:flex; flex-direction:column; gap:1rem; margin-top:1rem; font-family:'Outfit',sans-serif; line-height:1.6;">
+4504:                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+4505:                     <div>
+4506:                         <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Código de Ticket</span>
+4507:                         <div style="font-family:monospace; font-size:1.05rem; font-weight:800; color:var(--primary); margin-top:2px;">#${ticket.id.toUpperCase()}</div>
+4508:                     </div>
+4509:                     <div style="display:flex; gap:0.5rem; align-items:center;">
+4510:                         <span style="font-size:0.72rem; font-weight:700; padding:4px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color}; border:1px solid ${pr.color}33;">
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

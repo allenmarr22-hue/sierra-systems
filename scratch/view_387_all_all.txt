@@ -1,0 +1,24 @@
+Created At: 2026-05-26T11:51:25Z
+Completed At: 2026-05-26T11:51:25Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/client-app.js`
+Total Lines: 3915
+Total Bytes: 204866
+Showing lines 3900 to 3915
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3900:         }
+3901: 
+3902:         input.value = '';
+3903:         await fetchAndRenderChatMessages(ticketId, role);
+3904:     } catch (err) {
+3905:         console.error('Error al enviar mensaje:', err);
+3906:         showToast(err.message || 'Error de conexión', 'error');
+3907:     } finally {
+3908:         input.disabled = false;
+3909:         if (sendBtn) sendBtn.disabled = false;
+3910:         input.focus();
+3911:     }
+3912: };
+3913: 
+3914: 
+3915: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

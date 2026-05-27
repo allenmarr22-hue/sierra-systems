@@ -1,0 +1,79 @@
+Created At: 2026-05-26T11:47:29Z
+Completed At: 2026-05-26T11:47:29Z
+File Path: `file:///c:/Users/Allenmar/Documents/Proyectos%20de%20AS%20Sierra%20Systems/Administracion%20AS%20Sierra%20Systems/frontend/js/app.js`
+Total Lines: 4403
+Total Bytes: 196710
+Showing lines 4270 to 4340
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+4270:                     <span>Creado el: <strong>${fullDate}</strong></span>
+4271:                 </div>
+4272:             </div>
+4273:         `,
+4274:         background: 'var(--bg-surface)',
+4275:         color: 'var(--text-main)',
+4276:         width: '500px',
+4277:         confirmButtonText: 'Cerrar',
+4278:         confirmButtonColor: 'var(--primary)',
+4279:         didOpen: () => {
+4280:             lucide.createIcons();
+4281:             fetchAndRenderChatMessages(ticketId, 'admin');
+4282: 
+4283:             // Habilitar enviar con Enter
+4284:             const input = document.getElementById('chat-message-input');
+4285:             if (input) {
+4286:                 input.addEventListener('keypress', function(e) {
+4287:                     if (e.key === 'Enter') {
+4288:                         e.preventDefault();
+4289:                         sendTicketMessage(ticketId, 'admin');
+4290:                     }
+4291:                 });
+4292:             }
+4293:         },
+4294:         willClose: () => {
+4295:             window.activeChatTicketId = null;
+4296:         }
+4297:     });
+4298: };
+4299: 
+4300: window.fetchAndRenderChatMessages = async function(ticketId, role) {
+4301:     const container = document.getElementById('ticket-chat-container');
+4302:     if (!container) return;
+4303: 
+4304:     try {
+4305:         const fetchUrl = `/api/tickets/${ticketId}/messages`;
+4306:         const res = await (role === 'admin' ? adminFetch(fetchUrl) : clientFetch(fetchUrl));
+4307:         if (!res.ok) throw new Error('Error al obtener mensajes');
+4308:         
+4309:         const data = await res.json();
+4310:         if (!data.success) throw new Error(data.error || 'Error al obtener mensajes');
+4311: 
+4312:         const messages = data.messages || [];
+4313:         if (messages.length === 0) {
+4314:             container.innerHTML = `
+4315:                 <div style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:40px 10px;">
+4316:                     No hay mensajes en este chat.
+4317:                 </div>
+4318:             `;
+4319:             return;
+4320:         }
+4321: 
+4322:         container.innerHTML = messages.map(msg => {
+4323:             const isMe = (role === 'admin' && msg.sender === 'admin') || (role === 'client' && msg.sender === 'client');
+4324:             const bubbleBg = isMe 
+4325:                 ? 'hsla(var(--primary-hsl), 0.15)' 
+4326:                 : 'var(--bg-surface-light)';
+4327:             const bubbleBorder = isMe 
+4328:                 ? '1px solid hsla(var(--primary-hsl), 0.3)' 
+4329:                 : '1px solid var(--border-color)';
+4330:             const bubbleAlign = isMe 
+4331:                 ? 'flex-end' 
+4332:                 : 'flex-start';
+4333:             const borderRadius = isMe
+4334:                 ? '16px 16px 4px 16px'
+4335:                 : '16px 16px 16px 4px';
+4336: 
+4337:             const d = new Date(msg.created_at);
+4338:             const timeStr = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+4339:             const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+4340: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
