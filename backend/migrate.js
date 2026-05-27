@@ -133,6 +133,7 @@ async function runMigration() {
         console.log('[Migration] 🛠️ Limpiando tablas anteriores y creando estructura relacional...');
 
         // Eliminar tablas anteriores para evitar tipos de columna incompatibles
+        await pool.query('SET FOREIGN_KEY_CHECKS = 0');
         await pool.query('DROP TABLE IF EXISTS promotions');
         await pool.query('DROP TABLE IF EXISTS payment_history');
         await pool.query('DROP TABLE IF EXISTS business_modules');
@@ -141,6 +142,7 @@ async function runMigration() {
         await pool.query('DROP TABLE IF EXISTS notifications');
         await pool.query('DROP TABLE IF EXISTS users');
         await pool.query('DROP TABLE IF EXISTS system_config');
+        await pool.query('SET FOREIGN_KEY_CHECKS = 1');
 
         // Configuración Global
         await pool.query(`
