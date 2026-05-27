@@ -950,6 +950,42 @@ function renderDashboard() {
     const elMonthly = document.getElementById('client-monthly-total');
     if (elMonthly) elMonthly.textContent = monthlyTotal > 0 ? `$ ${monthlyTotal.toLocaleString('es-CO')} COP` : '—';
 
+    // --- Próximo Corte ---
+    const elNextPayment = document.getElementById('client-next-payment');
+    if (elNextPayment) {
+        // 1. Intentar con next_billing_date del sistema de facturación
+        let nextCutDate = clientBiz?.billing?.next_billing_date;
+
+        // 2. Si no hay, buscar la fecha de renovación más próxima entre los módulos activos
+        if (!nextCutDate && clientBiz.moduleDates) {
+            const futureDates = Object.values(clientBiz.moduleDates)
+                .filter(d => d && new Date(d).getTime() > Date.now())
+                .sort((a, b) => new Date(a) - new Date(b));
+            if (futureDates.length > 0) nextCutDate = futureDates[0];
+        }
+
+        // 3. Si aun no hay, tomar la más cercana de las instancias activas
+        if (!nextCutDate && clientBiz.moduleInstances) {
+            const activeDates = (clientBiz.moduleInstances || [])
+                .filter(inst => inst.status === 'active' && inst.renewalDate)
+                .map(inst => inst.renewalDate)
+                .filter(d => new Date(d).getTime() > Date.now())
+                .sort((a, b) => new Date(a) - new Date(b));
+            if (activeDates.length > 0) nextCutDate = activeDates[0];
+        }
+
+        if (nextCutDate) {
+            elNextPayment.textContent = new Date(nextCutDate).toLocaleDateString('es-CO', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+            elNextPayment.style.color = 'var(--text)';
+        } else {
+            elNextPayment.textContent = 'Contactar Admin';
+            elNextPayment.style.color = 'var(--text-muted)';
+            elNextPayment.style.fontSize = '0.85rem';
+        }
+    }
+
     lucide.createIcons();
     initClientCharts();
 }
