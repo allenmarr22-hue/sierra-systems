@@ -229,13 +229,22 @@ let categories = JSON.parse(localStorage.getItem('margarita_categories'));
 let services = JSON.parse(localStorage.getItem('margarita_services') || '[]');
 let dashboardCharts = { categories: null, topServices: null, monthlyRevenue: null, salesTrend: null };
 
-// Utility: Obtener nombre de categoría desde un ID
 function getCategoryName(idOrName) {
     if (!idOrName) return 'General';
-    if (!window.categories && !categories) return idOrName;
-    const cats = window.categories || categories || [];
-    const found = cats.find(c => c.id === idOrName.toLowerCase() || c.name.toLowerCase() === idOrName.toLowerCase());
-    return found ? found.name : idOrName;
+    try {
+        const idStr = String(idOrName).toLowerCase().trim();
+        const cats = window.categories || categories || [];
+        const found = cats.find(c => {
+            if (!c) return false;
+            const cId = c.id ? String(c.id).toLowerCase().trim() : '';
+            const cName = c.name ? String(c.name).toLowerCase().trim() : '';
+            return cId === idStr || cName === idStr;
+        });
+        return found ? found.name : idOrName;
+    } catch (e) {
+        console.error("Error in getCategoryName:", e);
+        return String(idOrName);
+    }
 }
 window.getCategoryName = getCategoryName;
 
@@ -9689,10 +9698,11 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            if (context.label === "Sin datos") return " Sin datos registrados";
+                            const labelStr = context.label || '';
+                            if (labelStr === "Sin datos" || !labelStr) return " Sin datos registrados";
                             const value = context.raw || 0;
                             const pct = totalItems > 0 ? ((value / totalItems) * 100).toFixed(1) : 0;
-                            return ` ${context.label.split(' (')[0]}: ${value} citas (${pct}%)`;
+                            return ` ${labelStr.split(' (')[0]}: ${value} citas (${pct}%)`;
                         }
                     }
                 }
@@ -9723,6 +9733,7 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
         data: {
             labels: months,
             datasets: [{
+                label: 'Ingresos',
                 data: monthlyData,
                 backgroundColor: 'rgba(56, 189, 248, 0.6)',
                 hoverBackgroundColor: 'rgba(56, 189, 248, 0.8)',
@@ -9840,9 +9851,10 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            if (context.label === "Sin datos") return " Sin datos registrados";
+                            const labelStr = context.label || '';
+                            if (labelStr === "Sin datos" || !labelStr) return " Sin datos registrados";
                             let label = context.dataset.label || '';
-                            let value = context.raw;
+                            let value = context.raw || 0;
                             if (label.includes('$')) {
                                 return label + ': $' + value.toLocaleString('es-CO');
                             }
