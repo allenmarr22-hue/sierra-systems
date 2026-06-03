@@ -58,7 +58,35 @@
             window.jsPDF = window.jspdf.jsPDF;
         }
     </script>
+    <script>
+        // Prevenir interferencia de global/module/exports en el UMD de autotable
+        var _tempModule = window.module;
+        var _tempExports = window.exports;
+        window.module = undefined;
+        window.exports = undefined;
+    </script>
     <script src="js/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        // Restaurar variables globales
+        window.module = _tempModule;
+        window.exports = _tempExports;
+    </script>
+    <script>
+        // Verificar que autoTable se registró correctamente en el prototipo
+        // Si no, forzar el registro manual usando la instancia UMD del plugin
+        if (window.jsPDF && window.jspdf && window.jspdf.jsPDF) {
+            const testDoc = new window.jspdf.jsPDF();
+            if (typeof testDoc.autoTable !== 'function') {
+                console.warn('[PDF] autoTable no registrado automáticamente — parcheando prototipo manualmente');
+                if (typeof window.applyPlugin === 'function') {
+                    window.applyPlugin(window.jsPDF);
+                    console.log('[PDF] autoTable parcheado exitosamente mediante window.applyPlugin');
+                } else if (typeof window.jspdfAutotable !== 'undefined') {
+                    window.jspdf.jsPDF.API.autoTable = window.jspdfAutotable;
+                }
+            }
+        }
+    </script>
 </head>
 <body>
 

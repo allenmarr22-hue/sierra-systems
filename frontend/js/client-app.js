@@ -3822,6 +3822,16 @@ window.loadPaymentHistory = async function() {
 
 window.downloadClientPaymentsPDF = function() {
     try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Librería PDF no disponible. Recarga la página.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+            return;
+        }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
