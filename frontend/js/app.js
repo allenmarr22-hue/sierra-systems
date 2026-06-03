@@ -1268,7 +1268,7 @@ function openUserModal(id = null) {
     const form = document.getElementById('user-form');
     form.reset();
     document.getElementById('user-id').value = '';
-    document.getElementById('user-modal-title').textContent = id ? 'Editar Usuario' : 'Nuevo Usuario';
+    document.getElementById('user-modal-title').textContent = id ? 'Editar Miembro' : 'Nuevo Miembro';
     document.getElementById('pass-label').textContent = id ? 'Nueva Contraseña' : 'Contraseña *';
     document.getElementById('pass-hint').style.display = id ? 'block' : 'none';
 
