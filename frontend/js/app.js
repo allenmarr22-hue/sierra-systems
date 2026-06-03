@@ -242,7 +242,7 @@ function applyRolePermissions() {
     }
 
     if (!perms.canDelete) {
-        document.querySelectorAll('.delete-biz-btn, .delete-user-btn').forEach(el => {
+        document.querySelectorAll('.delete-biz-btn, .delete-user-btn, .delete-ticket-btn').forEach(el => {
             if (el) el.style.display = 'none';
         });
     }
@@ -1261,6 +1261,7 @@ function renderUsersList(searchQuery = '') {
         </tr>
     `).join('');
     lucide.createIcons();
+    applyRolePermissions();
 }
 
 function openUserModal(id = null) {
@@ -1602,6 +1603,7 @@ function filterBusinesses(filterType, searchQuery = '') {
     `).join('');
 
     lucide.createIcons();
+    applyRolePermissions();
 }
 
 function renderQuickModules() {
@@ -3093,7 +3095,7 @@ function renderAdminTickets() {
                             onclick="updateTicketStatus('${t.id}', '${t.status}')">
                             <i data-lucide="edit-3" style="width:13px;"></i> Estado
                         </button>
-                        <button class="btn-ghost" style="padding:0.35rem 0.5rem; font-size:0.8rem; border:1px solid rgba(239,68,68,0.25); color:#ef4444; border-radius:8px; cursor:pointer; background:rgba(239,68,68,0.05); display:inline-flex; align-items:center; justify-content:center;"
+                        <button class="btn-ghost delete-ticket-btn" style="padding:0.35rem 0.5rem; font-size:0.8rem; border:1px solid rgba(239,68,68,0.25); color:#ef4444; border-radius:8px; cursor:pointer; background:rgba(239,68,68,0.05); display:inline-flex; align-items:center; justify-content:center;"
                             onclick="deleteTicket('${t.id}')" title="Eliminar ticket permanentemente">
                             <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
                         </button>
@@ -3102,6 +3104,7 @@ function renderAdminTickets() {
             </tr>`;
     }).join('');
     lucide.createIcons();
+    applyRolePermissions();
 }
 
 async function updateTicketStatus(ticketId, currentStatus) {

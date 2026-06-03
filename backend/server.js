@@ -191,11 +191,31 @@ function requireAdmin(req, res, next) {
     }
     const token = auth.split(' ')[1];
     const session = verifySignedToken(token);
-    if (!session || (session.role !== 'Super Admin' && session.role !== 'Admin')) {
+    if (!session || (session.role !== 'Super Admin' && session.role !== 'Admin' && session.role !== 'Administrador' && session.role !== 'Soporte')) {
         return res.status(401).json({ error: 'Sesión expirada o no autorizada. Por favor inicia sesión nuevamente.' });
     }
     req.adminUser = session;
     next();
+}
+
+function requireWriteAccess(req, res, next) {
+    requireAdmin(req, res, () => {
+        const role = req.adminUser.role;
+        if (role !== 'Super Admin' && role !== 'Admin' && role !== 'Administrador') {
+            return res.status(403).json({ error: 'Acceso denegado. Permisos de escritura requeridos.' });
+        }
+        next();
+    });
+}
+
+function requireSuperAdmin(req, res, next) {
+    requireAdmin(req, res, () => {
+        const role = req.adminUser.role;
+        if (role !== 'Super Admin' && role !== 'Admin') {
+            return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de Super Administrador.' });
+        }
+        next();
+    });
 }
 
 function requireAdminOrMatchingClient(req, res, next) {
@@ -566,25 +586,31 @@ app.get('/api/data', async (req, res) => {
 
         // 🔒 SEGURIDAD: Determinar si el solicitante es un Admin
         let isAdmin = false;
+        let isSuperAdmin = false;
+        let session = null;
         const auth = req.headers.authorization;
         if (auth && auth.startsWith('Bearer ')) {
             const token = auth.split(' ')[1];
-            const session = verifySignedToken(token);
-            if (session && (session.role === 'Super Admin' || session.role === 'Admin')) {
+            session = verifySignedToken(token);
+            if (session && ['Super Admin', 'Admin', 'Administrador', 'Soporte'].includes(session.role)) {
                 isAdmin = true;
+            }
+            if (session && (session.role === 'Super Admin' || session.role === 'Admin')) {
+                isSuperAdmin = true;
             }
         }
 
         // 🔒 SEGURIDAD: Eliminar campos sensibles antes de enviar al frontend
         const safeDb = {
             ...dbState,
-            config: isAdmin ? dbState.config : { ...dbState.config, adminUser: undefined, adminPass: undefined },
-            users: isAdmin ? dbState.users : [], // Clientes/Público no deben ver a los usuarios admin
+            config: isSuperAdmin ? dbState.config : { ...dbState.config, adminUser: undefined, adminPass: undefined },
+            users: isSuperAdmin ? dbState.users : [], // Clientes/Público no deben ver a los usuarios admin
             businesses: dbState.businesses.map(biz => {
                 const safeBiz = { ...biz };
                 
-                // Ocultar contraseñas a todo el mundo (excepto Admin)
-                if (!isAdmin) {
+                // Ocultar contraseñas a todo el mundo (excepto Admin y Super Admin)
+                const canSeePass = isSuperAdmin || (session && session.role === 'Administrador');
+                if (!canSeePass) {
                     safeBiz.clientPass = undefined;
                 }
 
@@ -616,7 +642,7 @@ app.get('/api/notifications', async (req, res) => {
     }
 });
 
-app.delete('/api/notifications', requireAdmin, async (req, res) => {
+app.delete('/api/notifications', requireWriteAccess, async (req, res) => {
     try {
         let dbState = await readDb();
         dbState.notifications = [];
@@ -631,7 +657,7 @@ app.delete('/api/notifications', requireAdmin, async (req, res) => {
 // ============================================================
 // NEGOCIOS (BUSINESSES)
 // ============================================================
-app.post('/api/businesses/toggle', requireAdmin, async (req, res) => {
+app.post('/api/businesses/toggle', requireWriteAccess, async (req, res) => {
     const { id, status } = req.body;
     try {
         let dbState = await readDb();
@@ -661,7 +687,7 @@ app.post('/api/businesses/toggle', requireAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/businesses/new', requireAdmin, async (req, res) => {
+app.post('/api/businesses/new', requireWriteAccess, async (req, res) => {
     const newBiz = req.body;
     try {
         let dbState = await readDb();
@@ -682,7 +708,7 @@ app.post('/api/businesses/new', requireAdmin, async (req, res) => {
     }
 });
 
-app.put('/api/businesses/:id', requireAdmin, async (req, res) => {
+app.put('/api/businesses/:id', requireWriteAccess, async (req, res) => {
     const bizId = req.params.id;
     const updatedFields = req.body;
     try {
@@ -710,7 +736,7 @@ app.put('/api/businesses/:id', requireAdmin, async (req, res) => {
     }
 });
 
-app.delete('/api/businesses/:id', requireAdmin, async (req, res) => {
+app.delete('/api/businesses/:id', requireSuperAdmin, async (req, res) => {
     const bizId = req.params.id;
     try {
         let dbState = await readDb();
@@ -745,7 +771,7 @@ app.delete('/api/businesses/:id', requireAdmin, async (req, res) => {
 // ============================================================
 // MÓDULOS
 // ============================================================
-app.post('/api/modules/toggle', requireAdmin, async (req, res) => {
+app.post('/api/modules/toggle', requireWriteAccess, async (req, res) => {
     const { id, status } = req.body;
     try {
         let dbState = await readDb();
@@ -775,7 +801,7 @@ app.post('/api/modules/toggle', requireAdmin, async (req, res) => {
 // ============================================================
 // PROMOCIONES (Campañas de descuentos)
 // ============================================================
-app.get('/api/admin/promotions', requireAdmin, async (req, res) => {
+app.get('/api/admin/promotions', requireWriteAccess, async (req, res) => {
     try {
         const dbState = await readDb();
         res.json({ success: true, promotions: dbState.promotions || [] });
@@ -784,7 +810,7 @@ app.get('/api/admin/promotions', requireAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/promotions/new', requireAdmin, async (req, res) => {
+app.post('/api/admin/promotions/new', requireWriteAccess, async (req, res) => {
     const { moduleId, discountType, discountValue, startDate, endDate } = req.body;
     if (!moduleId || !discountType || discountValue === undefined || !startDate || !endDate) {
         return res.status(400).json({ error: 'Faltan parámetros obligatorios.' });
@@ -834,7 +860,7 @@ app.post('/api/admin/promotions/new', requireAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/promotions/toggle', requireAdmin, async (req, res) => {
+app.post('/api/admin/promotions/toggle', requireWriteAccess, async (req, res) => {
     const { id, status } = req.body;
     if (!id || !status) return res.status(400).json({ error: 'ID y estado requeridos.' });
 
@@ -862,7 +888,7 @@ app.post('/api/admin/promotions/toggle', requireAdmin, async (req, res) => {
     }
 });
 
-app.put('/api/admin/promotions/:id', requireAdmin, async (req, res) => {
+app.put('/api/admin/promotions/:id', requireWriteAccess, async (req, res) => {
     const { id } = req.params;
     const { moduleId, discountType, discountValue, startDate, endDate } = req.body;
     if (!moduleId || !discountType || discountValue === undefined || !startDate || !endDate) {
@@ -914,7 +940,7 @@ app.put('/api/admin/promotions/:id', requireAdmin, async (req, res) => {
     }
 });
 
-app.delete('/api/admin/promotions/:id', requireAdmin, async (req, res) => {
+app.delete('/api/admin/promotions/:id', requireSuperAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         let dbState = await readDb();
@@ -943,7 +969,7 @@ app.delete('/api/admin/promotions/:id', requireAdmin, async (req, res) => {
 // ============================================================
 // USUARIOS
 // ============================================================
-app.post('/api/users/new', requireAdmin, async (req, res) => {
+app.post('/api/users/new', requireSuperAdmin, async (req, res) => {
     const newUser = req.body;
     try {
         let dbState = await readDb();
@@ -965,7 +991,7 @@ app.post('/api/users/new', requireAdmin, async (req, res) => {
     }
 });
 
-app.put('/api/users/:id', requireAdmin, async (req, res) => {
+app.put('/api/users/:id', requireSuperAdmin, async (req, res) => {
     const userId = req.params.id;
     const updatedFields = req.body;
     try {
@@ -993,7 +1019,7 @@ app.put('/api/users/:id', requireAdmin, async (req, res) => {
     }
 });
 
-app.delete('/api/users/:id', requireAdmin, async (req, res) => {
+app.delete('/api/users/:id', requireSuperAdmin, async (req, res) => {
     const userId = req.params.id;
     try {
         let dbState = await readDb();
@@ -1050,7 +1076,7 @@ app.get('/api/settings', async (req, res) => {
     }
 });
 
-app.post('/api/settings/save', requireAdmin, async (req, res) => {
+app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
     const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass } = req.body;
     try {
         let dbState = await readDb();
@@ -1085,7 +1111,7 @@ app.post('/api/settings/save', requireAdmin, async (req, res) => {
 // ============================================================
 // MÓDULOS (SUPER ADMIN)
 // ============================================================
-app.put('/api/modules/:id', requireAdmin, async (req, res) => {
+app.put('/api/modules/:id', requireSuperAdmin, async (req, res) => {
     const modId = req.params.id;
     const updatedFields = req.body;
     try {
@@ -1633,7 +1659,7 @@ app.post('/api/payment/save-token', requireAdminOrMatchingClient, async (req, re
 /**
  * POST /api/payment/charge-subscription/:bizId
  */
-app.post('/api/payment/charge-subscription/:bizId', requireAdmin, async (req, res) => {
+app.post('/api/payment/charge-subscription/:bizId', requireSuperAdmin, async (req, res) => {
     try {
         const dbState = await readDb();
         const biz = dbState.businesses.find(b => b.id == req.params.bizId);
@@ -1777,7 +1803,7 @@ app.delete('/api/payment/remove-card/:bizId', requireAdminOrMatchingClient, asyn
  * POST /api/payment/extend-billing/:bizId
  * Regala días adicionales extendiendo la fecha de próximo corte.
  */
-app.post('/api/payment/extend-billing/:bizId', requireAdmin, async (req, res) => {
+app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, res) => {
     try {
         const { bizId } = req.params;
         const { days, instanceId } = req.body;
@@ -1847,7 +1873,7 @@ app.post('/api/payment/extend-billing/:bizId', requireAdmin, async (req, res) =>
 /**
  * POST /api/payment/trigger-billing
  */
-app.post('/api/payment/trigger-billing', requireAdmin, async (req, res) => {
+app.post('/api/payment/trigger-billing', requireSuperAdmin, async (req, res) => {
     try {
         const dryRun = req.body.dryRun === true;
         const result = await runBillingCycle(dryRun);
@@ -1926,7 +1952,7 @@ app.post('/api/webhooks/wompi', async (req, res) => {
 // PAYMENT HISTORY ENDPOINTS
 // ============================================================
 
-app.get('/api/payments/history', requireAdmin, async (req, res) => {
+app.get('/api/payments/history', requireSuperAdmin, async (req, res) => {
     try {
         const [rows] = await db.pool.query(`
             SELECT ph.*, b.name as business_name 
@@ -2073,7 +2099,7 @@ app.patch('/api/admin/tickets/:id/status', requireAdmin, async (req, res) => {
 });
 
 // ADMIN: Eliminar un ticket (de forma física y sus imágenes)
-app.delete('/api/admin/tickets/:id', requireAdmin, async (req, res) => {
+app.delete('/api/admin/tickets/:id', requireSuperAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         // 1. Buscar todas las imágenes de este ticket para eliminarlas del disco
