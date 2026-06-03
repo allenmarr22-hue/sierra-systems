@@ -126,6 +126,7 @@ async function initializeDatabase() {
             CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
                 user VARCHAR(100) NOT NULL UNIQUE,
+                email VARCHAR(150) NOT NULL,
                 pass VARCHAR(255) NOT NULL,
                 name VARCHAR(150) NOT NULL,
                 role VARCHAR(100) NOT NULL DEFAULT 'Admin',
@@ -378,6 +379,7 @@ async function getCompleteState() {
         const dbUsers = userRows.map(u => ({
             id: Number(u.id),
             user: u.user,
+            email: u.email || '',
             pass: u.pass,
             name: u.name,
             role: u.role,
@@ -591,16 +593,17 @@ async function saveCompleteState(db) {
             }
             for (const user of db.users) {
                 await connection.query(`
-                    INSERT INTO users (id, user, pass, name, role, status)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (id, user, email, pass, name, role, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE 
                         user = VALUES(user),
+                        email = VALUES(email),
                         pass = VALUES(pass),
                         name = VALUES(name),
                         role = VALUES(role),
                         status = VALUES(status)
                 `, [
-                    user.id, user.user, user.pass, user.name, user.role || 'Admin', user.status || 'active'
+                    user.id, user.user, user.email || '', user.pass, user.name, user.role || 'Admin', user.status || 'active'
                 ]);
             }
         }
@@ -823,8 +826,8 @@ async function findMasterUser(username, password) {
 async function createUser(user) {
     const id = user.id || Date.now() + Math.floor(Math.random() * 1000);
     await pool.query(
-        'INSERT INTO users (id, user, pass, name, role, status) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, user.user, hashPassword(user.pass), user.name, user.role || 'Admin', user.status || 'active']
+        'INSERT INTO users (id, user, email, pass, name, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [id, user.user, user.email || '', hashPassword(user.pass), user.name, user.role || 'Admin', user.status || 'active']
     );
     return id;
 }
@@ -836,7 +839,7 @@ async function updateUser(id, fields) {
     const sets = [];
     const values = [];
     for (const key of keys) {
-        if (['user', 'pass', 'name', 'role', 'status'].includes(key)) {
+        if (['user', 'email', 'pass', 'name', 'role', 'status'].includes(key)) {
             sets.push(`${key} = ?`);
             if (key === 'pass') {
                 values.push(hashPassword(fields[key]));

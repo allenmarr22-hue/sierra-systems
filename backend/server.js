@@ -974,6 +974,7 @@ app.post('/api/users/new', requireSuperAdmin, async (req, res) => {
     try {
         let dbState = await readDb();
         if (!dbState.users) dbState.users = [];
+        newUser.id = Date.now();
         dbState.users.push(newUser);
 
         pushNotification(dbState, {
@@ -2133,6 +2134,41 @@ app.delete('/api/admin/tickets/:id', requireSuperAdmin, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error('Error al eliminar ticket:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// ADMIN: Eliminar TODOS los tickets (de forma física y sus imágenes de chat en disco)
+app.delete('/api/admin/tickets-clear-all', requireSuperAdmin, async (req, res) => {
+    try {
+        // 1. Buscar todas las imágenes de todos los mensajes de tickets para eliminarlas del disco
+        const [messages] = await db.pool.query(
+            `SELECT image_url FROM ticket_messages WHERE image_url IS NOT NULL AND image_url != ''`
+        );
+        const ticketImagesDir = path.join(__dirname, '..', 'frontend', 'uploads', 'ticket-images');
+        for (const msg of messages) {
+            const url = msg.image_url;
+            if (url) {
+                const filename = path.basename(url);
+                const fullPath = path.join(ticketImagesDir, filename);
+                if (fs.existsSync(fullPath)) {
+                    try {
+                        fs.unlinkSync(fullPath);
+                    } catch (err) {
+                        console.error('Error unlinking ticket image:', err);
+                    }
+                }
+            }
+        }
+
+        // 2. Eliminar todos los mensajes y tickets de la base de datos
+        await db.pool.query(`DELETE FROM ticket_messages`);
+        await db.pool.query(`DELETE FROM tickets`);
+
+        broadcastUpdate();
+        res.json({ success: true, message: 'Todos los tickets y mensajes eliminados correctamente.' });
+    } catch (err) {
+        console.error('Error al vaciar tickets:', err);
         res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });

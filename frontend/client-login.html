@@ -453,7 +453,7 @@
 
             <div class="login-footer">
                 ¿Olvidaste tu contraseña?
-                <a href="https://wa.me/573001234567?text=Hola,%20olvidé%20mi%20contraseña%20de%20acceso%20al%20panel%20de%20cliente." target="_blank">
+                <a href="https://wa.me/573001234567?text=Hola,%20olvidé%20mi%20contraseña%20de%20acceso%20al%20panel%20de%20cliente." id="login-whatsapp-recovery" target="_blank">
                     Contáctanos por WhatsApp
                 </a>
                 <br><br>
@@ -548,6 +548,16 @@
                 const res = await fetch('/api/settings');
                 if (res.ok) {
                     const data = await res.json();
+                    
+                    if (data.config && data.config.supportPhone) {
+                        const cleanPhone = data.config.supportPhone.replace(/\D/g, '');
+                        const whatsappNum = cleanPhone.length === 10 ? '57' + cleanPhone : cleanPhone;
+                        const waLink = document.getElementById('login-whatsapp-recovery');
+                        if (waLink) {
+                            waLink.href = `https://wa.me/${whatsappNum}?text=Hola,%20olvidé%20mi%20contraseña%20de%20acceso%20al%20panel%20de%20cliente.`;
+                        }
+                    }
+
                     if (data.config && data.config.logo) {
                         const logoSrc = data.config.logo;
                         // Guardar en caché local para inmediatez en próximas recargas

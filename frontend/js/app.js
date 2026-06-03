@@ -2,6 +2,156 @@
 // AS Sierra Systems - Main Application JS (Backend Connected)
 // ==========================================================================
 
+// --- CUSTOM TABLE DRAWING (NO DEPENDENCIES) ---
+function drawCustomTable(doc, headers, rows, startY, options = {}) {
+    const margin = options.margin || 14;
+    const cellPadding = options.cellPadding || 4;
+    const fontSize = options.fontSize || 8.5;
+    const lineSpacing = options.lineSpacing || 4.5;
+    const pageHeight = (doc.internal.pageSize && typeof doc.internal.pageSize.getHeight === 'function') 
+        ? doc.internal.pageSize.getHeight() 
+        : (doc.internal.pageSize && doc.internal.pageSize.height) || 297;
+    const pageWidth = (doc.internal.pageSize && typeof doc.internal.pageSize.getWidth === 'function') 
+        ? doc.internal.pageSize.getWidth() 
+        : (doc.internal.pageSize && doc.internal.pageSize.width) || 210;
+    const tableWidth = pageWidth - (margin * 2);
+    
+    // Column widths calculation
+    const columnsCount = headers[0].length;
+    let colWidths = options.colWidths || [];
+    if (colWidths.length === 0) {
+        // Equal distribution by default
+        for (let i = 0; i < columnsCount; i++) {
+            colWidths.push(tableWidth / columnsCount);
+        }
+    }
+    
+    let currentY = startY;
+    
+    // Helper to draw Header
+    function drawHeader() {
+        doc.setFillColor(79, 70, 229); // Indigo Header
+        doc.rect(margin, currentY, tableWidth, 10, 'F');
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(fontSize);
+        doc.setTextColor(255, 255, 255);
+        
+        let currentX = margin;
+        headers[0].forEach((headerText, i) => {
+            doc.text(String(headerText), currentX + cellPadding, currentY + 6.5);
+            currentX += colWidths[i];
+        });
+        currentY += 10;
+    }
+    
+    drawHeader();
+    
+    // Draw Rows
+    doc.setFont('Helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
+    
+    rows.forEach((row, rowIndex) => {
+        // 1. Calculate row height based on text wrapping
+        let maxLines = 1;
+        const cellLines = row.map((cellText, i) => {
+            const textStr = String(cellText || '');
+            const lines = doc.splitTextToSize(textStr, colWidths[i] - (cellPadding * 2));
+            if (lines.length > maxLines) maxLines = lines.length;
+            return lines;
+        });
+        
+        const rowHeight = (maxLines * lineSpacing) + (cellPadding * 2);
+        
+        // 2. Page break check
+        if (currentY + rowHeight > pageHeight - 20) {
+            doc.addPage();
+            currentY = 48; // Margin top under header overlay
+            drawHeader();
+            doc.setFont('Helvetica', 'normal');
+            doc.setTextColor(30, 41, 59);
+        }
+        
+        // 3. Striped rows background
+        if (rowIndex % 2 === 0) {
+            doc.setFillColor(248, 250, 252); // Alternating light gray
+        } else {
+            doc.setFillColor(255, 255, 255);
+        }
+        doc.rect(margin, currentY, tableWidth, rowHeight, 'F');
+        
+        // 4. Row bottom border line
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, currentY + rowHeight, margin + tableWidth, currentY + rowHeight);
+        
+        // 5. Draw cell text
+        let currentX = margin;
+        cellLines.forEach((lines, i) => {
+            let textY = currentY + cellPadding + 3; // base text offset
+            lines.forEach((line) => {
+                doc.text(line, currentX + cellPadding, textY);
+                textY += lineSpacing;
+            });
+            currentX += colWidths[i];
+        });
+        
+        currentY += rowHeight;
+    });
+    
+    return currentY;
+}
+
+// --- PROMPT YEAR & MONTH (SWEETALERT2) ---
+async function promptYearMonth(title) {
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear, currentYear - 1, currentYear - 2];
+    
+    const yearOptions = `<option value="all">Todos los años</option>` + 
+        years.map(y => `<option value="${y}">${y}</option>`).join('');
+        
+    const months = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const monthOptions = `<option value="all">Todos los meses</option>` + 
+        months.map((m, idx) => `<option value="${idx}">${m}</option>`).join('');
+        
+    const { value: formValues } = await Swal.fire({
+        title: title || 'Seleccionar Período',
+        html: `
+            <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; padding: 0.5rem;">
+                <div>
+                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">AÑO</label>
+                    <select id="swal-year" class="swal2-select" style="margin: 0; width: 100%; box-sizing: border-box; background: var(--bg-surface-light); color: var(--text); border: 1px solid var(--border-color); border-radius: 8px; height: 40px; padding: 0 0.5rem; outline: none; font-family: inherit;">
+                        ${yearOptions}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">MES</label>
+                    <select id="swal-month" class="swal2-select" style="margin: 0; width: 100%; box-sizing: border-box; background: var(--bg-surface-light); color: var(--text); border: 1px solid var(--border-color); border-radius: 8px; height: 40px; padding: 0 0.5rem; outline: none; font-family: inherit;">
+                        ${monthOptions}
+                    </select>
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Generar PDF',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#4f46e5',
+        background: 'var(--bg-surface, #1e293b)',
+        color: 'var(--text, #f8fafc)',
+        preConfirm: () => {
+            return {
+                year: document.getElementById('swal-year').value,
+                month: document.getElementById('swal-month').value
+            }
+        }
+    });
+    
+    return formValues;
+}
+
 // --- UTILERIAS PREMIUM (NOTIFICACIONES & BUSQUEDA) ---
 window.playMessageChime = function() {
     try {
@@ -3201,6 +3351,45 @@ window.deleteTicket = async function(ticketId) {
     }
 };
 
+window.clearAllTickets = async function() {
+    const result = await Swal.fire({
+        title: '¿Eliminar TODOS los tickets?',
+        html: `Vas a eliminar permanentemente <strong style="color:#ef4444">TODOS</strong> los tickets de soporte del sistema y sus chats asociados.<br><br><span style="color:#ef4444; font-size:0.85rem; font-weight:700;">Esta acción es irreversible y afectará a todos los clientes.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#334155',
+        confirmButtonText: 'Sí, borrar todo permanentemente',
+        cancelButtonText: 'Cancelar',
+        background: '#1e293b',
+        color: '#f8fafc'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await adminFetch('/api/admin/tickets-clear-all', {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            appState.adminTickets = [];
+            renderAdminTickets();
+            updateTicketBadge();
+            
+            // Recargar gráficos del dashboard
+            initCharts();
+            
+            showToast('🗑️ Todos los tickets de soporte han sido eliminados.', 'success');
+        } else {
+            showToast(data.error || 'Error al vaciar los tickets', 'error');
+        }
+    } catch (err) {
+        console.error('Error al vaciar tickets:', err);
+        showToast('Error de conexión', 'error');
+    }
+};
+
 window.viewTicketDetails = function(ticketId) {
     const ticket = appState.adminTickets.find(t => t.id === ticketId);
     if (!ticket) return;
@@ -3630,9 +3819,44 @@ window.openChatImageLightbox = function(src) {
     setTimeout(() => overlay.style.opacity = '1', 50);
 };
 
-window.exportExecutiveReportPDF = function() {
+window.exportExecutiveReportPDF = async function() {
     try {
         if (!window.jspdf || !window.jspdf.jsPDF) { showToast('Librería PDF no disponible. Recarga la página.', 'error'); return; }
+        
+        const period = await promptYearMonth('Exportar Reporte Ejecutivo');
+        if (!period) return; // Cancelado
+        const { year, month } = period;
+        
+        const yearVal = String(year);
+        const monthVal = String(month);
+        
+        let filteredBiz = appState.businesses || [];
+        if (yearVal !== 'all' || monthVal !== 'all') {
+            filteredBiz = filteredBiz.filter(biz => {
+                const d = new Date(biz.created_at);
+                const yearMatch = yearVal === 'all' || String(d.getFullYear()) === yearVal;
+                const monthMatch = monthVal === 'all' || String(d.getMonth()) === monthVal;
+                return yearMatch && monthMatch;
+            });
+        }
+        
+        const monthNames = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        let periodStr = 'Histórico Completo';
+        let filePeriod = 'Historico';
+        if (yearVal !== 'all' && monthVal !== 'all') {
+            periodStr = `${monthNames[Number(monthVal)]} de ${yearVal}`;
+            filePeriod = `${yearVal}_${monthNames[Number(monthVal)]}`;
+        } else if (yearVal !== 'all') {
+            periodStr = `Año ${yearVal}`;
+            filePeriod = `${yearVal}`;
+        } else if (monthVal !== 'all') {
+            periodStr = `Mes de ${monthNames[Number(monthVal)]} (Todos los años)`;
+            filePeriod = `Mes_${monthNames[Number(monthVal)]}`;
+        }
+        
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
@@ -3644,16 +3868,20 @@ window.exportExecutiveReportPDF = function() {
         doc.setFontSize(14);
         doc.setFont('Helvetica', 'bold');
         doc.text('Resumen Ejecutivo del Ecosistema SaaS', 14, startY);
-        doc.line(14, startY + 2, 196, startY + 2);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Período: ${periodStr}`, 14, startY + 5);
+        doc.line(14, startY + 7, 196, startY + 7);
         
         // KPIs Financieros y Operacionales
-        const activeBizCount = appState.businesses.filter(b => b.status === 'active').length;
-        const totalBizCount = appState.businesses.length;
+        const activeBizCount = filteredBiz.filter(b => b.status === 'active').length;
+        const totalBizCount = filteredBiz.length;
         const activeModsCount = appState.modules.filter(m => m.status === 'active').length;
-        const totalUsersCount = appState.users.length;
         
         let totalIncome = 0;
-        appState.businesses.forEach(biz => {
+        filteredBiz.forEach(biz => {
             if (biz.status !== 'active') return;
             
             let monthlyAmount = 0;
@@ -3682,46 +3910,46 @@ window.exportExecutiveReportPDF = function() {
         
         // Tarjeta 1: MRR
         doc.setFillColor(248, 250, 252);
-        doc.setStrokeColor(226, 232, 240);
-        doc.roundedRect(14, startY + 8, cardWidth, cardHeight, 3, 3, 'FD');
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, startY + 12, cardWidth, cardHeight, 3, 3, 'FD');
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139); // Text muted
-        doc.text('MRR PROYECTADO', 18, startY + 14);
+        doc.text('MRR PROYECTADO', 18, startY + 18);
         doc.setFontSize(11);
         doc.setTextColor(79, 70, 229); // INDIGO
-        doc.text('$' + totalIncome.toLocaleString('es-CO') + ' COP', 18, startY + 24);
+        doc.text('$' + totalIncome.toLocaleString('es-CO') + ' COP', 18, startY + 28);
         
         // Tarjeta 2: Negocios
         doc.setFillColor(248, 250, 252);
-        doc.roundedRect(14 + cardWidth + gap, startY + 8, cardWidth, cardHeight, 3, 3, 'FD');
+        doc.roundedRect(14 + cardWidth + gap, startY + 12, cardWidth, cardHeight, 3, 3, 'FD');
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text('NEGOCIOS ACTIVOS', 14 + cardWidth + gap + 4, startY + 14);
+        doc.text('NEGOCIOS REGISTRADOS', 14 + cardWidth + gap + 4, startY + 18);
         doc.setFontSize(11);
         doc.setTextColor(16, 185, 129); // GREEN
-        doc.text(activeBizCount + ' / ' + totalBizCount + ' Activos', 14 + cardWidth + gap + 4, startY + 24);
+        doc.text(activeBizCount + ' / ' + totalBizCount + ' Activos', 14 + cardWidth + gap + 4, startY + 28);
         
         // Tarjeta 3: Módulos
         doc.setFillColor(248, 250, 252);
-        doc.roundedRect(14 + (cardWidth + gap) * 2, startY + 8, cardWidth, cardHeight, 3, 3, 'FD');
+        doc.roundedRect(14 + (cardWidth + gap) * 2, startY + 12, cardWidth, cardHeight, 3, 3, 'FD');
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text('MODULOS ACTIVOS', 14 + (cardWidth + gap) * 2 + 4, startY + 14);
+        doc.text('MODULOS ACTIVOS', 14 + (cardWidth + gap) * 2 + 4, startY + 18);
         doc.setFontSize(11);
         doc.setTextColor(99, 102, 241); // VIOLET
-        doc.text(activeModsCount + ' Módulos', 14 + (cardWidth + gap) * 2 + 4, startY + 24);
+        doc.text(activeModsCount + ' Módulos', 14 + (cardWidth + gap) * 2 + 4, startY + 28);
         
         // Listado Detallado de Negocios
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(30, 41, 59);
-        doc.text('Detalle de Negocios Registrados', 14, startY + 40);
+        doc.text('Detalle de Negocios Registrados', 14, startY + 44);
         
         const headers = [['Nombre del Negocio', 'Ciudad', 'Tipo', 'Estado', 'Módulos Activos']];
-        const body = appState.businesses.map(biz => {
+        const body = filteredBiz.map(biz => {
             const modulesNames = (biz.modules || []).map(mid => {
                 const m = appState.modules.find(x => String(x.id) === String(mid));
                 return m ? m.name : mid;
@@ -3735,16 +3963,8 @@ window.exportExecutiveReportPDF = function() {
             ];
         });
         
-        doc.autoTable({
-            startY: startY + 44,
-            head: headers,
-            body: body,
-            theme: 'striped',
-            headStyles: { fillColor: [79, 70, 229] }, // Indigo
-            styles: { font: 'Helvetica', fontSize: 9, cellPadding: 4 },
-            columnStyles: {
-                4: { cellWidth: 55 }
-            }
+        drawCustomTable(doc, headers, body, startY + 48, {
+            colWidths: [45, 25, 30, 25, 57]
         });
         
         // Aplicar cabecera, monograma "AS" y pie de página dinámico a todas las páginas
@@ -3787,7 +4007,7 @@ window.exportExecutiveReportPDF = function() {
             doc.text(`Página ${i} de ${pageCount}`, 180, 287);
         }
         
-        doc.save('Reporte_Ejecutivo_AS_Sierra_' + new Date().toISOString().split('T')[0] + '.pdf');
+        doc.save(`Reporte_Ejecutivo_AS_Sierra_${filePeriod}.pdf`);
         showToast('📄 Reporte ejecutivo exportado con éxito.', 'success');
     } catch (err) {
         console.error('Error exportando PDF:', err);
@@ -3986,9 +4206,46 @@ window.setGlobalPaymentFilter = function(filterType) {
     renderGlobalPaymentsHistory();
 };
 
-window.downloadGlobalPaymentsPDF = function() {
+window.downloadGlobalPaymentsPDF = async function() {
     try {
         if (!window.jspdf || !window.jspdf.jsPDF) { showToast('Librería PDF no disponible. Recarga la página.', 'error'); return; }
+        
+        const period = await promptYearMonth('Exportar Ledger de Pagos');
+        if (!period) return; // Cancelado
+        const { year, month } = period;
+        
+        const yearVal = String(year);
+        const monthVal = String(month);
+        
+        const payments = window._filteredGlobalPayments || appState.globalPayments || [];
+        
+        let filteredPayments = payments;
+        if (yearVal !== 'all' || monthVal !== 'all') {
+            filteredPayments = filteredPayments.filter(ph => {
+                const d = new Date(ph.created_at);
+                const yearMatch = yearVal === 'all' || String(d.getFullYear()) === yearVal;
+                const monthMatch = monthVal === 'all' || String(d.getMonth()) === monthVal;
+                return yearMatch && monthMatch;
+            });
+        }
+        
+        const monthNames = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        let periodStr = 'Histórico Completo';
+        let filePeriod = 'Historico';
+        if (yearVal !== 'all' && monthVal !== 'all') {
+            periodStr = `${monthNames[Number(monthVal)]} de ${yearVal}`;
+            filePeriod = `${yearVal}_${monthNames[Number(monthVal)]}`;
+        } else if (yearVal !== 'all') {
+            periodStr = `Año ${yearVal}`;
+            filePeriod = `${yearVal}`;
+        } else if (monthVal !== 'all') {
+            periodStr = `Mes de ${monthNames[Number(monthVal)]} (Todos los años)`;
+            filePeriod = `Mes_${monthNames[Number(monthVal)]}`;
+        }
+        
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
@@ -4015,12 +4272,16 @@ window.downloadGlobalPaymentsPDF = function() {
         doc.setFontSize(14);
         doc.setFont('Helvetica', 'bold');
         doc.text('Ledger de Pagos del Ecosistema', 14, 48);
-        doc.line(14, 50, 196, 50);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Período: ${periodStr}`, 14, 53);
+        doc.line(14, 55, 196, 55);
         
         const headers = [['Fecha', 'Negocio', 'Concepto', 'Monto', 'Estado', 'Referencia TXN']];
-        const payments = window._filteredGlobalPayments || appState.globalPayments || [];
         
-        const body = payments.map(ph => {
+        const body = filteredPayments.map(ph => {
             const d = new Date(ph.created_at);
             const dateVal = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
             const amountVal = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
@@ -4041,21 +4302,14 @@ window.downloadGlobalPaymentsPDF = function() {
             ];
         });
         
-        doc.autoTable({
-            startY: 55,
-            head: headers,
-            body: body,
-            theme: 'striped',
-            headStyles: { fillColor: [79, 70, 229] },
-            styles: { font: 'Helvetica', fontSize: 9 }
+        const finalY = drawCustomTable(doc, headers, body, 60, {
+            colWidths: [20, 30, 50, 25, 22, 35]
         });
-        
-        const finalY = doc.lastAutoTable.finalY || 200;
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
         doc.text('AS Sierra Systems - Registro Histórico inalterable de transacciones.', 14, finalY + 20);
         
-        doc.save('Ledger_Pagos_AS_Sierra_' + today.toISOString().split('T')[0] + '.pdf');
+        doc.save(`Ledger_Pagos_AS_Sierra_${filePeriod}.pdf`);
         showToast('📄 Ledger de pagos exportado con éxito.', 'success');
     } catch (err) {
         console.error('Error exportando PDF de pagos:', err);
@@ -4066,20 +4320,57 @@ window.downloadGlobalPaymentsPDF = function() {
 // ============================================================
 // PDF: REPORTE GLOBAL DE FACTURACIÓN
 // ============================================================
-window.downloadGlobalBillingPDF = function() {
+window.downloadGlobalBillingPDF = async function() {
     try {
         if (!window.jspdf || !window.jspdf.jsPDF) { showToast('Librería PDF no disponible. Recarga la página.', 'error'); return; }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-
+        
+        const period = await promptYearMonth('Exportar Reporte de Facturación');
+        if (!period) return; // Cancelado
+        const { year, month } = period;
+        
+        const yearVal = String(year);
+        const monthVal = String(month);
+        
         const businesses = appState.businesses || [];
         const modules = appState.modules || [];
         const today = new Date();
         const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 
+        let filteredBiz = businesses;
+        if (yearVal !== 'all' || monthVal !== 'all') {
+            filteredBiz = filteredBiz.filter(biz => {
+                const billing = biz.billing || {};
+                if (!billing.next_billing_date) return false;
+                const d = new Date(billing.next_billing_date + 'T00:00:00');
+                const yearMatch = yearVal === 'all' || String(d.getFullYear()) === yearVal;
+                const monthMatch = monthVal === 'all' || String(d.getMonth()) === monthVal;
+                return yearMatch && monthMatch;
+            });
+        }
+
+        const monthNames = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        let periodStr = 'Histórico Completo';
+        let filePeriod = 'Historico';
+        if (yearVal !== 'all' && monthVal !== 'all') {
+            periodStr = `${monthNames[Number(monthVal)]} de ${yearVal}`;
+            filePeriod = `${yearVal}_${monthNames[Number(monthVal)]}`;
+        } else if (yearVal !== 'all') {
+            periodStr = `Año ${yearVal}`;
+            filePeriod = `${yearVal}`;
+        } else if (monthVal !== 'all') {
+            periodStr = `Mes de ${monthNames[Number(monthVal)]} (Todos los años)`;
+            filePeriod = `Mes_${monthNames[Number(monthVal)]}`;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
         // Construir datos de tabla
-        const headers = [['Negocio', 'Ciudad', 'Estado Suscripción', 'Próximo Corte', 'Valor Mensual', 'Módulos']];
-        const body = businesses.map(biz => {
+        const headers = [['Negocio', 'Ciudad', 'Estado', 'Próx. Corte', 'Monto/Mes', 'Módulos']];
+        const body = filteredBiz.map(biz => {
             const billing = biz.billing || {};
             const status = billing.subscription_status || 'pending';
             const statusLabels = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' };
@@ -4121,63 +4412,62 @@ window.downloadGlobalBillingPDF = function() {
         });
 
         // KPIs
-        const activeCount = businesses.filter(b => (b.billing?.subscription_status || '') === 'active').length;
-        const suspendedCount = businesses.filter(b => (b.billing?.subscription_status || '') === 'suspended').length;
+        const activeCount = filteredBiz.filter(b => (b.billing?.subscription_status || '') === 'active').length;
+        const suspendedCount = filteredBiz.filter(b => (b.billing?.subscription_status || '') === 'suspended').length;
         let totalRevenue = 0;
-        businesses.forEach(biz => {
+        filteredBiz.forEach(biz => {
             if ((biz.billing?.subscription_status || '') === 'active') {
                 totalRevenue += biz.billing?.last_payment_amount || 0;
             }
         });
 
-        doc.autoTable({
-            startY: 55,
-            head: headers,
-            body: body,
-            theme: 'striped',
-            headStyles: { fillColor: [79, 70, 229] },
-            styles: { font: 'Helvetica', fontSize: 8, cellPadding: 3 },
-            columnStyles: { 5: { cellWidth: 45 } },
-            didDrawPage: (data) => {
-                const pageCount = doc.internal.getNumberOfPages();
-                const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
-
-                // Header bar
-                doc.setFillColor(30, 41, 59);
-                doc.rect(0, 0, 210, 32, 'F');
-
-                // Monograma AS
-                doc.setFillColor(99, 102, 241);
-                doc.rect(14, 6, 20, 20, 'F');
-                doc.setFont('Helvetica', 'bold');
-                doc.setFontSize(14);
-                doc.setTextColor(255, 255, 255);
-                doc.text('AS', 24, 19, { align: 'center' });
-
-                // Títulos
-                doc.setFontSize(15);
-                doc.setTextColor(255, 255, 255);
-                doc.text('SIERRA SYSTEMS', 42, 15);
-                doc.setFont('Helvetica', 'normal');
-                doc.setFontSize(9);
-                doc.setTextColor(148, 163, 184);
-                doc.text('REPORTE GLOBAL DE FACTURACIÓN Y SUSCRIPCIONES', 42, 22);
-
-                // Timestamp y KPIs en el encabezado
-                doc.setFontSize(8);
-                doc.setTextColor(148, 163, 184);
-                doc.text('Emisión: ' + dateStr, 140, 16);
-                doc.text(`Activos: ${activeCount} | Suspendidos: ${suspendedCount} | Ingresos: $${totalRevenue.toLocaleString('es-CO')} COP`, 140, 22);
-
-                // Footer
-                doc.setFontSize(8);
-                doc.setTextColor(148, 163, 184);
-                doc.text('AS Sierra Systems — Reporte de Facturación. Confidencial.', 14, 287);
-                doc.text(`Página ${currentPage} de ${pageCount}`, 180, 287);
-            }
+        drawCustomTable(doc, headers, body, 55, {
+            colWidths: [35, 22, 22, 26, 27, 50]
         });
 
-        doc.save('Facturacion_AS_Sierra_' + today.toISOString().split('T')[0] + '.pdf');
+        // Apply headers and footers to all pages after drawing the table
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            
+            // Header bar
+            doc.setFillColor(30, 41, 59);
+            doc.rect(0, 0, 210, 32, 'F');
+
+            // Monograma AS
+            doc.setFillColor(99, 102, 241);
+            doc.rect(14, 6, 20, 20, 'F');
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.text('AS', 24, 19, { align: 'center' });
+
+            // Títulos
+            doc.setFontSize(15);
+            doc.setTextColor(255, 255, 255);
+            doc.text('SIERRA SYSTEMS', 42, 13);
+            doc.setFont('Helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text('REPORTE GLOBAL DE FACTURACIÓN Y SUSCRIPCIONES', 42, 19);
+            doc.setFontSize(8.5);
+            doc.text(`Período: ${periodStr}`, 42, 25);
+
+            // Timestamp y KPIs en el encabezado
+            doc.setFontSize(8.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text('Emisión: ' + dateStr, 135, 13);
+            doc.text(`Activos: ${activeCount} | Suspendidos: ${suspendedCount}`, 135, 19);
+            doc.text(`Ingresos: $${totalRevenue.toLocaleString('es-CO')} COP`, 135, 25);
+
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text('AS Sierra Systems — Reporte de Facturación. Confidencial.', 14, 287);
+            doc.text(`Página ${i} de ${pageCount}`, 180, 287);
+        }
+
+        doc.save(`Facturacion_AS_Sierra_${filePeriod}.pdf`);
         showToast('📄 Reporte de facturación exportado con éxito.', 'success');
     } catch (err) {
         console.error('Error exportando PDF de facturación:', err);
@@ -4296,20 +4586,22 @@ window.downloadIndividualBusinessPDF = function(bizId) {
             doc.setTextColor(100, 116, 139);
             doc.text('Sin módulos activos contratados.', 14, yPos + 18);
         } else {
-            doc.autoTable({
-                startY: yPos + 14,
-                head: [['Módulo', 'ID', 'Precio Mensual']],
-                body: activeModules.map(m => [
-                    m.name || m.id,
-                    String(m.id),
-                    m.price ? '$ ' + String(m.price).replace(/\D/g, '').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.') + ' COP' : '—'
-                ]),
-                theme: 'striped',
-                headStyles: { fillColor: [79, 70, 229] },
-                styles: { font: 'Helvetica', fontSize: 9, cellPadding: 4 },
-                foot: [['TOTAL MRR', '', '$ ' + mrr.toLocaleString('es-CO') + ' COP']],
-                footStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' }
+            const bodyData = activeModules.map(m => [
+                m.name || m.id,
+                String(m.id),
+                m.price ? '$ ' + String(m.price).replace(/\D/g, '').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.') + ' COP' : '—'
+            ]);
+            const finalY = drawCustomTable(doc, [['Módulo', 'ID', 'Precio Mensual']], bodyData, yPos + 14, {
+                colWidths: [80, 52, 50]
             });
+            // Draw custom footer row for summary
+            doc.setFillColor(30, 41, 59); // Dark grey background
+            doc.rect(14, finalY, 182, 10, 'F');
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(8.5);
+            doc.setTextColor(255, 255, 255);
+            doc.text('TOTAL MRR', 14 + 4, finalY + 6.5);
+            doc.text('$ ' + mrr.toLocaleString('es-CO') + ' COP', 14 + 80 + 52 + 4, finalY + 6.5);
         }
 
         // Footer
@@ -4709,3 +5001,50 @@ window.openPromoFormModal = function(id = '') {
         }
     });
 };
+
+// --- GLOBAL KEYBOARD NAVIGATION (ENTER & ESCAPE) ---
+document.addEventListener('keydown', (e) => {
+    // 1. Escape key handling
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal-overlay:not(.hidden)');
+        if (activeModal) {
+            e.preventDefault();
+            const cancelBtn = activeModal.querySelector('#business-modal-cancel, #user-modal-cancel, #module-modal-cancel, #security-modal-cancel, #delete-modal-cancel, .modal-close');
+            if (cancelBtn) {
+                cancelBtn.click();
+            } else {
+                activeModal.classList.add('hidden');
+            }
+        }
+    }
+    
+    // 2. Enter key handling for inputs inside modals & SweetAlert2 custom inputs
+    if (e.key === 'Enter') {
+        // Handle SweetAlert2 if visible
+        if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT')) {
+                if (activeEl.closest('.swal2-container')) {
+                    e.preventDefault();
+                    Swal.clickConfirm();
+                }
+            }
+            return;
+        }
+
+        // Handle Custom HTML Modals
+        const activeModal = document.querySelector('.modal-overlay:not(.hidden)');
+        if (activeModal) {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT')) {
+                if (activeEl.closest('.modal-overlay:not(.hidden)')) {
+                    const saveBtn = activeModal.querySelector('#business-modal-save, .btn-save-modern, #module-modal-save, #security-modal-save, #delete-modal-confirm, .btn-primary, .btn-danger');
+                    if (saveBtn) {
+                        e.preventDefault();
+                        saveBtn.click();
+                    }
+                }
+            }
+        }
+    }
+});

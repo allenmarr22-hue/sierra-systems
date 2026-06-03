@@ -162,6 +162,7 @@ async function runMigration() {
             CREATE TABLE IF NOT EXISTS users (
                 id BIGINT PRIMARY KEY,
                 user VARCHAR(100) NOT NULL UNIQUE,
+                email VARCHAR(150) NOT NULL,
                 pass VARCHAR(255) NOT NULL,
                 name VARCHAR(150) NOT NULL,
                 role VARCHAR(100) NOT NULL DEFAULT 'Admin',
@@ -329,10 +330,11 @@ async function runMigration() {
             // Si el id no es un número válido, generar uno
             const userId = parseInt(user.id) || Date.now() + Math.floor(Math.random() * 1000);
             await pool.query(`
-                INSERT INTO users (id, user, pass, name, role, status)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO users (id, user, email, pass, name, role, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                     user = VALUES(user),
+                    email = VALUES(email),
                     pass = VALUES(pass),
                     name = VALUES(name),
                     role = VALUES(role),
@@ -340,6 +342,7 @@ async function runMigration() {
             `, [
                 userId,
                 user.user,
+                user.email || '',
                 hashPassword(user.pass),
                 user.name,
                 user.role || 'Admin',

@@ -1,3 +1,102 @@
+// --- CUSTOM TABLE DRAWING (NO DEPENDENCIES) ---
+function drawCustomTable(doc, headers, rows, startY, options = {}) {
+    const margin = options.margin || 14;
+    const cellPadding = options.cellPadding || 4;
+    const fontSize = options.fontSize || 8.5;
+    const lineSpacing = options.lineSpacing || 4.5;
+    const pageHeight = (doc.internal.pageSize && typeof doc.internal.pageSize.getHeight === 'function') 
+        ? doc.internal.pageSize.getHeight() 
+        : (doc.internal.pageSize && doc.internal.pageSize.height) || 297;
+    const pageWidth = (doc.internal.pageSize && typeof doc.internal.pageSize.getWidth === 'function') 
+        ? doc.internal.pageSize.getWidth() 
+        : (doc.internal.pageSize && doc.internal.pageSize.width) || 210;
+    const tableWidth = pageWidth - (margin * 2);
+    
+    // Column widths calculation
+    const columnsCount = headers[0].length;
+    let colWidths = options.colWidths || [];
+    if (colWidths.length === 0) {
+        // Equal distribution by default
+        for (let i = 0; i < columnsCount; i++) {
+            colWidths.push(tableWidth / columnsCount);
+        }
+    }
+    
+    let currentY = startY;
+    
+    // Helper to draw Header
+    function drawHeader() {
+        doc.setFillColor(79, 70, 229); // Indigo Header
+        doc.rect(margin, currentY, tableWidth, 10, 'F');
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(fontSize);
+        doc.setTextColor(255, 255, 255);
+        
+        let currentX = margin;
+        headers[0].forEach((headerText, i) => {
+            doc.text(String(headerText), currentX + cellPadding, currentY + 6.5);
+            currentX += colWidths[i];
+        });
+        currentY += 10;
+    }
+    
+    drawHeader();
+    
+    // Draw Rows
+    doc.setFont('Helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
+    
+    rows.forEach((row, rowIndex) => {
+        // 1. Calculate row height based on text wrapping
+        let maxLines = 1;
+        const cellLines = row.map((cellText, i) => {
+            const textStr = String(cellText || '');
+            const lines = doc.splitTextToSize(textStr, colWidths[i] - (cellPadding * 2));
+            if (lines.length > maxLines) maxLines = lines.length;
+            return lines;
+        });
+        
+        const rowHeight = (maxLines * lineSpacing) + (cellPadding * 2);
+        
+        // 2. Page break check
+        if (currentY + rowHeight > pageHeight - 20) {
+            doc.addPage();
+            currentY = 48; // Margin top under header overlay
+            drawHeader();
+            doc.setFont('Helvetica', 'normal');
+            doc.setTextColor(30, 41, 59);
+        }
+        
+        // 3. Striped rows background
+        if (rowIndex % 2 === 0) {
+            doc.setFillColor(248, 250, 252); // Alternating light gray
+        } else {
+            doc.setFillColor(255, 255, 255);
+        }
+        doc.rect(margin, currentY, tableWidth, rowHeight, 'F');
+        
+        // 4. Row bottom border line
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, currentY + rowHeight, margin + tableWidth, currentY + rowHeight);
+        
+        // 5. Draw cell text
+        let currentX = margin;
+        cellLines.forEach((lines, i) => {
+            let textY = currentY + cellPadding + 3; // base text offset
+            lines.forEach((line) => {
+                doc.text(line, currentX + cellPadding, textY);
+                textY += lineSpacing;
+            });
+            currentX += colWidths[i];
+        });
+        
+        currentY += rowHeight;
+    });
+    
+    return currentY;
+}
+
 // ====================== CONFIGURACIÓN ======================
 // --- UTILERIAS PREMIUM (NOTIFICACIONES & BUSQUEDA) ---
 window.showToast = function(message, type = 'success') {
@@ -151,7 +250,7 @@ function getActivePromo(moduleId) {
 
 
 let CLIENT_ID = null; // Se asigna dinámicamente desde la sesión
-const WHATSAPP_NUMBER = '573001234567'; // Número de ventas de AS Sierra Systems
+let WHATSAPP_NUMBER = '573001234567'; // Número de ventas de AS Sierra Systems
 let appState = { businesses: [], modules: [], notifications: [], promotions: [] };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -706,6 +805,13 @@ async function loadData() {
         appState.modules = data.modules || [];
         appState.notifications = data.notifications || [];
         appState.promotions = data.promotions || [];
+        appState.config = data.config || {};
+
+        // Update WHATSAPP_NUMBER dynamically from config
+        if (appState.config?.supportPhone) {
+            const cleanPhone = appState.config.supportPhone.replace(/\D/g, '');
+            WHATSAPP_NUMBER = cleanPhone.length === 10 ? '57' + cleanPhone : cleanPhone;
+        }
 
         renderDashboard();
     } catch (error) {
@@ -762,9 +868,17 @@ function renderDashboard() {
     const emailDisplay = document.getElementById('profile-email-display');
     if (emailDisplay && clientBiz.clientEmail) emailDisplay.textContent = clientBiz.clientEmail;
 
-    // Mostrar correo del cliente en la tarjeta de soporte
+    // Mostrar correo de soporte de la plataforma en la tarjeta de soporte
     const supportEmailSpan = document.getElementById('support-client-email');
-    if (supportEmailSpan && clientBiz.clientEmail) supportEmailSpan.textContent = clientBiz.clientEmail;
+    if (supportEmailSpan) {
+        supportEmailSpan.textContent = appState.config?.supportEmail || 'soporte@assierrasystems.com';
+    }
+
+    // Actualizar enlace de WhatsApp de soporte dinámicamente
+    const supportWaBtn = document.querySelector('#tab-support a[href*="wa.me"]');
+    if (supportWaBtn) {
+        supportWaBtn.href = `https://wa.me/${WHATSAPP_NUMBER}?text=Hola,%20soy%20cliente%20de%20AS%20Sierra%20Systems%20y%20necesito%20soporte.`;
+    }
 
 
     if (clientBiz.avatarUrl) {
@@ -3930,16 +4044,9 @@ window.downloadClientPaymentsPDF = function() {
             ];
         });
         
-        doc.autoTable({
-            startY: 55,
-            head: headers,
-            body: body,
-            theme: 'striped',
-            headStyles: { fillColor: [79, 70, 229] },
-            styles: { font: 'Helvetica', fontSize: 9 }
+        const finalY = drawCustomTable(doc, headers, body, 55, {
+            colWidths: [30, 60, 30, 27, 35]
         });
-        
-        const finalY = doc.lastAutoTable.finalY || 200;
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
         doc.text('AS Sierra Systems - Comprobante de registro de transacciones.', 14, finalY + 20);
@@ -3964,4 +4071,20 @@ window.downloadClientPaymentsPDF = function() {
         });
     }
 };
+
+// --- GLOBAL KEYBOARD NAVIGATION (ENTER & ESCAPE) ---
+document.addEventListener('keydown', (e) => {
+    // Enter key handling for inputs inside SweetAlert2 custom inputs
+    if (e.key === 'Enter') {
+        if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT')) {
+                if (activeEl.closest('.swal2-container')) {
+                    e.preventDefault();
+                    Swal.clickConfirm();
+                }
+            }
+        }
+    }
+});
 

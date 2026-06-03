@@ -140,6 +140,44 @@
             gap: 1.5rem;
             margin-top: 1.5rem;
         }
+
+        /* Grid responsive dynamically based on sidebar state */
+        /* Sidebar NOT collapsed: exactly 3 columns on large screens */
+        .sidebar:not(.collapsed) ~ .main-content .client-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 1.5rem !important;
+            margin-top: 1.5rem !important;
+        }
+        /* Sidebar collapsed: exactly 4 columns on large screens */
+        .sidebar.collapsed ~ .main-content .client-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 1.5rem !important;
+            margin-top: 1.5rem !important;
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 1400px) {
+            .sidebar:not(.collapsed) ~ .main-content .client-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+            .sidebar.collapsed ~ .main-content .client-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+        }
+        @media (max-width: 1024px) {
+            .sidebar:not(.collapsed) ~ .main-content .client-grid,
+            .sidebar.collapsed ~ .main-content .client-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
+        @media (max-width: 768px) {
+            .sidebar:not(.collapsed) ~ .main-content .client-grid,
+            .sidebar.collapsed ~ .main-content .client-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
         /* Premium Dashboard Enhancements */
         .dashboard-hero {
             background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(79, 70, 229, 0.05) 100%);
@@ -445,32 +483,16 @@
                     </div>
                 </div>
 
-                   <!-- Contenedor Activos -->
+                <!-- Contenedor Activos -->
                 <div id="carousel-active-wrap" style="margin-top: 1rem;">
-                    <div class="carousel-container-outer">
-                        <button class="carousel-nav-btn prev-btn hidden" onclick="scrollCarousel(this, -1)">
-                            <i data-lucide="chevron-left"></i>
-                        </button>
-                        <div class="client-grid carousel-scroll-container" id="client-modules-grid-active">
-                            <p style="color:var(--text-muted);">Cargando tus aplicaciones...</p>
-                        </div>
-                        <button class="carousel-nav-btn next-btn" onclick="scrollCarousel(this, 1)">
-                            <i data-lucide="chevron-right"></i>
-                        </button>
+                    <div class="client-grid" id="client-modules-grid-active">
+                        <p style="color:var(--text-muted);">Cargando tus aplicaciones...</p>
                     </div>
                 </div>
                 
                 <!-- Contenedor Cancelados -->
                 <div id="carousel-cancelled-wrap" style="display: none; margin-top: 1rem;">
-                    <div class="carousel-container-outer">
-                        <button class="carousel-nav-btn prev-btn hidden" onclick="scrollCarousel(this, -1)">
-                            <i data-lucide="chevron-left"></i>
-                        </button>
-                        <div class="client-grid carousel-scroll-container" id="client-modules-grid-cancelled">
-                        </div>
-                        <button class="carousel-nav-btn next-btn" onclick="scrollCarousel(this, 1)">
-                            <i data-lucide="chevron-right"></i>
-                        </button>
+                    <div class="client-grid" id="client-modules-grid-cancelled">
                     </div>
                 </div>
             </section>
@@ -626,8 +648,8 @@
                         <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Tiempo de respuesta: <strong style="color:var(--primary);">~24 horas</strong></p>
                         <p style="color:var(--text-muted); font-size: 0.875rem; margin-bottom: 0.35rem;">Para solicitudes formales, escalamientos, facturación y reportes de errores detallados.</p>
                         <p style="font-size: 0.82rem; margin-bottom: 1.25rem; padding: 0.5rem 0.75rem; background: rgba(99,102,241,0.07); border-radius: 8px; border-left: 3px solid var(--primary);">
-                            <i data-lucide="user" style="width:13px; height:13px; vertical-align:middle; margin-right:4px;"></i>
-                            Tu correo: <strong id="support-client-email" style="color:var(--primary); font-weight:700;">—</strong>
+                            <i data-lucide="mail" style="width:13px; height:13px; vertical-align:middle; margin-right:4px;"></i>
+                            Soporte: <strong id="support-client-email" style="color:var(--primary); font-weight:700;">—</strong>
                         </p>
                         <button id="copy-support-email-btn" onclick="window.copySupportEmail()" class="btn-ghost"
                            style="justify-content:center; width:100%; gap:0.5rem;">

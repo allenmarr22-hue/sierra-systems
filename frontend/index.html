@@ -1429,6 +1429,32 @@
                 if (res.ok) {
                     const data = await res.json();
                     
+                    let waNum = '1234567890';
+                    if (data.config && data.config.supportPhone) {
+                        const cleanPhone = data.config.supportPhone.replace(/\D/g, '');
+                        waNum = cleanPhone.length === 10 ? '57' + cleanPhone : cleanPhone;
+                        
+                        const heroWaBtn = document.querySelector('a[href*="quiero%20m%C3%A1s%20informaci%C3%B3n"]');
+                        if (heroWaBtn) {
+                            heroWaBtn.href = `https://wa.me/${waNum}?text=Hola,%20quiero%20más%20información%20sobre%20sus%20soluciones`;
+                        }
+                        
+                        const helpWaBtn = document.querySelector('#ayuda a[href*="wa.me"]');
+                        if (helpWaBtn) {
+                            helpWaBtn.href = `https://wa.me/${waNum}?text=Hola,%20necesito%20ayuda%20con%20la%20plataforma`;
+                        }
+
+                        const floatWaBtn = document.querySelector('.whatsapp-float');
+                        if (floatWaBtn) {
+                            floatWaBtn.href = `https://wa.me/${waNum}`;
+                        }
+
+                        const footerWaBtn = document.querySelector('footer a[href*="wa.me"]');
+                        if (footerWaBtn) {
+                            footerWaBtn.href = `https://wa.me/${waNum}`;
+                        }
+                    }
+                    
                     if (data.config && data.config.logo) {
                         const logoSrc = data.config.logo;
                         // Guardar en caché local para inmediatez en próximas recargas
@@ -1556,7 +1582,7 @@
                             
                             const actionEl = document.getElementById(`action-${mod.id}`);
                             if (actionEl && mod.name) {
-                                actionEl.href = `https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20${encodeURIComponent(mod.name)}`;
+                                actionEl.href = `https://wa.me/${waNum}?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20${encodeURIComponent(mod.name)}`;
                             }
                             
                             if (mod.id === 'streetfeed') {
