@@ -24,3 +24,12 @@ lerna-debug.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Temporary agent scripts and local helper/test files
+scratch/
+backend/check_fogon.js
+backend/fix_fogon_owner.js
+backend/fix_fogon_status.js
+backend/get_businesses.js
+backend/test_save.js
+

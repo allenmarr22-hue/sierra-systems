@@ -8276,7 +8276,7 @@ window.getThemesMap = function() {
         cyan: { accent: '#3498DB', bg: '#F4F9FC', rgb: '52, 152, 219' },
         purple: { accent: '#7D3C98', bg: '#F8F4F9', rgb: '125, 60, 152' },
         maroon: { accent: '#922B21', bg: '#FCF5F4', rgb: '146, 43, 33' },
-        slate: { accent: '#34495E', bg: '#F4F6F7', rgb: '52, 73, 94' },
+        slate: { accent: '#38bdf8', bg: '#0f172a', rgb: '56, 189, 248' },
         
         emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133' },
         mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96' },
@@ -8436,6 +8436,14 @@ window.applyTheme = function(themeName, silent = false) {
     root.style.setProperty('--color-bg', theme.bg);
     root.style.setProperty('--accent-rgb', theme.rgb);
     
+    if (themeName === 'slate') {
+        root.classList.add('dark-theme');
+        root.classList.remove('light-theme');
+    } else {
+        root.classList.add('light-theme');
+        root.classList.remove('dark-theme');
+    }
+    
     localStorage.setItem('margarita_admin_theme', themeName);
     if (!silent) {
         showToast(`Tema aplicado: ${themeName.toUpperCase()}`, 'success');
@@ -8449,7 +8457,7 @@ window.applyTheme = function(themeName, silent = false) {
 document.addEventListener('DOMContentLoaded', () => {
     // Aplicar tema guardado
     const savedTheme = localStorage.getItem('margarita_admin_theme') || 'rose';
-    if(savedTheme !== 'rose') applyTheme(savedTheme, true); // true = no toast on load
+    applyTheme(savedTheme, true); // true = no toast on load
     if (window.renderThemeSelector) window.renderThemeSelector();
 
     initKeyboardShortcuts();

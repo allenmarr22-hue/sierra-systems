@@ -23,6 +23,7 @@
             } catch (e) {}
         })();
     </script>
+    <style>.hidden{display:none!important}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AS Sierra Systems — Panel de Control</title>
@@ -31,7 +32,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -401,10 +402,12 @@
             <!-- List Header -->
             <div style="display:flex; align-items:center; gap:1.5rem; padding:0 1.5rem 0.75rem 1.5rem; border-bottom:1px solid var(--border-color); margin-bottom:1rem; font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
                 <div style="flex:2; min-width:200px;">Negocio</div>
-                <div style="flex:1.5; min-width:120px;">Ciudad</div>
+                <div style="flex:2; min-width:160px;">Cliente</div>
+                <div style="flex:1.5; min-width:140px;">Teléfono</div>
+                <div style="flex:1.2; min-width:110px;">Ciudad</div>
                 <div style="flex:2;">Módulos Activos</div>
-                <div style="flex:1; min-width:100px; text-align:center;">Estado</div>
-                <div style="flex:1; min-width:120px; text-align:right;">Acciones</div>
+                <div style="flex:1; min-width:90px; text-align:center;">Estado</div>
+                <div style="flex:1; min-width:110px; text-align:right;">Acciones</div>
             </div>
 
             <div id="businesses-grid" class="businesses-grid"></div>
@@ -842,9 +845,31 @@
                             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">Personaliza tu logo institucional.</p>
                             
                             <input type="file" id="logo-upload-input" accept="image/*" style="display: none;">
-                            <button class="btn-primary" style="width: 100%; justify-content: center; height: 44px;" onclick="document.getElementById('logo-upload-input').click()">
+                            <button class="btn-primary" style="width: 100%; justify-content: center; height: 44px; margin-bottom: 1.5rem;" onclick="document.getElementById('logo-upload-input').click()">
                                 <i data-lucide="upload-cloud"></i> Seleccionar Imagen
                             </button>
+
+                            <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                                <label>Nombre de la Empresa</label>
+                                <div class="input-icon-wrap">
+                                    <i data-lucide="building"></i>
+                                    <input type="text" id="settings-company-name" placeholder="AS Sierra Systems">
+                                </div>
+                            </div>
+                            <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                                <label>Correo de Soporte</label>
+                                <div class="input-icon-wrap">
+                                    <i data-lucide="mail"></i>
+                                    <input type="email" id="settings-support-email" placeholder="soporte@assierrasystems.com">
+                                </div>
+                            </div>
+                            <div class="form-group" style="text-align: left; margin-bottom: 0;">
+                                <label>Teléfono de Soporte</label>
+                                <div class="input-icon-wrap">
+                                    <i data-lucide="phone"></i>
+                                    <input type="text" id="settings-support-phone" placeholder="573001234567">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -914,23 +939,29 @@
                         <input type="text" id="biz-name" placeholder="Ej: Restaurante El Buen Sabor" required>
                     </div>
                     <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" id="biz-phone" placeholder="Ej: 3001234567">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre Propietario / Cliente</label>
+                        <input type="text" id="biz-owner-name" placeholder="Ej: Juan Pérez">
+                    </div>
+                    <div class="form-group">
                         <label>NIT / RUC</label>
                         <input type="text" id="biz-nit" placeholder="Ej: 900123456-7">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Teléfono</label>
-                        <input type="text" id="biz-phone" placeholder="Ej: 3001234567">
-                    </div>
-                    <div class="form-group">
                         <label>Ciudad</label>
                         <input type="text" id="biz-city" placeholder="Ej: Riohacha">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Dirección</label>
-                    <input type="text" id="biz-address" placeholder="Ej: Calle 15 #8-22">
+                    <div class="form-group">
+                        <label>Dirección</label>
+                        <input type="text" id="biz-address" placeholder="Ej: Calle 15 #8-22">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Tipo de Negocio</label>

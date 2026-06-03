@@ -480,14 +480,39 @@ app.post('/api/client/profile/update', async (req, res) => {
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
 
-    const { newName } = req.body;
-    if (!newName || newName.trim() === '') return res.status(400).json({ error: 'El nombre es requerido.' });
+    const { newName, ownerName, phone, nit, address, city, clientEmail } = req.body;
+    if (!newName || newName.trim() === '') return res.status(400).json({ error: 'El nombre del negocio es requerido.' });
 
     try {
-        await db.updateBusiness(session.clientId, { name: newName });
+        const biz = await db.findBusinessById(session.clientId);
+        if (!biz) return res.status(404).json({ error: 'Negocio no encontrado.' });
+
+        if (clientEmail && clientEmail.trim() !== '' && clientEmail.toLowerCase() !== biz.client_email.toLowerCase()) {
+            const emailInUse = await db.emailInUseByOtherBusiness(clientEmail, session.clientId);
+            if (emailInUse) return res.status(409).json({ error: 'Este correo ya está registrado en otra cuenta.' });
+        }
+
+        await db.updateBusiness(session.clientId, { 
+            name: newName, 
+            ownerName: ownerName || '', 
+            phone: phone || '', 
+            nit: nit || '', 
+            address: address || '', 
+            city: city || '',
+            clientEmail: clientEmail || biz.client_email
+        });
 
         broadcastUpdate();
-        res.json({ success: true, name: newName });
+        res.json({ 
+            success: true, 
+            name: newName, 
+            ownerName: ownerName || '', 
+            phone: phone || '', 
+            nit: nit || '', 
+            address: address || '', 
+            city: city || '',
+            clientEmail: clientEmail || biz.client_email
+        });
     } catch (err) {
         console.error('Error actualizando perfil cliente:', err);
         res.status(500).json({ error: 'Error del servidor.' });
@@ -1005,7 +1030,9 @@ app.get('/api/settings', async (req, res) => {
         const dbState = await readDb();
         const publicConfig = {
             logo: dbState.config?.logo || null,
-            companyName: dbState.config?.companyName || 'AS Sierra Systems'
+            companyName: dbState.config?.companyName || 'AS Sierra Systems',
+            supportEmail: dbState.config?.supportEmail || 'soporte@assierrasystems.com',
+            supportPhone: dbState.config?.supportPhone || '573001234567'
         };
         const publicModules = (dbState.modules || []).map(m => ({
             id: m.id,
@@ -1024,20 +1051,26 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.post('/api/settings/save', requireAdmin, async (req, res) => {
-    const { logo, adminUser, adminPass, currentPass } = req.body;
+    const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass } = req.body;
     try {
         let dbState = await readDb();
         if (!dbState.config) dbState.config = {};
 
         const masterPass = dbState.config.adminPass || '123456';
 
-        if (adminUser || adminPass) {
+        const isChangingUser = adminUser && adminUser !== (dbState.config.adminUser || 'admin');
+        const isChangingPass = !!adminPass;
+
+        if (isChangingUser || isChangingPass) {
             if (!db.verifyPassword(currentPass, masterPass)) {
                 return res.status(401).json({ success: false, error: 'La contraseña actual es incorrecta' });
             }
         }
 
         if (logo) dbState.config.logo = logo;
+        if (companyName) dbState.config.companyName = companyName;
+        if (supportEmail) dbState.config.supportEmail = supportEmail;
+        if (supportPhone) dbState.config.supportPhone = supportPhone;
         if (adminUser) dbState.config.adminUser = adminUser;
         if (adminPass) dbState.config.adminPass = db.hashPassword(adminPass);
 
@@ -1327,24 +1360,58 @@ app.post('/api/client/module/renew', async (req, res) => {
             biz.modules.push(moduleId);
         }
 
+        let targetInstance = null;
+        if (instanceId) {
+            targetInstance = biz.moduleInstances.find(m => m.instanceId === instanceId);
+        }
+
         const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         const newExpiryStr = newExpiry.toISOString();
+
+        let finalBranchName;
+        let finalInstanceId;
         
-        // Keep legacy moduleDates for compatibility with some parts of UI
-        if (!biz.moduleDates) biz.moduleDates = {};
-        biz.moduleDates[moduleId] = newExpiryStr;
+        if (targetInstance) {
+            // Renovar/Extender instancia existente
+            finalBranchName = branchName || targetInstance.branchName;
+            finalInstanceId = targetInstance.instanceId;
+            
+            // Extender la fecha de renovación
+            const currentRenewal = targetInstance.renewalDate || targetInstance.accessUntil;
+            const baseDate = (currentRenewal && new Date(currentRenewal).getTime() > Date.now()) 
+                ? new Date(currentRenewal) 
+                : new Date();
+            const extendedExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            
+            targetInstance.status = 'active';
+            targetInstance.priceApplied = priceApplied;
+            targetInstance.renewalDate = extendedExpiry.toISOString();
+            targetInstance.cancelledAt = null;
+            targetInstance.accessUntil = null;
+            
+            // Actualizar también la fecha legacy si corresponde
+            if (!biz.moduleDates) biz.moduleDates = {};
+            biz.moduleDates[moduleId] = targetInstance.renewalDate;
+        } else {
+            // Crear nueva instancia
+            finalBranchName = branchName || (hasExisting ? `Sede ${activeInstancesOfModule.length + 1}` : 'Sede Principal');
+            finalInstanceId = `inst_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-        const finalBranchName = branchName || (hasExisting ? `Sede ${activeInstancesOfModule.length + 1}` : 'Sede Principal');
-        const newInstanceId = `inst_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            biz.moduleInstances.push({
+                instanceId: finalInstanceId,
+                moduleId: moduleId,
+                branchName: finalBranchName,
+                status: 'active',
+                priceApplied: priceApplied,
+                renewalDate: newExpiryStr
+            });
+            
+            if (!biz.moduleDates) biz.moduleDates = {};
+            biz.moduleDates[moduleId] = newExpiryStr;
+        }
 
-        biz.moduleInstances.push({
-            instanceId: newInstanceId,
-            moduleId: moduleId,
-            branchName: finalBranchName,
-            status: 'active',
-            priceApplied: priceApplied,
-            renewalDate: newExpiryStr
-        });
+        const finalExpiryStr = targetInstance ? targetInstance.renewalDate : newExpiryStr;
+        const finalExpiryFormatted = new Date(finalExpiryStr).toLocaleDateString('es-CO');
 
         // Registrar en historial de pagos SQL directo (Compra/Renovación Módulo)
         try {
@@ -1365,7 +1432,7 @@ app.post('/api/client/module/renew', async (req, res) => {
 
         pushNotification(dbState, {
             title: 'Pago Recibido',
-            desc: `"${biz.name}" adquirió/renovó "${moduleName || moduleId}" (${finalBranchName}) con tarjeta terminada en ${last4 || '****'}. Válido hasta ${newExpiry.toLocaleDateString('es-CO')}.${isDiscountApplied ? ' ¡Descuento de 30% aplicado!' : ''}`,
+            desc: `"${biz.name}" adquirió/renovó "${moduleName || moduleId}" (${finalBranchName}) con tarjeta terminada en ${last4 || '****'}. Válido hasta ${finalExpiryFormatted}.${isDiscountApplied ? ' ¡Descuento de 30% aplicado!' : ''}`,
             icon: 'credit-card',
             color: '#10b981'
         });
@@ -1702,6 +1769,77 @@ app.delete('/api/payment/remove-card/:bizId', requireAdminOrMatchingClient, asyn
         res.json({ ok: true, message: 'Tarjeta eliminada.' });
     } catch (err) {
         console.error('[Payment] Error eliminando tarjeta:', err);
+        res.status(500).json({ ok: false, message: 'Error interno del servidor.' });
+    }
+});
+
+/**
+ * POST /api/payment/extend-billing/:bizId
+ * Regala días adicionales extendiendo la fecha de próximo corte.
+ */
+app.post('/api/payment/extend-billing/:bizId', requireAdmin, async (req, res) => {
+    try {
+        const { bizId } = req.params;
+        const { days, instanceId } = req.body;
+        const daysInt = parseInt(days, 10);
+
+        if (!daysInt || daysInt < 1 || daysInt > 365) {
+            return res.status(400).json({ ok: false, message: 'El número de días debe estar entre 1 y 365.' });
+        }
+
+        const dbState = await readDb();
+        const biz = dbState.businesses.find(b => b.id == bizId);
+        if (!biz) return res.status(404).json({ ok: false, message: 'Negocio no encontrado.' });
+
+        let targetInstance = null;
+        if (instanceId && biz.moduleInstances) {
+            targetInstance = biz.moduleInstances.find(inst => inst.instanceId === instanceId);
+        }
+
+        let newDateStr = '';
+        if (targetInstance) {
+            // Calcular nueva fecha de corte para esta instancia específica
+            const currentRenewal = targetInstance.renewalDate || biz.billing?.next_billing_date;
+            const baseDate = currentRenewal ? new Date(currentRenewal + 'T00:00:00') : new Date();
+            baseDate.setDate(baseDate.getDate() + daysInt);
+            newDateStr = baseDate.toISOString().slice(0, 10);
+            targetInstance.renewalDate = newDateStr;
+
+            // Reactivar instancia si estaba cancelada/suspendida
+            targetInstance.status = 'active';
+
+            // Sincronizar también con la fecha global de corte del negocio si aplica
+            biz.billing = {
+                ...(biz.billing || {}),
+                next_billing_date: newDateStr,
+                subscription_status: biz.billing?.subscription_status === 'suspended' ? 'active' : (biz.billing?.subscription_status || 'active')
+            };
+        } else {
+            // Caso general o legacy (sin instanceId)
+            const currentNext = biz.billing?.next_billing_date;
+            const baseDate = currentNext ? new Date(currentNext + 'T00:00:00') : new Date();
+            baseDate.setDate(baseDate.getDate() + daysInt);
+            newDateStr = baseDate.toISOString().slice(0, 10);
+
+            biz.billing = {
+                ...(biz.billing || {}),
+                next_billing_date: newDateStr,
+                subscription_status: biz.billing?.subscription_status === 'suspended' ? 'active' : (biz.billing?.subscription_status || 'active')
+            };
+
+            // Sincronizar también en todos los moduleInstances activos
+            if (biz.moduleInstances) {
+                for (const inst of biz.moduleInstances) {
+                    if (inst.status === 'active') inst.renewalDate = newDateStr;
+                }
+            }
+        }
+
+        await writeDb(dbState);
+        broadcastUpdate();
+        res.json({ ok: true, message: `Se regalaron ${daysInt} día(s) al módulo. Nuevo corte: ${newDateStr}.`, newDate: newDateStr });
+    } catch (err) {
+        console.error('[Payment] Error extendiendo suscripción:', err);
         res.status(500).json({ ok: false, message: 'Error interno del servidor.' });
     }
 });

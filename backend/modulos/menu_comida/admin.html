@@ -226,6 +226,10 @@
                             <i data-lucide="bar-chart-2"></i>
                             <span>Métricas</span>
                         </button>
+                        <button class="sidebar-btn" data-tab="expenses-tab" title="Libreta de Gastos">
+                            <i data-lucide="receipt"></i>
+                            <span>Gastos</span>
+                        </button>
                         <button class="sidebar-btn" data-tab="history-tab" title="Historial de Pedidos">
                             <i data-lucide="clock"></i>
                             <span>Historial</span>
@@ -458,6 +462,120 @@
                         </div>
                     </div>
 
+                    <!-- Tab: Libreta de Gastos -->
+                    <div id="expenses-tab" class="admin-tab-content hidden">
+                        <!-- Lock Screen (Frosted Glass) -->
+                        <div id="expenses-lockscreen" class="glass" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; border-radius: 24px; max-width: 480px; margin: 5rem auto; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid var(--glass-border); backdrop-filter: blur(12px);">
+                            <div style="background: rgba(255, 107, 0, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--theme-accent); margin-bottom: 2rem; border: 1px solid rgba(255, 107, 0, 0.25);">
+                                <i data-lucide="lock" style="width: 38px; height: 38px;"></i>
+                            </div>
+                            <h3 class="font-serif" style="font-size: 1.8rem; margin-bottom: 0.8rem; color: #fff;">Módulo Financiero Protegido</h3>
+                            <p style="color: var(--text-dim); font-size: 0.95rem; line-height: 1.6; margin-bottom: 2rem;">Este panel contiene información contable y sensible. Por favor ingresa la clave de administrador para continuar.</p>
+                            
+                            <div style="width: 100%; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                                <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); width: 100%; max-width: 320px; transition: border-color 0.3s;" class="input-focus-accent">
+                                    <i data-lucide="key-round" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
+                                    <input type="password" id="expenses-pass-input" placeholder="Ingresa contraseña..." style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 700; font-size: 1.1rem; text-align: center;">
+                                </div>
+                                <button id="btn-unlock-expenses" onclick="verifyExpensesPassword()" style="width: 100%; max-width: 320px; padding: 1rem; background: var(--theme-accent); border: none; border-radius: 16px; color: #fff; font-weight: 800; cursor: pointer; transition: all 0.3s; box-shadow: 0 8px 20px rgba(255, 107, 0, 0.2);">
+                                    Desbloquear Panel
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Expenses Ledger Core Content (Hidden until unlocked) -->
+                        <div id="expenses-ledger-content" class="hidden">
+                            <div class="tab-header-pro" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h2 class="font-serif" style="font-size: 1.8rem; margin: 0;">Libreta de Gastos</h2>
+                                    <p style="color: var(--text-dim); margin-top: 0.2rem;">Registra, controla y analiza los egresos contables de tu negocio.</p>
+                                </div>
+                                <div style="display: flex; gap: 0.8rem;">
+                                    <button class="btn-primary" onclick="exportExpensesToExcel()" style="background: #10b981; border: none; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.15); font-weight: 700;">
+                                        <i data-lucide="file-spreadsheet"></i> Exportar a Excel
+                                    </button>
+                                    <button class="btn-primary" onclick="toggleNewExpenseModal()" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                                        <i data-lucide="plus"></i> Registrar Gasto
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- KPIs Grid -->
+                            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+                                <div class="chart-card glass" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.8rem 1.5rem;">
+                                    <div style="background: rgba(255, 107, 0, 0.1); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: var(--theme-accent);">
+                                        <i data-lucide="wallet" style="width: 28px; height: 28px;"></i>
+                                    </div>
+                                    <div>
+                                        <h4 style="color: var(--text-dim); font-size: 0.85rem; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Gasto Total del Mes</h4>
+                                        <p id="expense-total-month" style="font-size: 1.8rem; font-weight: 900; margin: 0.3rem 0 0 0; color: #fff;">$ 0</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="chart-card glass" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.8rem 1.5rem;">
+                                    <div style="background: rgba(79, 70, 229, 0.1); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: #6366f1;">
+                                        <i data-lucide="tag" style="width: 28px; height: 28px;"></i>
+                                    </div>
+                                    <div>
+                                        <h4 style="color: var(--text-dim); font-size: 0.85rem; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Categoría Principal</h4>
+                                        <p id="expense-top-category" style="font-size: 1.4rem; font-weight: 800; margin: 0.3rem 0 0 0; color: #fff;">Ninguna</p>
+                                    </div>
+                                </div>
+
+                                <div class="chart-card glass" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.8rem 1.5rem;">
+                                    <div style="background: rgba(16, 185, 129, 0.1); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: #10b981;">
+                                        <i data-lucide="calendar" style="width: 28px; height: 28px;"></i>
+                                    </div>
+                                    <div>
+                                        <h4 style="color: var(--text-dim); font-size: 0.85rem; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Último Registro</h4>
+                                        <p id="expense-last-date" style="font-size: 1.4rem; font-weight: 800; margin: 0.3rem 0 0 0; color: #fff;">--</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Filtros y Herramientas -->
+                            <div class="glass" style="margin-bottom: 2rem; padding: 1.2rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                <div style="display: flex; gap: 1rem; flex: 1; min-width: 280px; flex-wrap: wrap;">
+                                    <!-- Buscador -->
+                                    <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.3rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); flex: 1; min-width: 200px;" class="input-focus-accent">
+                                        <i data-lucide="search" style="width: 18px; color: var(--text-dim); opacity: 0.6;"></i>
+                                        <input type="text" id="expense-search-input" oninput="renderExpenses()" placeholder="Buscar por concepto o categoría..." style="width: 100%; padding: 0.6rem 0; border: none; background: transparent; color: white; outline: none; font-size: 0.95rem;">
+                                    </div>
+                                    
+                                    <!-- Filtro de mes -->
+                                    <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.3rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); min-width: 160px;" class="input-focus-accent">
+                                        <i data-lucide="filter" style="width: 16px; color: var(--theme-accent);"></i>
+                                        <select id="expense-month-filter" onchange="renderExpenses()" style="width: 100%; border: none; background: transparent; color: white; outline: none; font-size: 0.95rem; font-weight: 600; cursor: pointer;">
+                                            <option value="all" style="background:#1e293b;">Todos los Meses</option>
+                                            <option value="0" style="background:#1e293b;">Enero</option>
+                                            <option value="1" style="background:#1e293b;">Febrero</option>
+                                            <option value="2" style="background:#1e293b;">Marzo</option>
+                                            <option value="3" style="background:#1e293b;">Abril</option>
+                                            <option value="4" style="background:#1e293b;">Mayo</option>
+                                            <option value="5" style="background:#1e293b;">Junio</option>
+                                            <option value="6" style="background:#1e293b;">Julio</option>
+                                            <option value="7" style="background:#1e293b;">Agosto</option>
+                                            <option value="8" style="background:#1e293b;">Septiembre</option>
+                                            <option value="9" style="background:#1e293b;">Octubre</option>
+                                            <option value="10" style="background:#1e293b;">Noviembre</option>
+                                            <option value="11" style="background:#1e293b;">Diciembre</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Listado de Gastos -->
+                            <div class="chart-card glass" style="padding: 2rem; border-radius: 20px;">
+                                <h3 class="font-serif" style="margin-bottom: 1.5rem; font-size: 1.3rem; display: flex; align-items: center; gap: 0.6rem;">
+                                    <i data-lucide="list" style="color: var(--theme-accent); width: 22px;"></i> Historial de Gastos
+                                </h3>
+                                <div id="expenses-list-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                                    <!-- Generado Dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Tab: Orders Management -->
                     <div id="orders-tab" class="admin-tab-content">
                         <div class="tab-header-pro" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
@@ -539,6 +657,65 @@
 
                                 <button id="save-order-settings" style="margin-top: 2.5rem; width: 100%; padding: 1.2rem; background: var(--theme-accent); border: none; border-radius: 18px; color: #fff; font-weight: 900; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.8rem; transition: all 0.3s; box-shadow: 0 8px 25px rgba(255, 107, 0, 0.2);">
                                     <i data-lucide="save"></i> Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Expense Creation Modal (Ventana Flotante) -->
+                        <div id="newExpenseModal" class="modal" style="z-index: 100012; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
+                            <div class="modal-content glass" style="max-width: 480px; width: 90%; padding: 2.5rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8); border: 1px solid var(--glass-border);">
+                                <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, var(--theme-accent) 0%, transparent 70%); opacity: 0.15; pointer-events: none;"></div>
+
+                                <button onclick="toggleNewExpenseModal()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.05); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; transition: background 0.3s;">
+                                    <i data-lucide="x" style="width: 18px; color: #fff;"></i>
+                                </button>
+
+                                <h3 class="font-serif" style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.8rem; font-size: 1.6rem; color: #fff;">
+                                    <i data-lucide="dollar-sign" style="color: var(--theme-accent); width: 28px; height: 28px;"></i> Registrar Gasto
+                                </h3>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                    <div class="form-group">
+                                        <label style="display: block; margin-bottom: 0.6rem; font-weight: 600; font-size: 0.9rem; color: var(--text-dim);">Concepto / Descripción</label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
+                                            <input type="text" id="expense-desc" placeholder="Ej. Compra de aguacates" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 700; font-size: 1.1rem;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: block; margin-bottom: 0.6rem; font-weight: 600; font-size: 0.9rem; color: var(--text-dim);">Categoría</label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
+                                            <select id="expense-category" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 700; font-size: 1.1rem; cursor: pointer;">
+                                                <option value="Ingredientes" style="background:#1e293b;">Ingredientes</option>
+                                                <option value="Bebidas" style="background:#1e293b;">Bebidas</option>
+                                                <option value="Renta" style="background:#1e293b;">Renta</option>
+                                                <option value="Servicios" style="background:#1e293b;">Servicios</option>
+                                                <option value="Salarios" style="background:#1e293b;">Salarios</option>
+                                                <option value="Marketing" style="background:#1e293b;">Marketing</option>
+                                                <option value="Mantenimiento" style="background:#1e293b;">Mantenimiento</option>
+                                                <option value="Otros" style="background:#1e293b;">Otros</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: block; margin-bottom: 0.6rem; font-weight: 600; font-size: 0.9rem; color: var(--text-dim);">Monto (COP)</label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
+                                            <span style="font-weight: 800; color: var(--theme-accent); font-size: 1.2rem;">$</span>
+                                            <input type="text" id="expense-amount" oninput="formatCurrencyInput(this)" placeholder="0" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: block; margin-bottom: 0.6rem; font-weight: 600; font-size: 0.9rem; color: var(--text-dim);">Fecha</label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
+                                            <input type="date" id="expense-date" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 700; font-size: 1.1rem; cursor: pointer;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button onclick="saveNewExpense()" style="margin-top: 2rem; width: 100%; padding: 1.2rem; background: var(--theme-accent); border: none; border-radius: 18px; color: #fff; font-weight: 900; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.8rem; transition: all 0.3s; box-shadow: 0 8px 25px rgba(255, 107, 0, 0.2);">
+                                    <i data-lucide="check"></i> Guardar Registro
                                 </button>
                             </div>
                         </div>

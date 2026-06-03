@@ -10,6 +10,216 @@
     --font-heading: 'Playfair Display', serif;
     --font-body: 'Montserrat', sans-serif;
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --modal-overlay-bg: rgba(0, 0, 0, 0.5);
+    --card-bg: var(--glass-bg);
+}
+
+/* Dark Theme overrides for Admin Panel */
+.dark-theme {
+    --color-bg: #0f172a;
+    --color-text: #cbd5e1;
+    --color-accent: #38bdf8;
+    --gold-primary: #38bdf8;
+    --color-dark-pink: #38bdf8;
+    --accent-rgb: 56, 189, 248;
+    --color-white: #1e293b;
+    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --modal-overlay-bg: rgba(15, 23, 42, 0.75);
+    --card-bg: #1e293b;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.dark-theme body {
+    background-color: var(--color-bg) !important;
+    color: var(--color-text) !important;
+}
+
+/* Modals general container override */
+.dark-theme div[id$="Modal"] > div,
+.dark-theme div[id$="-modal"] > div,
+.dark-theme .custom-modal-overlay > div {
+    background-color: #1e293b !important;
+    color: #cbd5e1 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme div[id$="Modal"] p,
+.dark-theme div[id$="-modal"] p {
+    color: #cbd5e1 !important;
+}
+
+.dark-theme div[id$="Modal"] label,
+.dark-theme div[id$="-modal"] label {
+    color: var(--color-accent) !important;
+}
+
+.dark-theme div[id$="Modal"] button:not(.btn-primary):not([class*="btn-"]):not([style*="background:none"]),
+.dark-theme div[id$="-modal"] button:not(.btn-primary):not([class*="btn-"]):not([style*="background:none"]) {
+    background-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+
+/* Input elements */
+.dark-theme .admin-input,
+.dark-theme input,
+.dark-theme select,
+.dark-theme textarea {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme .admin-input:focus,
+.dark-theme input:focus,
+.dark-theme select:focus,
+.dark-theme textarea:focus {
+    border-color: var(--color-accent) !important;
+}
+
+/* Dropdowns */
+.dark-theme .custom-dropdown-toggle,
+.dark-theme .custom-dropdown-menu,
+.dark-theme .custom-dropdown-item {
+    background-color: #1e293b !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme .custom-dropdown-item:hover {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+/* Agenda tray buttons / tabs */
+.dark-theme .agenda-tabs {
+    background: rgba(30, 41, 59, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark-theme .tray-btn {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme .tray-btn:hover,
+.dark-theme .tray-btn.active {
+    background: rgba(56, 189, 248, 0.15) !important;
+    color: var(--color-accent) !important;
+    border-color: var(--color-accent) !important;
+}
+
+/* Calendar styling in dark theme */
+.dark-theme .calendar-day {
+    background-color: #1e293b !important;
+    color: #cbd5e1 !important;
+}
+
+.dark-theme .calendar-day.active {
+    background-color: var(--color-accent) !important;
+    color: #0f172a !important;
+}
+
+.dark-theme .calendar-day.other-month {
+    color: #64748b !important;
+    opacity: 0.5;
+}
+
+/* Visual Agenda Table Overrides in Dark Mode */
+.dark-theme #visual-agenda-canvas > div,
+.dark-theme #manual-visual-canvas > div {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme #visual-agenda-canvas table,
+.dark-theme #manual-visual-canvas table {
+    background: #1e293b !important;
+}
+
+.dark-theme #visual-agenda-canvas tr,
+.dark-theme #manual-visual-canvas tr {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme #visual-agenda-canvas th,
+.dark-theme #manual-visual-canvas th {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme #visual-agenda-canvas th div,
+.dark-theme #manual-visual-canvas th div {
+    color: #cbd5e1 !important;
+}
+
+.dark-theme #visual-agenda-canvas th div div,
+.dark-theme #manual-visual-canvas th div div {
+    color: #f8fafc !important;
+}
+
+.dark-theme #visual-agenda-canvas td,
+.dark-theme #manual-visual-canvas td {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark-theme #visual-agenda-canvas td div.hover-scale,
+.dark-theme #manual-visual-canvas td div.hover-scale {
+    color: #f8fafc !important;
+}
+
+.dark-theme #visual-agenda-canvas td div.hover-scale span,
+.dark-theme #manual-visual-canvas td div.hover-scale span {
+    color: #f8fafc !important;
+}
+
+/* Card borders styling with gradients */
+.appointment-group-card, .reminder-card {
+    position: relative;
+    border-left: none !important; /* overrides inline */
+}
+.appointment-group-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-hover, var(--color-accent)) 100%);
+    border-radius: 6px 0 0 6px;
+    z-index: 2;
+}
+.reminder-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+    border-radius: 6px 0 0 6px;
+    z-index: 2;
+}
+
+/* Appointment Group Card Status/Paid BG overrides using data attributes */
+.dark-theme .appointment-group-card {
+    background: rgba(30, 41, 59, 0.7) !important;
+}
+.dark-theme .appointment-group-card[data-paid="full"] {
+    background: rgba(34, 197, 94, 0.12) !important;
+}
+.dark-theme .appointment-group-card[data-status="accepted"] {
+    background: rgba(34, 197, 94, 0.12) !important;
+}
+.dark-theme .appointment-group-card[data-status="postponed"] {
+    background: rgba(234, 179, 8, 0.12) !important;
+}
+.dark-theme .appointment-group-card[data-status="cancelled"] {
+    background: rgba(239, 68, 68, 0.12) !important;
 }
 
 /* Agenda Dashboard Layout */
@@ -554,7 +764,7 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     -webkit-backdrop-filter: blur(10px);
     border-radius: 15px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.4));
     transition: all 0.3s ease;
 }
 
@@ -1467,4 +1677,134 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     border-radius: 12px;
     border: 1px dashed rgba(var(--accent-rgb), 0.18);
     margin-bottom: 1.5rem;
+}
+
+/* ============================================================
+   MOBILE-FIRST MEDIA QUERIES — Agenda Admin Panel
+   Responsive breakpoints: 768px (tablet) + 480px (phone)
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    /* ── Layout base ─────────────────────────────────── */
+    body { overflow-x: hidden; }
+
+    .main-content {
+        margin-left: 0 !important;
+        margin-bottom: 75px !important;
+        padding: 12px !important;
+    }
+
+    /* ── Agenda Dashboard Grid: stack columns ─────────── */
+    .agenda-dashboard-grid {
+        display: block !important;
+    }
+    .agenda-dashboard-grid > * { margin-bottom: 16px; }
+
+    .calendar-sidebar {
+        position: static !important;
+        width: 100% !important;
+    }
+
+    /* ── Tabs Agenda (barra deslizable horizontal táctil) */
+    .agenda-tabs {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scroll-snap-type: x mandatory;
+        gap: 8px !important;
+        padding: 8px !important;
+        margin-bottom: 16px !important;
+        scrollbar-width: none;
+    }
+    .agenda-tabs::-webkit-scrollbar { display: none; }
+
+    .tray-btn {
+        flex-shrink: 0 !important;
+        scroll-snap-align: start;
+        padding: 10px 16px !important;
+        font-size: 0.82rem !important;
+    }
+
+    /* ── Tarjetas de reserva/citas: apilado vertical ─── */
+    .appointment-card {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        padding: 14px !important;
+        min-height: unset !important;
+    }
+    .appointment-card > div { width: 100% !important; }
+
+    /* ── Calendarios optimizados ──────────────────────── */
+    .calendar-grid { gap: 2px !important; }
+    .calendar-day {
+        padding: 8px 1px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* ── Agenda full list: sin padding lateral en móvil ── */
+    .agenda-full-list {
+        padding-right: 0 !important;
+        max-height: unset !important;
+    }
+
+    /* ── Filtros de historial: columna ───────────────── */
+    #history-filters {
+        flex-direction: column !important;
+        gap: 8px !important;
+        align-items: flex-start !important;
+    }
+    #history-filters select,
+    #history-filters input { width: 100% !important; }
+
+    /* ── Glass modules: sin mínimo forzado ───────────── */
+    .glass-module {
+        min-width: unset !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    /* ── Formularios: una columna ─────────────────────── */
+    .form-row { flex-direction: column !important; gap: 0 !important; }
+}
+
+/* ── Smartphones (≤480px) ────────────────────────────── */
+@media (max-width: 480px) {
+
+    /* Header compacto */
+    .admin-header { padding: 6px 0 !important; }
+    .logo.dynamic-brand-name { font-size: 1.1rem !important; }
+
+    /* Sidebar bottom nav más compacto */
+    .sidebar-nav { height: 58px !important; }
+    .sidebar-nav nav a {
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Modales: full-width, sin mínimos */
+    [id$="Modal"] > div,
+    .custom-modal-overlay > div {
+        width: 95% !important;
+        max-width: 95vw !important;
+        min-width: unset !important;
+        padding: 18px !important;
+        border-radius: 16px !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+    }
+
+    /* Calendarios extra-compactos */
+    .calendar-day {
+        padding: 5px 0 !important;
+        font-size: 0.72rem !important;
+    }
+    .calendar-day-name { font-size: 0.6rem !important; padding-bottom: 4px !important; }
+
+    /* Tabs aún más compactos en 480 */
+    .tray-btn { padding: 8px 12px !important; font-size: 0.78rem !important; }
+    .tray-btn .badge { padding: 2px 6px !important; font-size: 0.68rem !important; }
 }

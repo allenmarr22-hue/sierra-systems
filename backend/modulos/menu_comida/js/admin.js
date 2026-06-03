@@ -754,6 +754,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'history-tab') {
                 if (typeof renderOrders === 'function') renderOrders();
             }
+            if (tabId === 'expenses-tab') {
+                if (typeof checkExpensesLockState === 'function') checkExpensesLockState();
+            }
         });
     });
 
@@ -3959,4 +3962,289 @@ document.addEventListener('click', (e) => {
         showToast('✅ Pedido manual creado y agregado a Pendientes');
     });
 })();
+
+// =============================================
+// LIBRETITA DE GASTOS - LOGIC & PERSISTENCE
+// =============================================
+window.checkExpensesLockState = function() {
+    const isUnlocked = sessionStorage.getItem('streetfeed_expenses_unlocked') === 'true';
+    const lockscreen = document.getElementById('expenses-lockscreen');
+    const content = document.getElementById('expenses-ledger-content');
+    
+    if (isUnlocked) {
+        if (lockscreen) lockscreen.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+        renderExpenses();
+    } else {
+        if (lockscreen) lockscreen.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
+        const passInp = document.getElementById('expenses-pass-input');
+        if (passInp) {
+            passInp.value = '';
+            passInp.focus();
+        }
+    }
+};
+
+window.verifyExpensesPassword = function() {
+    const passInp = document.getElementById('expenses-pass-input');
+    if (!passInp) return;
+    const password = passInp.value.trim();
+    
+    // Acepta "admin" o "admin123" como contraseñas válidas
+    if (password === 'admin' || password === 'admin123') {
+        sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
+        showToast('¡Acceso autorizado con éxito!', 'success');
+        checkExpensesLockState();
+    } else {
+        showToast('Contraseña incorrecta. Inténtalo de nuevo.', 'error');
+        passInp.value = '';
+        passInp.focus();
+    }
+};
+
+// Listener para desbloquear con tecla Enter en el lockscreen
+document.addEventListener('DOMContentLoaded', () => {
+    const passInp = document.getElementById('expenses-pass-input');
+    if (passInp) {
+        passInp.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                verifyExpensesPassword();
+            }
+        });
+    }
+});
+
+window.formatCurrencyInput = function(input) {
+    let value = input.value.replace(/\D/g, "");
+    if (value === "") { input.value = ""; return; }
+    value = parseInt(value);
+    input.value = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
+};
+
+window.toggleNewExpenseModal = function() {
+    const modal = document.getElementById('newExpenseModal');
+    if (modal) {
+        const isShowing = modal.style.display === 'flex';
+        modal.style.display = isShowing ? 'none' : 'flex';
+        modal.classList.toggle('hidden', isShowing);
+        if (!isShowing) {
+            document.getElementById('expense-desc').value = '';
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-date').value = new Date().toLocaleDateString('sv-SE');
+            document.getElementById('expense-category').value = 'Ingredientes';
+        }
+    }
+};
+
+window.saveNewExpense = async function() {
+    const desc = document.getElementById('expense-desc').value.trim();
+    const amountStr = document.getElementById('expense-amount').value.trim();
+    const date = document.getElementById('expense-date').value;
+    const cat = document.getElementById('expense-category').value;
+
+    const amount = parseInt(amountStr.replace(/\D/g, '')) || 0;
+
+    if (!desc || amount <= 0 || !date) {
+        showToast('Completa todos los campos con valores válidos.', 'error');
+        return;
+    }
+
+    let expenses = JSON.parse(localStorage.getItem('streetfeed_expenses')) || [];
+    expenses.unshift({
+        id: Date.now(),
+        desc,
+        amount,
+        date,
+        cat
+    });
+
+    localStorage.setItem('streetfeed_expenses', JSON.stringify(expenses));
+
+    // Persistencia simulada en Firestore (gastos_comida_v2) similar a firebase_app.js
+    localStorage.setItem('_local_list_gastos_comida_v2', JSON.stringify(expenses));
+    if (window.saveListToCloud) {
+        await window.saveListToCloud('gastos_comida_v2', expenses);
+    }
+
+    showToast('¡Gasto registrado con éxito!', 'success');
+    window.toggleNewExpenseModal();
+    renderExpenses();
+};
+
+window.renderExpenses = function() {
+    const container = document.getElementById('expenses-list-container');
+    if (!container) return;
+
+    const expenses = JSON.parse(localStorage.getItem('streetfeed_expenses')) || [];
+    const searchQuery = document.getElementById('expense-search-input').value.toLowerCase();
+    const monthFilter = document.getElementById('expense-month-filter').value;
+
+    const filtered = expenses.filter(e => {
+        const matchSearch = e.desc.toLowerCase().includes(searchQuery) || e.cat.toLowerCase().includes(searchQuery);
+        const expDate = new Date(e.date + 'T00:00:00');
+        const matchMonth = monthFilter === 'all' || expDate.getMonth().toString() === monthFilter;
+        return matchSearch && matchMonth;
+    });
+
+    const now = new Date();
+    const curM = now.getMonth();
+    const curY = now.getFullYear();
+    let totalM = 0;
+    const catTotals = {};
+
+    expenses.forEach(e => {
+        const d = new Date(e.date + 'T00:00:00');
+        if (d.getMonth() === curM && d.getFullYear() === curY) {
+            totalM += e.amount;
+        }
+        catTotals[e.cat] = (catTotals[e.cat] || 0) + e.amount;
+    });
+
+    const fmt = (num) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+    document.getElementById('expense-total-month').innerText = fmt(totalM);
+
+    let topC = 'Ninguna';
+    let maxV = 0;
+    for (const c in catTotals) {
+        if (catTotals[c] > maxV) {
+            maxV = catTotals[c];
+            topC = c;
+        }
+    }
+    document.getElementById('expense-top-category').innerText = topC;
+    document.getElementById('expense-last-date').innerText = expenses.length > 0 ? expenses[0].date : '--';
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:50px; color:var(--text-dim); border:2px dashed var(--glass-border); border-radius:20px;">
+                <i data-lucide="receipt-text" style="width:48px; height:48px; margin-bottom:15px; opacity:0.3; stroke: var(--theme-accent);"></i>
+                <br>No se encontraron registros de gastos.
+            </div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = filtered.map(e => `
+        <div class="chart-card glass" style="padding:15px 20px; display:flex; align-items:center; justify-content:space-between; gap:15px; border-left:4px solid var(--theme-accent); margin-bottom:0px;">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div style="background:rgba(255, 107, 0, 0.1); width:45px; height:45px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--theme-accent); font-size:1.2rem;">
+                    <i data-lucide="${getExpenseIcon(e.cat)}"></i>
+                </div>
+                <div>
+                    <h4 style="margin:0; font-size:1rem; color:#fff;">${e.desc}</h4>
+                    <small style="color:var(--text-dim);">${e.cat} • <i data-lucide="calendar" style="width:12px; display:inline-block; vertical-align:middle;"></i> ${e.date}</small>
+                </div>
+            </div>
+            <div style="text-align:right; display:flex; align-items:center; gap:20px;">
+                <div style="font-size:1.15rem; font-weight:800; color:var(--theme-accent);">${fmt(e.amount)}</div>
+                <button onclick="deleteExpense(${e.id})" style="background:rgba(239, 68, 68, 0.12); border:1px solid rgba(239, 68, 68, 0.25); color:#ef4444; width:36px; height:36px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: all 0.3s;" title="Eliminar registro">
+                    <i data-lucide="trash-2" style="width: 16px;"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    if (window.lucide) lucide.createIcons();
+};
+
+function getExpenseIcon(cat) {
+    const icons = {
+        'Ingredientes': 'shopping-basket',
+        'Bebidas': 'wine',
+        'Renta': 'home',
+        'Servicios': 'zap',
+        'Salarios': 'users',
+        'Marketing': 'megaphone',
+        'Mantenimiento': 'wrench',
+        'Otros': 'circle-ellipsis'
+    };
+    return icons[cat] || 'receipt';
+}
+
+window.deleteExpense = function(id) {
+    if (confirm('¿Estás seguro de eliminar este registro de gasto?')) {
+        let expenses = JSON.parse(localStorage.getItem('streetfeed_expenses')) || [];
+        expenses = expenses.filter(e => e.id !== id);
+        
+        localStorage.setItem('streetfeed_expenses', JSON.stringify(expenses));
+        localStorage.setItem('_local_list_gastos_comida_v2', JSON.stringify(expenses));
+        if (window.saveListToCloud) window.saveListToCloud('gastos_comida_v2', expenses);
+        
+        showToast('Registro de gasto eliminado.', 'success');
+        renderExpenses();
+    }
+};
+
+window.exportExpensesToExcel = function() {
+    const expenses = JSON.parse(localStorage.getItem('streetfeed_expenses')) || [];
+    if (expenses.length === 0) return showToast('No hay datos para exportar.', 'error');
+
+    const businessName = "StreetFeed Comida";
+    const reportDate = new Date().toLocaleDateString();
+    
+    let total = 0;
+    let rowsHtml = "";
+    expenses.forEach((e, index) => {
+        total += e.amount;
+        const rowBg = index % 2 === 0 ? '#ffffff' : '#fcfcfa';
+        rowsHtml += `
+            <tr style="background-color: ${rowBg};">
+                <td style="border:1px solid #eeeeee; padding:12px; color:#444;">${e.date}</td>
+                <td style="border:1px solid #eeeeee; padding:12px; color:#444;">${e.cat}</td>
+                <td style="border:1px solid #eeeeee; padding:12px; color:#444;">${e.desc}</td>
+                <td style="border:1px solid #eeeeee; padding:12px; text-align:right; font-weight:bold; color:#1a1a1a;">$ ${e.amount.toLocaleString()}</td>
+            </tr>`;
+    });
+
+    const tableHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="UTF-8">
+            <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Reporte de Gastos</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+        </head>
+        <body style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px;">
+            <table style="width:100%; margin-bottom: 20px;">
+                <tr>
+                    <td colspan="2" style="text-align: left; font-size: 24px; font-weight: bold; color: #ff6b00; padding-top: 20px;">REPORTE DE GASTOS STREETFEED</td>
+                    <td colspan="2" style="text-align: center; font-size: 24px; font-weight: bold; color: #000000; padding-top: 20px;">${businessName}</td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="text-align: left; color: #666; font-size: 14px; padding-bottom: 20px;">Generado el: ${reportDate}</td>
+                </tr>
+            </table>
+
+            <table style="border-collapse: collapse; width: 100%; border: 1px solid #dddddd;">
+                <thead>
+                    <tr style="background-color: #ff6b00; color: #ffffff;">
+                        <th style="padding:15px; text-align:left; border:1px solid #ff6b00;">FECHA</th>
+                        <th style="padding:15px; text-align:left; border:1px solid #ff6b00;">CATEGORÍA</th>
+                        <th style="padding:15px; text-align:left; border:1px solid #ff6b00;">DESCRIPCIÓN</th>
+                        <th style="padding:15px; text-align:right; border:1px solid #ff6b00;">MONTO (COP)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #f7931e; color: #ffffff; font-weight: bold;">
+                        <td colspan="3" style="padding:15px; border: 1px solid #f7931e; text-align: right;">GASTO TOTAL PROYECTADO:</td>
+                        <td style="padding:15px; border: 1px solid #f7931e; text-align: right;">$ ${total.toLocaleString()}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Reporte_Gastos_StreetFeed_${reportDate.replace(/\//g, '-')}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Reporte Excel descargado con éxito.', 'success');
+};
 

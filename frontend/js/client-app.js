@@ -1,5 +1,25 @@
 // ====================== CONFIGURACIÓN ======================
 // --- UTILERIAS PREMIUM (NOTIFICACIONES & BUSQUEDA) ---
+window.showToast = function(message, type = 'success') {
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        background: 'var(--bg-surface, #1e293b)',
+        color: 'var(--text, #f8fafc)',
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
+    Toast.fire({
+        icon: type,
+        title: message
+    });
+};
+
 window.playMessageChime = function() {
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -20,6 +40,33 @@ window.playMessageChime = function() {
     } catch (e) {
         console.warn('Audio Context not allowed or failed:', e);
     }
+};
+
+window.copySupportEmail = function() {
+    const adminSupportEmail = appState.config?.supportEmail || 'soporte@assierrasystems.com';
+    const btn = document.getElementById('copy-support-email-btn');
+    
+    navigator.clipboard.writeText(adminSupportEmail).then(() => {
+        showToast('✉️ Correo de soporte copiado al portapapeles.', 'success');
+        
+        if (btn) {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="check" style="color: #10b981;"></i> ¡Copiado!`;
+            btn.style.color = '#10b981';
+            btn.style.borderColor = '#10b981';
+            if (window.lucide) lucide.createIcons();
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.style.color = '';
+                btn.style.borderColor = '';
+                if (window.lucide) lucide.createIcons();
+            }, 2000);
+        }
+    }).catch(err => {
+        console.error('Error copying text: ', err);
+        showToast('Error al copiar correo.', 'error');
+    });
 };
 
 let titleFlashInterval = null;
@@ -190,34 +237,67 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Profile modal (Name + Avatar)
+    // Profile modal (Name + Avatar + Owner + Phone + NIT + City + Address + Email)
     document.getElementById('btn-open-profile')?.addEventListener('click', () => {
         document.getElementById('profile-dropdown-menu')?.classList.add('hidden');
         
         const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
         const currentName = clientBiz?.name || '';
         const currentAvatar = clientBiz?.avatarUrl || '';
+        const currentOwner = clientBiz?.ownerName || '';
+        const currentPhone = clientBiz?.phone || '';
+        const currentNit = clientBiz?.nit || '';
+        const currentAddress = clientBiz?.address || '';
+        const currentCity = clientBiz?.city || '';
+        const currentEmail = clientBiz?.clientEmail || '';
 
         Swal.fire({
             title: 'Mi Perfil',
             html: `
                 <div style="text-align:center; margin-top: 1rem;">
-                    <div id="avatar-preview-wrap" style="width:100px; height:100px; border-radius:50%; background: linear-gradient(135deg,#6366f1,#8b5cf6); margin: 0 auto 1.5rem; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:700; color:white; overflow:hidden; border:3px solid rgba(99,102,241,0.4); cursor:pointer;" onclick="document.getElementById('avatar-file-input').click()">
+                    <div id="avatar-preview-wrap" style="width:90px; height:90px; border-radius:50%; background: linear-gradient(135deg,#6366f1,#8b5cf6); margin: 0 auto 1rem; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:700; color:white; overflow:hidden; border:3px solid rgba(99,102,241,0.4); cursor:pointer;" onclick="document.getElementById('avatar-file-input').click()">
                         ${currentAvatar ? `<img src="${currentAvatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${currentName.substring(0, 2).toUpperCase()}</span>`}
                     </div>
                     <p style="font-size:0.75rem; color:var(--primary); margin-bottom:1.5rem; cursor:pointer; font-weight:600;" onclick="document.getElementById('avatar-file-input').click()">
-                        <i data-lucide="camera" style="width:14px; vertical-align:middle;"></i> Cambiar foto
+                        <i data-lucide="camera" style="width:14px; vertical-align:middle; margin-right:4px;"></i> Cambiar foto
                     </p>
                     <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
                     
-                    <div style="text-align:left;">
-                        <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.5rem; display:block;">Nombre del Negocio</label>
-                        <input type="text" id="profile-name-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentName}">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: left;">
+                        <div style="grid-column: span 2;">
+                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Nombre del Negocio *</label>
+                            <input type="text" id="profile-name-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentName}">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Nombre del Propietario</label>
+                            <input type="text" id="profile-owner-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentOwner}">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">NIT / Identificación</label>
+                            <input type="text" id="profile-nit-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentNit}">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Teléfono</label>
+                            <input type="text" id="profile-phone-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentPhone}">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Ciudad</label>
+                            <input type="text" id="profile-city-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentCity}">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Dirección</label>
+                            <input type="text" id="profile-address-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentAddress}">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Correo Electrónico (Acceso) *</label>
+                            <input type="email" id="profile-email-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentEmail}">
+                        </div>
                     </div>
                 </div>
             `,
             background: 'var(--bg-surface)',
             color: 'var(--text)',
+            width: '500px',
             showCancelButton: true,
             confirmButtonText: 'Guardar Cambios',
             cancelButtonText: 'Cancelar',
@@ -237,6 +317,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             },
             preConfirm: async () => {
                 const newName = document.getElementById('profile-name-input').value;
+                const ownerName = document.getElementById('profile-owner-input').value;
+                const phone = document.getElementById('profile-phone-input').value;
+                const nit = document.getElementById('profile-nit-input').value;
+                const city = document.getElementById('profile-city-input').value;
+                const address = document.getElementById('profile-address-input').value;
+                const clientEmail = document.getElementById('profile-email-input').value;
+                
                 const fileInput = document.getElementById('avatar-file-input');
                 const sessionRaw = sessionStorage.getItem('clientSession');
                 if (!sessionRaw) return false;
@@ -244,6 +331,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (!newName || newName.trim() === '') {
                     Swal.showValidationMessage('El nombre no puede estar vacío.');
+                    return false;
+                }
+                if (!clientEmail || clientEmail.trim() === '') {
+                    Swal.showValidationMessage('El correo no puede estar vacío.');
                     return false;
                 }
 
@@ -254,22 +345,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!res.ok) throw new Error(data.error || msg);
                         return data;
                     } else {
-                        throw new Error('El servidor no respondió correctamente. Asegúrate de haberlo reiniciado.');
+                        throw new Error('El servidor no respondió correctamente.');
                     }
                 };
 
                 try {
-                    // 1. Update Name if changed
-                    if (newName !== currentName) {
-                        const nameRes = await fetch('/api/client/profile/update', {
+                    // 1. Update Profile Info if changed
+                    if (newName !== currentName || ownerName !== currentOwner || phone !== currentPhone || nit !== currentNit || address !== currentAddress || city !== currentCity || clientEmail !== currentEmail) {
+                        const profileRes = await fetch('/api/client/profile/update', {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${session.token}`
                             },
-                            body: JSON.stringify({ newName })
+                            body: JSON.stringify({ newName, ownerName, phone, nit, address, city, clientEmail })
                         });
-                        await handleRes(nameRes, 'Error al actualizar nombre.');
+                        await handleRes(profileRes, 'Error al actualizar perfil.');
                     }
 
                     // 2. Update Avatar if selected
@@ -286,7 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         finalAvatarUrl = avData.avatarUrl;
                     }
 
-                    return { newName, avatarUrl: finalAvatarUrl };
+                    return { newName, ownerName, phone, nit, address, city, clientEmail, avatarUrl: finalAvatarUrl };
                 } catch (err) {
                     Swal.showValidationMessage(err.message);
                     return false;
@@ -294,26 +385,59 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                const { newName, avatarUrl } = result.value;
+                const { newName, ownerName, phone, nit, address, city, clientEmail, avatarUrl } = result.value;
                 
                 // Update local state and re-render header info
                 const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
                 if (clientBiz) {
                     clientBiz.name = newName;
+                    clientBiz.ownerName = ownerName;
+                    clientBiz.phone = phone;
+                    clientBiz.nit = nit;
+                    clientBiz.address = address;
+                    clientBiz.city = city;
+                    clientBiz.clientEmail = clientEmail;
                     clientBiz.avatarUrl = avatarUrl;
                 }
                 
                 // Immediate UI Update
-                document.getElementById('client-name-display').textContent = newName;
+                const greetingName = ownerName || newName || 'Cliente';
+                const businessName = newName || ownerName || 'Cliente';
+                
+                // Actualizar caché inmediatamente
+                try {
+                    localStorage.setItem('as_client_business_name', businessName);
+                    if (avatarUrl) {
+                        localStorage.setItem('as_client_avatar', avatarUrl);
+                    } else {
+                        localStorage.removeItem('as_client_avatar');
+                    }
+                } catch (e) {}
+                
+                document.getElementById('client-name-display').textContent = businessName;
                 const heroName = document.getElementById('hero-client-name');
-                if (heroName) heroName.textContent = newName;
+                if (heroName) heroName.textContent = greetingName;
+                
+                const brandText = document.getElementById('brand-text-display');
+                if (brandText) {
+                    brandText.textContent = greetingName.trim().split(' ')[0] || 'Cliente';
+                }
+                
+                const elAvatar = document.getElementById('client-avatar');
+                if (elAvatar) elAvatar.textContent = businessName.substring(0, 2).toUpperCase();
+                
+                const emailDisplay = document.getElementById('profile-email-display');
+                if (emailDisplay) emailDisplay.textContent = clientEmail;
+
+                const accEmailInput = document.getElementById('acc-email');
+                if (accEmailInput) accEmailInput.value = clientEmail;
                 
                 const wrap = document.getElementById('client-avatar-wrap');
                 if (wrap) {
                     if (avatarUrl) {
                         wrap.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
                     } else {
-                        wrap.innerHTML = `<span id="client-avatar">${newName.substring(0, 2).toUpperCase()}</span>`;
+                        wrap.innerHTML = `<span id="client-avatar">${activeDisplayName.substring(0, 2).toUpperCase()}</span>`;
                     }
                 }
                 
@@ -601,15 +725,39 @@ function renderDashboard() {
         return;
     }
 
+    // Define active display name for greetings (prefers Owner Name)
+    const greetingName = clientBiz.ownerName || clientBiz.name || 'Cliente';
+
+    // Define active display name for brand/business (prefers Business Name)
+    const businessName = clientBiz.name || clientBiz.ownerName || 'Cliente';
+    const firstName = greetingName.trim().split(' ')[0] || 'Cliente';
+
+    // Guardar en caché para prevenir flash/parpadeo al recargar la página
+    try {
+        localStorage.setItem('as_client_business_name', businessName);
+        if (clientBiz.avatarUrl) {
+            localStorage.setItem('as_client_avatar', clientBiz.avatarUrl);
+        } else {
+            localStorage.removeItem('as_client_avatar');
+        }
+    } catch (e) {}
+
     // --- Header & Hero (sólo si los elementos existen) ---
     const elName = document.getElementById('client-name-display');
-    if (elName) elName.textContent = clientBiz.name;
+    // Topbar shows business name if available, otherwise owner name
+    if (elName) elName.textContent = clientBiz.name || clientBiz.ownerName;
+
+    const elBrand = document.getElementById('brand-text-display');
+    if (elBrand) {
+        elBrand.textContent = firstName;
+        elBrand.style.opacity = '1';
+    }
 
     const elAvatar = document.getElementById('client-avatar');
-    if (elAvatar) elAvatar.textContent = clientBiz.name.substring(0, 2).toUpperCase();
+    if (elAvatar) elAvatar.textContent = businessName.substring(0, 2).toUpperCase();
 
     const heroName = document.getElementById('hero-client-name');
-    if (heroName) heroName.textContent = clientBiz.name;
+    if (heroName) heroName.textContent = greetingName;
 
     const emailDisplay = document.getElementById('profile-email-display');
     if (emailDisplay && clientBiz.clientEmail) emailDisplay.textContent = clientBiz.clientEmail;
@@ -617,11 +765,7 @@ function renderDashboard() {
     // Mostrar correo del cliente en la tarjeta de soporte
     const supportEmailSpan = document.getElementById('support-client-email');
     if (supportEmailSpan && clientBiz.clientEmail) supportEmailSpan.textContent = clientBiz.clientEmail;
-    const supportEmailLink = document.getElementById('support-email-link');
-    if (supportEmailLink && clientBiz.clientEmail) {
-        const subject = encodeURIComponent('Solicitud de Soporte — ' + (clientBiz.name || clientBiz.clientEmail));
-        supportEmailLink.href = `mailto:soporte@assierrasystems.com?subject=${subject}&cc=${encodeURIComponent(clientBiz.clientEmail)}`;
-    }
+
 
     if (clientBiz.avatarUrl) {
         const wrap = document.getElementById('client-avatar-wrap');
@@ -631,87 +775,164 @@ function renderDashboard() {
     const accEmailInput = document.getElementById('acc-email');
     if (accEmailInput && clientBiz.clientEmail) accEmailInput.value = clientBiz.clientEmail;
 
-    // --- Separar módulos ---
-    const activeMods = (clientBiz.modules || []).map(mid =>
-        appState.modules.find(m => String(m.id) === String(mid))
-    ).filter(Boolean);
-
-    const cancelledMods = (clientBiz.cancelledModules || [])
-        // Excluir módulos que ya están activos (guardia de seguridad frontend)
-        .filter(cm => !(clientBiz.modules || []).some(mid => String(mid) === String(cm.id)))
-        .map(cm => {
-            const modInfo = appState.modules.find(m => String(m.id) === String(cm.id));
-            return modInfo ? { ...modInfo, cancelledAt: cm.cancelledAt, accessUntil: cm.accessUntil } : null;
-        }).filter(Boolean);
-
-    const allClientModIds = [
-        ...(clientBiz.modules || []).map(id => String(id)),
-        ...(clientBiz.cancelledModules || []).map(cm => String(cm.id))
-    ];
-    const availableMods = appState.modules.filter(m =>
-        m.status === 'active' && !allClientModIds.includes(String(m.id))
-    );
+    // Construir lista de instancias activas y canceladas (una por sede) para "Mis Módulos"
+    // Si hay moduleInstances en el negocio, usarlas; si no, fallback a modules (legacy)
+    let activeInstances = [];
+    let cancelledInstances = [];
+    if (clientBiz.moduleInstances && clientBiz.moduleInstances.length > 0) {
+        clientBiz.moduleInstances.forEach(inst => {
+            if (inst.status === 'active') {
+                const modInfo = appState.modules.find(m => String(m.id) === String(inst.moduleId));
+                if (modInfo) {
+                    activeInstances.push({
+                        ...modInfo,
+                        instanceId: inst.instanceId,
+                        branchName: inst.branchName || inst.sedeName || 'Sede Principal',
+                        priceApplied: parseFloat(inst.priceApplied) || 0,
+                        renewalDate: inst.renewalDate || null,
+                        isMultiSede: false
+                    });
+                }
+            } else if (inst.status === 'cancelled') {
+                const modInfo = appState.modules.find(m => String(m.id) === String(inst.moduleId));
+                if (modInfo) {
+                    cancelledInstances.push({
+                        ...modInfo,
+                        instanceId: inst.instanceId,
+                        branchName: inst.branchName || inst.sedeName || 'Sede Principal',
+                        priceApplied: parseFloat(inst.priceApplied) || 0,
+                        renewalDate: inst.renewalDate || null,
+                        cancelledAt: inst.cancelledAt || null,
+                        accessUntil: inst.accessUntil || null,
+                        isMultiSede: false
+                    });
+                }
+            }
+        });
+        
+        // Marcar cuáles son multi-sede (más de 1 instancia del mismo módulo en total)
+        const countByMod = {};
+        [...activeInstances, ...cancelledInstances].forEach(inst => {
+            countByMod[inst.id] = (countByMod[inst.id] || 0) + 1;
+        });
+        activeInstances.forEach(inst => {
+            inst.isMultiSede = countByMod[inst.id] > 1;
+        });
+        cancelledInstances.forEach(inst => {
+            inst.isMultiSede = countByMod[inst.id] > 1;
+        });
+    } else {
+        // Fallback legacy: un registro por módulo único activo
+        (clientBiz.modules || []).forEach(mid => {
+            const mod = appState.modules.find(m => String(m.id) === String(mid));
+            if (mod) {
+                const rawDate = clientBiz?.moduleDates?.[mod.id];
+                const priceVal = parseInt(String(mod.price || '').replace(/\D/g, ''), 10);
+                activeInstances.push({
+                    ...mod,
+                    instanceId: null,
+                    branchName: 'Sede Principal',
+                    priceApplied: isNaN(priceVal) ? 0 : priceVal,
+                    renewalDate: rawDate || null,
+                    isMultiSede: false
+                });
+            }
+        });
+        
+        // Fallback legacy: un registro por módulo único cancelado
+        (clientBiz.cancelledModules || [])
+            .filter(cm => !(clientBiz.modules || []).some(mid => String(mid) === String(cm.id)))
+            .forEach(cm => {
+                const mod = appState.modules.find(m => String(m.id) === String(cm.id));
+                if (mod) {
+                    const priceVal = parseInt(String(mod.price || '').replace(/\D/g, ''), 10);
+                    cancelledInstances.push({
+                        ...mod,
+                        instanceId: null,
+                        branchName: 'Sede Principal',
+                        priceApplied: isNaN(priceVal) ? 0 : priceVal,
+                        renewalDate: null,
+                        cancelledAt: cm.cancelledAt || null,
+                        accessUntil: cm.accessUntil || null,
+                        isMultiSede: false
+                    });
+                }
+            });
+    }
 
     // --- KPIs ---
     const elCount = document.getElementById('active-modules-count');
-    if (elCount) elCount.textContent = activeMods.length;
+    if (elCount) elCount.textContent = activeInstances.length;
 
     // KPI Cancelados: SIEMPRE visible, actualizar conteo
     const elCancelledCount = document.getElementById('cancelled-modules-count');
-    if (elCancelledCount) elCancelledCount.textContent = cancelledMods.length;
+    if (elCancelledCount) elCancelledCount.textContent = cancelledInstances.length;
+    
     // Highlight amber border when > 0, subtle when = 0
     const kpiCancelledCard = document.getElementById('kpi-cancelled-card');
     if (kpiCancelledCard) {
-        kpiCancelledCard.style.borderColor = cancelledMods.length > 0
+        kpiCancelledCard.style.borderColor = cancelledInstances.length > 0
             ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.12)';
-        kpiCancelledCard.style.opacity = cancelledMods.length > 0 ? '1' : '0.55';
+        kpiCancelledCard.style.opacity = cancelledInstances.length > 0 ? '1' : '0.55';
     }
 
     // --- Pestañas de módulos: SIEMPRE visibles (ya en HTML con display:flex) ---
     // (No necesitamos ocultar el contenedor, solo actualizar el estado activo/inactivo)
 
     // ----------------------------------------------------------------
-    // RENDER: ACTIVOS
+    // RENDER: ACTIVOS (una tarjeta por instancia/sede)
     // ----------------------------------------------------------------
     const gridActive = document.getElementById('client-modules-grid-active');
     if (gridActive) {
         let htmlActive = '';
-        if (activeMods.length > 0) {
-            activeMods.forEach((mod, index) => {
-                // Normalizar URL
-                const modUrl    = (mod.url     || '').replace('menu_comida', 'order-system');
-                const modAdmUrl = (mod.adminUrl || '').replace('menu_comida', 'order-system');
+        if (activeInstances.length > 0) {
+            activeInstances.forEach((inst, index) => {
+                // Normalizar URL del módulo
+                const modUrl    = (inst.url     || '').replace('menu_comida', 'order-system');
+                const modAdmUrl = (inst.adminUrl || '').replace('menu_comida', 'order-system');
 
-                // Fecha de renovación real desde el backend (sin fallbacks falsos)
-                const bizForDate = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
-                const rawDate = bizForDate?.moduleDates?.[mod.id];
-                const renewalDate = rawDate ? new Date(rawDate).toLocaleDateString('es-CO') : 'Contactar Admin';
-                
+                // Fecha de renovación real de esta instancia
+                const rawDate = inst.renewalDate;
+                const renewalDate = rawDate
+                    ? new Date(rawDate + (rawDate.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('es-CO')
+                    : 'Contactar Admin';
+
                 // Determinar si está vencido
                 const isExpired = rawDate && (new Date(rawDate).getTime() <= Date.now());
 
-                const badgeHtml = isExpired 
+                // Badge de estado
+                const badgeHtml = isExpired
                     ? `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">⚠️ Pago Vencido</div>`
                     : `<div class="status-badge active" style="position:absolute; top:1.5rem; right:1.5rem;">Activo</div>`;
-                
+
+                // Badge de sede (siempre mostrar cuando hay branchName y es diferente de Principal, o cuando hay más de 1 instancia del mismo módulo)
+                const showSedeBadge = inst.branchName && (inst.isMultiSede || inst.branchName !== 'Sede Principal');
+                const sedeBadgeHtml = showSedeBadge
+                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
+                    : '';
+
                 const borderColor = isExpired ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.12)';
                 const dateBoxColor = isExpired ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)';
                 const dateBorderColor = isExpired ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
                 const dateTextColor = isExpired ? '#ef4444' : '#10b981';
                 const dateTextLabel = isExpired ? 'Vencido el:' : 'Próxima renovación:';
-                
-                // Formatear precio
-                const priceVal = parseInt(String(mod.price || '').replace(/\D/g, ''));
-                const priceDisplay = (!isNaN(priceVal) && priceVal > 0) ? `$ ${priceVal.toLocaleString('es-CO')} COP/mes` : 'Consultar';
+
+                // Precio de esta instancia (priceApplied si disponible, o del módulo como fallback)
+                const instPrice = inst.priceApplied > 0
+                    ? inst.priceApplied
+                    : parseInt(String(inst.price || '').replace(/\D/g, ''), 10) || 0;
+                const priceDisplay = instPrice > 0
+                    ? `$ ${instPrice.toLocaleString('es-CO')} COP/mes`
+                    : 'Consultar';
 
                 let actionsHtml = '';
                 if (isExpired) {
                     actionsHtml = `
                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                            <button class="btn-primary" onclick="handleRenewal('${mod.id}','${mod.name}','${priceDisplay}')" style="width:100%; justify-content:center; box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); background:var(--primary); padding:0.75rem;">
+                            <button class="btn-primary" onclick="handleRenewal('${inst.id}','${inst.name}','${priceDisplay}')" style="width:100%; justify-content:center; box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); background:var(--primary); padding:0.75rem;">
                                 <i data-lucide="credit-card" style="width:16px;"></i> Renovar Suscripción
                             </button>
-                            <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(mod.name)}','_blank')" style="width:100%; justify-content:center; font-size:0.82rem; padding:0.5rem;">
+                            <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(inst.name)}','_blank')" style="width:100%; justify-content:center; font-size:0.82rem; padding:0.5rem;">
                                 <i data-lucide="headset" style="width:14px;"></i> Contactar Soporte
                             </button>
                         </div>
@@ -719,14 +940,14 @@ function renderDashboard() {
                 } else {
                     actionsHtml = `
                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                            <button class="btn-primary" onclick="showLaunchPad('${mod.id}','${mod.name}','${modUrl}','${modAdmUrl}')" style="width:100%; justify-content:center; box-shadow:0 4px 14px 0 rgba(99,102,241,0.39); padding:0.75rem;">
+                            <button class="btn-primary" onclick="showLaunchPad('${inst.id}','${inst.name}','${modUrl}','${modAdmUrl}','${inst.instanceId}','${inst.branchName}')" style="width:100%; justify-content:center; box-shadow:0 4px 14px 0 rgba(99,102,241,0.39); padding:0.75rem;">
                                 <i data-lucide="external-link" style="width:16px;"></i> Abrir Aplicación
                             </button>
                             <div style="display:flex; gap:0.6rem;">
-                                <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(mod.name)}','_blank')" style="flex:1; justify-content:center; font-size:0.82rem; padding:0.5rem;">
+                                <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(inst.name)}','_blank')" style="flex:1; justify-content:center; font-size:0.82rem; padding:0.5rem;">
                                     <i data-lucide="headset" style="width:14px;"></i> Soporte
                                 </button>
-                                <button class="btn-ghost" onclick="window.cancelModule('${mod.id}','${mod.name}')" style="flex:1; justify-content:center; color:var(--warning); font-size:0.82rem; padding:0.5rem; border-color:rgba(245,158,11,0.3);">
+                                <button class="btn-ghost" onclick="window.cancelModule('${inst.id}','${inst.name}')" style="flex:1; justify-content:center; color:var(--warning); font-size:0.82rem; padding:0.5rem; border-color:rgba(245,158,11,0.3);">
                                     <i data-lucide="pause-circle" style="width:14px;"></i> Suspender
                                 </button>
                             </div>
@@ -738,12 +959,13 @@ function renderDashboard() {
                 <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid ${borderColor};">
                     <div class="module-card-header">
                         <div class="module-icon-large" style="background:rgba(99,102,241,0.1); color:var(--primary);">
-                            <i data-lucide="${mod.icon || 'package'}"></i>
+                            <i data-lucide="${inst.icon || 'package'}"></i>
                         </div>
                         ${badgeHtml}
                     </div>
-                    <h3 class="module-title" style="margin-top:1rem; font-size:1.2rem;">${mod.name}</h3>
-                    <p class="module-desc" style="font-size:0.85rem; margin-bottom:0.5rem;">${mod.desc || ''}</p>
+                    ${sedeBadgeHtml}
+                    <h3 class="module-title" style="margin-top:${sedeBadgeHtml ? '0.4rem' : '1rem'}; font-size:1.2rem;">${inst.name}</h3>
+                    <p class="module-desc" style="font-size:0.85rem; margin-bottom:0.5rem;">${inst.desc || ''}</p>
 
                     <div style="margin:0.5rem 0 0.75rem; display:inline-flex; align-items:center; gap:0.4rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); border-radius:20px; padding:0.3rem 0.85rem;">
                         <i data-lucide="tag" style="width:13px;height:13px;color:var(--primary);"></i>
@@ -772,93 +994,126 @@ function renderDashboard() {
 
     // ----------------------------------------------------------------
     // RENDER: CANCELADOS
-    // ----------------------------------------------------------------
     const gridCancelled = document.getElementById('client-modules-grid-cancelled');
     if (gridCancelled) {
         let htmlCancelled = '';
-        if (cancelledMods.length > 0) {
-            cancelledMods.forEach((mod, index) => {
-                const modUrl    = (mod.url     || '').replace('menu_comida', 'order-system');
-                const modAdmUrl = (mod.adminUrl || '').replace('menu_comida', 'order-system');
+        if (cancelledInstances.length > 0) {
+            cancelledInstances.forEach((inst, index) => {
+                const modUrl    = (inst.url     || '').replace('menu_comida', 'order-system');
+                const modAdmUrl = (inst.adminUrl || '').replace('menu_comida', 'order-system');
 
-                const accessUntilMs = new Date(mod.accessUntil).getTime();
+                const accessUntilMs = new Date(inst.accessUntil).getTime();
                 const daysLeft = Math.max(0, Math.ceil((accessUntilMs - Date.now()) / (1000 * 60 * 60 * 24)));
-                const accessDate = new Date(mod.accessUntil).toLocaleDateString('es-CO');
+                const accessDate = new Date(inst.accessUntil).toLocaleDateString('es-CO');
 
                 // Color de urgencia
                 const urgencyColor = daysLeft <= 5 ? '#ef4444' : (daysLeft <= 10 ? '#f97316' : '#f59e0b');
 
                 // Formatear precio
-                const priceVal = parseInt(String(mod.price || '').replace(/\D/g, ''));
-                const priceDisplay = (!isNaN(priceVal) && priceVal > 0) ? `$ ${priceVal.toLocaleString('es-CO')} COP/mes` : 'Consultar';
+                const instPrice = inst.priceApplied > 0
+                    ? inst.priceApplied
+                    : parseInt(String(inst.price || '').replace(/\D/g, ''), 10) || 0;
+                const priceDisplay = instPrice > 0
+                    ? `$ ${instPrice.toLocaleString('es-CO')} COP/mes`
+                    : 'Consultar';
+
+                // Badge de sede (siempre mostrar cuando hay branchName y es diferente de Principal, o cuando hay más de 1 instancia del mismo módulo)
+                const showSedeBadge = inst.branchName && (inst.isMultiSede || inst.branchName !== 'Sede Principal');
+                const sedeBadgeHtml = showSedeBadge
+                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
+                    : '';
 
                 let actionsHtml = '';
                 if (accessUntilMs <= Date.now()) {
                     actionsHtml = `
                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                            <button class="btn-primary" onclick="handleRenewal('${mod.id}','${mod.name}','${priceDisplay}')" style="width:100%; justify-content:center; background:var(--primary); box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); padding:0.75rem;">
+                            <button class="btn-primary" onclick="handleRenewal('${inst.id}','${inst.name}','${priceDisplay}', '${inst.branchName}', '${inst.instanceId}')" style="width:100%; justify-content:center; background:var(--primary); box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); padding:0.75rem;">
                                 <i data-lucide="credit-card" style="width:16px;"></i> Renovar Suscripción
                             </button>
-                                <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(mod.name)}','_blank')" style="width:100%; justify-content:center; font-size:0.85rem; padding:0.6rem;">
-                                    <i data-lucide="headset" style="width:14px;"></i> Contactar Soporte
-                                </button>
-                            </div>
-                        `;
-                    } else {
-                        actionsHtml = `
-                            <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                                <button class="btn-primary" onclick="window.reactivateModule('${mod.id}','${mod.name}')" style="width:100%; justify-content:center; background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 14px 0 rgba(16,185,129,0.3); padding:0.75rem;">
-                                    <i data-lucide="refresh-cw" style="width:15px;"></i> Reactivar (Días a favor)
-                                </button>
-                                <button class="btn-ghost" onclick="showLaunchPad('${mod.id}','${mod.name}','${modUrl}','${modAdmUrl}')" style="width:100%; justify-content:center; font-size:0.85rem; padding:0.6rem;">
-                                    <i data-lucide="external-link" style="width:14px;"></i> Abrir (Acceso Temporal)
-                                </button>
-                            </div>
-                        `;
-                    }
-
-                    htmlCancelled += `
-                    <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid rgba(245,158,11,0.2); opacity:0.9;">
-                        <div class="module-card-header">
-                            <div class="module-icon-large" style="background:rgba(245,158,11,0.08); color:#f59e0b;">
-                                <i data-lucide="${mod.icon || 'package'}"></i>
-                            </div>
-                            <div style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(245,158,11,0.12); color:#f59e0b; font-size:0.7rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:20px; border:1px solid rgba(245,158,11,0.25);">Suspendido</div>
+                            <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(inst.name)}','_blank')" style="width:100%; justify-content:center; font-size:0.85rem; padding:0.6rem;">
+                                <i data-lucide="headset" style="width:14px;"></i> Contactar Soporte
+                            </button>
                         </div>
-                        <h3 class="module-title" style="margin-top:1rem; font-size:1.2rem;">${mod.name}</h3>
-                        <p class="module-desc" style="font-size:0.82rem;">${mod.desc || ''}</p>
-
-                        <div style="margin:1rem 0; padding:0.85rem 1rem; background:rgba(245,158,11,0.07); border-radius:10px; border:1px solid rgba(245,158,11,0.15);">
-                            <div style="font-size:0.78rem; color:${urgencyColor}; font-weight:700; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.4rem;">
-                                <i data-lucide="hourglass" style="width:14px; height:14px;"></i>
-                                Acceso hasta: ${accessDate}
-                            </div>
-                            <div class="countdown-timer" data-endtime="${accessUntilMs}" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-family: monospace; font-weight: 600;">
-                                ${daysLeft} día${daysLeft !== 1 ? 's' : ''} restante${daysLeft !== 1 ? 's' : ''} de acceso
-                            </div>
-                            <!-- Barra de progreso de tiempo restante -->
-                            <div style="height:4px; background:var(--border-color); border-radius:99px; overflow:hidden;">
-                                <div style="height:100%; width:${Math.min(100, (daysLeft / 30) * 100)}%; background:${urgencyColor}; border-radius:99px; transition:width 0.5s ease;"></div>
-                            </div>
+                    `;
+                } else {
+                    actionsHtml = `
+                        <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                            <button class="btn-primary" onclick="window.reactivateModule('${inst.id}','${inst.name}','${inst.instanceId}')" style="width:100%; justify-content:center; background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 14px 0 rgba(16,185,129,0.3); padding:0.75rem;">
+                                <i data-lucide="refresh-cw" style="width:15px;"></i> Reactivar (Días a favor)
+                            </button>
+                            <button class="btn-ghost" onclick="showLaunchPad('${inst.id}','${inst.name}','${modUrl}','${modAdmUrl}','${inst.instanceId}','${inst.branchName}')" style="width:100%; justify-content:center; font-size:0.85rem; padding:0.6rem;">
+                                <i data-lucide="external-link" style="width:14px;"></i> Abrir (Acceso Temporal)
+                            </button>
                         </div>
+                    `;
+                }
 
-                        ${actionsHtml}
-                    </div>`;
-                });
+                htmlCancelled += `
+                <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid rgba(245,158,11,0.2); opacity:0.9;">
+                    <div class="module-card-header">
+                        <div class="module-icon-large" style="background:rgba(245,158,11,0.08); color:#f59e0b;">
+                            <i data-lucide="${inst.icon || 'package'}"></i>
+                        </div>
+                        <div style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(245,158,11,0.12); color:#f59e0b; font-size:0.7rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:20px; border:1px solid rgba(245,158,11,0.25);">Suspendido</div>
+                    </div>
+                    ${sedeBadgeHtml}
+                    <h3 class="module-title" style="margin-top:${sedeBadgeHtml ? '0.4rem' : '1rem'}; font-size:1.2rem;">${inst.name}</h3>
+                    <p class="module-desc" style="font-size:0.82rem;">${inst.desc || ''}</p>
+
+                    <div style="margin:1rem 0; padding:0.85rem 1rem; background:rgba(245,158,11,0.07); border-radius:10px; border:1px solid rgba(245,158,11,0.15);">
+                        <div style="font-size:0.78rem; color:${urgencyColor}; font-weight:700; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.4rem;">
+                            <i data-lucide="hourglass" style="width:14px; height:14px;"></i>
+                            Acceso hasta: ${accessDate}
+                        </div>
+                        <div class="countdown-timer" data-endtime="${accessUntilMs}" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-family: monospace; font-weight: 600;">
+                            ${daysLeft} día${daysLeft !== 1 ? 's' : ''} restante${daysLeft !== 1 ? 's' : ''} de acceso
+                        </div>
+                        <!-- Barra de progreso de tiempo restante -->
+                        <div style="height:4px; background:var(--border-color); border-radius:99px; overflow:hidden;">
+                            <div style="height:100%; width:${Math.min(100, (daysLeft / 30) * 100)}%; background:${urgencyColor}; border-radius:99px; transition:width 0.5s ease;"></div>
+                        </div>
+                    </div>
+
+                    ${actionsHtml}
+                </div>`;
+            });
+        } else {
+            htmlCancelled = `<div style="grid-column:1/-1; text-align:center; padding:3rem;">
+                <div style="font-size:3rem; margin-bottom:1rem;">📭</div>
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.5rem;">Sin módulos suspendidos</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem;">Todas tus herramientas están al día y activas.</p>
+            </div>`;
         }
         gridCancelled.innerHTML = htmlCancelled;
     }
 
     // Sincronizar vista de pestaña activa
-    if (cancelledMods.length === 0) {
+    if (cancelledInstances.length === 0) {
         switchModuleSubTab('active');
     }
 
-    // --- Marketplace (sólo si el grid existe) ---
-    const mktGrid = document.getElementById('client-marketplace-grid');
-    if (mktGrid) {
+    // --- Marketplace (sólo si el container existe) ---
+    const mktContainer = document.getElementById('client-marketplace-sections-container');
+    if (mktContainer) {
+        let htmlMarketplace = '';
+
+        // Variables para el Marketplace
+        const allClientModIds = [
+            ...(clientBiz.modules || []).map(id => String(id)),
+            ...(clientBiz.cancelledModules || []).map(cm => String(cm.id))
+        ];
+        const availableMods = appState.modules.filter(m =>
+            m.status === 'active' && !allClientModIds.includes(String(m.id))
+        );
+        const activeModIds = (clientBiz.modules || []).map(id => String(id));
+        const ownedActiveMods = appState.modules.filter(m =>
+            m.status === 'active' && activeModIds.includes(String(m.id))
+        );
+
+        // 1. Grupo: NUEVAS SOLUCIONES
+        let htmlNewMods = '';
         if (availableMods.length > 0) {
-            mktGrid.innerHTML = availableMods.map((mod, i) => {
+            htmlNewMods = availableMods.map((mod, i) => {
                 const activePromo = getActivePromo(mod.id);
                 const basePriceVal = parseInt(String(mod.price || '').replace(/\D/g, ''));
                 let finalPriceDisplay = '';
@@ -898,7 +1153,7 @@ function renderDashboard() {
 
                 const badge = i === 0 && !activePromo ? '<div class="marketplace-badge">⭐ POPULAR</div>' : (discountBadge || '');
                 return `
-                <div class="biz-card" style="border:1px solid rgba(79,70,229,0.2); position:relative; overflow:hidden; display:flex; flex-direction:column;">
+                <div class="biz-card" style="border:1px solid rgba(139,92,246,0.2); position:relative; overflow:hidden; display:flex; flex-direction:column; min-width:320px; max-width:320px;">
                     ${badge}
                     <div class="module-card-header">
                         <div class="module-icon-large" style="background:rgba(139,92,246,0.1); color:#8b5cf6;">
@@ -910,7 +1165,7 @@ function renderDashboard() {
                     ${priceHtml}
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <button class="btn-primary btn-adquirir"
-                            data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
+                            data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
                             style="width:100%; justify-content:center; background:#8b5cf6; border:none; box-shadow:0 4px 14px 0 rgba(139,92,246,0.39);">
                             <i data-lucide="shopping-cart"></i> Adquirir Módulo
                         </button>
@@ -923,28 +1178,176 @@ function renderDashboard() {
                 </div>`;
             }).join('');
 
+            htmlMarketplace += `
+            <div style="margin-top: 0.5rem; margin-bottom: 0.5rem; padding: 0 0.5rem;">
+                <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    <span style="display: inline-block; width: 4px; height: 18px; background: #8b5cf6; border-radius: 4px;"></span>
+                    Nuevas Soluciones para tu Negocio
+                </h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">Explora y activa herramientas adicionales para potenciar tu gestión.</p>
+            </div>
+            <div class="carousel-container-outer" style="margin-top: 1rem; margin-bottom: 2rem; position: relative;">
+                <button class="carousel-nav-btn prev-btn hidden" onclick="scrollCarousel(this, -1)">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <div class="client-grid carousel-scroll-container" id="client-marketplace-grid-new" style="display: flex; gap: 1.5rem; overflow-x: auto; scroll-behavior: smooth; padding: 0.5rem 0.25rem;">
+                    ${htmlNewMods}
+                </div>
+                <button class="carousel-nav-btn next-btn" onclick="scrollCarousel(this, 1)">
+                    <i data-lucide="chevron-right"></i>
+                </button>
+            </div>
+            `;
+        }
+
+        // 2. Grupo: MULTI-SEDES (EXPANDIR SEDES)
+        let htmlSedesMods = '';
+        if (ownedActiveMods.length > 0) {
+            htmlSedesMods = ownedActiveMods.map((mod) => {
+                const activePromo = getActivePromo(mod.id);
+                const basePriceVal = parseInt(String(mod.price || '').replace(/\D/g, ''));
+                let finalPriceVal = 0;
+                let promoPriceVal = basePriceVal;
+
+                if (activePromo && !isNaN(basePriceVal) && basePriceVal > 0) {
+                    if (activePromo.discountType === 'percentage') {
+                        promoPriceVal = Math.round(basePriceVal * (1 - parseFloat(activePromo.discountValue) / 100));
+                    } else if (activePromo.discountType === 'fixed_price') {
+                        promoPriceVal = Math.round(parseFloat(activePromo.discountValue));
+                    }
+                }
+                
+                finalPriceVal = Math.round(promoPriceVal * 0.70); // Descuento permanente 30%
+                const formattedSedePrice = `$ ${finalPriceVal.toLocaleString('es-CO')} COP/mes`;
+                const strikePrice = `$ ${promoPriceVal.toLocaleString('es-CO')} COP`;
+
+                const priceHtml = `
+                    <div style="display:flex; flex-direction:column; gap:0.25rem; margin:1.25rem 0 1rem;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:0.88rem; text-decoration:line-through; color:var(--text-muted); font-weight:600;">${strikePrice}</span>
+                            <span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
+                                -30% MULTI-SEDE
+                            </span>
+                        </div>
+                        <div style="font-weight:800; font-size:1.6rem; color:#f59e0b; text-shadow:0 0 10px rgba(245,158,11,0.2);">${formattedSedePrice}</div>
+                    </div>
+                `;
+
+                const discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🏢 SEDE 2+</div>`;
+                
+                return `
+                <div class="biz-card" style="border:1px solid rgba(245,158,11,0.25); position:relative; overflow:hidden; display:flex; flex-direction:column; background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(245,158,11,0.02) 100%); min-width:320px; max-width:320px;">
+                    ${discountBadge}
+                    <div class="module-card-header">
+                        <div class="module-icon-large" style="background:rgba(245,158,11,0.1); color:#f59e0b;">
+                            <i data-lucide="${mod.icon || 'package'}"></i>
+                        </div>
+                    </div>
+                    <h3 class="module-title" style="margin-top:1rem; font-size:1.2rem;">${mod.name}</h3>
+                    <p class="module-desc" style="flex:1;">${mod.desc || ''}</p>
+                    ${priceHtml}
+                    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                        <button class="btn-primary btn-adquirir-sede"
+                            data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${formattedSedePrice}"
+                            style="width:100%; justify-content:center; background:#f59e0b; border:none; box-shadow:0 4px 14px 0 rgba(245,158,11,0.39);">
+                            <i data-lucide="plus-circle"></i> Adquirir Nueva Sede
+                        </button>
+                        <button class="btn-ghost btn-demo"
+                            data-mod-id="${mod.id}" data-mod-name="${mod.name}"
+                            style="width:100%; justify-content:center; border:1px solid rgba(245,158,11,0.3);">
+                            <i data-lucide="play-circle" style="width:15px; color:#f59e0b;"></i> Ver Demo
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            htmlMarketplace += `
+            <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; padding: 0 0.5rem;">
+                <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    <span style="display: inline-block; width: 4px; height: 18px; background: #f59e0b; border-radius: 4px;"></span>
+                    Expandir tus Módulos (Sedes Adicionales)
+                    <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase;">30% Off Sede 2+</span>
+                </h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">Adquiere el mismo módulo para una nueva sucursal o sede con descuento de multi-sede permanente.</p>
+            </div>
+            <div class="carousel-container-outer" style="margin-top: 1rem; margin-bottom: 2rem; position: relative;">
+                <button class="carousel-nav-btn prev-btn hidden" onclick="scrollCarousel(this, -1)">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <div class="client-grid carousel-scroll-container" id="client-marketplace-grid-sedes" style="display: flex; gap: 1.5rem; overflow-x: auto; scroll-behavior: smooth; padding: 0.5rem 0.25rem;">
+                    ${htmlSedesMods}
+                </div>
+                <button class="carousel-nav-btn next-btn" onclick="scrollCarousel(this, 1)">
+                    <i data-lucide="chevron-right"></i>
+                </button>
+            </div>
+            `;
+        }
+
+        if (htmlMarketplace === '') {
+            mktContainer.innerHTML = `<div style="text-align:center; padding:3rem; background: var(--bg-surface); border-radius: 12px; border: 1px dashed var(--border-color);">
+                <div style="font-size:3rem; margin-bottom:1rem;">🎉</div>
+                <h3 style="font-size:1.5rem; font-weight:700; margin-bottom:0.5rem;">¡Tienes todo activado!</h3>
+                <p style="color:var(--text-muted);">Ya tienes todos los módulos disponibles activos en tu cuenta.</p>
+            </div>`;
+        } else {
+            mktContainer.innerHTML = htmlMarketplace;
+
+            // Wire up event listeners
             document.querySelectorAll('.btn-adquirir').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    handlePurchase(e.currentTarget.getAttribute('data-mod-name'), e.currentTarget.getAttribute('data-mod-price'));
+                    const modId = e.currentTarget.getAttribute('data-mod-id');
+                    const modName = e.currentTarget.getAttribute('data-mod-name');
+                    const modPrice = e.currentTarget.getAttribute('data-mod-price');
+                    // Realizar compra integrada real en backend MySQL
+                    handleRenewal(modId, modName, modPrice);
                 });
             });
+
+            document.querySelectorAll('.btn-adquirir-sede').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const modId = e.currentTarget.getAttribute('data-mod-id');
+                    const modName = e.currentTarget.getAttribute('data-mod-name');
+                    const modPrice = e.currentTarget.getAttribute('data-mod-price');
+
+                    // Prompt premium para pedir el nombre identificador de la nueva sede
+                    const currentInstancesCount = (clientBiz.moduleInstances || []).filter(inst => String(inst.moduleId) === String(modId) && inst.status === 'active').length;
+                    const { value: branchName } = await Swal.fire({
+                        title: 'Identificador de Nueva Sede',
+                        text: `Ingresa un nombre descriptivo para identificar esta nueva sede del módulo "${modName}":`,
+                        input: 'text',
+                        inputValue: `Sede ${currentInstancesCount + 1}`,
+                        background: 'var(--bg-surface)',
+                        color: 'var(--text)',
+                        confirmButtonText: 'Continuar al Pago',
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#f59e0b',
+                        inputValidator: (value) => {
+                            if (!value || !value.trim()) {
+                                return '¡El nombre identificador de la sede es obligatorio!';
+                            }
+                        }
+                    });
+
+                    if (branchName) {
+                        // Iniciar pasarela segura indicando la sede
+                        handleRenewal(modId, modName, modPrice, branchName.trim());
+                    }
+                });
+            });
+
             document.querySelectorAll('.btn-demo').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     handleDemo(e.currentTarget.getAttribute('data-mod-id'), e.currentTarget.getAttribute('data-mod-name'));
                 });
             });
-        } else {
-            mktGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem;">
-                <div style="font-size:3rem; margin-bottom:1rem;">🎉</div>
-                <h3 style="font-size:1.5rem; font-weight:700; margin-bottom:0.5rem;">¡Tienes todo activado!</h3>
-                <p style="color:var(--text-muted);">Ya tienes todos los módulos disponibles activos en tu cuenta.</p>
-            </div>`;
         }
     }
 
     // --- Total mensual (sólo si el elemento existe) ---
-    const monthlyTotal = activeMods.reduce((sum, mod) => {
-        const price = parseInt(String(mod.price || '').replace(/\D/g, ''), 10);
+    const monthlyTotal = activeInstances.reduce((sum, inst) => {
+        const price = inst.priceApplied !== undefined ? inst.priceApplied : parseInt(String(inst.price || '').replace(/\D/g, ''), 10);
         return sum + (isNaN(price) ? 0 : price);
     }, 0);
     const elMonthly = document.getElementById('client-monthly-total');
@@ -987,7 +1390,10 @@ function renderDashboard() {
     }
 
     lucide.createIcons();
-    initClientCharts();
+    // Defer chart init to next paint cycle so canvas dimensions are settled
+    requestAnimationFrame(() => {
+        setTimeout(() => initClientCharts(), 0);
+    });
 }
 
 // ====================== DYNAMIC CLIENT CHARTS (FINTECH PREMIUM) ======================
@@ -995,41 +1401,83 @@ let clientBillingChart = null;
 let clientUsageChart = null;
 
 function initClientCharts() {
-    if (clientBillingChart) clientBillingChart.destroy();
-    if (clientUsageChart) clientUsageChart.destroy();
+    try {
+        // --- Diagnóstico: verificar que Chart.js esté disponible ---
+        if (typeof Chart === 'undefined') {
+            console.error('[initClientCharts] Chart.js no está disponible en window.Chart');
+            return;
+        }
 
-    const ctxBilling = document.getElementById('clientBillingChart')?.getContext('2d');
-    const ctxUsage = document.getElementById('clientUsageChart')?.getContext('2d');
+        if (clientBillingChart) { clientBillingChart.destroy(); clientBillingChart = null; }
+        if (clientUsageChart)   { clientUsageChart.destroy();   clientUsageChart = null; }
 
-    const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
-    if (!clientBiz) return;
+        const canvasBilling = document.getElementById('clientBillingChart');
+        const canvasUsage   = document.getElementById('clientUsageChart');
 
-    // Calcular costos activos
-    const activeMods = (clientBiz.modules || []).map(mid =>
-        appState.modules.find(m => String(m.id) === String(mid))
-    ).filter(Boolean);
+        if (!canvasBilling || !canvasUsage) {
+            console.warn('[initClientCharts] No se encontraron los canvas de gráficas');
+            return;
+        }
 
-    const monthlyTotal = activeMods.reduce((sum, mod) => {
-        const price = parseInt(String(mod.price || '').replace(/\D/g, ''), 10);
-        return sum + (isNaN(price) ? 0 : price);
-    }, 0);
+        const ctxBilling = canvasBilling.getContext('2d');
+        const ctxUsage   = canvasUsage.getContext('2d');
 
-    // 1. Line Chart: Consumo y Proyección Mensual
-    if (ctxBilling) {
-        // Crear gradiente premium fintech
-        const gradient = ctxBilling.createLinearGradient(0, 0, 0, 220);
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
-        gradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.15)');
+        const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+        if (!clientBiz) {
+            console.warn('[initClientCharts] clientBiz no encontrado para CLIENT_ID:', CLIENT_ID);
+            return;
+        }
+
+        // ── Obtener módulos activos (soporta tanto moduleInstances como módulos legados) ──
+        let activeMods = [];
+        if (clientBiz.moduleInstances && clientBiz.moduleInstances.length > 0) {
+            // Sistema nuevo: usar moduleInstances activos
+            clientBiz.moduleInstances
+                .filter(inst => inst.status === 'active')
+                .forEach(inst => {
+                    const modInfo = appState.modules.find(m => String(m.id) === String(inst.moduleId));
+                    if (modInfo) {
+                        activeMods.push({
+                            ...modInfo,
+                            priceApplied: parseFloat(inst.priceApplied) || 0
+                        });
+                    }
+                });
+        } else {
+            // Legado: usar clientBiz.modules (array de IDs)
+            activeMods = (clientBiz.modules || [])
+                .map(mid => appState.modules.find(m => String(m.id) === String(mid)))
+                .filter(Boolean);
+        }
+
+        console.log('[initClientCharts] activeMods:', activeMods.length, activeMods.map(m => m.name));
+
+        // Calcular total mensual usando priceApplied si existe, sino price del módulo
+        const monthlyTotal = activeMods.reduce((sum, mod) => {
+            const price = mod.priceApplied > 0
+                ? mod.priceApplied
+                : parseInt(String(mod.price || '').replace(/\D/g, ''), 10) || 0;
+            return sum + price;
+        }, 0);
+
+        console.log('[initClientCharts] monthlyTotal:', monthlyTotal);
+
+        // ── 1. Line Chart: Consumo y Proyección Mensual ──
+        const gradient = ctxBilling.createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.45)');
+        gradient.addColorStop(0.6, 'rgba(99, 102, 241, 0.12)');
         gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
 
-        // Historial simulado + proyección basada en el total mensual actual
-        const val4 = Math.round(monthlyTotal * 0.8);
-        const val5 = monthlyTotal;
-        const val6 = Math.round(monthlyTotal * 1.2); // Proyección futura de crecimiento
-
-        const dataPoints = monthlyTotal > 0 
-            ? [Math.round(monthlyTotal * 0.4), Math.round(monthlyTotal * 0.6), Math.round(monthlyTotal * 0.6), val4, val5, val6]
-            : [0, 0, 0, 0, 0, 0];
+        // Datos: historial relativo + proyección del mes siguiente
+        const base = monthlyTotal > 0 ? monthlyTotal : 100000; // valor base de referencia
+        const dataPoints = [
+            Math.round(base * 0.40),
+            Math.round(base * 0.55),
+            Math.round(base * 0.65),
+            Math.round(base * 0.80),
+            base,
+            Math.round(base * 1.15)
+        ];
 
         clientBillingChart = new Chart(ctxBilling, {
             type: 'line',
@@ -1042,17 +1490,21 @@ function initClientCharts() {
                     backgroundColor: gradient,
                     fill: true,
                     tension: 0.4,
-                    borderWidth: 3,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
                     pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
                     pointHoverRadius: 7,
                     pointHoverBackgroundColor: '#fff',
                     pointHoverBorderColor: '#6366f1',
-                    pointHoverBorderWidth: 3
+                    pointHoverBorderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 600 },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -1064,22 +1516,18 @@ function initClientCharts() {
                         borderColor: 'rgba(255,255,255,0.08)',
                         borderWidth: 1,
                         callbacks: {
-                            label: function(context) {
-                                return `Consumo: $ ${context.parsed.y.toLocaleString('es-CO')} COP`;
-                            }
+                            label: ctx => `$ ${ctx.parsed.y.toLocaleString('es-CO')} COP`
                         }
                     }
                 },
                 scales: {
                     y: {
-                        beginAtZero: true,
+                        beginAtZero: false,
                         grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { 
-                            color: '#94a3b8', 
+                        ticks: {
+                            color: '#94a3b8',
                             font: { family: 'Outfit', size: 10 },
-                            callback: function(value) {
-                                return `$ ${(value / 1000).toFixed(0)}k`;
-                            }
+                            callback: v => `$${(v / 1000).toFixed(0)}k`
                         }
                     },
                     x: {
@@ -1089,24 +1537,22 @@ function initClientCharts() {
                 }
             }
         });
-    }
 
-    // 2. Doughnut Chart: Distribución de Módulos por Sede
-    if (ctxUsage) {
-        const labels = activeMods.map(m => m.name);
-        const data = activeMods.map(() => 1); // Peso uniforme para distribución
-        
+        // ── 2. Doughnut Chart: Distribución de Módulos por Sede ──
         const COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#f97316'];
-        
+        const doughnutLabels = activeMods.length > 0 ? activeMods.map(m => m.name) : ['Sin módulos'];
+        const doughnutData   = activeMods.length > 0 ? activeMods.map(() => 1)     : [1];
+        const doughnutColors = activeMods.length > 0
+            ? doughnutLabels.map((_, i) => COLORS[i % COLORS.length])
+            : ['rgba(255,255,255,0.07)'];
+
         clientUsageChart = new Chart(ctxUsage, {
             type: 'doughnut',
             data: {
-                labels: labels.length > 0 ? labels : ['Ninguno'],
+                labels: doughnutLabels,
                 datasets: [{
-                    data: data.length > 0 ? data : [1],
-                    backgroundColor: labels.length > 0 
-                        ? labels.map((_, i) => COLORS[i % COLORS.length])
-                        : ['rgba(255,255,255,0.05)'],
+                    data: doughnutData,
+                    backgroundColor: doughnutColors,
                     borderWidth: 0,
                     hoverOffset: 10
                 }]
@@ -1114,21 +1560,28 @@ function initClientCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 600 },
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
                             color: '#94a3b8',
-                            padding: 14,
+                            padding: 12,
                             font: { family: 'Outfit', size: 11 },
                             boxWidth: 10,
-                            borderRadius: 4
+                            usePointStyle: true,
+                            pointStyle: 'circle'
                         }
                     }
                 },
-                cutout: '70%'
+                cutout: '68%'
             }
         });
+
+        console.log('[initClientCharts] ✅ Gráficas renderizadas correctamente');
+
+    } catch (err) {
+        console.error('[initClientCharts] ❌ Error:', err);
     }
 }
 
@@ -1142,13 +1595,26 @@ function generatePassword(length = 12) {
 }
 
 /** Launch Pad: muestra links de cliente, admin y credenciales con persistencia */
-function showLaunchPad(modId, modName, clientUrl, adminUrl) {
+function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null) {
+    if (instanceId === 'null' || instanceId === 'undefined') instanceId = null;
+    if (branchName === 'null' || branchName === 'undefined') branchName = null;
+
     // Verificación estricta de caducidad
     const currentBizDateCheck = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
     
-    // Si está en cancelados, comprobar que no haya expirado
-    const isCancelled = currentBizDateCheck?.cancelledModules?.find(cm => String(cm.id) === String(modId));
-    const accessUntil = isCancelled ? isCancelled.accessUntil : currentBizDateCheck?.moduleDates?.[modId];
+    let accessUntil = null;
+    if (currentBizDateCheck) {
+        if (instanceId && currentBizDateCheck.moduleInstances) {
+            const inst = currentBizDateCheck.moduleInstances.find(i => i.instanceId === instanceId);
+            if (inst) {
+                accessUntil = inst.status === 'cancelled' ? inst.accessUntil : inst.renewalDate;
+            }
+        }
+        if (!accessUntil) {
+            const isCancelled = currentBizDateCheck.cancelledModules?.find(cm => String(cm.id) === String(modId));
+            accessUntil = isCancelled ? isCancelled.accessUntil : currentBizDateCheck.moduleDates?.[modId];
+        }
+    }
     
     if (accessUntil && new Date(accessUntil).getTime() <= Date.now()) {
         Swal.fire({
@@ -1161,7 +1627,7 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl) {
         return;
     }
 
-    const storageKey = `mod_creds_${CLIENT_ID}_${modId}`;
+    const storageKey = `mod_creds_${CLIENT_ID}_${modId}${instanceId ? '_' + instanceId : ''}`;
     let savedData = JSON.parse(localStorage.getItem(storageKey) || '{}');
     
     // Obtener el nombre del negocio de forma segura para la URL
@@ -1172,7 +1638,7 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl) {
     // Si no existe clave y no está configurado, generamos una inicial
     if (!savedData.tempPass && !savedData.isConfigured) {
         savedData = {
-            tempUser: `admin.${modId}`,
+            tempUser: `admin.${modId}${instanceId ? '.' + instanceId.slice(-4) : ''}`,
             tempPass: generatePassword(),
             isConfigured: false
         };
@@ -1183,22 +1649,31 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl) {
     // Inyectamos las credenciales temporales en la clave esperada por el módulo.
     if (!savedData.isConfigured && savedData.tempUser && savedData.tempPass) {
         let authKey = null;
-        if (modId === 'streetfeed') authKey = 'streetfeed_auth';
-        if (modId === 'agenda') authKey = 'agenda_auth';
+        if (modId === 'streetfeed') authKey = `streetfeed_auth${instanceId ? '_' + instanceId : ''}`;
+        if (modId === 'agenda') authKey = `agenda_auth${instanceId ? '_' + instanceId : ''}`;
 
         if (authKey) {
-            // Siempre inyectar las credenciales temporales en el entorno local
-            // para que el cliente pueda entrar directamente la primera vez.
-            // Eliminamos la lógica de auto-ocultado para evitar conflictos
-            // cuando se prueban múltiples negocios en el mismo navegador.
             localStorage.setItem(authKey, JSON.stringify({ user: savedData.tempUser, pass: savedData.tempPass }));
         }
     }
 
     const hasAdmin = adminUrl && adminUrl.trim() !== '';
 
+    let finalClientUrl = clientUrl;
+    let finalAdminUrl = adminUrl;
+    if (instanceId) {
+        finalClientUrl = clientUrl.includes('?') ? `${clientUrl}&instanceId=${instanceId}` : `${clientUrl}?instanceId=${instanceId}`;
+        if (adminUrl) {
+            finalAdminUrl = adminUrl.includes('?') ? `${adminUrl}&instanceId=${instanceId}` : `${adminUrl}?instanceId=${instanceId}`;
+        }
+    }
+
+    const modalTitle = branchName && branchName !== 'Sede Principal'
+        ? `${modName} — ${branchName}`
+        : modName;
+
     Swal.fire({
-        title: modName,
+        title: modalTitle,
         html: `
             <style>
                 .launch-link-btn {
@@ -1229,20 +1704,20 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl) {
             </style>
             <div style="display:flex; flex-direction:column; gap:1rem; margin-top:1rem; text-align:left; overflow:hidden;">
 
-                <a href="${clientUrl}" target="_blank" class="launch-link-btn">
+                <a href="${finalClientUrl}" target="_blank" class="launch-link-btn">
                     <div class="btn-icon" style="background:rgba(99,102,241,0.12); color:var(--primary);"><i data-lucide="globe" style="width:20px;"></i></div>
                     <div class="btn-text">
                         Portal Público
-                        <small style="word-break: break-all;">assierra.com/${bizSlug}/${modSlug}</small>
+                        <small style="word-break: break-all;">assierra.com/${bizSlug}/${modSlug}${instanceId ? '?instanceId=' + instanceId : ''}</small>
                     </div>
                 </a>
 
                 ${hasAdmin ? `
-                <a href="${adminUrl}" target="_blank" class="launch-link-btn">
+                <a href="${finalAdminUrl}" target="_blank" class="launch-link-btn">
                     <div class="btn-icon" style="background:rgba(16,185,129,0.12); color:#10b981;"><i data-lucide="settings" style="width:20px;"></i></div>
                     <div class="btn-text">
                         Panel de Administración
-                        <small>Gestión y configuración</small>
+                        <small>Gestión y configuración${branchName ? ' (' + branchName + ')' : ''}</small>
                     </div>
                 </a>
 
@@ -1272,7 +1747,7 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl) {
                 <div style="text-align:center; padding: 1.25rem; background: rgba(16,185,129,0.05); border-radius:12px; border: 1px dashed rgba(16,185,129,0.3);">
                     <p style="margin:0; font-size:0.85rem; color:#10b981; font-weight:600;">&#10004; Acceso administrativo configurado</p>
                     <small style="color:var(--text-muted); display:block; margin-top:4px;">Usa las credenciales que definiste personalmente.</small>
-                    <button onclick="resetCredentialView('${storageKey}', '${modId}', '${modName}', '${clientUrl}', '${adminUrl}')" 
+                    <button onclick="resetCredentialView('${storageKey}', '${modId}', '${modName}', '${clientUrl}', '${adminUrl}', '${instanceId || ""}', '${branchName || ""}')" 
                             style="margin-top:0.75rem; background:none; border:none; color:var(--primary); font-size:0.75rem; cursor:pointer; text-decoration:underline; font-weight:500;">
                         ¿Olvidaste tu clave? Ver credenciales iniciales
                     </button>
@@ -1324,7 +1799,7 @@ window.markAsConfigured = function(storageKey) {
 };
 
 /** Restablece la vista de las credenciales originales */
-window.resetCredentialView = function(storageKey, modId, modName, clientUrl, adminUrl) {
+window.resetCredentialView = function(storageKey, modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null) {
     Swal.fire({
         title: '¿Restablecer vista?',
         text: 'Volveremos a mostrarte el usuario y la clave iniciales. Ten en cuenta que si ya las cambiaste en el panel de administración, estas no funcionarán.',
@@ -1341,73 +1816,165 @@ window.resetCredentialView = function(storageKey, modId, modName, clientUrl, adm
             data.isConfigured = false;
             localStorage.setItem(storageKey, JSON.stringify(data));
             // Re-abrir el launchpad para ver los cambios
-            showLaunchPad(modId, modName, clientUrl, adminUrl);
+            showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId, branchName);
         }
     });
 };
 
 function varColor(varName) {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#6366f1';
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }
 
+// ── Verifica si el perfil está incompleto antes de comprar ───────────────────
+function isProfileIncomplete(biz) {
+    if (!biz) return true;
+    return !biz.ownerName || !biz.phone || !biz.nit || !biz.address || !biz.city;
+}
+
+// ── Selección de tarjeta en modal de pago ────────────────────────────────────
+window.selectCardForPayment = function(element, index) {
+    document.querySelectorAll('.confirm-card-option').forEach(el => {
+        el.classList.remove('active');
+        el.style.borderColor = 'rgba(99,102,241,0.2)';
+        el.style.background = 'var(--bg-surface-light)';
+        const check = el.querySelector('.card-check-icon');
+        if (check) check.style.opacity = '0';
+    });
+    element.classList.add('active');
+    element.style.borderColor = 'rgba(139,92,246,0.7)';
+    element.style.background = 'rgba(99,102,241,0.08)';
+    const check = element.querySelector('.card-check-icon');
+    if (check) check.style.opacity = '1';
+    window.selectedPaymentCardIndex = index;
+};
+
+/** Navega a soporte y pre-selecciona el módulo en el formulario de ticket */
+window.openTicketWithModule = function(modName) {
+    if (typeof switchTab === 'function') {
+        switchTab('tab-support');
+        setTimeout(() => {
+            const btn = document.getElementById('btn-open-ticket');
+            if (btn) {
+                btn.click();
+                setTimeout(() => {
+                    const select = document.getElementById('ticket-module');
+                    if (select) {
+                        for (let option of select.options) {
+                            if (option.text.toLowerCase().includes(modName.toLowerCase()) ||
+                                option.value.toLowerCase().includes(modName.toLowerCase())) {
+                                select.value = option.value;
+                                break;
+                            }
+                        }
+                    }
+                }, 200);
+            }
+        }, 150);
+    }
+};
 
 function handlePurchase(modName, modPrice) {
-    const storageKey = `client_payment_method_${CLIENT_ID}`;
-    const savedCardStr = localStorage.getItem(storageKey);
-    
-    // --- FLUJO 1-CLICK BUY (Si hay tarjeta guardada) ---
-    if (savedCardStr) {
-        const savedCard = JSON.parse(savedCardStr);
+    // --- Verificar perfil completo antes de comprar ---
+    const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+    if (isProfileIncomplete(clientBiz)) {
+        Swal.fire({
+            title: 'Perfil Incompleto',
+            html: `<p style="color:var(--text-muted);">Antes de adquirir un módulo, completa tu perfil con <strong>Nombre del Propietario, Teléfono, NIT, Dirección y Ciudad</strong>.</p>`,
+            icon: 'warning',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)',
+            confirmButtonText: 'Completar Perfil',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--primary)'
+        }).then(r => { if (r.isConfirmed) document.getElementById('btn-open-profile')?.click(); });
+        return;
+    }
+
+    // --- FLUJO: WALLET con tarjetas guardadas ---
+    const walletCards = walletLoad();
+    if (walletCards.length > 0) {
+        window.selectedPaymentCardIndex = 0;
+        const BRAND_S = typeof BRAND_STYLE !== 'undefined' ? BRAND_STYLE : {};
+        const cardsListHTML = walletCards.map((card, i) => {
+            const bs = BRAND_S[card.brand] || {};
+            return `
+            <div class="confirm-card-option" onclick="window.selectCardForPayment(this,${i})"
+                style="display:flex; align-items:center; justify-content:space-between; gap:1rem;
+                    padding:0.85rem 1rem; border-radius:10px; cursor:pointer; transition:all 0.2s;
+                    border:1px solid ${ i === 0 ? 'rgba(139,92,246,0.7)' : 'rgba(99,102,241,0.2)' };
+                    background:${ i === 0 ? 'rgba(99,102,241,0.08)' : 'var(--bg-surface-light)' };">
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:rgba(99,102,241,0.12);display:flex;align-items:center;justify-content:center;font-size:1rem;">${bs.logo || '💳'}</div>
+                    <div>
+                        <div style="font-weight:700; font-size:0.92rem;">•••• •••• •••• ${card.last4}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${card.brand || ''} · ${card.holder || card.name || ''}</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${card.expiry}</span>
+                    <div class="card-check-icon" style="width:20px;height:20px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;opacity:${i===0?'1':'0'};transition:opacity 0.2s;">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
         Swal.fire({
             title: 'Confirmar Compra',
             html: `
+                <style>.confirm-card-option:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.15);}</style>
                 <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; margin-top:1rem;">
-                    <div style="background: rgba(99, 102, 241, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                        <p style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Módulo a adquirir</p>
+                    <div style="background:rgba(99,102,241,0.05); padding:1rem; border-radius:8px; border:1px solid rgba(99,102,241,0.2);">
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Módulo a adquirir</p>
                         <h4 style="margin:0.25rem 0; font-size:1.2rem; color:var(--text); font-weight:700;">${modName}</h4>
                         <p style="margin:0; font-size:1.1rem; font-weight:800; color:var(--primary);">${modPrice}</p>
                     </div>
-                    
-                    <div style="background: var(--bg-body); padding: 1rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display:flex; align-items:center; gap: 0.75rem;">
-                            <div style="background:rgba(16, 185, 129, 0.1); color:#10b981; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
-                                <i data-lucide="credit-card"></i>
-                            </div>
-                            <div>
-                                <p style="margin:0; font-weight:700; font-size:0.95rem;">•••• •••• •••• ${savedCard.last4}</p>
-                                <p style="margin:0; font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${savedCard.name}</p>
-                            </div>
+                    <div>
+                        <p style="margin:0 0 0.75rem; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">${walletCards.length > 1 ? 'Selecciona una tarjeta guardada:' : 'Tarjeta guardada:'}</p>
+                        <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:230px; overflow-y:auto; padding-right:2px;">
+                            ${cardsListHTML}
                         </div>
-                        <div style="font-size:0.75rem; color:var(--text-muted);">Exp: ${savedCard.expiry}</div>
                     </div>
-                    
                     <p style="font-size:0.75rem; color:var(--text-muted); margin:0; display:flex; align-items:center; gap:6px;">
                         <i data-lucide="zap" style="width:16px; color:#f59e0b;"></i>
-                        <span>Compra rápida en 1 clic.</span>
+                        <span>Compra rápida. Los datos están protegidos con SSL.</span>
                     </p>
                 </div>
             `,
             background: 'var(--bg-surface)',
             color: 'var(--text)',
-            width: '450px',
+            width: '480px',
             showCancelButton: true,
-            confirmButtonText: 'Pagar con esta tarjeta',
-            cancelButtonText: 'Cancelar',
+            showCloseButton: true,
+            confirmButtonText: 'Pagar y Activar',
+            cancelButtonText: 'Usar otra tarjeta',
             confirmButtonColor: '#10b981',
+            cancelButtonColor: 'rgba(99,102,241,0.15)',
             didRender: () => lucide.createIcons(),
             preConfirm: () => {
+                const idx = window.selectedPaymentCardIndex ?? 0;
+                const chosenCard = walletCards[idx];
+                if (!chosenCard) return Swal.showValidationMessage('Selecciona una tarjeta.');
                 Swal.showLoading();
-                return new Promise(resolve => setTimeout(() => resolve(true), 2000));
+                return new Promise(resolve => setTimeout(() => resolve(chosenCard), 2000));
             }
-        }).then((result) => {
+        }).then(result => {
             if (result.isConfirmed) {
                 activateModule(modName);
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                // Usuario quiere usar tarjeta diferente — ir a formulario
+                showPurchaseNewCardForm(modName, modPrice);
             }
         });
-        return; // Salir de la función si usamos 1-click
+        return;
     }
 
-    // --- FLUJO NORMAL (Si no hay tarjeta guardada) ---
+    // --- FLUJO NORMAL (Sin tarjetas en wallet) ---
+    showPurchaseNewCardForm(modName, modPrice);
+}
+
+function showPurchaseNewCardForm(modName, modPrice) {
     Swal.fire({
         title: 'Completar Adquisición',
         html: `
@@ -1472,23 +2039,18 @@ function handlePurchase(modName, modPrice) {
             if (!expiry || expiry.length < 5) return Swal.showValidationMessage('Fecha de vencimiento inválida.');
             if (!cvc || cvc.length < 3) return Swal.showValidationMessage('CVC inválido.');
             if (!name || name.length < 3) return Swal.showValidationMessage('Ingresa el nombre del titular.');
-            
             Swal.showLoading();
-            return new Promise(resolve => {
-                setTimeout(() => resolve({ num: numRaw, expiry, name }), 2500); // Retornamos los datos para guardarlos
-            });
+            return new Promise(resolve => setTimeout(() => resolve({ num: numRaw, expiry, name }), 2500));
         }
-    }).then((result) => {
+    }).then(result => {
         if (result.isConfirmed) {
-            // Guardar tarjeta automáticamente
             const cardData = result.value;
-            const paymentMethod = {
-                last4: cardData.num.slice(-4),
-                expiry: cardData.expiry,
-                name: cardData.name.toUpperCase()
-            };
-            localStorage.setItem(storageKey, JSON.stringify(paymentMethod));
-            
+            // Add to wallet automatically
+            const brand = detectCardBrand(cardData.num.replace(/\s/g,''));
+            const cards = walletLoad();
+            cards.push({ brand, last4: cardData.num.replace(/\s/g,'').slice(-4), expiry: cardData.expiry, holder: cardData.name.toUpperCase() });
+            walletSave(cards);
+            if (document.getElementById('card-wallet')) renderCardWallet();
             activateModule(modName);
         }
     });
@@ -1540,10 +2102,24 @@ function activateModule(modName) {
     });
 }
 
-async function handleRenewal(modId, modName, modPrice) {
-    const storageKey = `client_payment_method_${CLIENT_ID}`;
-    const savedCardStr = localStorage.getItem(storageKey);
-    
+async function handleRenewal(modId, modName, modPrice, branchName = null, instanceId = null) {
+    // --- Verificar perfil completo antes de renovar ---
+    const clientBizChk = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+    if (isProfileIncomplete(clientBizChk)) {
+        Swal.fire({
+            title: 'Perfil Incompleto',
+            text: 'Antes de realizar cualquier pago, completa tu perfil con Nombre del Propietario, Teléfono, NIT, Dirección y Ciudad.',
+            icon: 'warning',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)',
+            confirmButtonText: 'Completar Ahora',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--primary)'
+        }).then(r => { if (r.isConfirmed) document.getElementById('btn-open-profile')?.click(); });
+        return;
+    }
+
     // Función auxiliar para procesar el pago en el servidor
     const processRenewalOnServer = async (last4) => {
         let session;
@@ -1554,7 +2130,7 @@ async function handleRenewal(modId, modName, modPrice) {
             const res = await fetch('/api/client/module/renew', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
-                body: JSON.stringify({ moduleId: modId, moduleName: modName, last4 })
+                body: JSON.stringify({ moduleId: modId, moduleName: modName, last4, branchName, instanceId })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Error al renovar.');
@@ -1565,13 +2141,14 @@ async function handleRenewal(modId, modName, modPrice) {
                 clientBiz.modules = data.modules;
                 clientBiz.cancelledModules = data.cancelledModules;
                 if (data.moduleDates) clientBiz.moduleDates = data.moduleDates;
+                if (data.moduleInstances) clientBiz.moduleInstances = data.moduleInstances;
             }
             renderDashboard();
 
             Swal.fire({
                 icon: 'success',
                 title: '¡Renovación Exitosa!',
-                text: `El módulo ${modName} ha sido renovado por 30 días más.`,
+                text: `El módulo ${modName}${branchName ? ' (' + branchName + ')' : ''} ha sido renovado por 30 días más.`,
                 background: 'var(--bg-surface)',
                 color: 'var(--text)',
                 confirmButtonColor: '#10b981'
@@ -1581,51 +2158,81 @@ async function handleRenewal(modId, modName, modPrice) {
         }
     };
 
-    // --- FLUJO 1-CLICK BUY (Si hay tarjeta guardada) ---
-    if (savedCardStr) {
-        const savedCard = JSON.parse(savedCardStr);
-        const result = await Swal.fire({
+    // --- FLUJO: WALLET con tarjetas guardadas ---
+    const walletCards = walletLoad();
+    if (walletCards.length > 0) {
+        window.selectedPaymentCardIndex = 0;
+        const BRAND_S = typeof BRAND_STYLE !== 'undefined' ? BRAND_STYLE : {};
+        const cardsListHTML = walletCards.map((card, i) => {
+            const bs = BRAND_S[card.brand] || {};
+            return `
+            <div class="confirm-card-option" onclick="window.selectCardForPayment(this,${i})"
+                style="display:flex; align-items:center; justify-content:space-between; gap:1rem;
+                    padding:0.85rem 1rem; border-radius:10px; cursor:pointer; transition:all 0.2s;
+                    border:1px solid ${ i === 0 ? 'rgba(139,92,246,0.7)' : 'rgba(99,102,241,0.2)' };
+                    background:${ i === 0 ? 'rgba(99,102,241,0.08)' : 'var(--bg-surface-light)' };">
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:center;font-size:1rem;">${bs.logo || '💳'}</div>
+                    <div>
+                        <div style="font-weight:700; font-size:0.92rem;">•••• •••• •••• ${card.last4}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${card.brand || ''} · ${card.holder || card.name || ''}</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${card.expiry}</span>
+                    <div class="card-check-icon" style="width:20px;height:20px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;opacity:${i===0?'1':'0'};transition:opacity 0.2s;">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        const swalResult = await Swal.fire({
             title: 'Renovar Suscripción',
             html: `
+                <style>.confirm-card-option:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.15);}</style>
                 <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; margin-top:1rem;">
-                    <div style="background: rgba(99, 102, 241, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                        <p style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Módulo a Renovar</p>
-                        <h4 style="margin:0.25rem 0; font-size:1.2rem; color:var(--text); font-weight:700;">${modName}</h4>
-                        <p style="margin:0; font-size:1.1rem; font-weight:800; color:var(--primary);">${modPrice}</p>
+                    <div style="background:rgba(99,102,241,0.05); padding:1rem; border-radius:8px; border:1px solid rgba(99,102,241,0.2);">
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Módulo a Renovar</p>
+                        <h4 style="margin:0.25rem 0; font-size:1.15rem; color:var(--text); font-weight:700;">${modName}${branchName && branchName !== 'Sede Principal' ? ' <span style="font-size:0.8rem;opacity:0.7;">('+branchName+')</span>' : ''}</h4>
+                        <p style="margin:0; font-size:1.1rem; font-weight:800; color:#10b981;">${modPrice}</p>
                     </div>
-                    
-                    <div style="background: var(--bg-body); padding: 1rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display:flex; align-items:center; gap: 0.75rem;">
-                            <div style="background:rgba(16, 185, 129, 0.1); color:#10b981; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
-                                <i data-lucide="credit-card"></i>
-                            </div>
-                            <div>
-                                <p style="margin:0; font-weight:700; font-size:0.95rem;">•••• •••• •••• ${savedCard.last4}</p>
-                                <p style="margin:0; font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${savedCard.name}</p>
-                            </div>
+                    <div>
+                        <p style="margin:0 0 0.75rem; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">${walletCards.length > 1 ? 'Selecciona una tarjeta guardada:' : 'Tarjeta guardada:'}</p>
+                        <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:230px; overflow-y:auto; padding-right:2px;">
+                            ${cardsListHTML}
                         </div>
                     </div>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin:0; display:flex; align-items:center; gap:6px;">
+                        <i data-lucide="shield-check" style="width:16px; color:#10b981;"></i>
+                        <span>Datos protegidos con SSL 256-bit.</span>
+                    </p>
                 </div>
             `,
             background: 'var(--bg-surface)',
             color: 'var(--text)',
+            width: '480px',
             showCancelButton: true,
+            showCloseButton: true,
             confirmButtonText: 'Pagar y Renovar',
             cancelButtonText: 'Usar otra tarjeta',
             confirmButtonColor: '#10b981',
-            cancelButtonColor: 'transparent',
+            cancelButtonColor: 'rgba(99,102,241,0.15)',
             didRender: () => lucide.createIcons(),
             preConfirm: () => {
+                const idx = window.selectedPaymentCardIndex ?? 0;
+                const chosenCard = walletCards[idx];
+                if (!chosenCard) return Swal.showValidationMessage('Selecciona una tarjeta.');
                 Swal.showLoading();
-                return new Promise(resolve => setTimeout(() => resolve(true), 2500));
+                return new Promise(resolve => setTimeout(() => resolve(chosenCard), 2500));
             }
         });
 
-        if (result.isConfirmed) {
-            await processRenewalOnServer(savedCard.last4);
+        if (swalResult.isConfirmed) {
+            await processRenewalOnServer(swalResult.value.last4);
             return;
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-            // El usuario quiere usar otra tarjeta, sigue al flujo de formulario nuevo
+        } else if (swalResult.dismiss === Swal.DismissReason.cancel) {
+            // Usuario quiere usar otra tarjeta — caer al formulario nuevo
         } else {
             return; // Cerró el modal
         }
@@ -1643,7 +2250,7 @@ async function handleRenewal(modId, modName, modPrice) {
             <div style="background: rgba(99, 102, 241, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2); text-align:left; margin-bottom:1.5rem;">
                 <p style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Total a Pagar</p>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem;">
-                    <h4 style="margin:0; font-size:1.2rem; color:var(--text); font-weight:700;">${modName}</h4>
+                    <h4 style="margin:0; font-size:1.15rem; color:var(--text); font-weight:700;">${modName}</h4>
                     <p style="margin:0; font-size:1.2rem; font-weight:800; color:var(--primary);">${modPrice}</p>
                 </div>
             </div>
@@ -1685,7 +2292,6 @@ async function handleRenewal(modId, modName, modPrice) {
             if (!expiry || expiry.length < 5) return Swal.showValidationMessage('Fecha de vencimiento inválida.');
             if (!cvc || cvc.length < 3) return Swal.showValidationMessage('CVC inválido.');
             if (!name || name.length < 3) return Swal.showValidationMessage('Ingresa el nombre del titular.');
-            
             Swal.showLoading();
             return new Promise(resolve => setTimeout(() => resolve({ num: numRaw, expiry, name }), 2500));
         }
@@ -1693,13 +2299,14 @@ async function handleRenewal(modId, modName, modPrice) {
 
     if (result.isConfirmed) {
         const cardData = result.value;
-        const paymentMethod = {
-            last4: cardData.num.replace(/\s/g, '').slice(-4),
-            expiry: cardData.expiry,
-            name: cardData.name.toUpperCase()
-        };
-        localStorage.setItem(storageKey, JSON.stringify(paymentMethod));
-        await processRenewalOnServer(paymentMethod.last4);
+        const brand = detectCardBrand(cardData.num.replace(/\s/g,''));
+        const newCard = { brand, last4: cardData.num.replace(/\s/g,'').slice(-4), expiry: cardData.expiry, holder: cardData.name.toUpperCase() };
+        // Add new card to wallet for future use
+        const cards = walletLoad();
+        cards.push(newCard);
+        walletSave(cards);
+        if (document.getElementById('card-wallet')) renderCardWallet();
+        await processRenewalOnServer(newCard.last4);
     }
 }
 
@@ -2019,10 +2626,21 @@ window.onCardInput = function(inputEl, iconContainerId) {
     }
 };
 
-window.cancelModule = async function(modId, modName) {
+window.cancelModule = async function(modId, modName, instanceId = null, branchName = null) {
     // Buscar negocio y verificar que haya fecha oficial de ciclo registrada por el admin
     const bizForCancel = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
-    const rawDate = bizForCancel?.moduleDates?.[modId];
+    
+    // Obtener la instancia específica
+    let targetInstance = null;
+    if (bizForCancel && bizForCancel.moduleInstances) {
+        if (instanceId) {
+            targetInstance = bizForCancel.moduleInstances.find(inst => inst.instanceId === instanceId);
+        } else {
+            targetInstance = bizForCancel.moduleInstances.find(inst => String(inst.moduleId) === String(modId) && inst.status === 'active');
+        }
+    }
+
+    const rawDate = targetInstance ? targetInstance.renewalDate : bizForCancel?.moduleDates?.[modId];
 
     // Si no hay fecha oficial, bloquear — no se puede suspender sin datos de ciclo
     if (!rawDate) {
@@ -2047,11 +2665,15 @@ window.cancelModule = async function(modId, modName) {
         ? `<strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''} y ${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}</strong>`
         : `<strong style="color:#ef4444;">${hoursLeft} hora${hoursLeft !== 1 ? 's' : ''}</strong>`;
 
+    const displayTitle = branchName && branchName !== 'Sede Principal'
+        ? `¿Suspender "${modName}" (${branchName})?`
+        : `¿Suspender suscripción de "${modName}"?`;
+
     const result = await Swal.fire({
-        title: '¿Suspender suscripción?',
+        title: displayTitle,
         html: `
             <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:1rem;">
-                Tu acceso a <strong>${modName}</strong> continuará durante ${timeLeftText} restantes de tu ciclo (hasta el ${formattedDate}).
+                Tu acceso a esta sede continuará durante ${timeLeftText} restantes de tu ciclo (hasta el ${formattedDate}).
             </p>
             <p style="color:var(--text-muted); font-size:0.85rem;">Puedes reactivar tu suscripción en cualquier momento <em>antes de que expire</em>. Una vez vencido, deberás contactar al administrador.</p>
         `,
@@ -2059,7 +2681,7 @@ window.cancelModule = async function(modId, modName) {
         showCancelButton: true,
         confirmButtonColor: '#f59e0b',
         cancelButtonColor: 'transparent',
-        confirmButtonText: 'Sí, suspender suscripción',
+        confirmButtonText: 'Sí, suspender',
         cancelButtonText: 'Mantener activo',
         background: 'var(--bg-surface)',
         color: 'var(--text)'
@@ -2075,7 +2697,7 @@ window.cancelModule = async function(modId, modName) {
         const res = await fetch('/api/client/module/cancel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
-            body: JSON.stringify({ moduleId: modId, moduleName: modName })
+            body: JSON.stringify({ moduleId: modId, moduleName: modName, instanceId: instanceId })
         });
         const data = await res.json();
         if (!res.ok) { Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo suspender.', background: 'var(--bg-surface)', color: 'var(--text)' }); return; }
@@ -2085,6 +2707,9 @@ window.cancelModule = async function(modId, modName) {
         if (clientBiz) {
             clientBiz.modules = data.modules;
             clientBiz.cancelledModules = data.cancelledModules;
+            if (data.moduleInstances) {
+                clientBiz.moduleInstances = data.moduleInstances;
+            }
         }
 
         renderDashboard();
@@ -2107,7 +2732,7 @@ window.cancelModule = async function(modId, modName) {
     }
 };
 
-window.reactivateModule = async function(modId, modName) {
+window.reactivateModule = async function(modId, modName, instanceId = null) {
     const result = await Swal.fire({
         title: '¿Reactivar suscripción?',
         html: `<p style="color:var(--text-muted); font-size:0.95rem;">Tu suscripción a <strong>${modName}</strong> volverá a estar activa y se renovará normalmente.</p>`,
@@ -2131,7 +2756,7 @@ window.reactivateModule = async function(modId, modName) {
         const res = await fetch('/api/client/module/reactivate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
-            body: JSON.stringify({ moduleId: modId })
+            body: JSON.stringify({ moduleId: modId, instanceId: instanceId })
         });
         const data = await res.json();
         if (!res.ok) {
@@ -2156,6 +2781,9 @@ window.reactivateModule = async function(modId, modName) {
             // Sincronizar fecha de renovación renovada del servidor
             if (data.moduleDates) {
                 clientBiz.moduleDates = data.moduleDates;
+            }
+            if (data.moduleInstances) {
+                clientBiz.moduleInstances = data.moduleInstances;
             }
         }
 

@@ -21,6 +21,28 @@
                 }
                 document.getElementsByTagName('head')[0].appendChild(link);
             } catch (e) {}
+
+            // Cargar de manera instantánea avatar e iniciales del cliente desde caché para prevenir flash
+            try {
+                var cachedAvatar = localStorage.getItem('as_client_avatar');
+                var cachedBizName = localStorage.getItem('as_client_business_name');
+                if (cachedAvatar || cachedBizName) {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var nameDisplay = document.getElementById('client-name-display');
+                        if (nameDisplay && cachedBizName) nameDisplay.textContent = cachedBizName;
+                        
+                        var avatar = document.getElementById('client-avatar');
+                        var avatarWrap = document.getElementById('client-avatar-wrap');
+                        if (avatarWrap) {
+                            if (cachedAvatar) {
+                                avatarWrap.innerHTML = '<img src="' + cachedAvatar + '" style="width:100%;height:100%;object-fit:cover;">';
+                            } else if (avatar && cachedBizName) {
+                                avatar.textContent = cachedBizName.substring(0, 2).toUpperCase();
+                            }
+                        }
+                    });
+                }
+            } catch (e) {}
         })();
     </script>
     <meta charset="UTF-8">
@@ -184,7 +206,7 @@
                 <div class="brand-icon" id="default-logo-icon">
                     <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="url(#grad2)"/><defs><linearGradient id="grad2" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>
                 </div>
-                <div class="brand-text">AS <span>Sierra</span></div>
+                <div class="brand-text" id="brand-text-display" style="opacity: 0; transition: opacity 0.2s;">AS <span>Sierra</span></div>
             </div>
             <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Colapsar menú">
                 <i data-lucide="panel-left-close"></i>
@@ -350,7 +372,7 @@
                             <i data-lucide="trending-up" style="color: var(--primary);"></i> Consumo y Proyección Mensual
                         </h3>
                         <div style="height: 220px; position: relative; width: 100%;">
-                            <canvas id="clientBillingChart"></canvas>
+                            <canvas id="clientBillingChart" style="width:100%;height:100%;"></canvas>
                         </div>
                     </div>
                     
@@ -360,7 +382,7 @@
                             <i data-lucide="pie-chart" style="color: var(--warning);"></i> Distribución de Módulos por Sede
                         </h3>
                         <div style="height: 220px; position: relative; width: 100%;">
-                            <canvas id="clientUsageChart"></canvas>
+                            <canvas id="clientUsageChart" style="width:100%;height:100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -418,17 +440,8 @@
                     </div>
                 </div>
  
-                <div class="carousel-container-outer" style="margin-top: 1rem;">
-                    <button class="carousel-nav-btn prev-btn hidden" onclick="scrollCarousel(this, -1)">
-                        <i data-lucide="chevron-left"></i>
-                    </button>
-                    <div class="client-grid carousel-scroll-container" id="client-marketplace-grid">
-                        <!-- Los módulos disponibles se cargarán por JS -->
-                        <p style="color:var(--text-muted);">Cargando mercado de aplicaciones...</p>
-                    </div>
-                    <button class="carousel-nav-btn next-btn" onclick="scrollCarousel(this, 1)">
-                        <i data-lucide="chevron-right"></i>
-                    </button>
+                <div id="client-marketplace-sections-container" style="margin-top: 1rem;">
+                    <p style="color:var(--text-muted); padding: 2rem; text-align: center;">Cargando mercado de aplicaciones...</p>
                 </div>
             </section>
 
@@ -572,10 +585,10 @@
                             <i data-lucide="user" style="width:13px; height:13px; vertical-align:middle; margin-right:4px;"></i>
                             Tu correo: <strong id="support-client-email" style="color:var(--primary); font-weight:700;">—</strong>
                         </p>
-                        <a id="support-email-link" href="mailto:soporte@assierrasystems.com?subject=Solicitud%20de%20Soporte" class="btn-ghost"
-                           style="justify-content:center; text-decoration:none;">
-                            <i data-lucide="send"></i> Enviar Correo
-                        </a>
+                        <button id="copy-support-email-btn" onclick="window.copySupportEmail()" class="btn-ghost"
+                           style="justify-content:center; width:100%; gap:0.5rem;">
+                            <i data-lucide="copy"></i> Copiar Correo
+                        </button>
                     </div>
                     <!-- Solicitud / Formulario -->
                     <div class="biz-card">
@@ -731,8 +744,8 @@
     }
     document.addEventListener('DOMContentLoaded', loadDynamicConfig);
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="js/client-app.js?v=20260527.18"></script>
+<script src="js/chart.min.js"></script>
+<script src="js/client-app.js?v=20260603.3"></script>
 <script src="js/consent.js?v=20260527.18"></script>
 </body>
 </html>

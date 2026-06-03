@@ -568,6 +568,26 @@ function updateUIFromConfig() {
             if (favicon) favicon.href = c.themeLogo;
         }
 
+        const hasName = c.restaurantName && c.restaurantName.trim().length > 0;
+
+        if (elId === 'header-logo') {
+            if (!hasName) {
+                logoEl.style.display = 'none';
+                logoEl.innerHTML = '';
+                return;
+            } else {
+                logoEl.style.display = '';
+            }
+        }
+
+        if (!hasName) {
+            if (elId === 'admin-sidebar-logo' || elId === 'admin-login-logo') {
+                logoEl.innerHTML = `<img src="${c.themeLogo || 'assets/logo-default.png'}" alt="Logo" style="height:45px;max-width:100%;object-fit:contain;display:block;margin:0 auto;" />`;
+                logoEl.style.opacity = '1';
+                return;
+            }
+        }
+
         const name = c.restaurantName || 'StreetFeed';
         const parts = name.trim().split(/\s+/);
         let first, last;
@@ -651,24 +671,29 @@ function updateUIFromConfig() {
     // Socials & Footer Identity
     const socials = document.getElementById('footer-socials');
     if (socials) {
-        const rawName = (c.restaurantName || 'STREET FEED').trim();
-        const fParts = rawName.split(/\s+/);
-        let firstPart, lastPart;
-        if (fParts.length === 1) {
-            const word = fParts[0];
-            const splitAt = Math.max(word.length - 4, Math.ceil(word.length * 0.55));
-            firstPart = word.slice(0, splitAt);
-            lastPart = word.slice(splitAt);
-        } else {
-            lastPart = fParts.pop();
-            firstPart = fParts.join(' ');
+        const hasName = c.restaurantName && c.restaurantName.trim().length > 0;
+        let footerLogoHtml = '';
+        if (hasName) {
+            const rawName = c.restaurantName.trim();
+            const fParts = rawName.split(/\s+/);
+            let firstPart, lastPart;
+            if (fParts.length === 1) {
+                const word = fParts[0];
+                const splitAt = Math.max(word.length - 4, Math.ceil(word.length * 0.55));
+                firstPart = word.slice(0, splitAt);
+                lastPart = word.slice(splitAt);
+            } else {
+                lastPart = fParts.pop();
+                firstPart = fParts.join(' ');
+            }
+            footerLogoHtml = `<button class="footer-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver al inicio">${firstPart}<span>${lastPart}</span></button>`;
+        } else if (c.themeLogo) {
+            footerLogoHtml = `<button class="footer-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver al inicio" style="background:transparent;border:none;padding:0;outline:none;"><img src="${c.themeLogo}" alt="Logo" style="height:50px;max-width:150px;object-fit:contain;display:block;margin:0 auto;" /></button>`;
         }
 
         socials.innerHTML = `
             <div class="footer-identity">
-                <button class="footer-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver al inicio">
-                    ${firstPart}<span>${lastPart}</span>
-                </button>
+                ${footerLogoHtml}
                 <p class="footer-tagline">${c.tagline || 'Fast Food Reimagined'}</p>
                 <div class="footer-social-links">
                     <a href="${c.instagram || '#'}" target="_blank" class="social-icon" title="Instagram">
@@ -679,7 +704,7 @@ function updateUIFromConfig() {
                     </a>
                 </div>
                 <div class="footer-divider"></div>
-                <p class="footer-copyright">&copy; ${new Date().getFullYear()} ${c.restaurantName}. Todos los derechos reservados.</p>
+                <p class="footer-copyright">&copy; ${new Date().getFullYear()} ${c.restaurantName || ''}. Todos los derechos reservados.</p>
             </div>
         `;
     }

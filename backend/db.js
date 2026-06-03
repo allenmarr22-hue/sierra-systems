@@ -156,8 +156,13 @@ async function initializeDatabase() {
                 type VARCHAR(100) NOT NULL,
                 status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
                 city VARCHAR(100) NULL,
+                nit VARCHAR(100) NULL,
+                phone VARCHAR(100) NULL,
+                address VARCHAR(255) NULL,
                 client_email VARCHAR(150) NOT NULL UNIQUE,
                 client_pass VARCHAR(255) NOT NULL,
+                owner_name VARCHAR(150) NULL,
+                registration_source VARCHAR(100) NULL DEFAULT 'admin',
                 avatar_url VARCHAR(255) NULL,
                 gateway_token VARCHAR(255) NULL,
                 last_four VARCHAR(4) NULL,
@@ -171,6 +176,51 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Migración dinámica segura: agregar columnas si no existen en la tabla businesses
+        const [configColumns] = await pool.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'system_config'
+        `);
+        const existingConfigColumns = configColumns.map(c => (c.COLUMN_NAME || c.column_name || '').toLowerCase());
+        
+        if (!existingConfigColumns.includes('support_email')) {
+            await pool.query('ALTER TABLE system_config ADD COLUMN support_email VARCHAR(150) NULL DEFAULT "soporte@assierrasystems.com"');
+            console.log('[DB] 🛠️ Column "support_email" added to "system_config" table.');
+        }
+        if (!existingConfigColumns.includes('support_phone')) {
+            await pool.query('ALTER TABLE system_config ADD COLUMN support_phone VARCHAR(100) NULL DEFAULT "573001234567"');
+            console.log('[DB] 🛠️ Column "support_phone" added to "system_config" table.');
+        }
+
+        const [bizColumns] = await pool.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'businesses'
+        `);
+        const existingBizColumns = bizColumns.map(c => (c.COLUMN_NAME || c.column_name || '').toLowerCase());
+        
+        if (!existingBizColumns.includes('nit')) {
+            await pool.query('ALTER TABLE businesses ADD COLUMN nit VARCHAR(100) NULL');
+            console.log('[DB] 🛠️ Column "nit" added to "businesses" table.');
+        }
+        if (!existingBizColumns.includes('phone')) {
+            await pool.query('ALTER TABLE businesses ADD COLUMN phone VARCHAR(100) NULL');
+            console.log('[DB] 🛠️ Column "phone" added to "businesses" table.');
+        }
+        if (!existingBizColumns.includes('address')) {
+            await pool.query('ALTER TABLE businesses ADD COLUMN address VARCHAR(255) NULL');
+            console.log('[DB] 🛠️ Column "address" added to "businesses" table.');
+        }
+        if (!existingBizColumns.includes('owner_name')) {
+            await pool.query('ALTER TABLE businesses ADD COLUMN owner_name VARCHAR(150) NULL');
+            console.log('[DB] 🛠️ Column "owner_name" added to "businesses" table.');
+        }
+        if (!existingBizColumns.includes('registration_source')) {
+            await pool.query('ALTER TABLE businesses ADD COLUMN registration_source VARCHAR(100) NULL DEFAULT "admin"');
+            console.log('[DB] 🛠️ Column "registration_source" added to "businesses" table.');
+        }
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS business_modules (
@@ -295,13 +345,17 @@ async function getCompleteState() {
             adminUser: configRows[0].admin_user,
             adminPass: configRows[0].admin_pass,
             adminName: configRows[0].admin_name,
-            logo: configRows[0].logo
+            logo: configRows[0].logo,
+            supportEmail: configRows[0].support_email || 'soporte@assierrasystems.com',
+            supportPhone: configRows[0].support_phone || '573001234567'
         } : {
             companyName: "AS Sierra Systems",
             adminUser: "admin",
             adminPass: "123456",
             adminName: "Allenmar",
-            logo: null
+            logo: null,
+            supportEmail: 'soporte@assierrasystems.com',
+            supportPhone: '573001234567'
         };
 
         // 3.2. Consultar Módulos
@@ -413,6 +467,11 @@ async function getCompleteState() {
                 modules: activeModules,
                 moduleInstances: moduleInstances,
                 city: b.city,
+                nit: b.nit,
+                phone: b.phone,
+                address: b.address,
+                ownerName: b.owner_name,
+                registrationSource: b.registration_source || 'admin',
                 clientEmail: b.client_email,
                 clientPass: b.client_pass,
                 avatarUrl: b.avatar_url,
@@ -470,20 +529,24 @@ async function saveCompleteState(db) {
         // 1. Sincronizar Configuración Global
         if (db.config) {
             await connection.query(`
-                INSERT INTO system_config (id, company_name, admin_user, admin_pass, admin_name, logo)
-                VALUES (1, ?, ?, ?, ?, ?)
+                INSERT INTO system_config (id, company_name, admin_user, admin_pass, admin_name, logo, support_email, support_phone)
+                VALUES (1, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                     company_name = VALUES(company_name),
                     admin_user = VALUES(admin_user),
                     admin_pass = VALUES(admin_pass),
                     admin_name = VALUES(admin_name),
-                    logo = VALUES(logo)
+                    logo = VALUES(logo),
+                    support_email = VALUES(support_email),
+                    support_phone = VALUES(support_phone)
             `, [
                 db.config.companyName || 'AS Sierra Systems',
                 db.config.adminUser || 'admin',
                 db.config.adminPass || '123456',
                 db.config.adminName || 'Allenmar',
-                db.config.logo || null
+                db.config.logo || null,
+                db.config.supportEmail || 'soporte@assierrasystems.com',
+                db.config.supportPhone || '573001234567'
             ]);
         }
 
@@ -583,17 +646,22 @@ async function saveCompleteState(db) {
 
                 await connection.query(`
                     INSERT INTO businesses (
-                        id, name, type, status, city, client_email, client_pass, avatar_url,
+                        id, name, type, status, city, nit, phone, address, client_email, client_pass, owner_name, registration_source, avatar_url,
                         gateway_token, last_four, card_brand, subscription_status, next_billing_date,
                         last_payment_date, last_payment_amount, last_failed_attempt, last_transaction_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE 
                         name = VALUES(name),
                         type = VALUES(type),
                         status = VALUES(status),
                         city = VALUES(city),
+                        nit = VALUES(nit),
+                        phone = VALUES(phone),
+                        address = VALUES(address),
                         client_email = VALUES(client_email),
                         client_pass = VALUES(client_pass),
+                        owner_name = VALUES(owner_name),
+                        registration_source = VALUES(registration_source),
                         avatar_url = VALUES(avatar_url),
                         gateway_token = VALUES(gateway_token),
                         last_four = VALUES(last_four),
@@ -605,7 +673,7 @@ async function saveCompleteState(db) {
                         last_failed_attempt = VALUES(last_failed_attempt),
                         last_transaction_id = VALUES(last_transaction_id)
                 `, [
-                    biz.id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.clientEmail, biz.clientPass, biz.avatarUrl || null,
+                    biz.id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.nit || null, biz.phone || null, biz.address || null, biz.clientEmail, biz.clientPass, biz.ownerName || null, biz.registrationSource || 'admin', biz.avatarUrl || null,
                     billing.gateway_token || null, billing.last_four || null, billing.card_brand || null, billing.subscription_status || 'pending',
                     nextBillingDate, billing.last_payment_date || null, lastPaymentAmount, billing.last_failed_attempt || null, billing.last_transaction_id || null
                 ]);
@@ -716,7 +784,9 @@ async function updateSystemConfig(fields) {
         adminUser: 'admin_user',
         adminPass: 'admin_pass',
         adminName: 'admin_name',
-        logo: 'logo'
+        logo: 'logo',
+        supportEmail: 'support_email',
+        supportPhone: 'support_phone'
     };
 
     const sets = [];
@@ -887,12 +957,12 @@ async function createBusiness(biz) {
     
     await pool.query(`
         INSERT INTO businesses (
-            id, name, type, status, city, client_email, client_pass, avatar_url,
+            id, name, type, status, city, nit, phone, address, client_email, client_pass, owner_name, registration_source, avatar_url,
             gateway_token, last_four, card_brand, subscription_status, next_billing_date,
             last_payment_date, last_payment_amount, last_failed_attempt, last_transaction_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-        id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.clientEmail, hashPassword(biz.clientPass), biz.avatarUrl || null,
+        id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.nit || null, biz.phone || null, biz.address || null, biz.clientEmail, hashPassword(biz.clientPass), biz.ownerName || null, biz.registrationSource || 'admin', biz.avatarUrl || null,
         billing.gateway_token || null, billing.last_four || null, billing.card_brand || null, billing.subscription_status || 'pending',
         billing.next_billing_date || null, billing.last_payment_date || null, billing.last_payment_amount || 0.00,
         billing.last_failed_attempt || null, billing.last_transaction_id || null
@@ -916,6 +986,11 @@ async function updateBusiness(id, fields) {
         type: 'type',
         status: 'status',
         city: 'city',
+        nit: 'nit',
+        phone: 'phone',
+        address: 'address',
+        ownerName: 'owner_name',
+        registrationSource: 'registration_source',
         clientEmail: 'client_email',
         clientPass: 'client_pass',
         avatarUrl: 'avatar_url'

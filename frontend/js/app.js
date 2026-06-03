@@ -344,7 +344,7 @@ function requestSecurityCheck(callback) {
 
 async function loadData() {
     try {
-        const res = await fetch('/api/data');
+        const res = await adminFetch('/api/data');
         const data = await res.json();
         appState.businesses = data.businesses || [];
         appState.modules = data.modules || [];
@@ -356,6 +356,25 @@ async function loadData() {
         if (appState.config.adminUser) {
             const input = document.getElementById('settings-admin-user');
             if (input) input.value = appState.config.adminUser;
+        }
+        if (appState.config.companyName) {
+            const input = document.getElementById('settings-company-name');
+            if (input) input.value = appState.config.companyName;
+        }
+        if (appState.config.supportEmail) {
+            const input = document.getElementById('settings-support-email');
+            if (input) input.value = appState.config.supportEmail;
+        }
+        if (appState.config.supportPhone) {
+            const input = document.getElementById('settings-support-phone');
+            if (input) input.value = appState.config.supportPhone;
+        }
+        if (appState.config.logo) {
+            const logoPreview = document.getElementById('logo-preview-container');
+            if (logoPreview) {
+                logoPreview.innerHTML = `<img src="${appState.config.logo}" style="width:100%; height:100%; object-fit:contain;">`;
+            }
+            appState.customLogo = appState.config.logo;
         }
 
         // Preload tickets if admin token is present to feed the charts
@@ -940,6 +959,29 @@ function setupEventListeners() {
         }
     });
 
+    const modImageInput = document.getElementById('mod-image-input');
+    modImageInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const originalBase64 = event.target.result;
+                const compressedBase64 = await resizeImageBase64(originalBase64, 1200, 680);
+                document.getElementById('mod-image-base64').value = compressedBase64;
+                const preview = document.getElementById('mod-image-preview');
+                if (preview) {
+                    preview.src = compressedBase64;
+                    preview.style.display = 'block';
+                }
+                const placeholder = document.getElementById('mod-image-placeholder');
+                if (placeholder) placeholder.style.display = 'none';
+                const removeBtn = document.getElementById('mod-image-remove');
+                if (removeBtn) removeBtn.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
     // Internal Config Tabs (Fixed bug: use config-nav-btn instead of nav-btn)
     document.querySelectorAll('.config-nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -958,7 +1000,15 @@ function setupEventListeners() {
         const adminPass = document.getElementById('settings-admin-pass').value;
         const currentPass = document.getElementById('settings-current-pass').value;
         
-        if ((adminUser || adminPass) && !currentPass) {
+        const companyName = document.getElementById('settings-company-name').value;
+        const supportEmail = document.getElementById('settings-support-email').value;
+        const supportPhone = document.getElementById('settings-support-phone').value;
+        
+        const currentAdminUser = appState.config?.adminUser || 'admin';
+        const isChangingUser = adminUser && adminUser !== currentAdminUser;
+        const isChangingPass = !!adminPass;
+
+        if ((isChangingUser || isChangingPass) && !currentPass) {
             return showToast('Debes ingresar tu contraseña actual para cambiar credenciales', 'error');
         }
 
@@ -968,6 +1018,9 @@ function setupEventListeners() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     logo: appState.customLogo || null,
+                    companyName: companyName || null,
+                    supportEmail: supportEmail || null,
+                    supportPhone: supportPhone || null,
                     adminUser: adminUser || null,
                     adminPass: adminPass || null,
                     currentPass: currentPass || null
@@ -980,7 +1033,7 @@ function setupEventListeners() {
                 if (appState.customLogo) updateAllLogos(appState.customLogo);
                 
                 // Si cambió usuario o clave, cerrar sesión
-                if (adminUser || adminPass) {
+                if (isChangingUser || isChangingPass) {
                     showToast('Credenciales cambiadas. Cerrando sesión...', 'info');
                     setTimeout(() => {
                         localStorage.removeItem('as_auth');
@@ -989,6 +1042,9 @@ function setupEventListeners() {
                 } else {
                     document.getElementById('settings-current-pass').value = '';
                     document.getElementById('settings-admin-pass').value = '';
+                    if (companyName) appState.config.companyName = companyName;
+                    if (supportEmail) appState.config.supportEmail = supportEmail;
+                    if (supportPhone) appState.config.supportPhone = supportPhone;
                 }
             } else {
                 showToast(data.error || 'Error al guardar', 'error');
@@ -1017,7 +1073,11 @@ function setupEventListeners() {
             e.preventDefault();
             
             const name = document.getElementById('biz-name').value;
+            const phone = document.getElementById('biz-phone')?.value || '';
+            const ownerName = document.getElementById('biz-owner-name')?.value || '';
+            const nit = document.getElementById('biz-nit')?.value || '';
             const city = document.getElementById('biz-city').value || 'Sin ciudad';
+            const address = document.getElementById('biz-address')?.value || '';
             const isActive = document.getElementById('biz-active').checked;
             
             const selectedTypeEl = document.querySelector('.biz-type-option.selected');
@@ -1044,7 +1104,7 @@ function setupEventListeners() {
 
             const bizData = {
                 id: id ? Number(id) : Date.now(),
-                name, type, city,
+                name, type, city, phone, ownerName, nit, address,
                 status: isActive ? 'active' : 'inactive',
                 modules: selectedModules,
                 moduleDates: moduleDates
@@ -1445,28 +1505,55 @@ function filterBusinesses(filterType, searchQuery = '') {
         <div class="biz-list-item">
             <div class="biz-info-main">
                 <div class="biz-name">${biz.name}</div>
-                <div class="biz-type">${biz.type}</div>
+                <span class="biz-type" style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-top:0.2rem;">${biz.type}</span>
             </div>
-            <div class="biz-info-city">
+            <div class="biz-info-client" style="flex:2; min-width:160px;">
+                <div class="client-name" style="font-weight:600; font-size:0.95rem; color:var(--text-main); word-break:break-all;">${biz.ownerName || '-'}</div>
+            </div>
+            <div class="biz-info-phone" style="flex:1.5; min-width:140px; display:flex; align-items:center; gap:0.5rem; font-size:0.95rem;">
+                ${biz.phone ? `
+                    <a href="https://wa.me/${(() => {
+                        let clean = String(biz.phone).replace(/[^0-9]/g, '');
+                        if (clean.length === 10 && clean.startsWith('3')) clean = '57' + clean;
+                        return clean;
+                    })()}" target="_blank" style="color:#25d366; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; transition:color 0.2s;" onmouseover="this.style.color='#128c7e'" onmouseout="this.style.color='#25d366'" title="Chatear por WhatsApp">
+                        <i data-lucide="phone" style="width:14px; height:14px; stroke-width:2.5px;"></i> ${biz.phone}
+                    </a>
+                ` : '<span style="color:var(--text-muted);">-</span>'}
+            </div>
+            <div class="biz-info-city" style="flex:1.2; min-width:110px; display:flex; align-items:center; gap:0.5rem; font-size:0.875rem; color:var(--text-muted);">
                 <i data-lucide="map-pin"></i> ${biz.city}
             </div>
             <div class="biz-info-modules">
-                ${(biz.modules || []).map(mod => {
-                    const m = appState.modules.find(x => String(x.id) === String(mod));
-                    return m ? `<span class="module-chip"><i data-lucide="${m.icon}"></i> ${m.name}</span>` : '';
-                }).join('')}
-                ${(biz.cancelledModules || []).map(cm => {
-                    const m = appState.modules.find(x => String(x.id) === String(cm.id));
-                    if (!m) return '';
-                    const accessUntilMs = new Date(cm.accessUntil).getTime();
-                    const daysLeft = Math.max(0, Math.ceil((accessUntilMs - Date.now()) / (1000 * 60 * 60 * 24)));
-                    return `<span class="module-chip" style="background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.25);" title="Suspendido · ${daysLeft} días de acceso restantes"><i data-lucide="${m.icon}"></i> ${m.name} <span style="font-size:0.65rem; opacity:0.8;">(${daysLeft}d)</span></span>`;
-                }).join('')}
+                ${(() => {
+                    const activeInsts = (biz.moduleInstances && biz.moduleInstances.length > 0)
+                        ? biz.moduleInstances.filter(inst => inst.status === 'active')
+                        : (biz.modules || []).map((mid, idx) => ({
+                            moduleId: mid,
+                            status: 'active'
+                          }));
+                    const activeCount = activeInsts.length;
+                    return activeCount > 0 
+                        ? `<span class="module-chip" style="font-weight:700;"><i data-lucide="package"></i> ${activeCount} Módulo${activeCount !== 1 ? 's' : ''}</span>` 
+                        : '<span style="color:var(--text-muted);font-size:0.75rem;">Sin módulos</span>';
+                })()}
+                ${(() => {
+                    const cancelledInsts = (biz.moduleInstances && biz.moduleInstances.length > 0)
+                        ? biz.moduleInstances.filter(inst => inst.status === 'cancelled')
+                        : (biz.cancelledModules || []).map(cm => ({
+                            moduleId: cm.id || cm.moduleId,
+                            status: 'cancelled'
+                          }));
+                    const cancelledCount = cancelledInsts.length;
+                    return cancelledCount > 0 
+                        ? `<span class="module-chip" style="background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.25); font-weight:700;"><i data-lucide="package"></i> ${cancelledCount} Suspendido${cancelledCount !== 1 ? 's' : ''}</span>` 
+                        : '';
+                })()}
             </div>
-            <div class="biz-info-status">
+            <div class="biz-info-status" style="flex:1; min-width:90px; display:flex; justify-content:center; align-items:center;">
                 <div class="status-badge ${biz.status}">${biz.status === 'active' ? 'Activo' : 'Inactivo'}</div>
             </div>
-            <div class="biz-actions">
+            <div class="biz-actions" style="flex:1; min-width:110px; display:flex; justify-content:flex-end; align-items:center;">
                 <div class="dropdown">
                     <button class="btn-icon dropdown-toggle" title="Opciones">
                         <i data-lucide="more-vertical"></i>
@@ -1481,6 +1568,9 @@ function filterBusinesses(filterType, searchQuery = '') {
                         <button class="dropdown-item toggle-biz-btn" data-id="${biz.id}" data-status="${biz.status === 'active' ? 'inactive' : 'active'}">
                             ${biz.status === 'active' ? '<i data-lucide="power-off"></i> Desactivar' : '<i data-lucide="power" style="color:var(--success)"></i> Activar'}
                         </button>
+                        <button class="dropdown-item" onclick="downloadIndividualBusinessPDF('${biz.id}')">
+                            <i data-lucide="file-text"></i> Descargar Ficha PDF
+                        </button>
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item text-danger delete-biz-btn" data-id="${biz.id}">
                             <i data-lucide="trash-2"></i> Eliminar
@@ -1490,6 +1580,7 @@ function filterBusinesses(filterType, searchQuery = '') {
             </div>
         </div>
     `).join('');
+
     lucide.createIcons();
 }
 
@@ -1542,6 +1633,22 @@ function renderModulesGrid() {
     lucide.createIcons();
 }
 
+window.removeModuleImage = function() {
+    const input = document.getElementById('mod-image-input');
+    if (input) input.value = '';
+    const base64 = document.getElementById('mod-image-base64');
+    if (base64) base64.value = '';
+    const preview = document.getElementById('mod-image-preview');
+    if (preview) {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    const placeholder = document.getElementById('mod-image-placeholder');
+    if (placeholder) placeholder.style.display = 'block';
+    const removeBtn = document.getElementById('mod-image-remove');
+    if (removeBtn) removeBtn.style.display = 'none';
+};
+
 function openModuleModal(id) {
     const mod = appState.modules.find(m => m.id == id);
     if (!mod) return;
@@ -1555,6 +1662,22 @@ function openModuleModal(id) {
     
     const priceNum = parseInt(String(mod.price).replace(/\D/g, ''), 10);
     document.getElementById('mod-price-input').value = isNaN(priceNum) ? '' : priceNum.toLocaleString('es-CO');
+
+    // Populate module image if exists
+    if (mod.image) {
+        document.getElementById('mod-image-base64').value = mod.image;
+        const preview = document.getElementById('mod-image-preview');
+        if (preview) {
+            preview.src = mod.image;
+            preview.style.display = 'block';
+        }
+        const placeholder = document.getElementById('mod-image-placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+        const removeBtn = document.getElementById('mod-image-remove');
+        if (removeBtn) removeBtn.style.display = 'block';
+    } else {
+        window.removeModuleImage();
+    }
 
     document.getElementById('module-modal').classList.remove('hidden');
     lucide.createIcons();
@@ -1573,6 +1696,7 @@ function saveModule() {
         const icon = document.getElementById('mod-icon-input').value;
         const status = document.getElementById('mod-status-input').value;
         const videoUrl = document.getElementById('mod-video-input').value;
+        const image = document.getElementById('mod-image-base64')?.value || '';
 
         const updatedMod = {
             id: id,
@@ -1581,7 +1705,8 @@ function saveModule() {
             price: !rawPrice || rawPrice === '0' ? 'Cotizar' : `$ ${parseInt(rawPrice).toLocaleString('es-CO')}`,
             icon,
             status,
-            videoUrl
+            videoUrl,
+            image
         };
 
         try {
@@ -1673,8 +1798,17 @@ function openBusinessModal(id = null) {
     if (biz) {
         document.getElementById('biz-id').value = biz.id;
         document.getElementById('biz-name').value = biz.name || '';
+        document.getElementById('biz-nit').value = biz.nit || '';
+        document.getElementById('biz-phone').value = biz.phone || '';
         document.getElementById('biz-city').value = biz.city || '';
+        document.getElementById('biz-address').value = biz.address || '';
+        document.getElementById('biz-owner-name').value = biz.ownerName || '';
         document.getElementById('biz-active').checked = biz.status === 'active';
+    } else {
+        document.getElementById('biz-nit').value = '';
+        document.getElementById('biz-phone').value = '';
+        document.getElementById('biz-address').value = '';
+        document.getElementById('biz-owner-name').value = '';
     }
 
     lucide.createIcons();
@@ -2099,21 +2233,13 @@ function initCharts() {
  * Se llama cada vez que se abre el tab de Facturación.
  */
 function renderBillingTab() {
-    let businesses = appState.businesses || [];
-    const modules = appState.modules || [];
     const list = document.getElementById('billing-list');
     if (!list) return;
 
-    const searchInput = document.getElementById('billing-search');
-    if (searchInput && searchInput.value) {
-        const term = searchInput.value.toLowerCase();
-        businesses = businesses.filter(b => 
-            (b.name && b.name.toLowerCase().includes(term)) || 
-            (b.clientEmail && b.clientEmail.toLowerCase().includes(term))
-        );
-    }
+    const modules = appState.modules || [];
+    const businesses = appState.businesses || [];
 
-    // Calcular KPIs
+    // Calcular KPIs de TODOS los negocios (sin filtrar por buscador o pill de pestaña)
     let totalRevenue = 0;
     let activeCount = 0;
     let suspendedCount = 0;
@@ -2121,32 +2247,106 @@ function renderBillingTab() {
     const today = new Date().toISOString().slice(0, 10);
     const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    list.innerHTML = businesses.map(biz => {
+    businesses.forEach(biz => {
         const billing = biz.billing || {};
         const status = billing.subscription_status || 'pending';
 
         // Calcular monto mensual
         let monthlyAmount = 0;
-        (biz.modules || []).forEach(modId => {
-            const mod = modules.find(m => m.id === modId);
-            if (mod?.price) {
-                const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-                if (!isNaN(p)) monthlyAmount += p;
-            }
-        });
+        if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+            biz.moduleInstances.forEach(inst => {
+                if (inst.status === 'active') {
+                    monthlyAmount += parseFloat(inst.priceApplied) || 0;
+                }
+            });
+        } else {
+            (biz.modules || []).forEach(modId => {
+                const mod = modules.find(m => m.id === modId);
+                if (mod?.price) {
+                    const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(p)) monthlyAmount += p;
+                }
+            });
+        }
 
         // Acumular KPIs
-        if (status === 'active') { activeCount++; totalRevenue += billing.last_payment_amount || 0; }
-        if (status === 'suspended') suspendedCount++;
-        if (billing.next_billing_date && billing.next_billing_date <= in7Days && billing.next_billing_date >= today) upcomingCount++;
+        if (status === 'active') {
+            activeCount++;
+            totalRevenue += monthlyAmount;
+        }
+        if (status === 'suspended') {
+            suspendedCount++;
+        }
+        if (billing.next_billing_date && billing.next_billing_date <= in7Days && billing.next_billing_date >= today) {
+            upcomingCount++;
+        }
+    });
+
+    // Ahora filtramos para renderizar la tabla
+    let filteredBusinesses = [...businesses];
+
+    // Filtro por buscador (billing-search)
+    const searchInput = document.getElementById('billing-search');
+    if (searchInput && searchInput.value) {
+        const term = searchInput.value.toLowerCase().trim();
+        filteredBusinesses = filteredBusinesses.filter(b => 
+            (b.name && b.name.toLowerCase().includes(term)) || 
+            (b.clientEmail && b.clientEmail.toLowerCase().includes(term)) ||
+            (b.city && b.city.toLowerCase().includes(term))
+        );
+    }
+
+    // Filtro por pill de pestaña activa
+    const filter = window._currentBillingFilter || 'all';
+    if (filter === 'active') {
+        filteredBusinesses = filteredBusinesses.filter(b => (b.billing?.subscription_status || 'pending') === 'active');
+    } else if (filter === 'suspended') {
+        filteredBusinesses = filteredBusinesses.filter(b => (b.billing?.subscription_status || 'pending') === 'suspended');
+    } else if (filter === 'pending') {
+        filteredBusinesses = filteredBusinesses.filter(b => {
+            const billing = b.billing || {};
+            const status = billing.subscription_status || 'pending';
+            const isUpcoming = billing.next_billing_date && billing.next_billing_date <= in7Days && billing.next_billing_date >= today;
+            return status === 'pending' || isUpcoming;
+        });
+    }
+
+    // Renderizar la tabla de facturación con la lista filtrada
+    list.innerHTML = filteredBusinesses.map(biz => {
+        const billing = biz.billing || {};
+        const status = billing.subscription_status || 'pending';
+
+        // Calcular monto mensual del negocio específico
+        let monthlyAmount = 0;
+        if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+            biz.moduleInstances.forEach(inst => {
+                if (inst.status === 'active') {
+                    monthlyAmount += parseFloat(inst.priceApplied) || 0;
+                }
+            });
+        } else {
+            (biz.modules || []).forEach(modId => {
+                const mod = modules.find(m => m.id === modId);
+                if (mod?.price) {
+                    const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(p)) monthlyAmount += p;
+                }
+            });
+        }
+
+        // Contar suscripciones activas (moduleInstances o modules como fallback)
+        const activeSubsCount = biz.moduleInstances && biz.moduleInstances.length > 0
+            ? biz.moduleInstances.filter(inst => inst.status === 'active').length
+            : (biz.modules || []).length;
+        const subsLabel = activeSubsCount === 1 ? '1 Suscripción' : `${activeSubsCount} Suscripciones`;
 
         // Badge de estado
         const statusBadge = {
-            active: '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:0.2rem 0.7rem;border-radius:20px;font-size:0.75rem;font-weight:700;">✅ Activo</span>',
-            suspended: '<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:0.2rem 0.7rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⛔ Suspendido</span>',
-            pending: '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:0.2rem 0.7rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⏳ Pendiente</span>',
-            cancelled: '<span style="background:rgba(100,116,139,0.15);color:#64748b;padding:0.2rem 0.7rem;border-radius:20px;font-size:0.75rem;font-weight:700;">🚫 Cancelado</span>',
-        }[status] || statusBadge?.pending || '—';
+            active: '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">✓ Activo</span>',
+            suspended: '<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⛔ Suspendido</span>',
+            pending: '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⏳ Pendiente</span>',
+            cancelled: '<span style="background:rgba(100,116,139,0.15);color:#64748b;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">🚫 Cancelado</span>',
+        }[status] || '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⏳ Pendiente</span>';
 
         // Info de tarjeta
         const cardInfo = billing.gateway_token
@@ -2163,24 +2363,18 @@ function renderBillingTab() {
             : '<span style="color:#64748b;">$0</span>';
 
         // Botones de acción
-        const hasCard = !!billing.gateway_token;
-        const chargeBtn = hasCard
-            ? `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;" onclick="billingChargeNow(${biz.id})" title="Cobrar suscripción ahora"><i data-lucide="credit-card" style="width:13px;height:13px;"></i> Cobrar</button>`
-            : '';
-        const removeCardBtn = hasCard
-            ? `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;color:#ef4444;" onclick="billingRemoveCard(${biz.id})" title="Eliminar tarjeta"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>`
-            : '';
-        const assignCardBtn = !hasCard
-            ? `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;color:#6366f1;" onclick="billingAssignSimCard(${biz.id})" title="Asignar tarjeta simulada"><i data-lucide="plus" style="width:13px;height:13px;"></i> Asignar tarjeta</button>`
-            : '';
+        const detailsBtn = `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;color:#818cf8;border:1px solid rgba(99,102,241,0.25);border-radius:7px;" onclick="billingShowDetail(${biz.id})" title="Ver detalle de facturación"><i data-lucide="file-text" style="width:13px;height:13px;"></i> Detalle</button>`;
+
+        // Botón Regalar días (siempre visible para el Admin)
+        const giftDaysBtn = `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;color:#10b981;border:1px solid rgba(16,185,129,0.25);border-radius:7px;" onclick="billingGiftDays(${biz.id})" title="Regalar días de suscripción"><i data-lucide="gift" style="width:13px;height:13px;"></i> Días</button>`;
 
         return `<tr>
             <td>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem;">
+                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">
                     ${biz.name}
                 </div>
                 <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.3rem;">
-                    <span style="font-size:0.7rem; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">${biz.category || 'NEGOCIO'}</span>
+                    <span style="font-size:0.7rem; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; min-width:100px;">${subsLabel}</span>
                     <span style="font-size:0.75rem; color:#94a3b8; display:flex; align-items:center; gap:0.2rem;"><i data-lucide="map-pin" style="width:12px;height:12px;"></i> ${biz.city || 'Sin ciudad'}</span>
                 </div>
             </td>
@@ -2189,8 +2383,8 @@ function renderBillingTab() {
             <td style="text-align:center;font-size:0.85rem;">${nextCut}</td>
             <td style="text-align:center;font-weight:600;">${amountDisplay}</td>
             <td style="text-align:center;">
-                <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;">
-                    ${chargeBtn}${removeCardBtn}${assignCardBtn}
+                <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;align-items:center;">
+                    ${detailsBtn}${giftDaysBtn}
                 </div>
             </td>
         </tr>`;
@@ -2206,6 +2400,339 @@ function renderBillingTab() {
     // Re-renderizar íconos Lucide en el nuevo contenido
     if (window.lucide) lucide.createIcons();
 }
+
+window.setBillingFilter = function(filter) {
+    window._currentBillingFilter = filter;
+    
+    // Activar pill en la UI
+    const pills = document.querySelectorAll('#billing-filters .pill');
+    pills.forEach(p => {
+        const action = p.getAttribute('onclick');
+        if (action && action.includes(`'${filter}'`)) {
+            p.classList.add('active');
+        } else {
+            p.classList.remove('active');
+        }
+    });
+    
+    renderBillingTab();
+};
+
+/**
+ * Muestra un modal con el detalle de facturación de un negocio.
+ */
+window.billingShowDetail = async function(bizId) {
+    const biz = appState.businesses.find(b => b.id === bizId);
+    if (!biz) return;
+    const billing = biz.billing || {};
+    const modules = appState.modules || [];
+
+    // Calcular monto mensual
+    let monthlyAmount = 0;
+    const instLines = [];
+    if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+        biz.moduleInstances.forEach(inst => {
+            if (inst.status === 'active') {
+                const p = parseFloat(inst.priceApplied) || 0;
+                monthlyAmount += p;
+                const mod = modules.find(m => String(m.id) === String(inst.moduleId));
+                instLines.push(`<tr><td style="padding:0.3rem 0.5rem;color:#cbd5e1;">${mod ? mod.name : inst.moduleId}</td><td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;">${inst.branchName || inst.sedeName || 'Principal'}</td><td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td></tr>`);
+            }
+        });
+    } else {
+        (biz.modules || []).forEach(modId => {
+            const mod = modules.find(m => m.id === modId);
+            if (mod?.price) {
+                const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                if (!isNaN(p)) { monthlyAmount += p; instLines.push(`<tr><td style="padding:0.3rem 0.5rem;color:#cbd5e1;" colspan="2">${mod.name}</td><td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td></tr>`); }
+            }
+        });
+    }
+
+    const statusLabels = { active: '✓ Activo', suspended: '⛔ Suspendido', pending: '⏳ Pendiente', cancelled: '🚫 Cancelado' };
+    const status = billing.subscription_status || 'pending';
+    const nextCut = billing.next_billing_date
+        ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '—';
+    const lastPayment = billing.last_payment_date
+        ? new Date(billing.last_payment_date).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '—';
+
+    await Swal.fire({
+        title: `<span style="font-size:1.1rem;font-weight:800;">📄 ${biz.name}</span>`,
+        html: `
+            <div style="text-align:left;font-size:0.88rem;color:#cbd5e1;">
+                <!-- Botón de descarga de PDF individual -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; background:rgba(99,102,241,0.05); padding:0.6rem 0.8rem; border-radius:10px; border:1px solid rgba(99,102,241,0.15);">
+                    <div>
+                        <div style="font-size:0.7rem; color:#818cf8; text-transform:uppercase; font-weight:700;">Ficha del Negocio</div>
+                        <div style="font-weight:700; color:#f8fafc; font-size:0.85rem;">Exportar reporte actual</div>
+                    </div>
+                    <button class="btn-primary" style="font-size:0.75rem; padding:0.4rem 0.8rem; background:#6366f1; border:none; border-radius:6px; color:#fff; font-weight:600; display:flex; align-items:center; gap:0.3rem; cursor:pointer;" onclick="downloadIndividualBusinessPDF(${biz.id})">
+                        <i data-lucide="download" style="width:13px;height:13px;"></i> Descargar PDF
+                    </button>
+                </div>
+
+                <!-- Grilla de KPIs de Facturación -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);padding:0.75rem;border-radius:10px;">
+                        <div style="font-size:0.7rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Estado</div>
+                        <div style="font-weight:700;color:#f8fafc;">${statusLabels[status] || status}</div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);padding:0.75rem;border-radius:10px;">
+                        <div style="font-size:0.7rem;color:#10b981;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Monto/Mes</div>
+                        <div style="font-weight:700;color:#f8fafc;">$${monthlyAmount.toLocaleString('es-CO')}</div>
+                    </div>
+                    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);padding:0.75rem;border-radius:10px;">
+                        <div style="font-size:0.7rem;color:#f59e0b;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Próximo Corte</div>
+                        <div style="font-weight:700;color:#f8fafc;">${nextCut}</div>
+                    </div>
+                    <div style="background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.15);padding:0.75rem;border-radius:10px;">
+                        <div style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Último Pago</div>
+                        <div style="font-weight:700;color:#f8fafc;">${lastPayment}</div>
+                    </div>
+                </div>
+
+                <!-- Datos del Cliente / Propietario -->
+                <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Información del Cliente</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;background:rgba(255,255,255,0.02);padding:0.75rem;border-radius:10px;border:1px solid rgba(255,255,255,0.05);">
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Propietario / Cliente</span>
+                        <span style="color:#cbd5e1;font-weight:600;">${biz.ownerName || '—'}</span>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">NIT / CC</span>
+                        <span style="color:#cbd5e1;font-weight:600;">${biz.nit || '—'}</span>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Teléfono</span>
+                        <span style="color:#cbd5e1;font-weight:600;">${biz.phone || '—'}</span>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Email</span>
+                        <span style="color:#cbd5e1;font-weight:600;word-break:break-all;">${biz.clientEmail || '—'}</span>
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Dirección</span>
+                        <span style="color:#cbd5e1;font-weight:600;">${biz.address || '—'} ${biz.city ? `(${biz.city})` : ''}</span>
+                    </div>
+                </div>
+
+                <!-- Método de Pago -->
+                <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Tarjeta registrada</div>
+                <div style="margin-bottom:1.25rem;background:rgba(255,255,255,0.02);padding:0.6rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.04);">${billing.gateway_token ? `💳 ${billing.card_brand || ''} ···${billing.last_four || '****'} (Token: <code style="font-size:0.7rem;color:#94a3b8;">${billing.gateway_token.slice(0,20)}…</code>)` : '<span style="color:#64748b;">Sin tarjeta registrada</span>'}</div>
+
+                <!-- Desglose de Módulos Activos -->
+                ${instLines.length > 0 ? `
+                    <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Módulos / Sedes activas</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead><tr style="border-bottom:1px solid rgba(99,102,241,0.2);"><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Módulo</th><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Sede</th><th style="padding:0.3rem 0.5rem;text-align:right;color:#64748b;font-weight:600;">Precio</th></tr></thead>
+                        <tbody>${instLines.join('')}</tbody>
+                        <tfoot><tr style="border-top:1px solid rgba(99,102,241,0.2);"><td colspan="2" style="padding:0.4rem 0.5rem;font-weight:700;color:#f8fafc;">Total</td><td style="padding:0.4rem 0.5rem;text-align:right;font-weight:800;color:#10b981;">$${monthlyAmount.toLocaleString('es-CO')}</td></tr></tfoot>
+                    </table>
+                ` : '<span style="color:#64748b;">Sin módulos asignados.</span>'}
+            </div>
+        `,
+        background: '#1e293b',
+        color: '#f8fafc',
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: '#6366f1',
+        width: '600px',
+        didOpen: (popup) => {
+            if (window.lucide) lucide.createIcons();
+        }
+    });
+};
+
+/**
+ * Regala días adicionales de suscripción a un negocio, permitiendo elegir módulo y sede específicos.
+ */
+window.billingGiftDays = async function(bizId) {
+    const biz = appState.businesses.find(b => b.id === bizId);
+    if (!biz) return;
+
+    const modules = appState.modules || [];
+
+    // Obtener todas las instancias de módulos activos
+    const activeInstances = [];
+    if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+        biz.moduleInstances.forEach(inst => {
+            if (inst.status === 'active') {
+                const mod = modules.find(m => String(m.id) === String(inst.moduleId));
+                activeInstances.push({
+                    instanceId: inst.instanceId,
+                    moduleId: inst.moduleId,
+                    moduleName: mod ? mod.name : inst.moduleId,
+                    branchName: inst.branchName || inst.sedeName || 'Sede Principal',
+                    renewalDate: inst.renewalDate || biz.billing?.next_billing_date
+                });
+            }
+        });
+    } else {
+        // Fallback legacy
+        (biz.modules || []).forEach((modId, index) => {
+            const mod = modules.find(m => String(m.id) === String(modId));
+            activeInstances.push({
+                instanceId: `${biz.id}-${modId}-${index}`,
+                moduleId: modId,
+                moduleName: mod ? mod.name : modId,
+                branchName: 'Sede Principal',
+                renewalDate: biz.billing?.next_billing_date
+            });
+        });
+    }
+
+    if (activeInstances.length === 0) {
+        Swal.fire({
+            title: 'Sin módulos activos',
+            text: 'Este negocio no tiene módulos activos a los cuales regalarles días.',
+            icon: 'warning',
+            background: '#1e293b',
+            color: '#f8fafc',
+            confirmButtonColor: '#6366f1'
+        });
+        return;
+    }
+
+    // Agrupar por módulo único para el primer selector
+    const uniqueModules = [];
+    activeInstances.forEach(inst => {
+        if (!uniqueModules.some(m => m.moduleId === inst.moduleId)) {
+            uniqueModules.push({ moduleId: inst.moduleId, moduleName: inst.moduleName });
+        }
+    });
+
+    // Construir el formulario HTML
+    const htmlContent = `
+        <div style="text-align:left; font-size:0.9rem; color:#cbd5e1;">
+            <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:1.25rem;">
+                Selecciona el módulo y la sede a la que deseas otorgar los días de suscripción.
+            </p>
+            
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Módulo</label>
+                <select id="gift-module-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(99,102,241,0.3); background:#0f172a; color:#f8fafc; font-size:0.9rem;">
+                    ${uniqueModules.map(m => `<option value="${m.moduleId}">${m.moduleName}</option>`).join('')}
+                </select>
+            </div>
+            
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Sede</label>
+                <select id="gift-branch-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(99,102,241,0.3); background:#0f172a; color:#f8fafc; font-size:0.9rem;">
+                    <!-- Se llena dinámicamente -->
+                </select>
+            </div>
+            
+            <div style="margin-bottom:1.25rem; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.15); padding:0.6rem; border-radius:8px; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#94a3b8;">Corte Actual:</span>
+                <span id="current-expiry-display" style="color:#10b981; font-weight:700;">—</span>
+            </div>
+
+            <div style="margin-bottom:0.5rem;">
+                <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Días Adicionales</label>
+                <input type="number" id="gift-days-input" min="1" max="365" value="30" style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid rgba(99,102,241,0.3); background:#0f172a; color:#f8fafc; font-size:1.2rem; font-weight:700; text-align:center;">
+            </div>
+            <p style="font-size:0.75rem; color:#64748b; text-align:center; margin:0.3rem 0 0;">días a regalar</p>
+        </div>
+    `;
+
+    const { value: result, isConfirmed } = await Swal.fire({
+        title: `<span style="font-size:1rem;font-weight:800;">🎁 Regalar días a</span><br><span style="color:var(--primary);font-size:1.1rem;">${biz.name}</span>`,
+        html: htmlContent,
+        background: '#1e293b',
+        color: '#f8fafc',
+        confirmButtonText: '🎁 Regalar días',
+        confirmButtonColor: '#10b981',
+        cancelButtonText: 'Cancelar',
+        cancelButtonColor: '#334155',
+        showCancelButton: true,
+        didOpen: (popup) => {
+            const moduleSelect = popup.querySelector('#gift-module-select');
+            const branchSelect = popup.querySelector('#gift-branch-select');
+            const expiryDisplay = popup.querySelector('#current-expiry-display');
+
+            const updateBranches = () => {
+                const selectedModule = moduleSelect.value;
+                // Filtrar instancias activas de ese módulo
+                const instancesForModule = activeInstances.filter(inst => String(inst.moduleId) === String(selectedModule));
+                
+                // Llenar el selector de sedes
+                branchSelect.innerHTML = instancesForModule.map(inst => 
+                    `<option value="${inst.instanceId}" data-expiry="${inst.renewalDate || ''}">${inst.branchName}</option>`
+                ).join('');
+
+                updateExpiry();
+            };
+
+            const updateExpiry = () => {
+                const selectedOption = branchSelect.options[branchSelect.selectedIndex];
+                if (selectedOption) {
+                    const expiry = selectedOption.getAttribute('data-expiry');
+                    if (expiry) {
+                        const dateObj = new Date(expiry + 'T00:00:00');
+                        expiryDisplay.textContent = dateObj.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+                    } else {
+                        expiryDisplay.textContent = '—';
+                    }
+                } else {
+                    expiryDisplay.textContent = '—';
+                }
+            };
+
+            moduleSelect.addEventListener('change', updateBranches);
+            branchSelect.addEventListener('change', updateExpiry);
+
+            // Inicializar por primera vez
+            updateBranches();
+        },
+        preConfirm: () => {
+            const moduleSelect = document.getElementById('gift-module-select');
+            const branchSelect = document.getElementById('gift-branch-select');
+            const daysInput = document.getElementById('gift-days-input');
+
+            const instanceId = branchSelect.value;
+            const daysVal = parseInt(daysInput.value, 10);
+
+            if (!instanceId) {
+                Swal.showValidationMessage('Selecciona una sede válida.');
+                return false;
+            }
+            if (!daysVal || daysVal < 1 || daysVal > 365) {
+                Swal.showValidationMessage('Ingresa un número de días entre 1 y 365.');
+                return false;
+            }
+
+            return {
+                instanceId,
+                days: daysVal,
+                moduleName: moduleSelect.options[moduleSelect.selectedIndex].text,
+                branchName: branchSelect.options[branchSelect.selectedIndex].text
+            };
+        }
+    });
+
+    if (!isConfirmed || !result) return;
+
+    try {
+        const resp = await adminFetch(`/api/payment/extend-billing/${bizId}`, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                days: result.days,
+                instanceId: result.instanceId
+            }),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            showToast(`🎁 ${result.days} día(s) regalados a ${result.moduleName} (${result.branchName}). Nuevo corte: ${data.newDate}`, 'success');
+            await loadData();
+            renderBillingTab();
+        } else {
+            showToast('❌ ' + (data.message || 'Error al regalar días'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de red al regalar días.', 'error');
+    }
+};
 
 /**
  * Asigna una tarjeta simulada a un negocio (modo prueba).
@@ -2425,13 +2952,13 @@ function updateTicketBadge() {
     }
 }
 
-function setTicketFilter(filter) {
+window.setTicketFilter = function(filter) {
     window._currentTicketFilter = filter;
     document.querySelectorAll('#ticket-filters .pill').forEach(p => p.classList.remove('active'));
     const activeBtn = document.querySelector(`#ticket-filters .pill[onclick="setTicketFilter('${filter}')"]`);
     if (activeBtn) activeBtn.classList.add('active');
     renderAdminTickets();
-}
+};
 
 const TICKET_STATUS_MAP = {
     abierto:    { label: 'Entrante',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: 'info' },
@@ -3074,38 +3601,17 @@ window.exportExecutiveReportPDF = function() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Colores y Marca corporativa
-        doc.setFillColor(30, 41, 59); // Fondo oscuro para cabecera corporativa (#1e293b)
-        doc.rect(0, 0, 210, 35, 'F');
-        
-        doc.setFont('Helvetica', 'bold');
-        doc.setFontSize(22);
-        doc.setTextColor(248, 250, 252);
-        doc.text('AS SIERRA SYSTEMS', 14, 23);
-        
-        doc.setFont('Helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(148, 163, 184);
-        doc.text('REPORTE EJECUTIVO DE ADMINISTRACION SAAS', 14, 29);
-        
-        // Fecha de emisión
-        const today = new Date();
-        const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) + ' ' + today.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-        doc.setFontSize(9);
-        doc.setTextColor(248, 250, 252);
-        doc.text('Fecha: ' + dateStr, 140, 23);
+        // Configuración de márgenes e inicio de tabla
+        const startY = 48;
         
         // Contenido Principal
-        doc.setTextColor(30, 41, 59);
+        doc.setTextColor(30, 41, 59); // DARK (#1e293b)
         doc.setFontSize(14);
         doc.setFont('Helvetica', 'bold');
-        doc.text('Resumen del Ecosistema de Negocios', 14, 48);
-        doc.line(14, 50, 196, 50);
+        doc.text('Resumen Ejecutivo del Ecosistema SaaS', 14, startY);
+        doc.line(14, startY + 2, 196, startY + 2);
         
         // KPIs Financieros y Operacionales
-        doc.setFont('Helvetica', 'normal');
-        doc.setFontSize(11);
-        
         const activeBizCount = appState.businesses.filter(b => b.status === 'active').length;
         const totalBizCount = appState.businesses.length;
         const activeModsCount = appState.modules.filter(m => m.status === 'active').length;
@@ -3123,17 +3629,50 @@ window.exportExecutiveReportPDF = function() {
             });
         });
         
+        // Renderizar mini-tarjetas de KPI usando rectángulos con bordes redondeados
+        const cardWidth = 56;
+        const cardHeight = 22;
+        const gap = 8;
+        
+        // Tarjeta 1: MRR
+        doc.setFillColor(248, 250, 252);
+        doc.setStrokeColor(226, 232, 240);
+        doc.roundedRect(14, startY + 8, cardWidth, cardHeight, 3, 3, 'FD');
         doc.setFont('Helvetica', 'bold');
-        doc.text('KPIs Clave:', 14, 60);
-        doc.setFont('Helvetica', 'normal');
-        doc.text('• Ingresos Recurrentes Mensuales (MRR) Proyectados: $' + totalIncome.toLocaleString('es-CO') + ' COP', 18, 67);
-        doc.text('• Negocios Registrados: ' + totalBizCount + ' (' + activeBizCount + ' Activos)', 18, 74);
-        doc.text('• Módulos en Producción: ' + activeModsCount + ' módulos SaaS activos', 18, 81);
-        doc.text('• Usuarios Registrados en el Sistema: ' + totalUsersCount + ' usuarios', 18, 88);
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139); // Text muted
+        doc.text('MRR PROYECTADO', 18, startY + 14);
+        doc.setFontSize(11);
+        doc.setTextColor(79, 70, 229); // INDIGO
+        doc.text('$' + totalIncome.toLocaleString('es-CO') + ' COP', 18, startY + 24);
+        
+        // Tarjeta 2: Negocios
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(14 + cardWidth + gap, startY + 8, cardWidth, cardHeight, 3, 3, 'FD');
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text('NEGOCIOS ACTIVOS', 14 + cardWidth + gap + 4, startY + 14);
+        doc.setFontSize(11);
+        doc.setTextColor(16, 185, 129); // GREEN
+        doc.text(activeBizCount + ' / ' + totalBizCount + ' Activos', 14 + cardWidth + gap + 4, startY + 24);
+        
+        // Tarjeta 3: Módulos
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(14 + (cardWidth + gap) * 2, startY + 8, cardWidth, cardHeight, 3, 3, 'FD');
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text('MODULOS ACTIVOS', 14 + (cardWidth + gap) * 2 + 4, startY + 14);
+        doc.setFontSize(11);
+        doc.setTextColor(99, 102, 241); // VIOLET
+        doc.text(activeModsCount + ' Módulos', 14 + (cardWidth + gap) * 2 + 4, startY + 24);
         
         // Listado Detallado de Negocios
         doc.setFont('Helvetica', 'bold');
-        doc.text('Detalle de Negocios Registrados:', 14, 102);
+        doc.setFontSize(12);
+        doc.setTextColor(30, 41, 59);
+        doc.text('Detalle de Negocios Registrados', 14, startY + 40);
         
         const headers = [['Nombre del Negocio', 'Ciudad', 'Tipo', 'Estado', 'Módulos Activos']];
         const body = appState.businesses.map(biz => {
@@ -3150,26 +3689,59 @@ window.exportExecutiveReportPDF = function() {
             ];
         });
         
-        // Renderizar la tabla de forma premium usando autoTable
         doc.autoTable({
-            startY: 106,
+            startY: startY + 44,
             head: headers,
             body: body,
             theme: 'striped',
-            headStyles: { fillColor: [79, 70, 229] }, // Color Índigo Corporativo (#4f46e5)
-            styles: { font: 'Helvetica', fontSize: 9 },
+            headStyles: { fillColor: [79, 70, 229] }, // Indigo
+            styles: { font: 'Helvetica', fontSize: 9, cellPadding: 4 },
             columnStyles: {
-                4: { cellWidth: 60 } // Limitar ancho de columna de módulos
+                4: { cellWidth: 55 }
             }
         });
         
-        // Pie de página corporativo
-        const finalY = doc.lastAutoTable.finalY || 200;
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text('AS Sierra Systems - Soluciones Multi-tenant de Alta Gama. Todos los derechos reservados.', 14, finalY + 20);
+        // Aplicar cabecera, monograma "AS" y pie de página dinámico a todas las páginas
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            
+            // Header bar
+            doc.setFillColor(30, 41, 59); // DARK
+            doc.rect(0, 0, 210, 32, 'F');
+            
+            // Monograma AS en contenedor Violeta
+            doc.setFillColor(99, 102, 241); // VIOLET
+            doc.rect(14, 6, 20, 20, 'F');
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.text('AS', 24, 19, { align: 'center' });
+            
+            // Títulos del Header
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(15);
+            doc.text('SIERRA SYSTEMS', 42, 15);
+            doc.setFont('Helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(148, 163, 184);
+            doc.text('REPORTE EJECUTIVO DE ADMINISTRACION SAAS', 42, 22);
+            
+            // Timestamp
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text('Emisión: ' + dateStr, 140, 19);
+            
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text('AS Sierra Systems - Registro Corporativo Ecosistema. Confidencial.', 14, 287);
+            doc.text(`Página ${i} de ${pageCount}`, 180, 287);
+        }
         
-        doc.save('Reporte_Ejecutivo_AS_Sierra_' + today.toISOString().split('T')[0] + '.pdf');
+        doc.save('Reporte_Ejecutivo_AS_Sierra_' + new Date().toISOString().split('T')[0] + '.pdf');
         showToast('📄 Reporte ejecutivo exportado con éxito.', 'success');
     } catch (err) {
         console.error('Error exportando PDF:', err);
@@ -3441,6 +4013,264 @@ window.downloadGlobalPaymentsPDF = function() {
     } catch (err) {
         console.error('Error exportando PDF de pagos:', err);
         showToast('Error al exportar el reporte de pagos.', 'error');
+    }
+};
+
+// ============================================================
+// PDF: REPORTE GLOBAL DE FACTURACIÓN
+// ============================================================
+window.downloadGlobalBillingPDF = function() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const businesses = appState.businesses || [];
+        const modules = appState.modules || [];
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Construir datos de tabla
+        const headers = [['Negocio', 'Ciudad', 'Estado Suscripción', 'Próximo Corte', 'Valor Mensual', 'Módulos']];
+        const body = businesses.map(biz => {
+            const billing = biz.billing || {};
+            const status = billing.subscription_status || 'pending';
+            const statusLabels = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' };
+
+            let monthlyAmount = 0;
+            (biz.modules || []).forEach(modId => {
+                const mod = modules.find(m => m.id === modId);
+                if (mod?.price) {
+                    const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(p)) monthlyAmount += p;
+                }
+            });
+
+            const nextCut = billing.next_billing_date
+                ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+                : '—';
+
+            const modNames = (biz.modules || []).map(mid => {
+                const m = modules.find(x => String(x.id) === String(mid));
+                return m ? m.name : mid;
+            }).join(', ') || 'Ninguno';
+
+            return [
+                biz.name || '—',
+                biz.city || '—',
+                statusLabels[status] || status.toUpperCase(),
+                nextCut,
+                monthlyAmount > 0 ? '$ ' + monthlyAmount.toLocaleString('es-CO') + ' COP' : '$0',
+                modNames
+            ];
+        });
+
+        // KPIs
+        const activeCount = businesses.filter(b => (b.billing?.subscription_status || '') === 'active').length;
+        const suspendedCount = businesses.filter(b => (b.billing?.subscription_status || '') === 'suspended').length;
+        let totalRevenue = 0;
+        businesses.forEach(biz => {
+            if ((biz.billing?.subscription_status || '') === 'active') {
+                totalRevenue += biz.billing?.last_payment_amount || 0;
+            }
+        });
+
+        doc.autoTable({
+            startY: 55,
+            head: headers,
+            body: body,
+            theme: 'striped',
+            headStyles: { fillColor: [79, 70, 229] },
+            styles: { font: 'Helvetica', fontSize: 8, cellPadding: 3 },
+            columnStyles: { 5: { cellWidth: 45 } },
+            didDrawPage: (data) => {
+                const pageCount = doc.internal.getNumberOfPages();
+                const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
+
+                // Header bar
+                doc.setFillColor(30, 41, 59);
+                doc.rect(0, 0, 210, 32, 'F');
+
+                // Monograma AS
+                doc.setFillColor(99, 102, 241);
+                doc.rect(14, 6, 20, 20, 'F');
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.setTextColor(255, 255, 255);
+                doc.text('AS', 24, 19, { align: 'center' });
+
+                // Títulos
+                doc.setFontSize(15);
+                doc.setTextColor(255, 255, 255);
+                doc.text('SIERRA SYSTEMS', 42, 15);
+                doc.setFont('Helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(148, 163, 184);
+                doc.text('REPORTE GLOBAL DE FACTURACIÓN Y SUSCRIPCIONES', 42, 22);
+
+                // Timestamp y KPIs en el encabezado
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text('Emisión: ' + dateStr, 140, 16);
+                doc.text(`Activos: ${activeCount} | Suspendidos: ${suspendedCount} | Ingresos: $${totalRevenue.toLocaleString('es-CO')} COP`, 140, 22);
+
+                // Footer
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text('AS Sierra Systems — Reporte de Facturación. Confidencial.', 14, 287);
+                doc.text(`Página ${currentPage} de ${pageCount}`, 180, 287);
+            }
+        });
+
+        doc.save('Facturacion_AS_Sierra_' + today.toISOString().split('T')[0] + '.pdf');
+        showToast('📄 Reporte de facturación exportado con éxito.', 'success');
+    } catch (err) {
+        console.error('Error exportando PDF de facturación:', err);
+        showToast('Error al exportar el reporte de facturación.', 'error');
+    }
+};
+
+// ============================================================
+// PDF: FICHA INDIVIDUAL DE NEGOCIO
+// ============================================================
+window.downloadIndividualBusinessPDF = function(bizId) {
+    const biz = (appState.businesses || []).find(b => String(b.id) === String(bizId));
+    if (!biz) { showToast('No se encontró el negocio.', 'error'); return; }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+        const modules = appState.modules || [];
+
+        // Módulos activos del negocio
+        const activeModules = (biz.modules || []).map(mid => {
+            const m = modules.find(x => String(x.id) === String(mid));
+            return m || { id: mid, name: mid, price: '—' };
+        });
+
+        // Calcular MRR
+        let mrr = 0;
+        activeModules.forEach(m => {
+            const p = parseInt(String(m.price || '0').replace(/\D/g, ''), 10);
+            if (!isNaN(p)) mrr += p;
+        });
+
+        const billing = biz.billing || {};
+        const statusLabel = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' }[billing.subscription_status || 'pending'] || '—';
+        const nextCut = billing.next_billing_date
+            ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—';
+
+        const pageCount = 1;
+
+        // Header bar
+        doc.setFillColor(30, 41, 59);
+        doc.rect(0, 0, 210, 32, 'F');
+
+        // Monograma AS
+        doc.setFillColor(99, 102, 241);
+        doc.rect(14, 6, 20, 20, 'F');
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(255, 255, 255);
+        doc.text('AS', 24, 19, { align: 'center' });
+
+        // Títulos
+        doc.setFontSize(15);
+        doc.setTextColor(255, 255, 255);
+        doc.text('SIERRA SYSTEMS', 42, 15);
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(148, 163, 184);
+        doc.text('FICHA DE CLIENTE', 42, 22);
+
+        // Timestamp
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Emisión: ' + dateStr, 140, 19);
+
+        // Nombre del negocio — sección principal
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text(biz.name || 'Sin nombre', 14, 48);
+
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text((biz.category || 'Negocio') + ' · ' + (biz.city || 'Sin ciudad'), 14, 55);
+        doc.line(14, 58, 196, 58);
+
+        // Info del negocio en dos columnas
+        const infoRows = [
+            ['Email cliente', biz.clientEmail || '—'],
+            ['Teléfono', biz.phone || '—'],
+            ['Tipo', biz.type || '—'],
+            ['Estado negocio', biz.status === 'active' ? 'Activo' : 'Inactivo'],
+            ['Estado suscripción', statusLabel],
+            ['Próximo corte', nextCut],
+            ['MRR proyectado', mrr > 0 ? '$ ' + mrr.toLocaleString('es-CO') + ' COP' : '$0'],
+            ['Tarjeta registrada', billing.card_brand ? billing.card_brand + ' ···' + (billing.last_four || '****') : 'Sin tarjeta'],
+        ];
+
+        let yPos = 65;
+        doc.setFontSize(9);
+        infoRows.forEach(([label, value]) => {
+            doc.setFont('Helvetica', 'bold');
+            doc.setTextColor(100, 116, 139);
+            doc.text(label + ':', 14, yPos);
+            doc.setFont('Helvetica', 'normal');
+            doc.setTextColor(30, 41, 59);
+            doc.text(String(value), 70, yPos);
+            yPos += 8;
+        });
+
+        // Módulos activos
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(79, 70, 229);
+        doc.text('Módulos Contratados', 14, yPos + 8);
+        doc.line(14, yPos + 10, 196, yPos + 10);
+
+        if (activeModules.length === 0) {
+            doc.setFont('Helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Sin módulos activos contratados.', 14, yPos + 18);
+        } else {
+            doc.autoTable({
+                startY: yPos + 14,
+                head: [['Módulo', 'ID', 'Precio Mensual']],
+                body: activeModules.map(m => [
+                    m.name || m.id,
+                    String(m.id),
+                    m.price ? '$ ' + String(m.price).replace(/\D/g, '').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.') + ' COP' : '—'
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] },
+                styles: { font: 'Helvetica', fontSize: 9, cellPadding: 4 },
+                foot: [['TOTAL MRR', '', '$ ' + mrr.toLocaleString('es-CO') + ' COP']],
+                footStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' }
+            });
+        }
+
+        // Footer
+        const finalPageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= finalPageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text('AS Sierra Systems — Ficha de Cliente. Documento Confidencial.', 14, 287);
+            doc.text(`Página ${i} de ${finalPageCount}`, 180, 287);
+        }
+
+        const safeName = (biz.name || 'negocio').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        doc.save(`Ficha_${safeName}_AS_Sierra_${today.toISOString().split('T')[0]}.pdf`);
+        showToast(`📄 Ficha de ${biz.name} exportada con éxito.`, 'success');
+    } catch (err) {
+        console.error('Error exportando ficha de negocio:', err);
+        showToast('Error al exportar la ficha del negocio.', 'error');
     }
 };
 

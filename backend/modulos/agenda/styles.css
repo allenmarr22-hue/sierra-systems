@@ -2087,3 +2087,85 @@ td:hover .choose-hint {
     border: 1px dashed rgba(var(--accent-rgb), 0.18);
     margin-bottom: 1.5rem;
 }
+
+/* --- Dark Theme (Slate) Overrides for Client Page --- */
+.dark-theme {
+    --color-bg: #0f172a;
+    --color-bg-alt: #1e293b;
+    --color-text: #cbd5e1;
+    --color-text-light: #94a3b8;
+    --color-white: #1e293b;
+    --color-black: #f8fafc;
+    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* Modals and popups */
+.dark-theme .modal,
+.dark-theme .custom-modal-overlay > div,
+.dark-theme [id$="Modal"] > div,
+.dark-theme [id$="-modal"] > div {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme .custom-modal-overlay p,
+.dark-theme [id$="Modal"] p,
+.dark-theme [id$="-modal"] p {
+    color: #cbd5e1 !important;
+}
+
+/* Public booking visual grid overrides */
+.dark-theme #public-grid-canvas > div {
+    background-color: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme .responsive-agenda-grid {
+    background-color: #1e293b !important;
+}
+
+.dark-theme .responsive-agenda-grid thead {
+    background-color: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme .responsive-agenda-grid th {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark-theme .responsive-agenda-grid td {
+    background-color: #1e293b !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark-theme .responsive-agenda-grid td:first-child {
+    background-color: #1e293b !important;
+}
+
+/* Specific elements on the public page */
+.dark-theme .header-stack {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark-theme .service-card,
+.dark-theme .category-card {
+    background-color: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #cbd5e1 !important;
+}
+
+.dark-theme .footer {
+    background-color: #1e293b !important;
+    color: #cbd5e1 !important;
+}
