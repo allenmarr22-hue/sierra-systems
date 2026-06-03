@@ -1593,6 +1593,10 @@
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // Registrar jsPDF en el espacio global para compatibilidad con jspdf-autotable
+        window.jsPDF = window.jspdf.jsPDF;
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <!-- MODAL: AGENDA VISUAL DINÁMICA (CUADRÍCULA DE TURNOS) -->
     <div id="visualAgendaModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:#333; overflow:hidden;">
