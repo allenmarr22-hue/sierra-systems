@@ -1317,7 +1317,7 @@ app.post('/api/client/module/renew', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
-    const { moduleId, moduleName, last4, branchName } = req.body;
+    const { moduleId, moduleName, last4, branchName, instanceId } = req.body;
     if (!moduleId) return res.status(400).json({ error: 'moduleId es requerido.' });
 
     try {

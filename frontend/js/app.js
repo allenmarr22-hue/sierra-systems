@@ -3632,6 +3632,7 @@ window.openChatImageLightbox = function(src) {
 
 window.exportExecutiveReportPDF = function() {
     try {
+        if (!window.jspdf || !window.jspdf.jsPDF) { showToast('Librería PDF no disponible. Recarga la página.', 'error'); return; }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
@@ -3987,6 +3988,7 @@ window.setGlobalPaymentFilter = function(filterType) {
 
 window.downloadGlobalPaymentsPDF = function() {
     try {
+        if (!window.jspdf || !window.jspdf.jsPDF) { showToast('Librería PDF no disponible. Recarga la página.', 'error'); return; }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
@@ -4066,6 +4068,7 @@ window.downloadGlobalPaymentsPDF = function() {
 // ============================================================
 window.downloadGlobalBillingPDF = function() {
     try {
+        if (!window.jspdf || !window.jspdf.jsPDF) { showToast('Librería PDF no disponible. Recarga la página.', 'error'); return; }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
@@ -4190,6 +4193,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
     if (!biz) { showToast('No se encontró el negocio.', 'error'); return; }
 
     try {
+        if (!window.jspdf || !window.jspdf.jsPDF) { showToast('Librería PDF no disponible. Recarga la página.', 'error'); return; }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const today = new Date();
