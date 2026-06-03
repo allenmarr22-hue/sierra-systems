@@ -424,14 +424,24 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                     <h3 style="font-size: 1.25rem; font-weight: 700;">Tus Aplicaciones</h3>
                     
-                    <!-- Botones de pestaña SIEMPRE visibles -->
-                    <div class="module-tabs" id="module-tabs-container" style="display: flex; background: var(--bg-surface-light); padding: 0.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <button class="mod-tab-btn active" onclick="switchModuleSubTab('active')" id="btn-tab-mod-active" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: var(--primary); color: white; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                            Activos
-                        </button>
-                        <button class="mod-tab-btn" onclick="switchModuleSubTab('cancelled')" id="btn-tab-mod-cancelled" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                            Suspendidos
-                        </button>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <!-- Selector de Filtro de Módulo -->
+                        <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-surface-light); padding: 0.25rem 0.5rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <i data-lucide="filter" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
+                            <select id="module-filter-select" onchange="filterClientModules()" style="background: transparent; border: none; color: var(--text-main); font-size: 0.85rem; font-weight: 600; outline: none; cursor: pointer; padding-right: 0.5rem; font-family: inherit;">
+                                <option value="all" style="background: var(--bg-surface); color: var(--text-main);">Todos los Módulos</option>
+                            </select>
+                        </div>
+
+                        <!-- Botones de pestaña SIEMPRE visibles -->
+                        <div class="module-tabs" id="module-tabs-container" style="display: flex; background: var(--bg-surface-light); padding: 0.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <button class="mod-tab-btn active" onclick="switchModuleSubTab('active')" id="btn-tab-mod-active" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: var(--primary); color: white; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                Activos
+                            </button>
+                            <button class="mod-tab-btn" onclick="switchModuleSubTab('cancelled')" id="btn-tab-mod-cancelled" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                Suspendidos
+                            </button>
+                        </div>
                     </div>
                 </div>
 

@@ -860,6 +860,47 @@ function renderDashboard() {
             });
     }
 
+    // Poblar el selector de filtro por módulo si no está poblado o ha cambiado la cantidad de módulos
+    const filterSelect = document.getElementById('module-filter-select');
+    let activeFilterValue = 'all';
+    if (filterSelect) {
+        activeFilterValue = filterSelect.value || 'all';
+        const uniqueModules = [];
+        const seenModuleIds = new Set();
+        [...activeInstances, ...cancelledInstances].forEach(inst => {
+            if (!seenModuleIds.has(inst.id)) {
+                seenModuleIds.add(inst.id);
+                uniqueModules.push({ id: inst.id, name: inst.name });
+            }
+        });
+
+        // Solo repoblar si el número de opciones (excluyendo "Todos") es diferente
+        const currentOptionsCount = filterSelect.options.length - 1; // -1 por "Todos"
+        if (currentOptionsCount !== uniqueModules.length) {
+            let optionsHtml = '<option value="all" style="background: var(--bg-surface); color: var(--text-main);">Todos los Módulos</option>';
+            uniqueModules.forEach(m => {
+                optionsHtml += `<option value="${m.id}" style="background: var(--bg-surface); color: var(--text-main);">${m.name}</option>`;
+            });
+            filterSelect.innerHTML = optionsHtml;
+            
+            // Intentar restaurar la selección anterior si aún es válida
+            if (Array.from(filterSelect.options).some(opt => opt.value === activeFilterValue)) {
+                filterSelect.value = activeFilterValue;
+            } else {
+                filterSelect.value = 'all';
+                activeFilterValue = 'all';
+            }
+        }
+    }
+
+    // Filtrar instancias a renderizar basándose en el selector
+    let displayActive = activeInstances;
+    let displayCancelled = cancelledInstances;
+    if (activeFilterValue && activeFilterValue !== 'all') {
+        displayActive = activeInstances.filter(inst => String(inst.id) === String(activeFilterValue));
+        displayCancelled = cancelledInstances.filter(inst => String(inst.id) === String(activeFilterValue));
+    }
+
     // --- KPIs ---
     const elCount = document.getElementById('active-modules-count');
     if (elCount) elCount.textContent = activeInstances.length;
@@ -885,8 +926,8 @@ function renderDashboard() {
     const gridActive = document.getElementById('client-modules-grid-active');
     if (gridActive) {
         let htmlActive = '';
-        if (activeInstances.length > 0) {
-            activeInstances.forEach((inst, index) => {
+        if (displayActive.length > 0) {
+            displayActive.forEach((inst, index) => {
                 // Normalizar URL del módulo
                 const modUrl    = (inst.url     || '').replace('menu_comida', 'order-system');
                 const modAdmUrl = (inst.adminUrl || '').replace('menu_comida', 'order-system');
@@ -997,8 +1038,8 @@ function renderDashboard() {
     const gridCancelled = document.getElementById('client-modules-grid-cancelled');
     if (gridCancelled) {
         let htmlCancelled = '';
-        if (cancelledInstances.length > 0) {
-            cancelledInstances.forEach((inst, index) => {
+        if (displayCancelled.length > 0) {
+            displayCancelled.forEach((inst, index) => {
                 const modUrl    = (inst.url     || '').replace('menu_comida', 'order-system');
                 const modAdmUrl = (inst.adminUrl || '').replace('menu_comida', 'order-system');
 
@@ -2802,6 +2843,10 @@ window.reactivateModule = async function(modId, modName, instanceId = null) {
         console.error("Error en reactivateModule:", err);
         Swal.fire({ icon: 'error', title: 'Error de conexión', text: (err.stack || err.message || 'Error desconocido'), background: 'var(--bg-surface)', color: 'var(--text)' });
     }
+};
+
+window.filterClientModules = function() {
+    renderDashboard();
 };
 
 window.switchModuleSubTab = function(tabName) {
