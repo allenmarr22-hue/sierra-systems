@@ -405,7 +405,7 @@ async function loadData() {
         if (!document.getElementById('tab-businesses').classList.contains('hidden')) renderBusinessesGrid();
         if (!document.getElementById('tab-modules').classList.contains('hidden')) renderModulesGrid();
         if (!document.getElementById('tab-users').classList.contains('hidden')) renderUsersList();
-        if (!document.getElementById('tab-billing').classList.contains('hidden')) renderBillingData();
+        if (!document.getElementById('tab-billing').classList.contains('hidden')) renderBillingTab();
     } catch (err) {
         console.error(err);
         showToast('Error de conexión con el servidor', 'error');
@@ -664,7 +664,7 @@ function setupEventListeners() {
             if (target === 'tab-businesses') renderBusinessesGrid();
             if (target === 'tab-modules') renderModulesGrid();
             if (target === 'tab-users') renderUsersList();
-            if (target === 'tab-billing') renderBillingData();
+            if (target === 'tab-billing') renderBillingTab();
             if (target === 'tab-tickets') loadAdminTickets();
             if (target === 'tab-payment-history') loadGlobalPaymentsHistory();
             if (target === 'tab-promotions') loadPromotions();
@@ -1185,22 +1185,33 @@ function initDashboard() {
     const kpiMods = document.getElementById('kpi-modules');
     if (kpiMods) kpiMods.textContent = activeMods;
 
-    // KPI: Usuarios totales
-    const totalUsers = appState.users.length;
+    // KPI: Usuarios totales (Admins + Clientes registrados)
+    const totalUsers = (appState.users?.length || 0) + (appState.businesses?.length || 0);
     const kpiUsers = document.getElementById('kpi-users');
     if (kpiUsers) kpiUsers.textContent = totalUsers;
 
-    // KPI: Ingresos del mes (suma real basada en módulos con precio)
+    // KPI: Ingresos del mes (suma real basada en módulos con precio y sedes activas)
     let totalIncome = 0;
     appState.businesses.forEach(biz => {
         if (biz.status !== 'active') return;
-        (biz.modules || []).forEach(mid => {
-            const mod = appState.modules.find(m => m.id === mid);
-            if (mod && mod.price) {
-                const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-                if (!isNaN(price)) totalIncome += price;
-            }
-        });
+        
+        let monthlyAmount = 0;
+        if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+            biz.moduleInstances.forEach(inst => {
+                if (inst.status === 'active') {
+                    monthlyAmount += parseFloat(inst.priceApplied) || 0;
+                }
+            });
+        } else {
+            (biz.modules || []).forEach(mid => {
+                const mod = appState.modules.find(m => m.id === mid);
+                if (mod && mod.price) {
+                    const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                    if (!isNaN(price)) monthlyAmount += price;
+                }
+            });
+        }
+        totalIncome += monthlyAmount;
     });
     const kpiIncome = document.getElementById('kpi-revenue');
     if (kpiIncome) kpiIncome.innerHTML = `<span style="white-space: nowrap;">$ ${totalIncome.toLocaleString('es-CO')} <span style="font-size: 0.65em; opacity: 0.8;">COP</span></span>`;
@@ -1213,40 +1224,62 @@ function initDashboard() {
 
 function renderUsersList(searchQuery = '') {
     const list = document.getElementById('users-list');
-    let filtered = appState.users;
+    if (!list) return;
+
+    // Combinar usuarios del sistema (admins/soporte) y clientes registrados (de negocios)
+    const systemUsers = appState.users || [];
+    const clientUsers = (appState.businesses || []).map(biz => ({
+        id: biz.id,
+        name: biz.ownerName || biz.name || 'Cliente',
+        user: biz.clientEmail ? biz.clientEmail.split('@')[0] : 'cliente',
+        email: biz.clientEmail || '—',
+        role: 'Cliente',
+        status: biz.status || 'active',
+        isClient: true
+    }));
+
+    let allUsers = [...systemUsers, ...clientUsers];
 
     if (searchQuery) {
-        filtered = filtered.filter(u => 
-            u.name.toLowerCase().includes(searchQuery) || 
-            u.email.toLowerCase().includes(searchQuery) ||
-            u.user.toLowerCase().includes(searchQuery)
+        const query = searchQuery.toLowerCase().trim();
+        allUsers = allUsers.filter(u => 
+            (u.name || '').toLowerCase().includes(query) || 
+            (u.email || '').toLowerCase().includes(query) ||
+            (u.user || '').toLowerCase().includes(query) ||
+            (u.role || '').toLowerCase().includes(query)
         );
     }
 
-    list.innerHTML = filtered.map(user => `
-        <tr>
-            <td>
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div class="user-avatar">${user.name.charAt(0)}</div>
-                    <div>
-                        <div style="font-weight: 600;">${user.name}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">@${user.user}</div>
+    list.innerHTML = allUsers.map(user => {
+        const actionsHtml = user.isClient
+            ? `<span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Gestionar en Negocios</span>`
+            : `<div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="btn-icon edit-user-btn" data-id="${user.id}" title="Editar"><i data-lucide="edit-3" style="width:18px; height:18px;"></i></button>
+                <button class="btn-icon delete-user-btn" data-id="${user.id}" title="Eliminar" style="color: var(--danger);"><i data-lucide="trash-2" style="width:18px; height:18px;"></i></button>
+              </div>`;
+
+        return `
+            <tr>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="user-avatar">${(user.name || 'U').charAt(0).toUpperCase()}</div>
+                        <div>
+                            <div style="font-weight: 600;">${user.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">@${user.user}</div>
+                        </div>
                     </div>
-                </div>
-            </td>
-            <td>${user.email}</td>
-            <td><span class="pill" style="font-size: 0.7rem; background: rgba(99, 102, 241, 0.05); color: var(--primary); border-color: rgba(99, 102, 241, 0.1);">${user.role}</span></td>
-            <td>
-                <div class="status-badge ${user.status}">${user.status === 'active' ? 'Activo' : 'Inactivo'}</div>
-            </td>
-            <td style="text-align: right;">
-                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                    <button class="btn-icon edit-user-btn" data-id="${user.id}" title="Editar"><i data-lucide="edit-3" style="width:18px; height:18px;"></i></button>
-                    <button class="btn-icon delete-user-btn" data-id="${user.id}" title="Eliminar" style="color: var(--danger);"><i data-lucide="trash-2" style="width:18px; height:18px;"></i></button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+                </td>
+                <td>${user.email}</td>
+                <td><span class="pill" style="font-size: 0.7rem; background: rgba(99, 102, 241, 0.05); color: var(--primary); border-color: rgba(99, 102, 241, 0.1);">${user.role}</span></td>
+                <td>
+                    <div class="status-badge ${user.status}">${user.status === 'active' ? 'Activo' : 'Inactivo'}</div>
+                </td>
+                <td style="text-align: right;">
+                    ${actionsHtml}
+                </td>
+            </tr>
+        `;
+    }).join('');
     lucide.createIcons();
 }
 
@@ -2099,17 +2132,28 @@ function initCharts() {
 
     // --- REVENUE CHART (GANANCIAS MENSUALES) ---
     if (ctxRevenue) {
-        // KPI: Ingresos del mes (suma real basada en módulos con precio)
+        // KPI: Ingresos del mes (suma real basada en módulos con precio y sedes)
         let currentMonthlyRevenue = 0;
         appState.businesses.forEach(biz => {
             if (biz.status !== 'active') return;
-            (biz.modules || []).forEach(mid => {
-                const mod = appState.modules.find(m => m.id === mid);
-                if (mod && mod.price) {
-                    const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-                    if (!isNaN(price)) currentMonthlyRevenue += price;
-                }
-            });
+            
+            let monthlyAmount = 0;
+            if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+                biz.moduleInstances.forEach(inst => {
+                    if (inst.status === 'active') {
+                        monthlyAmount += parseFloat(inst.priceApplied) || 0;
+                    }
+                });
+            } else {
+                (biz.modules || []).forEach(mid => {
+                    const mod = appState.modules.find(m => m.id === mid);
+                    if (mod && mod.price) {
+                        const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                        if (!isNaN(price)) monthlyAmount += price;
+                    }
+                });
+            }
+            currentMonthlyRevenue += monthlyAmount;
         });
 
         const gradient = ctxRevenue.createLinearGradient(0, 0, 0, 300);
@@ -3622,18 +3666,29 @@ window.exportExecutiveReportPDF = function() {
         const activeBizCount = appState.businesses.filter(b => b.status === 'active').length;
         const totalBizCount = appState.businesses.length;
         const activeModsCount = appState.modules.filter(m => m.status === 'active').length;
-        const totalUsersCount = appState.users.length;
+        const totalUsersCount = (appState.users?.length || 0) + (appState.businesses?.length || 0);
         
         let totalIncome = 0;
         appState.businesses.forEach(biz => {
             if (biz.status !== 'active') return;
-            (biz.modules || []).forEach(mid => {
-                const mod = appState.modules.find(m => m.id === mid);
-                if (mod && mod.price) {
-                    const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-                    if (!isNaN(price)) totalIncome += price;
-                }
-            });
+            
+            let monthlyAmount = 0;
+            if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+                biz.moduleInstances.forEach(inst => {
+                    if (inst.status === 'active') {
+                        monthlyAmount += parseFloat(inst.priceApplied) || 0;
+                    }
+                });
+            } else {
+                (biz.modules || []).forEach(mid => {
+                    const mod = appState.modules.find(m => m.id === mid);
+                    if (mod && mod.price) {
+                        const price = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                        if (!isNaN(price)) monthlyAmount += price;
+                    }
+                });
+            }
+            totalIncome += monthlyAmount;
         });
         
         // Renderizar mini-tarjetas de KPI usando rectángulos con bordes redondeados
@@ -4044,13 +4099,21 @@ window.downloadGlobalBillingPDF = function() {
             const statusLabels = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' };
 
             let monthlyAmount = 0;
-            (biz.modules || []).forEach(modId => {
-                const mod = modules.find(m => m.id === modId);
-                if (mod?.price) {
-                    const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-                    if (!isNaN(p)) monthlyAmount += p;
-                }
-            });
+            if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+                biz.moduleInstances.forEach(inst => {
+                    if (inst.status === 'active') {
+                        monthlyAmount += parseFloat(inst.priceApplied) || 0;
+                    }
+                });
+            } else {
+                (biz.modules || []).forEach(modId => {
+                    const mod = modules.find(m => m.id === modId);
+                    if (mod?.price) {
+                        const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
+                        if (!isNaN(p)) monthlyAmount += p;
+                    }
+                });
+            }
 
             const nextCut = billing.next_billing_date
                 ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
