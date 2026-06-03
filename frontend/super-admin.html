@@ -8,6 +8,15 @@
             var theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', theme);
             try {
+                // Prevenir flash de login/dashboard
+                var isAuth = localStorage.getItem('as_auth') === 'true';
+                var hasUser = !!localStorage.getItem('as_user');
+                if (isAuth && hasUser) {
+                    document.documentElement.classList.add('is-logged-in');
+                } else {
+                    document.documentElement.classList.add('is-logged-out');
+                }
+
                 var logoUrl = localStorage.getItem('as_systems_logo_url');
                 var link = document.createElement('link');
                 link.id = 'dynamic-favicon';
@@ -23,7 +32,15 @@
             } catch (e) {}
         })();
     </script>
-    <style>.hidden{display:none!important}</style>
+    <style>
+        .hidden{display:none!important}
+        /* Evitar flash de login cuando ya se está autenticado */
+        html.is-logged-in #login-view { display: none !important; }
+        html.is-logged-in #dashboard-view { display: flex !important; }
+        /* Evitar flash de dashboard cuando no se está autenticado */
+        html.is-logged-out #dashboard-view { display: none !important; }
+        html.is-logged-out #login-view { display: flex !important; }
+    </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AS Sierra Systems — Panel de Control</title>

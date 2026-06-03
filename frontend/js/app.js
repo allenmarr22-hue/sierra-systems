@@ -504,6 +504,13 @@ function updateThemeIcon() {
 }
 
 function showView(viewId) {
+    if (viewId === 'dashboard-view') {
+        document.documentElement.classList.remove('is-logged-out');
+        document.documentElement.classList.add('is-logged-in');
+    } else if (viewId === 'login-view') {
+        document.documentElement.classList.remove('is-logged-in');
+        document.documentElement.classList.add('is-logged-out');
+    }
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('dashboard-view').classList.add('hidden');
     document.getElementById(viewId).classList.remove('hidden');
