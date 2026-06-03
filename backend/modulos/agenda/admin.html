@@ -9,6 +9,8 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="admin.css?v=20260423.01">
+    <!-- Chart.js for Pro Graphics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // ====== AISLAMIENTO MULTI-SEDE (TENANT ISOLATION MONKEY PATCH) ======
         (function() {
@@ -180,6 +182,7 @@
                     <a href="#" onclick="showTab('promo-tab', this)" title="Ofertas"><i class="fas fa-tags"></i></a>
 
                     <a href="#" onclick="showTab('expenses-tab', this)" title="Libreta de Gastos"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none"><rect x="4" y="2" width="14" height="20" rx="2" fill="currentColor" opacity="0.85"/><rect x="6" y="7" width="8" height="1.5" rx="0.75" fill="white" opacity="0.7"/><rect x="6" y="10.5" width="8" height="1.5" rx="0.75" fill="white" opacity="0.7"/><rect x="6" y="14" width="5" height="1.5" rx="0.75" fill="white" opacity="0.7"/><line x1="14" y1="16" x2="20" y2="10" stroke="#f9ca24" stroke-width="2" stroke-linecap="round"/><polygon points="20,10 21.5,8.5 22,11" fill="#f9ca24"/><rect x="13.5" y="16" width="1.2" height="2" rx="0.4" fill="#c0392b" transform="rotate(-45 14 17)"/></svg></a>
+                    <a href="#" onclick="showTab('dashboard-tab', this)" title="Dashboard"><i class="fas fa-chart-line"></i></a>
                     <a href="#" onclick="showTab('history-tab', this)" title="Historial"><i class="fas fa-history"></i></a>
                     <a href="#" onclick="showTab('settings-tab', this)" title="Configuración"><i class="fas fa-cog"></i></a>
                 </nav>
@@ -992,6 +995,176 @@
                         </div>
 
                         <div id="HISTORY-section-start"></div>
+
+                    <!-- TAB: DASHBOARD -->
+                    <section id="dashboard-tab" class="tab-content">
+                        <div class="stats-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <div>
+                                <h2 class="section-title" style="margin:0;"><i class="fas fa-chart-line"></i> Panel de Control</h2>
+                                <p style="margin:0; color: var(--color-text); opacity: 0.7;">Análisis inteligente de tu negocio.</p>
+                            </div>
+                            <div class="stats-filters-wrapper">
+                                <div class="stats-filters glass-module" style="display: flex; align-items: center; border-radius: 12px; gap: 5px; padding: 5px 10px;">
+                                    <!-- Reset Button -->
+                                    <button id="reset-stats-btn" class="btn-reset-stats" style="background: transparent; border: none; padding: 10px 15px; color: #ff5252; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;" title="Limpiar datos">
+                                        <i class="fas fa-sync-alt"></i> <span>Reset</span>
+                                    </button>
+
+                                    <!-- Specific Date Picker -->
+                                    <div id="stats-date-wrapper" class="date-picker-mini" style="display: flex; align-items: center; gap: 5px; padding: 0 10px; border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);" title="Buscar día específico">
+                                        <i class="fas fa-calendar-alt" style="color: var(--color-accent);"></i>
+                                        <input type="date" id="stats-date-filter" style="background: transparent; border: none; color: inherit; font-weight: 600; outline: none; cursor: pointer;">
+                                    </div>
+
+                                    <!-- Custom Range Dropdown -->
+                                    <div class="custom-dropdown" id="range-dropdown">
+                                        <div class="dropdown-trigger" id="range-trigger">
+                                            <span id="current-range">Hoy</span>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="today" class="active">Hoy</li>
+                                            <li data-value="week">7 Días</li>
+                                            <li data-value="fortnight">15 Días</li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Custom Month Dropdown -->
+                                    <div class="custom-dropdown" id="month-dropdown">
+                                        <div class="dropdown-trigger" id="month-trigger">
+                                            <span id="current-month">Meses...</span>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="">Meses...</li>
+                                            <li data-value="0">Enero</li>
+                                            <li data-value="1">Febrero</li>
+                                            <li data-value="2">Marzo</li>
+                                            <li data-value="3">Abril</li>
+                                            <li data-value="4">Mayo</li>
+                                            <li data-value="5">Junio</li>
+                                            <li data-value="6">Julio</li>
+                                            <li data-value="7">Agosto</li>
+                                            <li data-value="8">Septiembre</li>
+                                            <li data-value="9">Octubre</li>
+                                            <li data-value="10">Noviembre</li>
+                                            <li data-value="11">Diciembre</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Cards Grid -->
+                        <div class="metrics-grid">
+                            <div class="metric-card glass-module kpi-card">
+                                <div class="metric-icon" style="background: rgba(46, 204, 113, 0.1); color: #2ecc71;">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Ingresos Totales (Bruto)</span>
+                                    <span class="metric-value" id="stat-revenue">$0</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass-module kpi-card">
+                                <div class="metric-icon" style="background: rgba(56, 189, 248, 0.1); color: #38bdf8;">
+                                    <i class="fas fa-wallet"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Ganancia Neta (Estudio)</span>
+                                    <span class="metric-value" id="stat-net-revenue">$0</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass-module kpi-card">
+                                <div class="metric-icon" style="background: rgba(231, 76, 60, 0.1); color: #e74c3c;">
+                                    <i class="fas fa-receipt"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Gastos Totales</span>
+                                    <span class="metric-value" id="stat-expenses">$0</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass-module kpi-card">
+                                <div class="metric-icon" style="background: rgba(241, 196, 15, 0.1); color: #f1c40f;">
+                                    <i class="fas fa-balance-scale"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Balance Neto</span>
+                                    <span class="metric-value" id="stat-net-balance">$0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Secondary Metrics Row -->
+                        <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-bottom: 2.5rem;">
+                            <div class="metric-card glass-module" style="padding: 1.2rem 1.5rem;">
+                                <div class="metric-icon" style="background: rgba(155, 89, 182, 0.1); color: #9b59b6; width: 40px; height: 40px; font-size: 1.1rem; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label" style="font-size: 0.75rem;">Total Citas Realizadas</span>
+                                    <span class="metric-value" id="stat-appointments-count" style="font-size: 1.4rem;">0</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass-module" style="padding: 1.2rem 1.5rem;">
+                                <div class="metric-icon" style="background: rgba(230, 126, 34, 0.1); color: #e67e22; width: 40px; height: 40px; font-size: 1.1rem; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label" style="font-size: 0.75rem;">Servicio Estrella</span>
+                                    <span class="metric-value" id="stat-top-service" style="font-size: 1.1rem; margin-top: 2px;">---</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass-module" style="padding: 1.2rem 1.5rem;">
+                                <div class="metric-icon" style="background: rgba(26, 188, 156, 0.1); color: #1abc9c; width: 40px; height: 40px; font-size: 1.1rem; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label" style="font-size: 0.75rem;">Personal Estrella</span>
+                                    <span class="metric-value" id="stat-top-specialist" style="font-size: 1.1rem; margin-top: 2px;">---</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Charts Quad Grid -->
+                        <div class="charts-container-grid quad-grid">
+                            <!-- Q1: Sales Trend -->
+                            <div class="chart-card glass-module">
+                                <h3><i class="fas fa-chart-line" style="color: #e91e63; margin-right: 8px;"></i> Tendencia Diaria</h3>
+                                <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 1rem;">Flujo de ingresos de citas en el tiempo.</p>
+                                <div class="chart-wrapper" style="position: relative; width: 100%; height: 300px;">
+                                    <canvas id="chart-sales-trend"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Q2: Category Distribution -->
+                            <div class="chart-card glass-module">
+                                <h3><i class="fas fa-chart-pie" style="color: #2196f3; margin-right: 8px;"></i> Citas por Categoría</h3>
+                                <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 1rem;">Distribución de demanda por especialidad.</p>
+                                <div class="chart-wrapper" style="position: relative; width: 100%; height: 300px;">
+                                    <canvas id="chart-categories"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Q3: Monthly Totals -->
+                            <div class="chart-card glass-module">
+                                <h3><i class="fas fa-chart-bar" style="color: #4caf50; margin-right: 8px;"></i> Ingresos Mensuales</h3>
+                                <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 1rem;">Comparativa de rendimiento anual.</p>
+                                <div class="chart-wrapper" style="position: relative; width: 100%; height: 300px;">
+                                    <canvas id="chart-monthly-revenue"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Q4: Top Services -->
+                            <div class="chart-card glass-module">
+                                <h3><i class="fas fa-award" style="color: #f7931e; margin-right: 8px;"></i> Top 5 Servicios</h3>
+                                <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 1rem;">Los servicios más solicitados.</p>
+                                <div class="chart-wrapper" style="position: relative; width: 100%; height: 300px;">
+                                    <canvas id="chart-top-products"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
                     <!-- TAB 6: HISTORY -->
                     <section id="history-tab" class="tab-content">

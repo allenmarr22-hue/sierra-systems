@@ -227,6 +227,7 @@ if (!localStorage.getItem('margarita_categories')) {
 // Global state initialized from local storage first for instant UI response
 let categories = JSON.parse(localStorage.getItem('margarita_categories'));
 let services = JSON.parse(localStorage.getItem('margarita_services') || '[]');
+let dashboardCharts = { categories: null, topServices: null, monthlyRevenue: null, salesTrend: null };
 
 // Utility: Obtener nombre de categoría desde un ID
 function getCategoryName(idOrName) {
@@ -1236,6 +1237,10 @@ window.showTab = function(tabId, element) {
 
     if (tabId === 'expenses-tab') {
         renderExpenses();
+    }
+
+    if (tabId === 'dashboard-tab') {
+        renderDashboardStats('today');
     }
 };
 
@@ -8474,6 +8479,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCurrentSettings();
     // Inicializar configuraciones de promociones
     if(typeof loadPromoSettings === 'function') loadPromoSettings();
+    if(typeof initDashboardDropdowns === 'function') initDashboardDropdowns();
 });
 
 // Promo UI functions moved to upper section (lines 1818-2000)
@@ -9417,4 +9423,535 @@ window.savePromoBubbleConfig = async function() {
     }
 
     showToast('<i class="fas fa-gift"></i> Burbuja Pro configurada y guardada.', 'success');
+};
+
+// ============================================
+// LOGICA DEL DASHBOARD ADMINISTRATIVO
+// ============================================
+window.renderDashboardStats = function(range = 'today', specificMonth = null, specificDate = null) {
+    if (!document.getElementById('dashboard-tab')) return;
+
+    const appointments = JSON.parse(localStorage.getItem('margarita_appointments')) || [];
+    const completedApts = appointments.filter(a => a.status === 'accepted');
+    const expenses = JSON.parse(localStorage.getItem('margarita_expenses')) || [];
+
+    const isDark = document.documentElement.classList.contains('dark-theme');
+    const chartText = isDark ? '#cbd5e1' : '#3D3B3A';
+    const chartGrid = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+    const chartDim = isDark ? '#64748b' : '#888888';
+
+    const parsePrice = (priceStr) => {
+        if (!priceStr || priceStr === 'Gratis') return 0;
+        return parseInt(priceStr.toString().replace(/\D/g, '')) || 0;
+    };
+
+    const fmt = (num) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('sv-SE');
+
+    // 1. Filtrar Citas y Gastos por Período
+    const filterData = (items, dateField) => {
+        return items.filter(item => {
+            if (!item[dateField]) return false;
+            const itemDateStr = item[dateField];
+
+            if (specificDate) {
+                return itemDateStr === specificDate;
+            }
+
+            if (specificMonth !== null && specificMonth !== "") {
+                const d = new Date(itemDateStr + 'T00:00:00');
+                return !isNaN(d) && d.getMonth() === parseInt(specificMonth) && d.getFullYear() === now.getFullYear();
+            }
+
+            if (range === 'today') {
+                return itemDateStr === todayStr;
+            }
+            if (range === 'week') {
+                const startOfRange = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                startOfRange.setDate(startOfRange.getDate() - 6);
+                const itemDate = new Date(itemDateStr + 'T00:00:00');
+                return !isNaN(itemDate) && itemDate >= startOfRange && itemDate <= now;
+            }
+            if (range === 'fortnight') {
+                const startOfRange = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                startOfRange.setDate(startOfRange.getDate() - 14);
+                const itemDate = new Date(itemDateStr + 'T00:00:00');
+                return !isNaN(itemDate) && itemDate >= startOfRange && itemDate <= now;
+            }
+            return true;
+        });
+    };
+
+    const filteredApts = filterData(completedApts, 'date');
+    const filteredExpenses = filterData(expenses, 'date');
+
+    // 2. Calcular KPIs
+    let totalRevenue = 0;
+    let totalNetRevenue = 0;
+
+    const specialists = JSON.parse(localStorage.getItem('margarita_specialists')) || [];
+    const specCommMap = {};
+    specialists.forEach(s => {
+        const pct = parseInt(s.profitPercent);
+        specCommMap[s.name] = isNaN(pct) ? 50 : pct;
+    });
+
+    filteredApts.forEach(a => {
+        const parsedFacial = parsePrice(a.price);
+        const val = (a.splitPrice != null && parsePrice(a.splitPrice) !== parsedFacial) ? parsePrice(a.splitPrice) : parsedFacial;
+        
+        totalRevenue += val;
+        
+        const profPct = specCommMap[a.specialist] || 50;
+        const studioPart = val * ((100 - profPct) / 100);
+        totalNetRevenue += studioPart;
+    });
+
+    const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const netBalance = totalNetRevenue - totalExpenses;
+
+    document.getElementById('stat-revenue').textContent = fmt(totalRevenue);
+    document.getElementById('stat-net-revenue').textContent = fmt(totalNetRevenue);
+    document.getElementById('stat-expenses').textContent = fmt(totalExpenses);
+    document.getElementById('stat-net-balance').textContent = fmt(netBalance);
+    document.getElementById('stat-appointments-count').textContent = filteredApts.length;
+
+    const balanceEl = document.getElementById('stat-net-balance');
+    if (balanceEl) {
+        if (netBalance > 0) {
+            balanceEl.style.color = '#2ecc71';
+        } else if (netBalance < 0) {
+            balanceEl.style.color = '#e74c3c';
+        } else {
+            balanceEl.style.color = '';
+        }
+    }
+
+    // Servicio y Especialista Estrella
+    const serviceCounts = {};
+    filteredApts.forEach(a => {
+        const sName = a.service || 'Servicio';
+        serviceCounts[sName] = (serviceCounts[sName] || 0) + 1;
+    });
+    const sortedServices = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1]);
+    const topService = sortedServices[0]?.[0] || '---';
+    document.getElementById('stat-top-service').textContent = topService;
+
+    const specCounts = {};
+    filteredApts.forEach(a => {
+        if (a.specialist) specCounts[a.specialist] = (specCounts[a.specialist] || 0) + 1;
+    });
+    const sortedSpecs = Object.entries(specCounts).sort((a, b) => b[1] - a[1]);
+    const topSpecialist = sortedSpecs[0]?.[0] || '---';
+    document.getElementById('stat-top-specialist').textContent = topSpecialist;
+
+    // --- GRÁFICO 1: TENDENCIA DIARIA (LÍNEA) ---
+    let trendLabels = [];
+    let trendValues = [];
+
+    if (specificMonth !== null && specificMonth !== "") {
+        const daysInMonth = new Date(now.getFullYear(), parseInt(specificMonth) + 1, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayStr = i.toString();
+            const dateFormatted = `${now.getFullYear()}-${(parseInt(specificMonth)+1).toString().padStart(2, '0')}-${dayStr.padStart(2, '0')}`;
+            trendLabels.push(dayStr);
+            
+            const dayRev = completedApts
+                .filter(a => a.date === dateFormatted)
+                .reduce((sum, a) => {
+                    const parsedFacial = parsePrice(a.price);
+                    return sum + ((a.splitPrice != null && parsePrice(a.splitPrice) !== parsedFacial) ? parsePrice(a.splitPrice) : parsedFacial);
+                }, 0);
+            trendValues.push(dayRev);
+        }
+    } else {
+        const numDays = (range === 'fortnight') ? 15 : 7;
+        const endDate = specificDate ? new Date(specificDate + 'T00:00:00') : new Date();
+        
+        for (let i = 0; i < numDays; i++) {
+            const d = new Date(endDate.getTime());
+            d.setDate(endDate.getDate() - (numDays - 1 - i));
+            const dateFormatted = d.toLocaleDateString('sv-SE');
+            
+            trendLabels.push(d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' }));
+            
+            const dayRev = completedApts
+                .filter(a => a.date === dateFormatted)
+                .reduce((sum, a) => {
+                    const parsedFacial = parsePrice(a.price);
+                    return sum + ((a.splitPrice != null && parsePrice(a.splitPrice) !== parsedFacial) ? parsePrice(a.splitPrice) : parsedFacial);
+                }, 0);
+            trendValues.push(dayRev);
+        }
+    }
+
+    const ctxTrend = document.getElementById('chart-sales-trend').getContext('2d');
+    if (window.dashboardCharts && window.dashboardCharts.salesTrend) {
+        window.dashboardCharts.salesTrend.destroy();
+    }
+    window.dashboardCharts.salesTrend = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: [{
+                label: 'Ingresos',
+                data: trendValues,
+                borderColor: '#e91e63',
+                backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    grace: '10%',
+                    grid: { color: chartGrid }, 
+                    ticks: { 
+                        color: chartText,
+                        callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v
+                    } 
+                },
+                x: { ticks: { color: chartText, font: { size: 9 } }, grid: { display: false } }
+            },
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` Ingresos: $${ctx.raw.toLocaleString('es-CO')}`
+                    }
+                }
+            }
+        }
+    });
+
+    // --- GRÁFICO 2: CITAS POR CATEGORÍA (DONA) ---
+    const catSales = {};
+    filteredApts.forEach(a => {
+        const catName = getCategoryName(a.category || a.cat);
+        catSales[catName] = (catSales[catName] || 0) + 1;
+    });
+
+    let catLabels = Object.keys(catSales);
+    let catData = Object.values(catSales);
+    const totalItems = catData.reduce((a, b) => a + b, 0);
+
+    if (catData.length === 0) {
+        catLabels.push("Sin datos");
+        catData.push(1);
+    } else {
+        catLabels = catLabels.map((name, idx) => {
+            const val = catData[idx];
+            const pct = totalItems > 0 ? Math.round((val / totalItems) * 100) : 0;
+            return `${name} (${pct}%)`;
+        });
+    }
+
+    const ctxCat = document.getElementById('chart-categories').getContext('2d');
+    if (window.dashboardCharts && window.dashboardCharts.categories) {
+        window.dashboardCharts.categories.destroy();
+    }
+    window.dashboardCharts.categories = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+            labels: catLabels,
+            datasets: [{
+                data: catData,
+                backgroundColor: [
+                    '#A05D6B', '#38bdf8', '#2ecc71', '#f1c40f', '#9b59b6',
+                    '#e67e22', '#1abc9c', '#e74c3c', '#34495e', '#7f8c8d'
+                ],
+                borderWidth: 0,
+                hoverOffset: 12
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        color: chartText, 
+                        boxWidth: 8, 
+                        padding: 15,
+                        font: { size: 9, weight: '500' } 
+                    } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (context.label === "Sin datos") return " Sin datos registrados";
+                            const value = context.raw || 0;
+                            const pct = totalItems > 0 ? ((value / totalItems) * 100).toFixed(1) : 0;
+                            return ` ${context.label.split(' (')[0]}: ${value} citas (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // --- GRÁFICO 3: INGRESOS MENSUALES (BARRAS VERTICALES) ---
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const monthlyData = months.map((_, i) => {
+        return completedApts
+            .filter(a => {
+                const d = new Date(a.date + 'T00:00:00');
+                return !isNaN(d) && d.getMonth() === i && d.getFullYear() === now.getFullYear();
+            })
+            .reduce((sum, a) => {
+                const parsedFacial = parsePrice(a.price);
+                return sum + ((a.splitPrice != null && parsePrice(a.splitPrice) !== parsedFacial) ? parsePrice(a.splitPrice) : parsedFacial);
+            }, 0);
+    });
+
+    const ctxMonth = document.getElementById('chart-monthly-revenue').getContext('2d');
+    if (window.dashboardCharts && window.dashboardCharts.monthlyRevenue) {
+        window.dashboardCharts.monthlyRevenue.destroy();
+    }
+    window.dashboardCharts.monthlyRevenue = new Chart(ctxMonth, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                data: monthlyData,
+                backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                hoverBackgroundColor: 'rgba(56, 189, 248, 0.8)',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    grace: '15%',
+                    grid: { color: chartGrid }, 
+                    ticks: { 
+                        color: chartDim, 
+                        callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v 
+                    } 
+                },
+                x: { ticks: { color: chartText, font: { size: 9 } }, grid: { display: false } }
+            },
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` Ingresos: $${ctx.raw.toLocaleString('es-CO')}`
+                    }
+                }
+            }
+        }
+    });
+
+    // --- GRÁFICO 4: TOP 5 SERVICIOS (BARRAS HORIZONTALES) ---
+    const top5Services = sortedServices.slice(0, 5);
+    let svcLabels = top5Services.map(item => item[0]);
+    let svcUnits = top5Services.map(item => item[1]);
+    let svcRevenue = top5Services.map(item => {
+        return filteredApts
+            .filter(a => a.service === item[0])
+            .reduce((sum, a) => {
+                const parsedFacial = parsePrice(a.price);
+                return sum + ((a.splitPrice != null && parsePrice(a.splitPrice) !== parsedFacial) ? parsePrice(a.splitPrice) : parsedFacial);
+            }, 0);
+    });
+
+    if (svcLabels.length === 0) {
+        svcLabels.push("Sin datos");
+        svcUnits.push(0);
+        svcRevenue.push(0);
+    }
+
+    const ctxTop = document.getElementById('chart-top-products').getContext('2d');
+    if (window.dashboardCharts && window.dashboardCharts.topServices) {
+        window.dashboardCharts.topServices.destroy();
+    }
+    window.dashboardCharts.topServices = new Chart(ctxTop, {
+        type: 'bar',
+        data: {
+            labels: svcLabels,
+            datasets: [
+                {
+                    label: 'Citas',
+                    data: svcUnits,
+                    backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                    borderRadius: 3,
+                    barThickness: 12,
+                    xAxisID: 'xUnits'
+                },
+                {
+                    label: 'Ingresos ($)',
+                    data: svcRevenue,
+                    backgroundColor: 'rgba(160, 93, 107, 0.6)',
+                    borderRadius: 3,
+                    barThickness: 12,
+                    xAxisID: 'xRevenue'
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                xUnits: {
+                    type: 'linear',
+                    position: 'bottom',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Cant. Citas', color: chartDim, font: { size: 9 } },
+                    grid: { display: false },
+                    ticks: { color: chartText, font: { size: 9 } }
+                },
+                xRevenue: {
+                    type: 'linear',
+                    position: 'top',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Total Ingresos ($)', color: chartDim, font: { size: 9 } },
+                    grid: { color: chartGrid },
+                    ticks: { 
+                        color: chartText, 
+                        font: { size: 9 },
+                        callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v)
+                    }
+                },
+                y: { 
+                    ticks: { color: chartText, font: { size: 10, weight: 'bold' } },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { color: chartText, boxWidth: 10, font: { size: 10 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (context.label === "Sin datos") return " Sin datos registrados";
+                            let label = context.dataset.label || '';
+                            let value = context.raw;
+                            if (label.includes('$')) {
+                                return label + ': $' + value.toLocaleString('es-CO');
+                            }
+                            return label + ': ' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+};
+
+window.initDashboardDropdowns = function() {
+    const dropdowns = document.querySelectorAll('#dashboard-tab .custom-dropdown');
+    
+    dropdowns.forEach(dropdown => {
+        const trigger = dropdown.querySelector('.dropdown-trigger');
+        const menu = dropdown.querySelector('.dropdown-menu');
+        const items = dropdown.querySelectorAll('li');
+        const display = dropdown.querySelector('span');
+
+        if (trigger) {
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdowns.forEach(d => {
+                    if (d !== dropdown) d.classList.remove('open');
+                });
+                dropdown.classList.toggle('open');
+            });
+        }
+
+        items.forEach(item => {
+            item.addEventListener('click', () => {
+                const value = item.dataset.value;
+                const text = item.textContent;
+
+                display.textContent = text;
+                items.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                if (dropdown.id === 'range-dropdown') {
+                    trigger.classList.add('active-trigger');
+                    const monthDisplay = document.querySelector('#month-dropdown #month-trigger span');
+                    if (monthDisplay) monthDisplay.textContent = "Meses...";
+                    document.querySelectorAll('#month-dropdown li').forEach(li => li.classList.remove('active'));
+                } else {
+                    const rangeDisplay = document.querySelector('#range-dropdown #range-trigger span');
+                    if (rangeDisplay) rangeDisplay.textContent = "Rango...";
+                    document.querySelectorAll('#range-dropdown li').forEach(li => li.classList.remove('active'));
+                    trigger.classList.add('active-trigger');
+                }
+
+                const dateInput = document.getElementById('stats-date-filter');
+                if (dateInput) dateInput.value = "";
+
+                if (dropdown.id === 'range-dropdown') {
+                    renderDashboardStats(value);
+                } else {
+                    renderDashboardStats('month', value);
+                }
+
+                dropdown.classList.remove('open');
+            });
+        });
+    });
+
+    document.addEventListener('click', () => {
+        dropdowns.forEach(d => d.classList.remove('open'));
+    });
+
+    const statsDateFilter = document.getElementById('stats-date-filter');
+    if (statsDateFilter) {
+        statsDateFilter.addEventListener('change', (e) => {
+            if (e.target.value !== "") {
+                document.querySelectorAll('#dashboard-tab .custom-dropdown li').forEach(li => li.classList.remove('active'));
+                document.querySelectorAll('#dashboard-tab .dropdown-trigger').forEach(tr => tr.classList.remove('active-trigger'));
+                
+                const rangeDisp = document.querySelector('#range-dropdown #range-trigger span');
+                const monthDisp = document.querySelector('#month-dropdown #month-trigger span');
+                if (rangeDisp) rangeDisp.textContent = "Rango...";
+                if (monthDisp) monthDisp.textContent = "Meses...";
+
+                renderDashboardStats(null, null, e.target.value);
+            }
+        });
+    }
+
+    const resetBtn = document.getElementById('reset-stats-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            const statsDateFilter = document.getElementById('stats-date-filter');
+            if (statsDateFilter) statsDateFilter.value = "";
+            
+            const rangeDisp = document.querySelector('#range-dropdown #range-trigger span');
+            const monthDisp = document.querySelector('#month-dropdown #month-trigger span');
+            if (rangeDisp) rangeDisp.textContent = "Hoy";
+            if (monthDisp) monthDisp.textContent = "Meses...";
+            
+            document.querySelectorAll('#dashboard-tab .custom-dropdown li').forEach(li => li.classList.remove('active'));
+            document.querySelectorAll('#dashboard-tab .dropdown-trigger').forEach(tr => tr.classList.remove('active-trigger'));
+            
+            const todayLi = document.querySelector('#range-dropdown li[data-value="today"]');
+            if (todayLi) todayLi.classList.add('active');
+            
+            const rangeTrigger = document.querySelector('#range-dropdown #range-trigger');
+            if (rangeTrigger) rangeTrigger.classList.add('active-trigger');
+            
+            renderDashboardStats('today');
+            showToast('<i class="fas fa-sync-alt"></i> Panel restablecido a Hoy.');
+        });
+    }
 };

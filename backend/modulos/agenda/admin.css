@@ -1808,3 +1808,252 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     .tray-btn { padding: 8px 12px !important; font-size: 0.78rem !important; }
     .tray-btn .badge { padding: 2px 6px !important; font-size: 0.68rem !important; }
 }
+
+/* =========================================
+   ESTADÍSTICAS Y PANEL DE CONTROL (DASHBOARD)
+   ========================================= */
+.stats-header {
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 500;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.metric-card {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.5rem 1.5rem 1.5rem 2rem;
+    border-radius: 16px;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+    border: 1px solid var(--glass-border);
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: var(--color-accent);
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--color-accent);
+}
+
+.metric-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.metric-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    color: var(--color-text);
+    opacity: 0.7;
+    font-weight: 500;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--color-text);
+    line-height: 1.2;
+}
+
+.kpi-card .metric-value {
+    font-size: 2rem;
+    font-weight: 900;
+}
+
+/* Colores específicos para KPIs */
+.kpi-card:nth-child(1) .metric-value { color: #2ecc71 !important; } /* Verde para Bruto */
+.kpi-card:nth-child(2) .metric-value { color: #38bdf8 !important; } /* Azul/Cian para Neto */
+.kpi-card:nth-child(3) .metric-value { color: #e74c3c !important; } /* Rojo para Gastos */
+.kpi-card:nth-child(4) .metric-value { color: #f1c40f !important; } /* Dorado/Amarillo para Balance */
+
+.charts-container-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+.chart-card {
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+}
+
+.chart-card h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.chart-wrapper {
+    width: 100%;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.charts-container-grid.quad-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2x2 Grid */
+    gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+    .charts-container-grid.quad-grid {
+        grid-template-columns: 1fr; /* Colapsar a una columna en pantallas medianas */
+    }
+}
+
+#reset-stats-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+#reset-stats-btn:hover {
+    background: rgba(255, 82, 82, 0.15) !important;
+    transform: scale(1.05);
+}
+
+.stats-filters {
+    display: flex;
+    padding: 0.3rem;
+    border-radius: 12px;
+    gap: 0.2rem;
+}
+
+/* Custom Dropdown Styling (Dashboard Filters) */
+.custom-dropdown {
+    position: relative;
+    user-select: none;
+    z-index: 10;
+}
+
+.custom-dropdown.open {
+    z-index: 2001;
+}
+
+.dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 1.5rem;
+    height: 40px;
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    border-radius: 50px;
+    color: var(--color-text);
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 120px;
+    backdrop-filter: blur(10px);
+}
+
+.dropdown-trigger:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+}
+
+.dropdown-trigger.active-trigger {
+    background: var(--color-accent);
+    color: var(--color-bg) !important;
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.25);
+}
+
+.dropdown-trigger i {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.3s ease;
+}
+
+.custom-dropdown.open .dropdown-trigger i {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    width: 160px;
+    background: var(--color-white);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 8px;
+    list-style: none;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.custom-dropdown.open .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.dropdown-menu li {
+    padding: 10px 15px;
+    border-radius: 10px;
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.dropdown-menu li:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+    transform: scale(1.02);
+}
+
+.dropdown-menu li.active {
+    background: rgba(var(--accent-rgb), 0.15);
+    color: var(--color-accent);
+}
+
+.dark-theme #stats-date-filter {
+    background-color: transparent !important;
+    border: none !important;
+}
+
