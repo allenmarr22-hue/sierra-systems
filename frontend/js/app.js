@@ -1185,8 +1185,8 @@ function initDashboard() {
     const kpiMods = document.getElementById('kpi-modules');
     if (kpiMods) kpiMods.textContent = activeMods;
 
-    // KPI: Usuarios totales (Admins + Clientes registrados)
-    const totalUsers = (appState.users?.length || 0) + (appState.businesses?.length || 0);
+    // KPI: Usuarios totales (Solo parte administrativa)
+    const totalUsers = appState.users.length;
     const kpiUsers = document.getElementById('kpi-users');
     if (kpiUsers) kpiUsers.textContent = totalUsers;
 
@@ -1226,60 +1226,40 @@ function renderUsersList(searchQuery = '') {
     const list = document.getElementById('users-list');
     if (!list) return;
 
-    // Combinar usuarios del sistema (admins/soporte) y clientes registrados (de negocios)
-    const systemUsers = appState.users || [];
-    const clientUsers = (appState.businesses || []).map(biz => ({
-        id: biz.id,
-        name: biz.ownerName || biz.name || 'Cliente',
-        user: biz.clientEmail ? biz.clientEmail.split('@')[0] : 'cliente',
-        email: biz.clientEmail || '—',
-        role: 'Cliente',
-        status: biz.status || 'active',
-        isClient: true
-    }));
-
-    let allUsers = [...systemUsers, ...clientUsers];
+    let filtered = appState.users || [];
 
     if (searchQuery) {
-        const query = searchQuery.toLowerCase().trim();
-        allUsers = allUsers.filter(u => 
-            (u.name || '').toLowerCase().includes(query) || 
-            (u.email || '').toLowerCase().includes(query) ||
-            (u.user || '').toLowerCase().includes(query) ||
-            (u.role || '').toLowerCase().includes(query)
+        filtered = filtered.filter(u => 
+            (u.name || '').toLowerCase().includes(searchQuery) || 
+            (u.email || '').toLowerCase().includes(searchQuery) ||
+            (u.user || '').toLowerCase().includes(searchQuery)
         );
     }
 
-    list.innerHTML = allUsers.map(user => {
-        const actionsHtml = user.isClient
-            ? `<span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Gestionar en Negocios</span>`
-            : `<div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="btn-icon edit-user-btn" data-id="${user.id}" title="Editar"><i data-lucide="edit-3" style="width:18px; height:18px;"></i></button>
-                <button class="btn-icon delete-user-btn" data-id="${user.id}" title="Eliminar" style="color: var(--danger);"><i data-lucide="trash-2" style="width:18px; height:18px;"></i></button>
-              </div>`;
-
-        return `
-            <tr>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div class="user-avatar">${(user.name || 'U').charAt(0).toUpperCase()}</div>
-                        <div>
-                            <div style="font-weight: 600;">${user.name}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">@${user.user}</div>
-                        </div>
+    list.innerHTML = filtered.map(user => `
+        <tr>
+            <td>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="user-avatar">${(user.name || 'U').charAt(0).toUpperCase()}</div>
+                    <div>
+                        <div style="font-weight: 600;">${user.name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">@${user.user}</div>
                     </div>
-                </td>
-                <td>${user.email}</td>
-                <td><span class="pill" style="font-size: 0.7rem; background: rgba(99, 102, 241, 0.05); color: var(--primary); border-color: rgba(99, 102, 241, 0.1);">${user.role}</span></td>
-                <td>
-                    <div class="status-badge ${user.status}">${user.status === 'active' ? 'Activo' : 'Inactivo'}</div>
-                </td>
-                <td style="text-align: right;">
-                    ${actionsHtml}
-                </td>
-            </tr>
-        `;
-    }).join('');
+                </div>
+            </td>
+            <td>${user.email}</td>
+            <td><span class="pill" style="font-size: 0.7rem; background: rgba(99, 102, 241, 0.05); color: var(--primary); border-color: rgba(99, 102, 241, 0.1);">${user.role}</span></td>
+            <td>
+                <div class="status-badge ${user.status}">${user.status === 'active' ? 'Activo' : 'Inactivo'}</div>
+            </td>
+            <td style="text-align: right;">
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button class="btn-icon edit-user-btn" data-id="${user.id}" title="Editar"><i data-lucide="edit-3" style="width:18px; height:18px;"></i></button>
+                    <button class="btn-icon delete-user-btn" data-id="${user.id}" title="Eliminar" style="color: var(--danger);"><i data-lucide="trash-2" style="width:18px; height:18px;"></i></button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
     lucide.createIcons();
 }
 
@@ -3666,7 +3646,7 @@ window.exportExecutiveReportPDF = function() {
         const activeBizCount = appState.businesses.filter(b => b.status === 'active').length;
         const totalBizCount = appState.businesses.length;
         const activeModsCount = appState.modules.filter(m => m.status === 'active').length;
-        const totalUsersCount = (appState.users?.length || 0) + (appState.businesses?.length || 0);
+        const totalUsersCount = appState.users.length;
         
         let totalIncome = 0;
         appState.businesses.forEach(biz => {
