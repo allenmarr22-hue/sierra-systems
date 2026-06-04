@@ -1827,10 +1827,22 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
         let moduleName = '';
         let branchName = '';
 
+        // Función de análisis de fecha segura
+        const parseDate = (dStr) => {
+            if (!dStr) return new Date();
+            let dateObj;
+            if (dStr.includes('T') || dStr.includes(' ') || dStr.length > 10) {
+                dateObj = new Date(dStr);
+            } else {
+                dateObj = new Date(dStr + 'T00:00:00');
+            }
+            return isNaN(dateObj.getTime()) ? new Date() : dateObj;
+        };
+
         if (targetInstance) {
             // Calcular nueva fecha de corte para esta instancia específica
             const currentRenewal = targetInstance.renewalDate || biz.billing?.next_billing_date;
-            const baseDate = currentRenewal ? new Date(currentRenewal + 'T00:00:00') : new Date();
+            const baseDate = parseDate(currentRenewal);
             baseDate.setDate(baseDate.getDate() + daysInt);
             newDateStr = baseDate.toISOString().slice(0, 10);
             targetInstance.renewalDate = newDateStr;
@@ -1851,7 +1863,7 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
         } else {
             // Caso general o legacy (sin instanceId)
             const currentNext = biz.billing?.next_billing_date;
-            const baseDate = currentNext ? new Date(currentNext + 'T00:00:00') : new Date();
+            const baseDate = parseDate(currentNext);
             baseDate.setDate(baseDate.getDate() + daysInt);
             newDateStr = baseDate.toISOString().slice(0, 10);
 
