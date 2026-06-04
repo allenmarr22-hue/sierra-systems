@@ -6914,8 +6914,10 @@ function renderSpecialists() {
             specialists = specialists.filter(s => s && s.name && typeof s.name === 'string' && s.name.toLowerCase().includes(specialistSearchQuery));
         }
         
+        console.log('[renderSpecialists] Total specialists after filter:', specialists.length, JSON.stringify(specialists.map(s => s.name)));
+
         if (specialists.length === 0) {
-            container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding:40px; color:#999; border:1px dashed #ccc; border-radius:12px;">No hay personal registrado. Añade profesionales arriba.</p>`;
+            container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--color-text-muted); border:1px dashed var(--border-color); border-radius:12px;">No hay personal registrado. Añade profesionales arriba.</p>`;
             return;
         }
 
@@ -7110,12 +7112,20 @@ function renderSpecialists() {
                     </div>
                 </div>`;
             } catch(e) {
-                console.error("Error rendering specialist object:", spec, e);
-                return '';
+                console.error('[renderSpecialists] Error rendering specialist:', spec && spec.name, e.message, e.stack);
+                return `<div class="glass-module" style="padding:20px; border-radius:20px; border:2px dashed #e74c3c; color:#e74c3c; text-align:center;"><i class="fas fa-exclamation-triangle"></i><br><b>${(spec && spec.name) || 'Especialista'}</b><br><small style="opacity:0.7;">Error al cargar: ${e.message}</small></div>`;
             }
         }).join('');
+
+        // Fallback: si el HTML quedó vacío pero había especialistas, mostrar error
+        if (!container.innerHTML.trim() || container.innerHTML.trim() === '') {
+            console.error('[renderSpecialists] innerHTML vacío después de render - specialists count was:', specialists.length);
+            container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:40px; color:#e74c3c; border:2px dashed #e74c3c; border-radius:12px;"><i class="fas fa-exclamation-triangle"></i> Error inesperado al cargar el personal. Recarga la página (F5).</p>`;
+        }
     } catch(globalError) {
-        console.error("Global error in renderSpecialists:", globalError);
+        console.error('[renderSpecialists] Global error:', globalError.message, globalError.stack);
+        const container = document.getElementById('specialists-container');
+        if (container) container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:40px; color:#e74c3c; border:2px dashed #e74c3c; border-radius:12px;"><i class="fas fa-exclamation-triangle"></i> Error crítico: ${globalError.message}</p>`;
     }
 }
 
