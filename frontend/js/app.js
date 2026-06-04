@@ -3447,38 +3447,75 @@ async function updateTicketStatus(ticketId, currentStatus) {
     }
 }
 
-window.updateTicketStatusFromChat = async function(ticketId, newStatus) {
-    try {
-        const res = await adminFetch(`/api/admin/tickets/${ticketId}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-            const ticket = appState.adminTickets.find(t => t.id === ticketId);
-            if (ticket) ticket.status = newStatus;
-            renderAdminTickets();
-            updateTicketBadge();
-            
-            // Actualizar badge del chat en tiempo real
-            const badge = document.getElementById('chat-ticket-status-badge');
-            if (badge) {
-                const st = TICKET_STATUS_MAP[newStatus] || TICKET_STATUS_MAP['abierto'];
-                badge.style.background = st.bg;
-                badge.style.color = st.color;
-                badge.style.borderColor = st.color + '33';
-                badge.textContent = st.label;
-            }
-            
-            showToast(`Solicitud actualizada a: ${TICKET_STATUS_MAP[newStatus]?.label || newStatus}`, 'success');
-        } else {
-            showToast(data.error || 'Error al actualizar la solicitud', 'error');
-        }
-    } catch (err) {
-        console.error('Error actualizando solicitud desde chat:', err);
-        showToast('Error de conexión', 'error');
+window.toggleChatStatusDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('chat-status-dropdown-menu');
+    if (!menu) return;
+    const isVisible = menu.style.display === 'block';
+    
+    // Cerrar el de respuestas rápidas si está abierto
+    const cannedMenu = document.getElementById('canned-responses-dropdown');
+    if (cannedMenu) cannedMenu.style.display = 'none';
+    
+    menu.style.display = isVisible ? 'none' : 'block';
+};
+
+window.selectChatStatusOption = function(newStatus) {
+    window._selectedChatStatus = newStatus;
+    
+    // Actualizar visual del botón dropdown
+    const st = TICKET_STATUS_MAP[newStatus] || TICKET_STATUS_MAP['abierto'];
+    const btn = document.getElementById('chat-status-dropdown-btn');
+    const dot = document.getElementById('chat-status-dot');
+    const txt = document.getElementById('chat-status-text');
+    if (btn && dot && txt) {
+        btn.style.color = st.color;
+        dot.style.background = st.color;
+        txt.textContent = st.label;
     }
+    
+    // Cambiar el texto del botón Confirmar y Cerrar
+    const actionBtn = document.getElementById('chat-modal-action-btn');
+    if (actionBtn) {
+        if (window._selectedChatStatus !== window._originalChatStatus) {
+            actionBtn.textContent = 'Confirmar y cerrar chat';
+            actionBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        } else {
+            actionBtn.textContent = 'Cerrar';
+            actionBtn.style.background = 'linear-gradient(135deg, var(--primary), #818cf8)';
+        }
+    }
+    
+    // Ocultar menú
+    const menu = document.getElementById('chat-status-dropdown-menu');
+    if (menu) menu.style.display = 'none';
+};
+
+window.handleChatModalAction = async function(ticketId) {
+    if (window._selectedChatStatus !== window._originalChatStatus) {
+        const newStatus = window._selectedChatStatus;
+        try {
+            const res = await adminFetch(`/api/admin/tickets/${ticketId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                const ticket = appState.adminTickets.find(t => t.id === ticketId);
+                if (ticket) ticket.status = newStatus;
+                renderAdminTickets();
+                updateTicketBadge();
+                showToast(`Solicitud actualizada a: ${TICKET_STATUS_MAP[newStatus]?.label || newStatus}`, 'success');
+            } else {
+                showToast(data.error || 'Error al actualizar la solicitud', 'error');
+            }
+        } catch (err) {
+            console.error('Error actualizando solicitud desde chat:', err);
+            showToast('Error de conexión', 'error');
+        }
+    }
+    Swal.close();
 };
 
 window.deleteTicket = async function(ticketId) {
@@ -3702,18 +3739,30 @@ window.viewTicketDetails = function(ticketId) {
                 </div>
 
                 <!-- Modal Footer Actions -->
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px; border-top:1px solid var(--border-color); padding-top:16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px; border-top:1px solid var(--border-color); padding-top:16px; position:relative;">
                     <!-- Dropdown next to Cerrar -->
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Estado:</span>
-                        <select onchange="updateTicketStatusFromChat('${ticket.id}', this.value)" style="background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:var(--text-main); font-size:0.8rem; padding:6px 12px; border-radius:8px; outline:none; cursor:pointer; font-family:'Outfit',sans-serif; font-weight:700; transition: border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
-                            ${Object.entries(TICKET_STATUS_MAP).filter(([key]) => key !== 'resuelto').map(([key, val]) => `
-                                <option value="${key}" ${key === ticket.status ? 'selected' : ''} style="background:var(--bg-surface); color:${val.color}; font-weight:700;">${val.label}</option>
-                            `).join('')}
-                        </select>
+                        <div style="position:relative; display:inline-block;">
+                            <button id="chat-status-dropdown-btn" onclick="toggleChatStatusDropdown(event)" style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); color:${st.color}; font-size:0.8rem; padding:6px 14px; border-radius:8px; outline:none; cursor:pointer; font-family:'Outfit',sans-serif; font-weight:700; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)';" onmouseout="this.style.background='rgba(255,255,255,0.04)';">
+                                <span id="chat-status-dot" style="width:7px; height:7px; border-radius:50%; background:${st.color}; display:inline-block;"></span>
+                                <span id="chat-status-text">${st.label}</span>
+                                <i data-lucide="chevron-down" style="width:12px; height:12px; opacity:0.7;"></i>
+                            </button>
+                            
+                            <!-- Custom Dropdown Menu -->
+                            <div id="chat-status-dropdown-menu" style="display:none; position:absolute; bottom:42px; left:0; z-index:9999; background:rgba(30,41,59,0.98); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.08); border-radius:10px; width:160px; box-shadow:0 8px 20px rgba(0,0,0,0.4); padding:6px 0; animation: slideUp 0.15s ease;">
+                                ${Object.entries(TICKET_STATUS_MAP).filter(([key]) => key !== 'resuelto').map(([key, val]) => `
+                                    <a href="javascript:void(0)" onclick="selectChatStatusOption('${key}')" style="display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; font-weight:700;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">
+                                        <span style="width:6px; height:6px; border-radius:50%; background:${val.color};"></span>
+                                        <span style="color:${val.color};">${val.label}</span>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </div>
                     </div>
-                    <!-- Cerrar button -->
-                    <button class="btn-primary" onclick="Swal.close()" style="padding:8px 24px; font-size:0.85rem; border:none; border-radius:8px; cursor:pointer; font-weight:700; background:linear-gradient(135deg,var(--primary),#818cf8); color:white; transition: opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                    <!-- Cerrar / Confirmar button -->
+                    <button id="chat-modal-action-btn" class="btn-primary" onclick="handleChatModalAction('${ticket.id}')" style="padding:8px 24px; font-size:0.85rem; border:none; border-radius:8px; cursor:pointer; font-weight:700; background:linear-gradient(135deg,var(--primary),#818cf8); color:white; transition: all 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
                         Cerrar
                     </button>
                 </div>
@@ -3726,6 +3775,9 @@ window.viewTicketDetails = function(ticketId) {
         padding: '1.5rem',
         showConfirmButton: false,
         didOpen: () => {
+            window._originalChatStatus = ticket.status;
+            window._selectedChatStatus = ticket.status;
+            
             lucide.createIcons();
             fetchAndRenderChatMessages(ticketId, 'admin');
 
@@ -4268,6 +4320,13 @@ document.addEventListener('click', function(event) {
     if (dropdown && dropdown.style.display === 'block') {
         if (!dropdown.contains(event.target)) {
             dropdown.style.display = 'none';
+        }
+    }
+    const statusDropdown = document.getElementById('chat-status-dropdown-menu');
+    if (statusDropdown && statusDropdown.style.display === 'block') {
+        const toggleBtn = document.getElementById('chat-status-dropdown-btn');
+        if (!statusDropdown.contains(event.target) && (!toggleBtn || !toggleBtn.contains(event.target))) {
+            statusDropdown.style.display = 'none';
         }
     }
 });
