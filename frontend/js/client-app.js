@@ -1298,7 +1298,7 @@ function renderDashboard() {
                             <div style="font-weight:800; font-size:1.6rem; color:#f59e0b; text-shadow:0 0 10px rgba(245,158,11,0.2);">${formattedPromo}</div>
                         </div>
                     `;
-                    discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🔥 OFERTA</div>`;
+                    discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#ffffff; box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🔥 OFERTA</div>`;
                 } else {
                     const priceDisplay = (!isNaN(basePriceVal) && basePriceVal > 0)
                         ? `$ ${basePriceVal.toLocaleString('es-CO')} COP/mes` : 'Cotizar';
@@ -1388,7 +1388,7 @@ function renderDashboard() {
                     </div>
                 `;
 
-                const discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🏢 SEDE 2+</div>`;
+                const discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#ffffff; box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🏢 SEDE 2+</div>`;
                 
                 return `
                 <div class="biz-card" style="border:1px solid rgba(245,158,11,0.25); position:relative; overflow:hidden; display:flex; flex-direction:column; background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(245,158,11,0.02) 100%); min-width:320px; max-width:320px;">
