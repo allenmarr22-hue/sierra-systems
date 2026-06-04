@@ -2441,6 +2441,20 @@ app.listen(PORT, async () => {
 
     // Crear/verificar tablas adicionales del sistema de tickets legacy
     try {
+        // Verificar si ticket_messages tiene la estructura incorrecta de db.js (para autolimpieza y evitar colisiones de esquema)
+        try {
+            const [columns] = await db.pool.query("SHOW COLUMNS FROM ticket_messages");
+            const hasWrongColumn = columns.some(col => (col.Field || col.field || '').toLowerCase() === 'text');
+            if (hasWrongColumn) {
+                console.log('[AS Sierra] ⚠️ Detectada estructura de ticket_messages incorrecta. Recreando tablas de soporte...');
+                await db.pool.query("DROP TABLE IF EXISTS ticket_messages");
+                await db.pool.query("DROP TABLE IF EXISTS tickets");
+                await db.pool.query("DROP TABLE IF EXISTS support_tickets");
+            }
+        } catch (e) {
+            // Ignorar si la tabla no existe aún
+        }
+
         await db.pool.query(`
             CREATE TABLE IF NOT EXISTS tickets (
                 id VARCHAR(60) PRIMARY KEY,

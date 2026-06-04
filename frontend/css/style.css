@@ -1518,6 +1518,257 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
     border-color: var(--border-color) !important;
 }
 
+/* SweetAlert2 input elements, selects and .pro-input theme styling override */
+.swal2-popup .swal2-input, 
+.swal2-popup .swal2-select,
+.swal2-popup .swal2-textarea,
+.swal2-popup select.swal2-input,
+.swal2-popup input.swal2-input,
+.swal2-popup .pro-input {
+    background-color: var(--bg-surface-light) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+.swal2-popup .swal2-input:focus, 
+.swal2-popup .swal2-select:focus,
+.swal2-popup .swal2-textarea:focus,
+.swal2-popup select.swal2-input:focus,
+.swal2-popup input.swal2-input:focus,
+.swal2-popup .pro-input:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px var(--primary-alpha) !important;
+    outline: none !important;
+}
+
+/* Ensure dropdown options have proper colors in both dark and light mode inside Swal */
+.swal2-popup select.swal2-input option,
+.swal2-popup .swal2-select option,
+.swal2-popup .pro-input option {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-main) !important;
+}
+
+/* SweetAlert2 Light Mode Adjustments */
+[data-theme="light"] .swal2-popup {
+    background: #ffffff !important;
+    border: 1px solid rgba(99, 102, 241, 0.1) !important;
+    box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.08), 0 10px 10px -5px rgba(99, 102, 241, 0.04) !important;
+}
+
+[data-theme="light"] .swal2-title {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .swal2-html-container {
+    color: #475569 !important;
+}
+
+[data-theme="light"] .swal2-popup .swal2-input,
+[data-theme="light"] .swal2-popup .swal2-select,
+[data-theme="light"] .swal2-popup .swal2-textarea,
+[data-theme="light"] .swal2-popup select.swal2-input,
+[data-theme="light"] .swal2-popup input.swal2-input,
+[data-theme="light"] .swal2-popup .pro-input {
+    background-color: #ffffff !important;
+    border: 1px solid rgba(99, 102, 241, 0.15) !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .swal2-popup .swal2-input:focus,
+[data-theme="light"] .swal2-popup .swal2-select:focus,
+[data-theme="light"] .swal2-popup .swal2-textarea:focus,
+[data-theme="light"] .swal2-popup select.swal2-input:focus,
+[data-theme="light"] .swal2-popup input.swal2-input:focus,
+[data-theme="light"] .swal2-popup .pro-input:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px var(--primary-alpha) !important;
+}
+
+[data-theme="light"] .swal2-popup select.swal2-input option,
+[data-theme="light"] .swal2-popup .swal2-select option,
+[data-theme="light"] .swal2-popup .pro-input option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+
+/* Launchpad / Active Modules Modal Elements */
+.launch-link-btn {
+    display: flex; align-items: center; gap: 1rem;
+    width: 100%; padding: 1rem 1.25rem; border-radius: 12px;
+    border: 1px solid var(--border-color); background: var(--bg-surface-light);
+    color: var(--text-main); font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; text-decoration: none; transition: all 0.25s ease;
+    box-sizing: border-box;
+}
+.launch-link-btn:hover {
+    background: var(--primary-alpha);
+    border-color: var(--primary-border);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.08);
+}
+.launch-link-btn .btn-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.launch-link-btn .btn-text { text-align: left; overflow: hidden; }
+.launch-link-btn .btn-text small {
+    display: block; font-weight: 400; font-size: 0.8rem;
+    color: var(--text-muted); margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Dynamic colors for link buttons icons */
+.launch-link-btn .btn-icon.public-portal {
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--primary);
+}
+.launch-link-btn .btn-icon.admin-portal {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success);
+}
+
+.cred-box {
+    background: var(--bg-surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+.cred-row {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 0.8rem;
+}
+.cred-row:last-child { margin-bottom: 0; }
+.cred-label {
+    font-size: 0.75rem; color: var(--text-muted);
+    text-transform: uppercase; font-weight: 700;
+    letter-spacing: 0.05em; width: 30%;
+}
+.cred-value {
+    font-family: monospace; font-size: 0.95rem;
+    font-weight: 700; color: var(--text-main);
+    letter-spacing: 0.05em; flex: 1;
+}
+.copy-btn {
+    background: var(--primary-alpha);
+    border: 1px solid var(--primary-border);
+    color: var(--primary); padding: 4px 10px;
+    border-radius: 6px; font-size: 0.75rem;
+    font-weight: 600; cursor: pointer;
+    transition: all 0.2s; display: flex;
+    align-items: center; gap: 4px;
+}
+.copy-btn:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+}
+.warn-box {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    background: rgba(245, 158, 11, 0.05);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 10px; padding: 1rem; margin-top: 0.5rem;
+}
+.warn-box p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+
+.configured-check {
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; margin-top: 1.25rem; font-size: 0.9rem;
+    color: var(--primary); background: var(--primary-alpha);
+    border: 1px dashed var(--primary-border); padding: 0.75rem;
+    border-radius: 8px; cursor: pointer; font-weight: 600;
+    transition: 0.2s;
+}
+.configured-check:hover {
+    background: var(--primary-border);
+    color: var(--text-main);
+}
+
+/* Light mode overrides for launchpad items */
+[data-theme="light"] .launch-link-btn {
+    background: #ffffff !important;
+    border: 1px solid rgba(99, 102, 241, 0.1) !important;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.03), 0 2px 4px -1px rgba(99, 102, 241, 0.02) !important;
+}
+[data-theme="light"] .launch-link-btn:hover {
+    background: rgba(99, 102, 241, 0.04) !important;
+    border-color: rgba(99, 102, 241, 0.25) !important;
+    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.08) !important;
+}
+[data-theme="light"] .launch-link-btn .btn-icon.public-portal {
+    background: rgba(99, 102, 241, 0.08) !important;
+    color: #4f46e5 !important;
+}
+[data-theme="light"] .launch-link-btn .btn-icon.admin-portal {
+    background: rgba(16, 185, 129, 0.08) !important;
+    color: #059669 !important;
+}
+[data-theme="light"] .cred-box {
+    background: #f8fafc !important;
+    border: 1px solid rgba(99, 102, 241, 0.08) !important;
+}
+[data-theme="light"] .cred-label {
+    color: #475569 !important;
+}
+[data-theme="light"] .cred-value {
+    color: #0f172a !important;
+}
+[data-theme="light"] .copy-btn {
+    background: rgba(99, 102, 241, 0.05) !important;
+    border: 1px solid rgba(99, 102, 241, 0.15) !important;
+    color: var(--primary) !important;
+}
+[data-theme="light"] .copy-btn:hover {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    border-color: var(--primary) !important;
+}
+[data-theme="light"] .warn-box {
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+}
+[data-theme="light"] .warn-box p {
+    color: #b45309 !important;
+}
+[data-theme="light"] .warn-box p strong {
+    color: #d97706 !important;
+}
+[data-theme="light"] .configured-check {
+    background: rgba(99, 102, 241, 0.04) !important;
+    border: 1px dashed rgba(99, 102, 241, 0.25) !important;
+    color: var(--primary) !important;
+}
+[data-theme="light"] .configured-check:hover {
+    background: rgba(99, 102, 241, 0.08) !important;
+    border-style: solid !important;
+}
+
+.modal-btn-cancel {
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    padding: 0.6rem 1.5rem !important;
+    transition: all 0.2s !important;
+}
+.modal-btn-cancel:hover {
+    background: var(--bg-surface-light) !important;
+    color: var(--text-main) !important;
+}
+[data-theme="light"] .modal-btn-cancel {
+    color: #64748b !important;
+    border-color: rgba(99, 102, 241, 0.12) !important;
+}
+[data-theme="light"] .modal-btn-cancel:hover {
+    background: rgba(99, 102, 241, 0.08) !important;
+    color: var(--primary) !important;
+}
+
 /* ===================== NOTIFICATIONS DROPDOWN ===================== */
 .notifications-dropdown {
     position: absolute;

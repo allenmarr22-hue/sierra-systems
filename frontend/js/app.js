@@ -673,6 +673,17 @@ async function fetchNotifications() {
 function initTheme() {
     document.documentElement.setAttribute('data-theme', appState.theme);
     updateThemeIcon();
+    
+    // Initialize Accent Color
+    const accent = localStorage.getItem('as_accent') || 'indigo';
+    document.documentElement.setAttribute('data-accent', accent);
+    document.querySelectorAll('.accent-option').forEach(opt => {
+        if (opt.getAttribute('data-accent-val') === accent) {
+            opt.classList.add('active');
+        } else {
+            opt.classList.remove('active');
+        }
+    });
 }
 
 function toggleTheme() {
@@ -780,6 +791,28 @@ function setupEventListeners() {
     // Theme Toggle
     document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
 
+    // Accent Color Selector
+    const accentTrigger = document.getElementById('accent-trigger-btn');
+    const accentDropdown = document.getElementById('accent-dropdown-menu');
+
+    accentTrigger?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        accentDropdown?.classList.toggle('show');
+    });
+
+    document.querySelectorAll('.accent-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            const val = opt.getAttribute('data-accent-val');
+            document.documentElement.setAttribute('data-accent', val);
+            localStorage.setItem('as_accent', val);
+            
+            document.querySelectorAll('.accent-option').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            
+            accentDropdown?.classList.remove('show');
+        });
+    });
+
     // Notifications
     const notifBtn = document.getElementById('notifications-btn');
     const notifDropdown = document.getElementById('notifications-dropdown');
@@ -818,6 +851,9 @@ function setupEventListeners() {
     document.addEventListener('click', (e) => {
         if (!notifBtn?.contains(e.target) && !notifDropdown?.contains(e.target)) {
             notifDropdown?.classList.add('hidden');
+        }
+        if (!accentTrigger?.contains(e.target) && !accentDropdown?.contains(e.target)) {
+            accentDropdown?.classList.remove('show');
         }
     });
 
@@ -1405,6 +1441,39 @@ function initDashboard() {
     
     renderDashboardBusinesses();
     renderQuickModules();
+    setupMRRSimulator(totalIncome);
+}
+
+function setupMRRSimulator(currentMRR) {
+    const slider = document.getElementById('mrr-growth-slider');
+    const percentageVal = document.getElementById('simulator-percentage-val');
+    const mrrCurrentEl = document.getElementById('sim-mrr-current');
+    const mrrProjectedEl = document.getElementById('sim-mrr-projected');
+
+    if (!slider) return;
+
+    function updateSimulation() {
+        const val = parseInt(slider.value, 10);
+        const rate = val / 100;
+        if (percentageVal) percentageVal.textContent = `+${val}% mensual`;
+        
+        if (mrrCurrentEl) {
+            mrrCurrentEl.textContent = `$ ${currentMRR.toLocaleString('es-CO')}`;
+        }
+        
+        // Compound growth formula over 12 months: P = C * (1 + r)^12
+        const projectedMRR = Math.round(currentMRR * Math.pow(1 + rate, 12));
+        if (mrrProjectedEl) {
+            mrrProjectedEl.textContent = `$ ${projectedMRR.toLocaleString('es-CO')}`;
+        }
+    }
+
+    if (!slider.dataset.listenerSet) {
+        slider.addEventListener('input', updateSimulation);
+        slider.dataset.listenerSet = 'true';
+    }
+
+    updateSimulation();
 }
 
 // ===================== USER MANAGEMENT =====================

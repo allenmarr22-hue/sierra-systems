@@ -383,6 +383,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         Swal.fire({
             title: 'Mi Perfil',
             html: `
+                <style>
+                    .profile-input {
+                        width: 100%; box-sizing: border-box; padding: 0.8rem; border-radius: 8px;
+                        border: 1px solid var(--border-color); background: var(--bg-surface-light);
+                        color: var(--text-main); font-family: inherit; font-size: 0.95rem; outline: none; transition: all 0.2s;
+                    }
+                    .profile-input:focus {
+                        border-color: var(--primary);
+                        box-shadow: 0 0 0 3px var(--primary-alpha);
+                    }
+                    .profile-label {
+                        font-size: 0.72rem; color: var(--text-muted); font-weight: 700;
+                        text-transform: uppercase; margin-bottom: 0.4rem; display: block;
+                        letter-spacing: 0.05em;
+                    }
+                    [data-theme="light"] .profile-input {
+                        background: #ffffff !important;
+                        border: 1px solid rgba(99, 102, 241, 0.15) !important;
+                        color: #0f172a !important;
+                    }
+                    [data-theme="light"] .profile-label {
+                        color: #475569 !important;
+                    }
+                </style>
                 <div style="text-align:center; margin-top: 1rem;">
                     <div id="avatar-preview-wrap" style="width:90px; height:90px; border-radius:50%; background: linear-gradient(135deg,#6366f1,#8b5cf6); margin: 0 auto 1rem; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:700; color:white; overflow:hidden; border:3px solid rgba(99,102,241,0.4); cursor:pointer;" onclick="document.getElementById('avatar-file-input').click()">
                         ${currentAvatar ? `<img src="${currentAvatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${currentName.substring(0, 2).toUpperCase()}</span>`}
@@ -394,32 +418,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: left;">
                         <div style="grid-column: span 2;">
-                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Nombre del Negocio *</label>
-                            <input type="text" id="profile-name-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentName}">
+                            <label class="profile-label">Nombre del Negocio *</label>
+                            <input type="text" id="profile-name-input" class="profile-input" value="${currentName}">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Nombre del Propietario</label>
-                            <input type="text" id="profile-owner-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentOwner}">
+                            <label class="profile-label">Nombre del Propietario</label>
+                            <input type="text" id="profile-owner-input" class="profile-input" value="${currentOwner}">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">NIT / Identificación</label>
-                            <input type="text" id="profile-nit-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentNit}">
+                            <label class="profile-label">NIT / Identificación</label>
+                            <input type="text" id="profile-nit-input" class="profile-input" value="${currentNit}">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Teléfono</label>
-                            <input type="text" id="profile-phone-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentPhone}">
+                            <label class="profile-label">Teléfono</label>
+                            <input type="text" id="profile-phone-input" class="profile-input" value="${currentPhone}">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Ciudad</label>
-                            <input type="text" id="profile-city-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentCity}">
+                            <label class="profile-label">Ciudad</label>
+                            <input type="text" id="profile-city-input" class="profile-input" value="${currentCity}">
                         </div>
                         <div style="grid-column: span 2;">
-                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Dirección</label>
-                            <input type="text" id="profile-address-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentAddress}">
+                            <label class="profile-label">Dirección</label>
+                            <input type="text" id="profile-address-input" class="profile-input" value="${currentAddress}">
                         </div>
                         <div style="grid-column: span 2;">
-                            <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:0.4rem; display:block;">Correo Electrónico (Acceso) *</label>
-                            <input type="email" id="profile-email-input" class="form-control" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" value="${currentEmail}">
+                            <label class="profile-label">Correo Electrónico (Acceso) *</label>
+                            <input type="email" id="profile-email-input" class="profile-input" value="${currentEmail}">
                         </div>
                     </div>
                 </div>
@@ -430,7 +454,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showCancelButton: true,
             confirmButtonText: 'Guardar Cambios',
             cancelButtonText: 'Cancelar',
-            confirmButtonColor: 'var(--primary)',
+            confirmButtonColor: varColor('--primary'),
             didRender: () => {
                 lucide.createIcons();
                 document.getElementById('avatar-file-input')?.addEventListener('change', (e) => {
@@ -683,9 +707,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             title: 'Crear Ticket de Soporte',
             html: `
                 <style>
-                    .pro-input { width: 100%; box-sizing: border-box; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); background: var(--bg-body); color: var(--text); font-family: inherit; font-size: 0.95rem; outline: none; transition: all 0.2s; margin:0; }
-                    .pro-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+                    .pro-input { width: 100%; box-sizing: border-box; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-surface-light); color: var(--text-main); font-family: inherit; font-size: 0.95rem; outline: none; transition: all 0.2s; margin:0; }
+                    .pro-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-alpha); }
                     .pro-label { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+                    
+                    [data-theme="light"] .pro-input {
+                        background: #ffffff !important;
+                        border: 1px solid rgba(99, 102, 241, 0.15) !important;
+                        color: #0f172a !important;
+                    }
+                    [data-theme="light"] .pro-label {
+                        color: #475569 !important;
+                    }
                 </style>
                 <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; margin-top:1.5rem; overflow:hidden;">
                     <div>
@@ -693,8 +726,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <select id="ticket-module" class="pro-input">
                             <option value="">Selecciona un módulo...</option>
                             <option>StreetFeed Pro</option>
-                            <option>PDFTools Pro</option>
-                            <option>Sierra POS</option>
                             <option>StyleSync Pro</option>
                             <option>Facturación / Pagos</option>
                             <option>Otro</option>
@@ -702,11 +733,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div>
                         <label class="pro-label">Prioridad</label>
-                        <select id="ticket-priority" class="pro-input">
-                            <option value="normal">Normal</option>
-                            <option value="urgente">🔴 Urgente</option>
-                            <option value="baja">Baja</option>
-                        </select>
+                        <input type="hidden" id="ticket-priority" value="normal">
+                        <div class="priority-selector-group" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:4px;">
+                            <button type="button" class="priority-btn" data-val="baja" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; outline: none; font-size: 0.85rem;">
+                                🟢 Baja
+                            </button>
+                            <button type="button" class="priority-btn active" data-val="normal" style="background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b; color: #f59e0b; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; outline: none; font-size: 0.85rem;">
+                                🟡 Normal
+                            </button>
+                            <button type="button" class="priority-btn" data-val="urgente" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; outline: none; font-size: 0.85rem;">
+                                🔴 Urgente
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label class="pro-label">Descripción del Problema</label>
@@ -725,7 +763,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             confirmButtonText: 'Enviar Ticket',
             cancelButtonText: 'Cancelar',
             confirmButtonColor: 'var(--primary)',
-            didRender: () => lucide.createIcons(),
+            didRender: () => {
+                lucide.createIcons();
+                const hiddenInput = document.getElementById('ticket-priority');
+                const buttons = document.querySelectorAll('.priority-btn');
+                buttons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        buttons.forEach(b => {
+                            const val = b.getAttribute('data-val');
+                            // Reset unselected states
+                            if (val === 'baja') {
+                                b.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                                b.style.background = 'rgba(16, 185, 129, 0.08)';
+                            } else if (val === 'normal') {
+                                b.style.border = '1px solid rgba(245, 158, 11, 0.2)';
+                                b.style.background = 'rgba(245, 158, 11, 0.08)';
+                            } else if (val === 'urgente') {
+                                b.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                                b.style.background = 'rgba(239, 68, 68, 0.08)';
+                            }
+                            b.classList.remove('active');
+                        });
+                        
+                        // Select clicked state
+                        btn.classList.add('active');
+                        const val = btn.getAttribute('data-val');
+                        hiddenInput.value = val;
+                        
+                        if (val === 'baja') {
+                            btn.style.border = '2px solid #10b981';
+                            btn.style.background = 'rgba(16, 185, 129, 0.15)';
+                        } else if (val === 'normal') {
+                            btn.style.border = '2px solid #f59e0b';
+                            btn.style.background = 'rgba(245, 158, 11, 0.15)';
+                        } else if (val === 'urgente') {
+                            btn.style.border = '2px solid #ef4444';
+                            btn.style.background = 'rgba(239, 68, 68, 0.15)';
+                        }
+                    });
+                });
+            },
             preConfirm: () => {
                 const mod = document.getElementById('ticket-module').value;
                 const desc = document.getElementById('ticket-desc').value;
@@ -734,22 +811,60 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!desc || desc.length < 10) return Swal.showValidationMessage('Por favor describe el problema (mín. 10 caracteres).');
                 return { mod, desc, priority };
             }
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
                 const { mod, desc, priority } = result.value;
-                const msg = encodeURIComponent(`🎫 NUEVO TICKET\nMódulo: ${mod}\nPrioridad: ${priority.toUpperCase()}\n\n${desc}`);
-                // Enviar por WhatsApp y mostrar confirmación
-                window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Ticket enviado!',
-                    html: `<p style="color:var(--text-muted);">Tu ticket de soporte fue enviado. Un agente te responderá por WhatsApp pronto.</p>`,
-                    background: 'var(--bg-surface)',
-                    color: 'var(--text)',
-                    confirmButtonColor: 'var(--primary)',
-                    timer: 4000,
-                    timerProgressBar: true
-                });
+                
+                try {
+                    Swal.showLoading();
+                    const res = await clientFetch('/api/tickets', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ module: mod, priority, description: desc })
+                    });
+                    const data = await res.json();
+                    
+                    if (res.ok && data.success) {
+                        const msg = encodeURIComponent(`🎫 NUEVO TICKET\nID: ${data.ticketId}\nMódulo: ${mod}\nPrioridad: ${priority.toUpperCase()}\n\n${desc}`);
+                        // Enviar por WhatsApp
+                        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+                        
+                        // Recargar lista de tickets local
+                        if (typeof loadMyTickets === 'function') {
+                            loadMyTickets();
+                        }
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Ticket enviado!',
+                            html: `<p style="color:var(--text-muted);">Tu ticket de soporte fue creado y enviado. Un agente te responderá por WhatsApp pronto.</p>`,
+                            background: 'var(--bg-surface)',
+                            color: 'var(--text)',
+                            confirmButtonColor: 'var(--primary)',
+                            timer: 4000,
+                            timerProgressBar: true
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al registrar ticket',
+                            text: data.error || 'No se pudo crear el ticket en el sistema.',
+                            background: 'var(--bg-surface)',
+                            color: 'var(--text)',
+                            confirmButtonColor: 'var(--primary)'
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error enviando ticket:', err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo establecer conexión con el servidor.',
+                        background: 'var(--bg-surface)',
+                        color: 'var(--text)',
+                        confirmButtonColor: 'var(--primary)'
+                    });
+                }
             }
         });
     });
@@ -1093,7 +1208,7 @@ function renderDashboard() {
                 // Badge de sede (siempre mostrar cuando hay branchName y es diferente de Principal, o cuando hay más de 1 instancia del mismo módulo)
                 const showSedeBadge = inst.branchName && (inst.isMultiSede || inst.branchName !== 'Sede Principal');
                 const sedeBadgeHtml = showSedeBadge
-                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
+                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
                     : '';
 
                 const borderColor = isExpired ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.12)';
@@ -1205,7 +1320,7 @@ function renderDashboard() {
                 // Badge de sede (siempre mostrar cuando hay branchName y es diferente de Principal, o cuando hay más de 1 instancia del mismo módulo)
                 const showSedeBadge = inst.branchName && (inst.isMultiSede || inst.branchName !== 'Sede Principal');
                 const sedeBadgeHtml = showSedeBadge
-                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
+                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
                     : '';
 
                 let actionsHtml = '';
@@ -1234,18 +1349,18 @@ function renderDashboard() {
                 }
 
                 htmlCancelled += `
-                <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid rgba(245,158,11,0.2); opacity:0.9;">
+                <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid var(--warning-border); opacity:0.9;">
                     <div class="module-card-header">
-                        <div class="module-icon-large" style="background:rgba(245,158,11,0.08); color:#f59e0b;">
+                        <div class="module-icon-large" style="background:var(--warning-bg); color:var(--warning);">
                             <i data-lucide="${inst.icon || 'package'}"></i>
                         </div>
-                        <div style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(245,158,11,0.12); color:#f59e0b; font-size:0.7rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:20px; border:1px solid rgba(245,158,11,0.25);">Suspendido</div>
+                        <div style="position:absolute; top:1.5rem; right:1.5rem; background:var(--warning-bg); color:var(--warning); font-size:0.7rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:20px; border:1px solid var(--warning-border);">Suspendido</div>
                     </div>
                     ${sedeBadgeHtml}
                     <h3 class="module-title" style="margin-top:${sedeBadgeHtml ? '0.4rem' : '1rem'}; font-size:1.2rem;">${inst.name}</h3>
                     <p class="module-desc" style="font-size:0.82rem;">${inst.desc || ''}</p>
 
-                    <div style="margin:1rem 0; padding:0.85rem 1rem; background:rgba(245,158,11,0.07); border-radius:10px; border:1px solid rgba(245,158,11,0.15);">
+                    <div style="margin:1rem 0; padding:0.85rem 1rem; background:var(--warning-bg); border-radius:10px; border:1px solid var(--warning-border);">
                         <div style="font-size:0.78rem; color:${urgencyColor}; font-weight:700; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.4rem;">
                             <i data-lucide="hourglass" style="width:14px; height:14px;"></i>
                             Acceso hasta: ${accessDate}
@@ -1321,14 +1436,14 @@ function renderDashboard() {
                         <div style="display:flex; flex-direction:column; gap:0.25rem; margin:1.25rem 0 1rem;">
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-size:0.88rem; text-decoration:line-through; color:var(--text-muted); font-weight:600;">${formattedOriginal}</span>
-                                <span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
+                                <span style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
                                     -${activePromo.discountType === 'percentage' ? activePromo.discountValue + '%' : 'Descuento'}
                                 </span>
                             </div>
-                            <div style="font-weight:800; font-size:1.6rem; color:#f59e0b; text-shadow:0 0 10px rgba(245,158,11,0.2);">${formattedPromo}</div>
+                            <div style="font-weight:800; font-size:1.6rem; color:var(--primary); text-shadow:0 0 10px var(--primary-alpha);">${formattedPromo}</div>
                         </div>
                     `;
-                    discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#ffffff; box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🔥 OFERTA</div>`;
+                    discountBadge = `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">🔥 OFERTA</div>`;
                 } else {
                     const priceDisplay = (!isNaN(basePriceVal) && basePriceVal > 0)
                         ? `$ ${basePriceVal.toLocaleString('es-CO')} COP/mes` : 'Cotizar';
@@ -1336,12 +1451,13 @@ function renderDashboard() {
                     priceHtml = `<div style="font-weight:800; font-size:1.5rem; color:var(--text); margin:1.5rem 0 1rem;">${priceDisplay}</div>`;
                 }
 
-                const badge = i === 0 && !activePromo ? '<div class="marketplace-badge">⭐ POPULAR</div>' : (discountBadge || '');
+                const badge = i === 0 && !activePromo ? `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">⭐ POPULAR</div>` : (discountBadge || '');
+
                 return `
-                <div class="biz-card" style="border:1px solid rgba(139,92,246,0.2); position:relative; overflow:hidden; display:flex; flex-direction:column; min-width:320px; max-width:320px;">
+                <div class="biz-card" style="position:relative; overflow:hidden; display:flex; flex-direction:column; min-width:320px; max-width:320px;">
                     ${badge}
                     <div class="module-card-header">
-                        <div class="module-icon-large" style="background:rgba(139,92,246,0.1); color:#8b5cf6;">
+                        <div class="module-icon-large" style="background:var(--primary-bg); color:var(--primary);">
                             <i data-lucide="${mod.icon || 'package'}"></i>
                         </div>
                     </div>
@@ -1351,13 +1467,13 @@ function renderDashboard() {
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <button class="btn-primary btn-adquirir"
                             data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
-                            style="width:100%; justify-content:center; background:#8b5cf6; border:none; box-shadow:0 4px 14px 0 rgba(139,92,246,0.39);">
+                            style="width:100%; justify-content:center;">
                             <i data-lucide="shopping-cart"></i> Adquirir Módulo
                         </button>
                         <button class="btn-ghost btn-demo"
                             data-mod-id="${mod.id}" data-mod-name="${mod.name}"
-                            style="width:100%; justify-content:center; border:1px solid rgba(139,92,246,0.3);">
-                            <i data-lucide="play-circle" style="width:15px;"></i> Ver Demo
+                            style="width:100%; justify-content:center;">
+                            <i data-lucide="play-circle" style="width:15px; color:var(--primary);"></i> Ver Demo
                         </button>
                     </div>
                 </div>`;
@@ -1366,7 +1482,7 @@ function renderDashboard() {
             htmlMarketplace += `
             <div style="margin-top: 0.5rem; margin-bottom: 0.5rem; padding: 0 0.5rem;">
                 <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
-                    <span style="display: inline-block; width: 4px; height: 18px; background: #8b5cf6; border-radius: 4px;"></span>
+                    <span style="display: inline-block; width: 4px; height: 18px; background: var(--primary); border-radius: 4px;"></span>
                     Nuevas Soluciones para tu Negocio
                 </h3>
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">Explora y activa herramientas adicionales para potenciar tu gestión.</p>
@@ -1410,21 +1526,21 @@ function renderDashboard() {
                     <div style="display:flex; flex-direction:column; gap:0.25rem; margin:1.25rem 0 1rem;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="font-size:0.88rem; text-decoration:line-through; color:var(--text-muted); font-weight:600;">${strikePrice}</span>
-                            <span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
+                            <span style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
                                 -30% MULTI-SEDE
                             </span>
                         </div>
-                        <div style="font-weight:800; font-size:1.6rem; color:#f59e0b; text-shadow:0 0 10px rgba(245,158,11,0.2);">${formattedSedePrice}</div>
+                        <div style="font-weight:800; font-size:1.6rem; color:var(--primary); text-shadow:0 0 10px var(--primary-alpha);">${formattedSedePrice}</div>
                     </div>
                 `;
 
-                const discountBadge = `<div class="marketplace-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#ffffff; box-shadow:0 4px 12px rgba(245,158,11,0.3); border:none; top:12px; right:12px; font-weight:800;">🏢 SEDE 2+</div>`;
+                const discountBadge = `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">🏢 SEDE 2+</div>`;
                 
                 return `
-                <div class="biz-card" style="border:1px solid rgba(245,158,11,0.25); position:relative; overflow:hidden; display:flex; flex-direction:column; background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(245,158,11,0.02) 100%); min-width:320px; max-width:320px;">
+                <div class="biz-card" style="position:relative; overflow:hidden; display:flex; flex-direction:column; background: linear-gradient(180deg, var(--bg-surface) 0%, var(--primary-alpha) 100%); min-width:320px; max-width:320px;">
                     ${discountBadge}
                     <div class="module-card-header">
-                        <div class="module-icon-large" style="background:rgba(245,158,11,0.1); color:#f59e0b;">
+                        <div class="module-icon-large" style="background:var(--primary-bg); color:var(--primary);">
                             <i data-lucide="${mod.icon || 'package'}"></i>
                         </div>
                     </div>
@@ -1434,13 +1550,13 @@ function renderDashboard() {
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <button class="btn-primary btn-adquirir-sede"
                             data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${formattedSedePrice}"
-                            style="width:100%; justify-content:center; background:#f59e0b; border:none; box-shadow:0 4px 14px 0 rgba(245,158,11,0.39);">
+                            style="width:100%; justify-content:center;">
                             <i data-lucide="plus-circle"></i> Adquirir Nueva Sede
                         </button>
                         <button class="btn-ghost btn-demo"
                             data-mod-id="${mod.id}" data-mod-name="${mod.name}"
-                            style="width:100%; justify-content:center; border:1px solid rgba(245,158,11,0.3);">
-                            <i data-lucide="play-circle" style="width:15px; color:#f59e0b;"></i> Ver Demo
+                            style="width:100%; justify-content:center;">
+                            <i data-lucide="play-circle" style="width:15px; color:var(--primary);"></i> Ver Demo
                         </button>
                     </div>
                 </div>`;
@@ -1449,9 +1565,9 @@ function renderDashboard() {
             htmlMarketplace += `
             <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; padding: 0 0.5rem;">
                 <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
-                    <span style="display: inline-block; width: 4px; height: 18px; background: #f59e0b; border-radius: 4px;"></span>
+                    <span style="display: inline-block; width: 4px; height: 18px; background: var(--primary); border-radius: 4px;"></span>
                     Expandir tus Módulos (Sedes Adicionales)
-                    <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase;">30% Off Sede 2+</span>
+                    <span style="background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-border); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase;">30% Off Sede 2+</span>
                 </h3>
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">Adquiere el mismo módulo para una nueva sucursal o sede con descuento de multi-sede permanente.</p>
             </div>
@@ -1507,7 +1623,7 @@ function renderDashboard() {
                         confirmButtonText: 'Continuar al Pago',
                         showCancelButton: true,
                         cancelButtonText: 'Cancelar',
-                        confirmButtonColor: '#f59e0b',
+                        confirmButtonColor: varColor('--primary'),
                         inputValidator: (value) => {
                             if (!value || !value.trim()) {
                                 return '¡El nombre identificador de la sede es obligatorio!';
@@ -1844,37 +1960,10 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
     Swal.fire({
         title: modalTitle,
         html: `
-            <style>
-                .launch-link-btn {
-                    display: flex; align-items: center; gap: 1rem;
-                    width: 100%; padding: 1rem 1.25rem; border-radius: 12px;
-                    border: 1px solid rgba(99,102,241,0.15); background: rgba(30, 41, 59, 0.4);
-                    color: var(--text); font-size: 0.95rem; font-weight: 600;
-                    cursor: pointer; text-decoration: none; transition: all 0.2s;
-                    box-sizing: border-box;
-                }
-                .launch-link-btn:hover { background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.4); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-                .launch-link-btn .btn-icon { width: 42px; height: 42px; border-radius: 10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-                .launch-link-btn .btn-text { text-align: left; overflow: hidden; }
-                .launch-link-btn .btn-text small { display:block; font-weight:400; font-size:0.8rem; color:var(--text-muted); margin-top:3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .cred-box { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; padding: 1.25rem; }
-                .cred-row { display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.8rem; }
-                .cred-row:last-child { margin-bottom:0; }
-                .cred-label { font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing: 0.05em; width: 35%; }
-                .cred-value { font-family: monospace; font-size:0.95rem; font-weight:700; color: #f8fafc; letter-spacing: 0.05em; flex: 1; }
-                .copy-btn { background: rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#818cf8; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
-                .copy-btn:hover { background:rgba(99,102,241,0.2); color: #a5b4fc; }
-                .warn-box { display:flex; align-items:flex-start; gap:0.75rem; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:1rem; margin-top:0.5rem; }
-                .warn-box p { margin:0; font-size:0.85rem; color:#cbd5e1; line-height:1.5; }
-                .configured-check { display:flex; justify-content: center; align-items:center; gap:8px; margin-top:1.25rem; font-size:0.9rem; color: #a5b4fc; background: rgba(99,102,241,0.1); border: 1px dashed rgba(99,102,241,0.3); padding:0.75rem; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; }
-                .configured-check:hover { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.5); color: #c7d2fe; }
-                .modal-btn-cancel { background: transparent !important; color: #94a3b8 !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; transition: all 0.2s !important; }
-                .modal-btn-cancel:hover { background: #1e293b !important; color: #f8fafc !important; }
-            </style>
             <div style="display:flex; flex-direction:column; gap:1rem; margin-top:1rem; text-align:left; overflow:hidden;">
 
                 <a href="${finalClientUrl}" target="_blank" class="launch-link-btn">
-                    <div class="btn-icon" style="background:rgba(99,102,241,0.12); color:var(--primary);"><i data-lucide="globe" style="width:20px;"></i></div>
+                    <div class="btn-icon public-portal"><i data-lucide="globe" style="width:20px;"></i></div>
                     <div class="btn-text">
                         Portal Público
                         <small style="word-break: break-all;">assierra.com/${bizSlug}/${modSlug}${instanceId ? '?instanceId=' + instanceId : ''}</small>
@@ -1883,7 +1972,7 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
 
                 ${hasAdmin ? `
                 <a href="${finalAdminUrl}" target="_blank" class="launch-link-btn">
-                    <div class="btn-icon" style="background:rgba(16,185,129,0.12); color:#10b981;"><i data-lucide="settings" style="width:20px;"></i></div>
+                    <div class="btn-icon admin-portal"><i data-lucide="settings" style="width:20px;"></i></div>
                     <div class="btn-text">
                         Panel de Administración
                         <small>Gestión y configuración${branchName ? ' (' + branchName + ')' : ''}</small>
@@ -1892,7 +1981,7 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
 
                 ${!savedData.isConfigured ? `
                 <div class="cred-box" id="cred-section">
-                    <p style="font-size:0.85rem; font-weight:700; color: #f8fafc; margin:0 0 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">Credenciales de Acceso (Temporales)</p>
+                    <p style="font-size:0.85rem; font-weight:700; color: var(--text-main); margin:0 0 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Credenciales de Acceso (Temporales)</p>
                     <div class="cred-row">
                         <span class="cred-label">Usuario</span>
                         <span class="cred-value">${savedData.tempUser}</span>
@@ -1910,8 +1999,8 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
                 </div>
 
                 <div class="warn-box" id="warn-section">
-                    <i data-lucide="alert-triangle" style="width:20px; color:#f59e0b;"></i>
-                    <p><strong style="color:#f59e0b;">Importante:</strong> Esta es una contraseña temporal. Cámbiala en tu panel para mayor seguridad.</p>
+                    <i data-lucide="alert-triangle" style="width:20px;"></i>
+                    <p><strong>Importante:</strong> Esta es una contraseña temporal. Cámbiala en tu panel para mayor seguridad.</p>
                 </div>` : `
                 <div style="text-align:center; padding: 1.25rem; background: rgba(16,185,129,0.05); border-radius:12px; border: 1px dashed rgba(16,185,129,0.3);">
                     <p style="margin:0; font-size:0.85rem; color:#10b981; font-weight:600;">&#10004; Acceso administrativo configurado</p>
@@ -2737,12 +2826,54 @@ function initTheme() {
     html.setAttribute('data-theme', savedTheme);
     updateThemeIcon(themeToggle, savedTheme);
 
+    // Initialize Accent Color
+    const savedAccent = localStorage.getItem('as_accent') || 'indigo';
+    html.setAttribute('data-accent', savedAccent);
+    
+    // Mark the correct accent-option as active in UI
+    document.querySelectorAll('.accent-option').forEach(opt => {
+        if (opt.getAttribute('data-accent-val') === savedAccent) {
+            opt.classList.add('active');
+        } else {
+            opt.classList.remove('active');
+        }
+    });
+
     themeToggle?.addEventListener('click', () => {
         const current = html.getAttribute('data-theme');
         const next = current === 'light' ? 'dark' : 'light';
         html.setAttribute('data-theme', next);
         localStorage.setItem('theme', next);
         updateThemeIcon(themeToggle, next);
+    });
+
+    // Setup Accent Selector Events
+    const accentTrigger = document.getElementById('accent-trigger-btn');
+    const accentDropdown = document.getElementById('accent-dropdown-menu');
+
+    accentTrigger?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        accentDropdown?.classList.toggle('show');
+    });
+
+    document.querySelectorAll('.accent-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            const val = opt.getAttribute('data-accent-val');
+            html.setAttribute('data-accent', val);
+            localStorage.setItem('as_accent', val);
+            
+            document.querySelectorAll('.accent-option').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            
+            accentDropdown?.classList.remove('show');
+        });
+    });
+
+    // Close accent dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!accentTrigger?.contains(e.target) && !accentDropdown?.contains(e.target)) {
+            accentDropdown?.classList.remove('show');
+        }
     });
 }
 
@@ -2848,7 +2979,7 @@ window.cancelModule = async function(modId, modName, instanceId = null, branchNa
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#f59e0b',
+        confirmButtonColor: varColor('--warning'),
         cancelButtonColor: 'transparent',
         confirmButtonText: 'Sí, suspender',
         cancelButtonText: 'Mantener activo',
@@ -3265,17 +3396,32 @@ window.openAddCardModal = function() {
         html: `
         <style>
             .cc-input{width:100%;box-sizing:border-box;padding:.8rem 1rem;border-radius:8px;
-                border:1px solid rgba(99,102,241,.3);background:rgba(15,23,42,.6);
-                color:#f8fafc;font-family:inherit;font-size:.95rem;outline:none;transition:all .2s;}
-            .cc-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.2);}
-            .cc-label{font-size:.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;
+                border:1px solid var(--border-color);background:var(--bg-surface-light);
+                color:var(--text-main);font-family:inherit;font-size:.95rem;outline:none;transition:all .2s;}
+            .cc-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-alpha);}
+            .cc-label{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;
                 font-weight:700;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
             #cc-brand-preview{font-size:.8rem;font-weight:700;padding:.15rem .5rem;border-radius:6px;
-                background:rgba(99,102,241,.15);color:#818cf8;transition:all .3s;}
+                background:var(--primary-bg);color:var(--primary);transition:all .3s;}
             .cc-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;}
             .cc-security-note{display:flex;align-items:center;gap:.5rem;margin-top:.75rem;
-                font-size:.78rem;color:#64748b;background:rgba(16,185,129,.04);
-                border:1px solid rgba(16,185,129,.15);border-radius:8px;padding:.65rem .85rem;}
+                font-size:.78rem;color:var(--success);background:var(--success-bg);
+                border:1px solid var(--success-border);border-radius:8px;padding:.65rem .85rem;}
+
+            /* Light theme premium overrides for payment inputs */
+            [data-theme="light"] .cc-input {
+                background: #ffffff !important;
+                border: 1px solid rgba(99, 102, 241, 0.15) !important;
+                color: #0f172a !important;
+            }
+            [data-theme="light"] .cc-label {
+                color: #475569 !important;
+            }
+            [data-theme="light"] .cc-security-note {
+                color: #059669 !important;
+                background: rgba(16, 185, 129, 0.05) !important;
+                border: 1px solid rgba(16, 185, 129, 0.18) !important;
+            }
         </style>
         <div style="text-align:left;display:flex;flex-direction:column;gap:.9rem;margin-top:.75rem;">
             <div>
@@ -3313,7 +3459,7 @@ window.openAddCardModal = function() {
         showCancelButton: true,
         confirmButtonText: '💳 Agregar Tarjeta',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#6366f1',
+        confirmButtonColor: varColor('--primary'),
         didRender: () => lucide.createIcons(),
         preConfirm: () => {
             const rawNum = document.getElementById('cc-num').value.replace(/\D/g,'');

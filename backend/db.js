@@ -277,34 +277,7 @@ async function initializeDatabase() {
             )
         `);
 
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS support_tickets (
-                id VARCHAR(100) PRIMARY KEY,
-                business_id BIGINT NOT NULL,
-                business_name VARCHAR(150) NOT NULL,
-                module_id VARCHAR(50) NULL,
-                module_name VARCHAR(150) NULL,
-                subject VARCHAR(255) NOT NULL,
-                status VARCHAR(50) NOT NULL DEFAULT 'open',
-                priority VARCHAR(20) NOT NULL DEFAULT 'medium',
-                created_at VARCHAR(100) NOT NULL,
-                updated_at VARCHAR(100) NOT NULL,
-                resolved_at VARCHAR(100) NULL,
-                FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
-            )
-        `);
 
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS ticket_messages (
-                id VARCHAR(100) PRIMARY KEY,
-                ticket_id VARCHAR(100) NOT NULL,
-                role VARCHAR(20) NOT NULL,
-                text TEXT NOT NULL,
-                image_url VARCHAR(500) NULL,
-                created_at VARCHAR(100) NOT NULL,
-                FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
-            )
-        `);
 
         // Insertar configuración inicial si no existe
         await pool.query(`
