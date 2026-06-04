@@ -224,7 +224,7 @@
                     <i class="far fa-calendar-alt"></i> AGENDA
                 </button>
                 <!-- Location Button -->
-                <a href="https://www.google.com/maps/search/?api=1&query=Calle+14+%23+11-74" target="_blank" class="btn-primary">
+                <a id="public-location-btn" href="https://www.google.com/maps/search/?api=1&query=Calle+14+%23+11-74" target="_blank" class="btn-primary">
                     <i class="fas fa-map-marker-alt"></i> UBICACIÓN
                 </a>
                 <a href="#dynamic-categories-grid" class="btn-secondary">CATÁLOGOS</a>
@@ -328,6 +328,13 @@
                     }
                     // Actualizar el copyright text y otras ocurrencias
                     document.querySelectorAll('.dynamic-brand-text').forEach(el => { el.innerText = name; });
+
+                    // Actualizar enlace del botón de ubicación pública
+                    const address = localStorage.getItem('margarita_site_address') || "Calle 14 # 11-74, Sevilla";
+                    const locBtn = document.getElementById('public-location-btn');
+                    if (locBtn) {
+                        locBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+                    }
                 })();
             </script>
             <p>"La belleza comienza en el momento en que decides ser tú misma."</p>

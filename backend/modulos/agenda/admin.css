@@ -13,6 +13,23 @@
     --glass-border: rgba(255, 255, 255, 0.4);
     --modal-overlay-bg: rgba(0, 0, 0, 0.5);
     --card-bg: var(--glass-bg);
+    
+    /* New Adaptative UI variables */
+    --color-text-muted: #666666;
+    --border-color: #eeeeee;
+    --earnings-bg: linear-gradient(135deg, #ffffff 0%, #fff0f2 100%);
+    --earnings-border: rgba(184, 115, 129, 0.15);
+    --input-bg: #ffffff;
+    --input-border: #dddddd;
+    --dashed-bg: #f9f9f9;
+    --dashed-border: #cccccc;
+    --preview-bg: #f0f0f0;
+    --modal-panel-bg: #ffffff;
+    --modal-header-bg: #ffffff;
+    --modal-footer-bg: #ffffff;
+    --modal-canvas-bg: #fbfbfb;
+    --cancel-btn-bg: #eeeeee;
+    --cancel-btn-color: #444444;
 }
 
 /* Dark Theme overrides for Admin Panel */
@@ -29,6 +46,23 @@
     --modal-overlay-bg: rgba(15, 23, 42, 0.75);
     --card-bg: #1e293b;
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    
+    /* New Adaptative UI variables - Dark Mode */
+    --color-text-muted: #94a3b8;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --earnings-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    --earnings-border: rgba(255, 255, 255, 0.1);
+    --input-bg: #1e293b;
+    --input-border: rgba(255, 255, 255, 0.15);
+    --dashed-bg: #0f172a;
+    --dashed-border: rgba(255, 255, 255, 0.2);
+    --preview-bg: #0f172a;
+    --modal-panel-bg: #1e293b;
+    --modal-header-bg: #1e293b;
+    --modal-footer-bg: #1e293b;
+    --modal-canvas-bg: #0f172a;
+    --cancel-btn-bg: #334155;
+    --cancel-btn-color: #cbd5e1;
 }
 
 .dark-theme body {
@@ -128,52 +162,51 @@
 
 /* Visual Agenda Table Overrides in Dark Mode */
 .dark-theme #visual-agenda-canvas > div,
-.dark-theme #manual-visual-canvas > div {
+.dark-theme #manual-grid-canvas > div {
     background: #1e293b !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .dark-theme #visual-agenda-canvas table,
-.dark-theme #manual-visual-canvas table {
+.dark-theme #manual-grid-canvas table {
     background: #1e293b !important;
 }
 
 .dark-theme #visual-agenda-canvas tr,
-.dark-theme #manual-visual-canvas tr {
+.dark-theme #manual-grid-canvas tr {
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .dark-theme #visual-agenda-canvas th,
-.dark-theme #manual-visual-canvas th {
+.dark-theme #manual-grid-canvas th {
     background: #1e293b !important;
     color: #cbd5e1 !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .dark-theme #visual-agenda-canvas th div,
-.dark-theme #manual-visual-canvas th div {
+.dark-theme #manual-grid-canvas th div {
     color: #cbd5e1 !important;
 }
 
 .dark-theme #visual-agenda-canvas th div div,
-.dark-theme #manual-visual-canvas th div div {
+.dark-theme #manual-grid-canvas th div div {
     color: #f8fafc !important;
 }
 
 .dark-theme #visual-agenda-canvas td,
-.dark-theme #manual-visual-canvas td {
+.dark-theme #manual-grid-canvas td {
     background: #1e293b !important;
     color: #cbd5e1 !important;
     border-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 .dark-theme #visual-agenda-canvas td div.hover-scale,
-.dark-theme #manual-visual-canvas td div.hover-scale {
-    color: #f8fafc !important;
-}
-
+.dark-theme #visual-agenda-canvas td div.hover-scale div,
 .dark-theme #visual-agenda-canvas td div.hover-scale span,
-.dark-theme #manual-visual-canvas td div.hover-scale span {
+.dark-theme #manual-grid-canvas td div.hover-scale,
+.dark-theme #manual-grid-canvas td div.hover-scale div,
+.dark-theme #manual-grid-canvas td div.hover-scale span {
     color: #f8fafc !important;
 }
 
@@ -2055,4 +2088,134 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     background-color: transparent !important;
     border: none !important;
 }
+
+/* Header Theme Toggle & Actions */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--color-text);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.header-theme-toggle:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+}
+
+.dark-theme .header-theme-toggle {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dark-theme .header-theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dark-theme .user-status {
+    color: var(--color-text);
+}
+
+/* Custom Multi-select Dropdown Dark Theme Overrides */
+.dark-theme .custom-multi-select-dropdown {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-theme .custom-multi-select-dropdown .promo-cat-checklist div {
+    border-bottom-color: var(--border-color) !important;
+}
+
+.dark-theme .custom-multi-select-dropdown strong {
+    color: var(--color-text-muted) !important;
+}
+
+.dark-theme .custom-multi-select-trigger {
+    background-color: var(--input-bg) !important;
+    color: var(--color-text) !important;
+    border-color: var(--input-border) !important;
+}
+
+.dark-theme .custom-multi-select-trigger:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* General Headings Dark Theme overrides */
+.dark-theme h1,
+.dark-theme h2,
+.dark-theme h3,
+.dark-theme h4,
+.dark-theme h5,
+.dark-theme h6,
+.dark-theme .section-title {
+    color: var(--color-text) !important;
+}
+
+/* Automatic inline gray text contrast correction for Dark Theme */
+.dark-theme [style*="color:#666"],
+.dark-theme [style*="color: #666"],
+.dark-theme [style*="color:#888"],
+.dark-theme [style*="color: #888"],
+.dark-theme [style*="color:#999"],
+.dark-theme [style*="color: #999"],
+.dark-theme [style*="color:#333"],
+.dark-theme [style*="color: #333"],
+.dark-theme [style*="color:#1a1a1a"],
+.dark-theme [style*="color: #1a1a1a"] {
+    color: var(--color-text-muted) !important;
+}
+
+/* Exclude specific labels or links that should use high-contrast primary/accent color */
+.dark-theme strong[style*="color:#1a1a1a"],
+.dark-theme strong[style*="color: #1a1a1a"],
+.dark-theme span[style*="color:#1a1a1a"],
+.dark-theme span[style*="color: #1a1a1a"],
+.dark-theme div[style*="color:#1a1a1a"],
+.dark-theme div[style*="color: #1a1a1a"] {
+    color: var(--color-text) !important;
+}
+
+/* Modal content scrollable styling with custom thin scrollbars */
+.modal-content-scrollable {
+    max-height: 92vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(160, 93, 107, 0.4) transparent;
+}
+
+.modal-content-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-content-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(160, 93, 107, 0.4);
+    border-radius: 10px;
+}
+
+.modal-content-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dark-theme .modal-content-scrollable {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark-theme .modal-content-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 

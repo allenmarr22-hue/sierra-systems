@@ -390,6 +390,7 @@ window.syncAdminReady = async function() {
             if (cloudMeta.site_name) localStorage.setItem('margarita_site_name', cloudMeta.site_name);
             if (cloudMeta.admin_gender) localStorage.setItem('margarita_admin_gender', cloudMeta.admin_gender);
             if (cloudMeta.whatsapp_number) localStorage.setItem('margarita_whatsapp_number', cloudMeta.whatsapp_number);
+            if (cloudMeta.site_address) localStorage.setItem('margarita_site_address', cloudMeta.site_address);
             if (cloudMeta.logo_url) localStorage.setItem('margarita_logo_url', cloudMeta.logo_url);
             if (cloudMeta.hero_url) localStorage.setItem('margarita_hero_url', cloudMeta.hero_url);
             if (cloudMeta.admin_bg) localStorage.setItem('margarita_admin_bg', cloudMeta.admin_bg);
@@ -812,18 +813,18 @@ window.renderHistory = function() {
             statsContainer.innerHTML = `
             <div class="glass-module" style="display: flex; align-items: center; justify-content: space-between; padding: 15px 25px; gap: 25px; flex-wrap: wrap; border-top: 3px solid var(--gold-primary); margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
                 <div style="flex: 2; min-width: 300px; display: flex; align-items: center; gap: 20px;">
-                    <div style="border-right: 1px solid #eee; padding-right: 20px;">
-                        <small style="color: #888; text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;">${mainLabel}</small>
+                    <div style="border-right: 1px solid var(--border-color); padding-right: 20px;">
+                        <small style="color: var(--color-text-muted); text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;">${mainLabel}</small>
                         <div style="font-size: 0.9rem; font-weight: 700; color: var(--color-dark-pink); text-transform: capitalize;">${subLabel}</div>
                     </div>
                     <div style="display: flex; gap: 30px; align-items: center; flex: 1;">
                         <div>
-                            <div style="font-size: 1.15rem; font-weight: 800; color: #1a1a1a;">${fmt(mainData.total)}</div>
-                            <div style="font-size: 0.6rem; color: #999; text-transform: uppercase; font-weight: 700;">Tot. Bruto</div>
+                            <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-text);">${fmt(mainData.total)}</div>
+                            <div style="font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700;">Tot. Bruto</div>
                         </div>
                         <div>
                             <div style="font-size: 1.15rem; font-weight: 800; color: #e74c3c;">${fmt(mainData.total - mainData.studio)}</div>
-                            <div style="font-size: 0.6rem; color: #999; text-transform: uppercase; font-weight: 700;">Profesionales</div>
+                            <div style="font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700;">Profesionales</div>
                         </div>
                         <div style="background: rgba(46, 204, 113, 0.08); padding: 8px 15px; border-radius: 12px; border: 1px solid rgba(46, 204, 113, 0.2);">
                             <div style="font-size: 1.2rem; font-weight: 900; color: #27ae60;">${fmt(mainData.studio)}</div>
@@ -832,12 +833,12 @@ window.renderHistory = function() {
                     </div>
                 </div>
                 ${!showOnlyMonth ? `
-                <div style="flex: 1; min-width: 180px; padding-left: 25px; border-left: 1px solid #eee; display: flex; align-items: center; justify-content: flex-end;">
+                <div style="flex: 1; min-width: 180px; padding-left: 25px; border-left: 1px solid var(--border-color); display: flex; align-items: center; justify-content: flex-end;">
                     <div style="text-align: right;">
-                        <small style="color: #888; text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;">${monthLabel}</small>
+                        <small style="color: var(--color-text-muted); text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;">${monthLabel}</small>
                         <div style="margin-top: 5px;">
-                            <div style="font-size: 1.3rem; font-weight: 900; color: #1a1a1a;">${fmt(monthStats.total)}</div>
-                            <div style="font-size: 0.6rem; color: #999; text-transform: uppercase; font-weight: 800; letter-spacing:0.5px;">Acumulado Mes</div>
+                            <div style="font-size: 1.3rem; font-weight: 900; color: var(--color-text);">${fmt(monthStats.total)}</div>
+                            <div style="font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 800; letter-spacing:0.5px;">Acumulado Mes</div>
                         </div>
                     </div>
                 </div>` : ''}
@@ -1000,45 +1001,45 @@ window.showHistoryDetails = function(index) {
     
     overlay.innerHTML = `
         <div class="custom-modal" style="text-align:left; max-width:500px; padding:30px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:15px;">
                 <h3 style="margin:0; color:var(--color-dark-pink); font-size:1.4rem;"><i class="fas fa-info-circle"></i> Detalles de Cita</h3>
                 <span style="background:${color}15; color:${color}; padding:5px 12px; border-radius:20px; font-size:0.75rem; font-weight:800; text-transform:uppercase;">${statusLabel}</span>
             </div>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
                 <div>
-                    <small style="color:#888; text-transform:uppercase; font-size:0.65rem; font-weight:700;">Cliente</small>
-                    <div style="font-weight:700; color:#1a1a1a; font-size:1rem;">${apt.name || 'N/A'}</div>
+                    <small style="color:var(--color-text-muted); text-transform:uppercase; font-size:0.65rem; font-weight:700;">Cliente</small>
+                    <div style="font-weight:700; color:var(--color-text); font-size:1rem;">${apt.name || 'N/A'}</div>
                 </div>
                 <div>
-                    <small style="color:#888; text-transform:uppercase; font-size:0.65rem; font-weight:700;">Teléfono</small>
-                    <div style="font-weight:700; color:#1a1a1a; font-size:1rem;">
+                    <small style="color:var(--color-text-muted); text-transform:uppercase; font-size:0.65rem; font-weight:700;">Teléfono</small>
+                    <div style="font-weight:700; color:var(--color-text); font-size:1rem;">
                         <a href="https://wa.me/${apt.phone ? apt.phone.toString().replace(/\D/g,'') : ''}" target="_blank" style="color:inherit; text-decoration:none;">
                             ${apt.phone || 'N/A'} <i class="fab fa-whatsapp" style="color:#2ecc71; margin-left:3px;"></i>
                         </a>
                     </div>
                 </div>
                 <div>
-                    <small style="color:#888; text-transform:uppercase; font-size:0.65rem; font-weight:700;">Fecha y Hora</small>
-                    <div style="font-weight:700; color:#1a1a1a;">${apt.date} | ${fmtTime}</div>
+                    <small style="color:var(--color-text-muted); text-transform:uppercase; font-size:0.65rem; font-weight:700;">Fecha y Hora</small>
+                    <div style="font-weight:700; color:var(--color-text);">${apt.date} | ${fmtTime}</div>
                 </div>
                 <div>
-                    <small style="color:#888; text-transform:uppercase; font-size:0.65rem; font-weight:700;">Profesional</small>
-                    <div style="font-weight:700; color:#1a1a1a;">${apt.specialist || 'No asignado'}</div>
+                    <small style="color:var(--color-text-muted); text-transform:uppercase; font-size:0.65rem; font-weight:700;">Profesional</small>
+                    <div style="font-weight:700; color:var(--color-text);">${apt.specialist || 'No asignado'}</div>
                 </div>
             </div>
             
-            <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:25px; border:1px solid #eee;">
-                <small style="color:#888; text-transform:uppercase; font-size:0.65rem; font-weight:700;">Servicio</small>
+            <div style="background:var(--dashed-bg); padding:15px; border-radius:12px; margin-bottom:25px; border:1px solid var(--border-color);">
+                <small style="color:var(--color-text-muted); text-transform:uppercase; font-size:0.65rem; font-weight:700;">Servicio</small>
                 <div style="display:flex; align-items:center; gap:12px; margin-top:5px;">
                     ${apt.img ? `<img src="${apt.img}" style="width:45px; height:45px; border-radius:8px; object-fit:cover;">` : ''}
                     <div>
                         <div style="font-weight:700; color:var(--color-dark-pink);">${apt.service || 'N/A'}</div>
-                        <div style="font-size:0.85rem; color:#666;">Categoría: ${apt.category || 'N/A'}</div>
+                        <div style="font-size:0.85rem; color:var(--color-text-muted);">Categoría: ${apt.category || 'N/A'}</div>
                     </div>
                 </div>
-                <div style="margin-top:10px; border-top:1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.9rem; color:#444;">Precio Final:</span>
+                <div style="margin-top:10px; border-top:1px dashed var(--border-color); padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.9rem; color:var(--color-text-muted);">Precio Final:</span>
                     <strong style="color:var(--gold-primary); font-size:1.1rem;">$${(parseInt(String(apt.splitPrice || apt.price || 0).replace(/\D/g, '')) || 0).toLocaleString('es-CO')} COP</strong>
                 </div>
                 ${apt.promoType ? `<div style="font-size:0.75rem; text-align:right; color:var(--color-accent); font-weight:600; margin-top:3px;">Afectado por promoción: ${apt.promoType.toUpperCase()}</div>` : ''}
@@ -6979,18 +6980,18 @@ function renderSpecialists() {
                         ${spec.image ? `<img src="${spec.image}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="background:#f0f0f0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#999;"><i class="fas fa-user"></i></div>`}
                     </div>
                     <div style="min-width:150px;">
-                        <h5 style="margin:0; font-size:1rem; color:#1a1a1a;">${spec.name}</h5>
-                        <small style="color:#888; font-size:0.75rem;">${spec.specialty || 'General'}</small>
+                        <h5 style="margin:0; font-size:1rem; color:var(--color-text);">${spec.name}</h5>
+                        <small style="color:var(--color-text-muted); font-size:0.75rem;">${spec.specialty || 'General'}</small>
                     </div>
-                    <div style="display:flex; gap:15px; margin-left:20px; font-size:0.85rem; color:#666;">
+                    <div style="display:flex; gap:15px; margin-left:20px; font-size:0.85rem; color:var(--color-text-muted);">
                         <span><i class="fas fa-calendar-check" style="color:var(--color-dark-pink);"></i> Hoy: <strong>${dayCount}</strong></span>
                         <span><i class="fas fa-chart-line" style="color:#2ecc71;"></i> Mes: <strong>${fmt(monthTotal)}</strong></span>
                     </div>
                 </div>
                 <div style="display:flex; gap:8px;">
                     <button onclick="viewSpecialistReport('${spec.name}')" class="btn-primary" style="padding:6px 12px; font-size:0.75rem; border-radius:8px; width:auto; background:var(--color-dark-pink);">REPORTES</button>
-                    <button onclick="openEditSpecialistModal('${spec.name}')" style="background:#f0f8ff; border:1px solid #cce5ff; color:#3498db; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-pen" style="font-size:0.8rem;"></i></button>
-                    <button onclick="deleteSpecialist('${spec.name}')" style="background:#fff0f0; border:1px solid #ffcccc; color:#e74c3c; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-trash-alt" style="font-size:0.8rem;"></i></button>
+                    <button onclick="openEditSpecialistModal('${spec.name}')" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.2); color:#3498db; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-pen" style="font-size:0.8rem;"></i></button>
+                    <button onclick="deleteSpecialist('${spec.name}')" style="background:rgba(231, 76, 60, 0.1); border:1px solid rgba(231, 76, 60, 0.2); color:#e74c3c; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-trash-alt" style="font-size:0.8rem;"></i></button>
                 </div>
             </div>`;
         }
@@ -7003,14 +7004,14 @@ function renderSpecialists() {
         const specProfileImg = spec.image ? `<img src="${spec.image}" style="width:55px; height:55px; border-radius:12px; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : `<div style="background:var(--gold-primary)15; width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:1.5rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
 
         return `
-        <div class="glass-module" style="padding:20px; border-radius:20px; position:relative; display:flex; flex-direction:column; gap:15px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); opacity:${isActive ? '1' : '0.6'}; transition:0.3s; border: 1px solid ${isActive ? 'rgba(184, 115, 129, 0.2)' : '#eee'};">
+        <div class="glass-module" style="padding:20px; border-radius:20px; position:relative; display:flex; flex-direction:column; gap:15px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); opacity:${isActive ? '1' : '0.6'}; transition:0.3s; border: 1px solid ${isActive ? 'rgba(184, 115, 129, 0.2)' : 'var(--border-color)'};">
             
             <!-- HEADER COMPACTO -->
             <div style="display:flex; align-items:center; justify-content:space-between; gap:15px;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     ${specProfileImg}
                     <div style="max-width: 140px;">
-                        <h4 style="margin:0; font-size:1.2rem; color:#1a1a1a; font-family:var(--font-heading); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${spec.name}">${spec.name}</h4>
+                        <h4 style="margin:0; font-size:1.2rem; color:var(--color-text); font-family:var(--font-heading); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${spec.name}">${spec.name}</h4>
                         <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
                              <button onclick="viewSpecialistInfo('${spec.name}')" style="background:none; border:none; padding:0; color:var(--color-dark-pink); font-size:0.75rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:3px;"><i class="fas fa-id-card"></i> Perfil</button>
                         </div>
@@ -7019,16 +7020,16 @@ function renderSpecialists() {
                 
                 <div style="display:flex; align-items:center; gap:10px;">
                     <!-- Toggle Switch ON/OFF -->
-                    <div onclick="toggleSpecialistActive('${spec.name}')" style="display:flex; align-items:center; gap:8px; cursor:pointer; background:${isActive ? '#e8f5e9' : '#fff5f5'}; border-radius:30px; padding:0 12px; border:1px solid ${isActive ? '#2ecc71' : '#ff7675'}; transition:0.3s; flex-shrink:0; height:28px; box-sizing:border-box;">
-                        <span style="font-size:0.75rem; font-weight:800; color:${isActive ? '#2e7d32' : '#d63031'}; min-width:25px;">${isActive ? 'ON' : 'OFF'}</span>
-                        <div style="width:28px; height:14px; background:${isActive ? '#2ecc71' : '#d63031'}; border-radius:10px; position:relative;">
+                    <div onclick="toggleSpecialistActive('${spec.name}')" style="display:flex; align-items:center; gap:8px; cursor:pointer; background:${isActive ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)'}; border-radius:30px; padding:0 12px; border:1px solid ${isActive ? '#2ecc71' : '#e74c3c'}; transition:0.3s; flex-shrink:0; height:28px; box-sizing:border-box;">
+                        <span style="font-size:0.75rem; font-weight:800; color:${isActive ? '#2ecc71' : '#e74c3c'}; min-width:25px;">${isActive ? 'ON' : 'OFF'}</span>
+                        <div style="width:28px; height:14px; background:${isActive ? '#2ecc71' : '#e74c3c'}; border-radius:10px; position:relative;">
                             <div style="width:12px; height:12px; background:white; border-radius:50%; position:absolute; top:1px; left:${isActive ? '15px' : '1px'}; transition:0.2s;"></div>
                         </div>
                     </div>
                     
                     <!-- Menú de Acciones (Engranaje) -->
                     <div class="spec-actions-container">
-                        <button onclick="toggleSpecActionsMenu('${spec.name}', event)" style="background:rgba(0,0,0,0.03); border:1px solid #ddd; color:#777; width:28px; height:28px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;" class="hover-scale">
+                        <button onclick="toggleSpecActionsMenu('${spec.name}', event)" style="background:rgba(0,0,0,0.03); border:1px solid var(--border-color); color:var(--color-text-muted); width:28px; height:28px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;" class="hover-scale">
                             <i class="fas fa-cog" style="font-size:0.9rem;"></i>
                         </button>
                         <div id="actions-menu-${spec.name.replace(/\s+/g, '')}" class="spec-actions-menu">
@@ -7045,7 +7046,7 @@ function renderSpecialists() {
 
             <!-- ESPECIALIDADES (DESPLEGABLE) -->
             <div style="border-top: 1px dashed rgba(var(--accent-rgb), 0.1); padding-top: 10px;">
-                <button id="btn-spec-${specId}" onclick="toggleSpecDetails('${specId}')" class="spec-toggle-btn" style="background:none; border:none; padding:0; color:#888; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; text-transform:uppercase; letter-spacing:0.5px;">
+                <button id="btn-spec-${specId}" onclick="toggleSpecDetails('${specId}')" class="spec-toggle-btn" style="background:none; border:none; padding:0; color:var(--color-text-muted); font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; text-transform:uppercase; letter-spacing:0.5px;">
                     <i class="fas fa-magic" style="color:var(--color-dark-pink); opacity:0.6;"></i> SERVICIOS QUE REALIZA <i class="fas fa-chevron-down chevron-icon" style="margin-left:auto; transition:0.3s; font-size:0.6rem;"></i>
                 </button>
                 <div id="collapse-spec-${specId}" class="smooth-collapse">
@@ -7060,11 +7061,11 @@ function renderSpecialists() {
                 <!-- Cuadro Interactivo para Citas de Hoy -->
                 <div onclick="viewSpecialistServices('${spec.name}')" style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center; cursor:pointer;" class="hover-scale">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span style="font-size:0.6rem; color:#555; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Citas Hoy</span>
+                        <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Citas Hoy</span>
                         <i class="fas fa-history" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
                     </div>
                     <div style="font-size:1.7rem; font-weight:900; color:var(--color-dark-pink); line-height:1; margin: 4px 0;">${dayCount}</div>
-                    <div style="font-size:0.6rem; color:#888; font-weight:800; text-transform:uppercase;">
+                    <div style="font-size:0.6rem; color:var(--color-text-muted); font-weight:800; text-transform:uppercase;">
                         VER CITAS <i class="fas fa-chevron-right" style="font-size:0.5rem;"></i>
                     </div>
                 </div>
@@ -7072,25 +7073,25 @@ function renderSpecialists() {
                 <!-- Info Estática para Total Mes -->
                 <div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span style="font-size:0.6rem; color:#555; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Servicios Mes</span>
+                        <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Servicios Mes</span>
                         <i class="fas fa-chart-line" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
                     </div>
-                    <div style="font-size:1.7rem; font-weight:900; color:#1a1a1a; line-height:1; margin: 4px 0;">${monthCount}</div>
-                    <div style="font-size:0.6rem; color:#888; font-weight:800; text-transform:uppercase;">Historial Mes</div>
+                    <div style="font-size:1.7rem; font-weight:900; color:var(--color-text); line-height:1; margin: 4px 0;">${monthCount}</div>
+                    <div style="font-size:0.6rem; color:var(--color-text-muted); font-weight:800; text-transform:uppercase;">Historial Mes</div>
                 </div>
             </div>
 
             <!-- RESUMEN FINANCIERO HOY (MUY COMPACTO) -->
-            <div style="background: linear-gradient(135deg, #ffffff 0%, #fff0f2 100%); padding:12px; border-radius:15px; border:1px solid rgba(184, 115, 129, 0.15);">
+            <div style="background: var(--earnings-bg); padding:12px; border-radius:15px; border:1px solid var(--earnings-border);">
                 <div style="font-size:0.65rem; color:var(--color-dark-pink); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; text-align:center; border-bottom:1px dashed rgba(var(--accent-rgb), 0.3); padding-bottom:5px;">
                     💰 Ganancias Hoy
                 </div>
                 <div style="display:flex; flex-direction:column; gap:4px;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#666;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--color-text-muted);">
                          <span>Bruto:</span>
-                         <span style="font-weight:700; color:#1a1a1a;">${fmt(dayTotal)}</span>
+                         <span style="font-weight:700; color:var(--color-text);">${fmt(dayTotal)}</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:4px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; border-top:1px solid var(--border-color); padding-top:4px;">
                          <span style="color:var(--color-dark-pink); font-weight:600;">Estudio (${studioPercent}%):</span>
                          <span style="font-weight:800; color:var(--color-dark-pink);">${fmt(studioEarned)}</span>
                     </div>
@@ -7763,16 +7764,67 @@ window.populateSpecialtyCheckboxes = function(containerId, checkboxClass, checke
         return true;
     });
 
+    const type = checkboxClass.includes('new') ? 'new' : 'edit';
+
     uniqueCats.forEach(cat => {
         const isChecked = normalizedChecked.includes(cat.name.toLowerCase().trim()) ? 'checked' : '';
-        html += `<label style="display:flex; align-items:center; gap:5px; cursor:pointer; margin:0;"><input type="checkbox" value="${cat.name}" class="${checkboxClass}" ${isChecked}> ${cat.name}</label>`;
+        html += `<div style="padding: 6px 0; border-bottom: 1px solid rgba(160, 93, 107, 0.15); display: flex; align-items: center;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; width: 100%; color: var(--color-text);">
+                        <input type="checkbox" value="${cat.name}" class="${checkboxClass}" ${isChecked} onchange="window.updateSpecialistSvcCount('${type}')" style="accent-color: var(--color-dark-pink);"> 
+                        ${cat.name}
+                    </label>
+                 </div>`;
     });
     // Si no existen categorías, al menos mostramos un mensaje
     if(uniqueCats.length === 0) {
         html = '<span style="color:#999; font-size:0.8rem;">Crea categorías primero en el menú "Categorías".</span>';
     }
     container.innerHTML = html;
+
+    // Inicializar el contador y texto del trigger
+    window.updateSpecialistSvcCount(type);
 };
+
+window.toggleSpecialistSvcDropdown = function(type, event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById(`${type}-specialist-dropdown`);
+    const trigger = document.getElementById(`${type}-specialist-trigger`);
+    if (!dropdown || !trigger) return;
+    
+    // Cerrar otros dropdowns si están abiertos
+    document.querySelectorAll('.custom-multi-select-dropdown').forEach(d => {
+        if (d.id !== `${type}-specialist-dropdown`) d.classList.remove('active');
+    });
+    document.querySelectorAll('.custom-multi-select-trigger').forEach(t => {
+        if (t.id !== `${type}-specialist-trigger`) t.classList.remove('active');
+    });
+
+    dropdown.classList.toggle('active');
+    trigger.classList.toggle('active');
+};
+
+window.updateSpecialistSvcCount = function(type) {
+    const cbClass = type === 'new' ? 'new-spec-cb' : 'edit-spec-cb';
+    const checks = document.querySelectorAll(`.${cbClass}:checked`);
+    const label = document.getElementById(`${type}-specialist-label`);
+    const countBadge = document.getElementById(`${type}-specialist-count`);
+    if (!label || !countBadge) return;
+    
+    if (checks.length > 0) {
+        const text = Array.from(checks).map(cb => cb.value).join(', ');
+        if (text.length > 25) {
+            label.innerText = `${checks.length} seleccionados`;
+        } else {
+            label.innerText = text;
+        }
+        countBadge.innerText = checks.length;
+        countBadge.style.display = 'inline-block';
+    } else {
+        label.innerText = 'Elegir especialidades...';
+        countBadge.style.display = 'none';
+    }
+};
+
 
 window.toggleNewSpecialistForm = function() {
     const modal = document.getElementById('newSpecialistModal');
@@ -7881,6 +7933,7 @@ window.syncAdminMetaToCloud = async function(silent = false) {
         site_name: localStorage.getItem('margarita_site_name') || 'Margaritasmit',
         admin_gender: localStorage.getItem('margarita_admin_gender') || 'Femenino',
         whatsapp_number: localStorage.getItem('margarita_whatsapp_number') || '3057726115',
+        site_address: localStorage.getItem('margarita_site_address') || 'Calle 14 # 11-74, Sevilla',
         admin_user: localStorage.getItem('margarita_admin_user') || 'admin',
         admin_pass: localStorage.getItem('margarita_admin_pass') || '12345',
         admin_email: localStorage.getItem('margarita_admin_email') || 'ejemplo@correo.com',
@@ -7895,6 +7948,7 @@ window.syncAdminMetaToCloud = async function(silent = false) {
     const publicMeta = {
         site_name: meta.site_name,
         whatsapp: meta.whatsapp_number,
+        site_address: meta.site_address,
         social: meta.social_links,
         theme: meta.theme,
         logo_url: meta.logo_url,
@@ -7910,6 +7964,7 @@ window.saveIdentity = async function() {
     const name = document.getElementById('settings-site-name').value.trim();
     const gender = document.getElementById('settings-admin-gender').value;
     const waNum = document.getElementById('settings-site-whatsapp').value.trim();
+    const address = document.getElementById('settings-site-address').value.trim();
     
     if(!name) {
         return showToast("El nombre del negocio no puede estar vacío.", "error");
@@ -7917,10 +7972,14 @@ window.saveIdentity = async function() {
     if(!waNum) {
         return showToast("El teléfono de reservas no puede estar vacío.", "error");
     }
+    if(!address) {
+        return showToast("La dirección del negocio no puede estar vacía.", "error");
+    }
 
     localStorage.setItem('margarita_site_name', name);
     localStorage.setItem('margarita_admin_gender', gender);
     localStorage.setItem('margarita_whatsapp_number', waNum);
+    localStorage.setItem('margarita_site_address', address);
     localStorage.setItem('margarita_salon_trigger', Date.now()); // Notificar a la web
 
     const uploadFileHelper = function(inputEl, cloudFileName, maxWidth = 1200, maxHeight = 1200) {
@@ -8211,6 +8270,7 @@ function loadCurrentSettings() {
     document.getElementById('settings-site-name').value = localStorage.getItem('margarita_site_name') || "Margaritasmit";
     document.getElementById('settings-admin-gender').value = localStorage.getItem('margarita_admin_gender') || "Femenino";
     document.getElementById('settings-site-whatsapp').value = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
+    document.getElementById('settings-site-address').value = localStorage.getItem('margarita_site_address') || "Calle 14 # 11-74, Sevilla";
     
     const bgInput = document.getElementById('settings-admin-bg');
     const customBg = localStorage.getItem('margarita_admin_bg');

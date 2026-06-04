@@ -185,7 +185,6 @@
                     <a href="#" onclick="showTab('dashboard-tab', this)" title="Dashboard"><i class="fas fa-chart-line"></i></a>
                     <a href="#" onclick="showTab('history-tab', this)" title="Historial"><i class="fas fa-history"></i></a>
                     <a href="#" onclick="showTab('settings-tab', this)" title="Configuración"><i class="fas fa-cog"></i></a>
-                    <a href="#" id="sidebar-theme-toggle" onclick="toggleNightMode(event)" title="Modo Noche"><i class="fas fa-moon"></i></a>
                 </nav>
                 <button id="logout-btn" class="logout-icon-btn" title="Cerrar Sesión">
                     <i class="fas fa-sign-out-alt"></i>
@@ -202,7 +201,10 @@
                             document.getElementById('main-brand-logo').firstChild.innerHTML = name + '<span>.</span> Admin';
                         })();
                     </script>
-                    <div class="user-status"><i class="fas fa-circle" style="color:#2ecc71; font-size:0.7rem;"></i> Modo Dashboard</div>
+                    <div class="header-actions">
+                        <a href="#" id="sidebar-theme-toggle" onclick="toggleNightMode(event)" title="Modo Noche" class="header-theme-toggle"><i class="fas fa-moon"></i></a>
+                        <div class="user-status"><i class="fas fa-circle" style="color:#2ecc71; font-size:0.7rem;"></i> Modo Dashboard</div>
+                    </div>
                 </header>
 
                 <div class="tabs-container">
@@ -430,7 +432,7 @@
                                 <!-- Lista para editar/borrar categorías actuales -->
                                 <div style="margin-top:25px; border-top:2px dashed #eee; padding-top:20px;">
                                     <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#888; text-transform:uppercase;">Categorías Actuales</h4>
-                                    <div id="categories-manage-list" style="max-height:250px; overflow-y:auto; background:#f9f9f9; border-radius:10px; border:1px solid #eee;">
+                                    <div id="categories-manage-list" style="max-height:250px; overflow-y:auto; background:var(--dashed-bg); border-radius:10px; border:1px solid var(--border-color); color:var(--color-text);">
                                         <!-- Dinámico -->
                                     </div>
                                 </div>
@@ -439,7 +441,7 @@
                         
                         <!-- MODAL: Añadir Nuevo Servicio -->
                         <div id="newServiceModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:650px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+                            <div style="background:var(--modal-panel-bg); padding:30px; border-radius:20px; width:95%; max-width:650px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
                                 <button onclick="toggleNewServiceForm()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; transition:0.3s; padding:0; line-height:1;">&times;</button>
                                 
                                 <h3 id="service-modal-title" style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-magic"></i> Nuevo Servicio</h3>
@@ -483,14 +485,14 @@
                                         <label><i class="fas fa-camera"></i> Foto del Servicio</label>
                                         <div style="display:flex; flex-direction:column; gap:10px;">
                                             <input type="file" id="service-upload" accept="image/*" class="admin-input" style="padding:10px;">
-                                            <div id="service-preview" style="width:100%; border-radius:12px; overflow:hidden; background:#f0f0f0; display:flex; align-items:center; justify-content:center; min-height:100px;">
+                                            <div id="service-preview" style="width:100%; border-radius:12px; overflow:hidden; background:var(--preview-bg); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; min-height:100px;">
                                                 <p style="color:#aaa; font-size:0.85rem;">Vista previa de la imagen</p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
-                                        <button onclick="toggleNewServiceForm()" style="background:#eee; color:#444; border:none; padding:12px 25px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
+                                    <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:20px; border-top:1px solid var(--border-color); padding-top:20px;">
+                                        <button onclick="toggleNewServiceForm()" style="background:var(--cancel-btn-bg); color:var(--cancel-btn-color); border:none; padding:12px 25px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
                                         <button id="upload-service-btn" class="btn-primary" disabled style="padding:12px 25px; border-radius:10px; width:auto; min-width:180px;">
                                             <i class="fas fa-save"></i> PUBLICAR SERVICIO
                                         </button>
@@ -499,16 +501,15 @@
                             </div>
                         </div>
 
-                        <!-- MODAL: GESTIONAR GALERÍA POR CATEGORÍA -->
-                        <div id="catGalleryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:900px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:90vh; overflow-y:auto;">
+                                  <div id="catGalleryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                            <div class="modal-content-scrollable" style="background:var(--modal-panel-bg); color:var(--color-text); padding:30px; border-radius:20px; width:95%; max-width:900px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
                                 <button onclick="closeCategoryGalleryManager()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; line-height:1;">&times;</button>
                                 
                                 <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-images"></i> Galerías de Modelos por Categoría</h3>
                                 <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Sube hasta 30 fotos por cada categoría para que tus clientes elijan un modelo específico.</p>
                                 <div style="display:grid; grid-template-columns: 320px 1fr; gap:25px;">
                                     <!-- Lado Izquierdo: Selección y Carga -->
-                                    <div style="background:#f9f9f9; padding:20px; border-radius:15px; border:1px solid #eee;">
+                                    <div style="background:var(--input-bg); padding:20px; border-radius:15px; border:1px solid var(--border-color);">
                                         <div id="cat-gallery-selection-zone">
                                             <div class="form-group" style="margin-bottom:15px;">
                                                 <label>1. Categoría</label>
@@ -516,7 +517,7 @@
                                                     <!-- Dinámico -->
                                                 </select>
                                             </div>
-
+ 
                                             <div class="form-group" style="margin-bottom:20px;">
                                                 <label>2. Servicio específico</label>
                                                 <select id="svc-gallery-select" class="admin-input" onchange="loadServiceGalleryFromSelect()">
@@ -524,10 +525,10 @@
                                                 </select>
                                             </div>
                                         </div>
-
-                                        <div id="cat-gallery-upload-zone" style="display:none; border-top:1px solid #ddd; padding-top:20px;">
+ 
+                                        <div id="cat-gallery-upload-zone" style="display:none; border-top:1px solid var(--border-color); padding-top:20px;">
                                             <label>Sube una Foto de Modelo</label>
-                                            <div style="border:2px dashed #ccc; padding:20px; border-radius:10px; text-align:center; position:relative; background:white; cursor:pointer;" onclick="document.getElementById('cat-gallery-input').click()">
+                                            <div style="border:2px dashed var(--dashed-border); padding:20px; border-radius:10px; text-align:center; position:relative; background:var(--dashed-bg); color:var(--color-text); cursor:pointer;" onclick="document.getElementById('cat-gallery-input').click()">
                                                 <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:var(--color-accent); margin-bottom:10px;"></i>
                                                 <p style="margin:0; font-size:0.8rem; color:#888;">Clic para elegir imagen de modelo</p>
                                                 <input type="file" id="cat-gallery-input" accept="image/*" style="display:none;" onchange="handleCatGalleryUpload(this)">
@@ -542,21 +543,21 @@
                                                 <label>Precio Estimado (Opcional)</label>
                                                 <input type="text" id="cat-gallery-model-price" placeholder="Ej: $150.000" class="admin-input">
                                             </div>
-
+ 
                                             <p id="cat-gallery-limit-msg" style="margin-top:15px; font-size:0.75rem; color:#888; text-align:center;"></p>
                                         </div>
                                     </div>
-
+ 
                                     <!-- Lado Derecho: Listado de fotos existendes -->
                                     <div>
-                                        <div id="cat-gallery-title" style="font-weight:700; color:var(--color-dark-pink); margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">Selecciona una categoría para ver su galería</div>
+                                        <div id="cat-gallery-title" style="font-weight:700; color:var(--color-dark-pink); margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">Selecciona una categoría para ver su galería</div>
                                         <div id="cat-gallery-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:15px;">
                                             <!-- Dinámico -->
                                         </div>
                                     </div>
                                 </div>
-
-                                <div style="display:flex; justify-content:flex-end; margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
+ 
+                                <div style="display:flex; justify-content:flex-end; margin-top:30px; border-top:1px solid var(--border-color); padding-top:20px;">
                                     <button onclick="closeCategoryGalleryManager()" class="btn-primary" style="width:auto; padding:12px 40px; border-radius:10px;">LISTO / CERRAR</button>
                                 </div>
                             </div>
@@ -729,15 +730,12 @@
                                         <div style="display:flex; gap:10px; margin-top:10px;">
                                             <button onclick="window.saveClosureSettings()" class="btn-primary" style="flex:1;">GUARDAR PROGRAMACIÓN</button>
                                             <button onclick="window.clearClosureSettings()" style="background:#eee; border:none; padding:10px; border-radius:10px; cursor:pointer; font-weight:700; color:#666;">BORRAR</button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- MODAL: Añadir Nuevo Profesional -->
+                            <!-- MODAL: Añadir Nuevo Profesional -->
                         <div id="newSpecialistModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:600px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:95vh; overflow-y:auto;">
+                            <div class="modal-content-scrollable" style="background:var(--modal-panel-bg); color:var(--color-text); padding:30px; border-radius:20px; width:95%; max-width:600px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
                                 <button onclick="window.toggleNewSpecialistForm()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; transition:0.3s; padding:0; line-height:1;">&times;</button>
                                 
                                 <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.5rem; display:flex; align-items:center; gap:12px;"><i class="fas fa-user-plus"></i> Añadir Nuevo Profesional</h3>
@@ -775,13 +773,24 @@
                                 <div class="form-group" style="display: grid; grid-template-columns: 1fr; gap: 15px;">
                                     <div>
                                         <label>Especialidades</label>
-                                        <div id="new-specialist-specialties-container" style="display:flex; flex-wrap:wrap; gap:12px; background:#fff; padding:12px 15px; border:1px solid #ddd; border-radius:8px; min-height:45px; align-items:center;">
-                                            <!-- Llamado dinámicamente según categorías -->
+                                        <div class="custom-multi-select-container">
+                                            <div id="new-specialist-trigger" class="custom-multi-select-trigger" onclick="window.toggleSpecialistSvcDropdown('new', event)">
+                                                <div style="display:flex; align-items:center;">
+                                                    <span id="new-specialist-label">Elegir especialidades...</span>
+                                                    <span id="new-specialist-count" class="svc-count-badge" style="display:none;">0</span>
+                                                </div>
+                                                <i class="fas fa-chevron-down"></i>
+                                            </div>
+                                            <div id="new-specialist-dropdown" class="custom-multi-select-dropdown">
+                                                <div id="new-specialist-specialties-container" class="promo-cat-checklist glass-module">
+                                                    <!-- Dinámico -->
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div>
                                         <label><i class="fas fa-camera"></i> Foto de Perfil</label>
-                                        <div style="display:flex; align-items:center; gap:15px; background:#f9f9f9; padding:8px 10px; border-radius:8px; border:1px dashed #ccc;">
+                                        <div style="display:flex; align-items:center; gap:15px; background:var(--dashed-bg); color:var(--color-text); padding:8px 10px; border-radius:8px; border:1px dashed var(--dashed-border);">
                                             <div id="new-specialist-photo-preview" style="width:45px; height:45px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; overflow:hidden; border:2px solid var(--color-accent); flex-shrink:0;">
                                                 <i class="fas fa-user-tie" style="color:#aaa;"></i>
                                             </div>
@@ -794,8 +803,8 @@
                                     </div>
                                 </div>
                             </div>
-                                    <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:10px; border-top:1px solid #eee; padding-top:20px;">
-                                        <button onclick="window.toggleNewSpecialistForm()" style="background:#eee; color:#444; border:none; padding:12px 25px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
+                                    <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:10px; border-top:1px solid var(--border-color); padding-top:20px;">
+                                        <button onclick="window.toggleNewSpecialistForm()" style="background:var(--cancel-btn-bg); color:var(--cancel-btn-color); border:none; padding:12px 25px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
                                         <button onclick="addSpecialist()" class="btn-primary" style="padding:12px 25px; border-radius:10px; width:auto; min-width:180px;">
                                             <i class="fas fa-save"></i> GUARDAR PROFESIONAL
                                         </button>
@@ -956,24 +965,24 @@
                         <!-- Botón Único Global -->
                         <button onclick="saveAllPromos()" class="btn-primary" style="margin-top:25px; width:100%; height:55px; font-size:1.1rem; border-radius:15px; box-shadow:0 10px 20px rgba(184,115,129,0.2);">GUARDAR PROMOCIONES (DESCUENTO Y COMBO)</button>
 
-                        <div id="promo-status-summary" style="margin-top:30px; padding:20px; border-radius:15px; background: rgba(184, 115, 129, 0.05); text-align:left; color:#666;">
+                        <div id="promo-status-summary" style="margin-top:30px; padding:20px; border-radius:15px; background: var(--earnings-bg); border: 1px solid var(--earnings-border); text-align:left; color:var(--color-text);">
                             <!-- Resumen consolidado -->
                         </div>
                     </section>
 
                         <!-- MODAL: GESTIONAR GALERÍA GENERAL (TRABAJOS REALES) -->
                         <div id="generalGalleryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-                            <div style="background:white; padding:30px; border-radius:20px; width:95%; max-width:900px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:90vh; overflow-y:auto;">
+                            <div class="modal-content-scrollable" style="background:var(--modal-panel-bg); color:var(--color-text); padding:30px; border-radius:20px; width:95%; max-width:900px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
                                 <button onclick="window.closeGeneralGalleryModal()" style="position:absolute; top:15px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; line-height:1;">&times;</button>
                                 
                                 <h1 style="font-size: 1.5rem; margin-top:0; color:var(--color-dark-pink);"><i class="fas fa-images"></i> Galería de Trabajos Reales</h1>
                                 <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">Sube fotos de tus mejores resultados para mostrárselos a tus clientes en la web principal.</p>
 
-                                <div class="upload-card" style="background:#f9f9f9; padding:20px; border-radius:15px; border:1px solid #eee;">
+                                <div class="upload-card" style="background:var(--input-bg); padding:20px; border-radius:15px; border:1px solid var(--border-color); color:var(--color-text);">
                                     <input type="file" id="gallery-upload" accept="image/*" class="file-input">
-                                    <label for="gallery-upload" class="file-label" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; border: 2px dashed #ccc; padding: 30px; border-radius: 12px; background: white; transition: 0.3s;">
+                                    <label for="gallery-upload" class="file-label" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; border: 2px dashed var(--dashed-border); padding: 30px; border-radius: 12px; background: var(--dashed-bg); transition: 0.3s;">
                                         <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: var(--color-accent); margin-bottom: 10px;"></i>
-                                        <span style="font-weight: 600; color: #555;">Selecciona fotos reales de tus trabajos</span>
+                                        <span style="font-weight: 600; color: var(--color-text-muted);">Selecciona fotos reales de tus trabajos</span>
                                     </label>
                                     <div id="gallery-preview" style="margin-top: 15px; display: flex; justify-content: center;"></div>
                                     <button id="upload-gallery-btn" class="btn-primary" disabled style="margin-top:20px; width:100%;">Subir a la Galería Pública</button>
@@ -981,7 +990,7 @@
 
                                 <div style="margin-top:40px;">
                                     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
-                                        <h3 style="margin:0; font-size:1.2rem; color:#333;"><i class="fas fa-th"></i> Galería Actual</h3>
+                                        <h3 style="margin:0; font-size:1.2rem; color:var(--color-text);"><i class="fas fa-th"></i> Galería Actual</h3>
                                         <button onclick="clearAllGallery()" id="clear-gallery-btn" style="display:flex; align-items:center; gap:8px; background:transparent; border:1.5px solid #e74c3c; color:#e74c3c; padding:9px 20px; border-radius:10px; font-weight:700; font-size:0.88rem; cursor:pointer; transition:all 0.2s;"><i class="fas fa-trash-alt"></i> Vaciar Galería</button>
                                     </div>
                                     <div id="admin-gallery-list" class="admin-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px;">
@@ -989,7 +998,7 @@
                                     </div>
                                 </div>
 
-                                <div style="display:flex; justify-content:flex-end; margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
+                                <div style="display:flex; justify-content:flex-end; margin-top:30px; border-top:1px solid var(--border-color); padding-top:20px;">
                                     <button onclick="window.closeGeneralGalleryModal()" class="btn-primary" style="width:auto; padding:12px 40px; border-radius:10px;">LISTO / CERRAR</button>
                                 </div>
                             </div>
@@ -1224,6 +1233,12 @@
                                         <label style="font-weight:700; color:var(--color-dark-pink);">Teléfono WhatsApp (Para Agendar)</label>
                                         <input type="text" id="settings-site-whatsapp" class="admin-input" placeholder="Ej: 3057726115" style="margin-top:5px;">
                                         <small style="color:#999; display:block; margin-top:4px;">Cambiar este número actualizará todos los botones de agenda en la web principal.</small>
+                                    </div>
+                                    
+                                    <div class="form-group" style="margin-top:15px;">
+                                        <label style="font-weight:700; color:var(--color-dark-pink);">Dirección del Negocio (Ubicación)</label>
+                                        <input type="text" id="settings-site-address" class="admin-input" placeholder="Ej: Calle 14 # 11-74, Sevilla" style="margin-top:5px;">
+                                        <small style="color:#999; display:block; margin-top:4px;">Esta dirección es la que se abrirá en Google Maps al hacer clic en "Ubicación".</small>
                                     </div>
                                     
                                     <button onclick="saveIdentity()" class="btn-primary" style="margin-top:25px; width:100%; height:45px; border-radius:12px; background:var(--color-dark-pink); border:none; color:white; font-weight:700; cursor:pointer; box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.15);" class="hover-scale">Actualizar Identidad</button>
@@ -1567,7 +1582,7 @@
 
     <!-- Modal: Editar Especialista -->
     <div id="editSpecialistModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-        <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:600px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
+        <div class="modal-content-scrollable" style="background:var(--modal-panel-bg); color:var(--color-text); padding:30px; border-radius:15px; width:90%; max-width:600px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards;">
             <button onclick="closeEditSpecialistModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
             <h3 style="color:var(--color-dark-pink); margin-top:0; font-size:1.4rem; text-align:left;"><i class="fas fa-user-edit"></i> Editar Profesional</h3>
             
@@ -1603,8 +1618,19 @@
                 <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div>
                         <label>Especialidades</label>
-                        <div id="edit-specialist-specialties-container" style="display:flex; flex-wrap:wrap; gap:12px; background:#fff; padding:12px 15px; border:1px solid #ddd; border-radius:8px; min-height:45px; align-items:center;">
-                            <!-- Dinámico -->
+                        <div class="custom-multi-select-container">
+                            <div id="edit-specialist-trigger" class="custom-multi-select-trigger" onclick="window.toggleSpecialistSvcDropdown('edit', event)">
+                                <div style="display:flex; align-items:center;">
+                                    <span id="edit-specialist-label">Elegir especialidades...</span>
+                                    <span id="edit-specialist-count" class="svc-count-badge" style="display:none;">0</span>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="edit-specialist-dropdown" class="custom-multi-select-dropdown">
+                                <div id="edit-specialist-specialties-container" class="promo-cat-checklist glass-module">
+                                    <!-- Dinámico -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -1614,7 +1640,7 @@
                 </div>
                 <div>
                     <label><i class="fas fa-camera"></i> Actualizar Foto</label>
-                    <div style="display:flex; align-items:center; gap:15px; background:#f9f9f9; padding:8px 10px; border-radius:8px; border:1px dashed #ccc;">
+                    <div style="display:flex; align-items:center; gap:15px; background:var(--dashed-bg); color:var(--color-text); padding:8px 10px; border-radius:8px; border:1px dashed var(--dashed-border);">
                         <div id="edit-specialist-current-photo" style="width:50px; height:50px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; overflow:hidden; border:2px solid var(--color-accent); flex-shrink:0;"></div>
                         <div style="flex:1;">
                             <input type="file" id="edit-specialist-photo" class="admin-input" accept="image/*" style="padding: 5px; cursor: pointer; border:none; background:transparent;" onchange="previewEditSpecialistPhoto(this)">
@@ -1625,7 +1651,7 @@
             </div>
             
             <div style="display:flex; justify-content:flex-end; gap:15px;">
-                <button onclick="closeEditSpecialistModal()" style="background:#eee; color:#444; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
+                <button onclick="closeEditSpecialistModal()" style="background:var(--cancel-btn-bg); color:var(--cancel-btn-color); border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;">Cancelar</button>
                 <button onclick="saveSpecialistEdit()" class="btn-primary" style="padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.3s;"><i class="fas fa-save"></i> Guardar Cambios</button>
             </div>
         </div>
@@ -1633,13 +1659,13 @@
     
     <!-- Modal: Reporte Detallado de Servicios del Especialista -->
     <div id="specialistServicesModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-        <div style="background:white; padding:30px; border-radius:15px; width:95%; max-width:700px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:92vh; display:flex; flex-direction:column;">
+        <div style="background:var(--modal-panel-bg); color:var(--color-text); padding:30px; border-radius:15px; width:95%; max-width:700px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; max-height:92vh; display:flex; flex-direction:column;">
             <button onclick="closeSpecialistServicesModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
             <h3 style="color:var(--color-dark-pink); margin-top:0; margin-bottom:5px; font-size:1.4rem; text-align:left;"><i class="fas fa-clipboard-check"></i> Reporte de Servicios</h3>
-            <p id="specialist-services-title" style="color:#777; font-weight:bold; margin-top:0; margin-bottom:15px; font-size:1.1rem; border-bottom:1px solid #eee; padding-bottom:10px;"></p>
+            <p id="specialist-services-title" style="color:var(--color-dark-pink); font-weight:bold; margin-top:0; margin-bottom:15px; font-size:1.1rem; border-bottom:1px solid var(--border-color); padding-bottom:10px;"></p>
             
             <!-- Filtros de Fecha/Mes -->
-            <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; background:#f9f9f9; padding:12px; border-radius:12px; align-items:center; border:1px solid #eee;">
+            <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; background:var(--dashed-bg); padding:12px; border-radius:12px; align-items:center; border:1px solid var(--border-color);">
                 <div style="flex:1; min-width:140px;">
                     <label style="display:block; font-size:0.7rem; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:5px;">Ver por Día:</label>
                     <input type="date" id="spec-filter-date" class="admin-input" style="width:100%; margin:0; padding:8px; cursor:pointer;" onchange="document.getElementById('spec-filter-month').value=''; updateSpecialistReport()" onclick="this.showPicker()">
@@ -1651,12 +1677,12 @@
                 <button onclick="resetSpecialistReport()" style="background:var(--color-dark-pink); color:white; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; cursor:pointer; height:fit-content; margin-top:18px; transition:0.3s; font-size:0.85rem;"><i class="fas fa-sync-alt"></i> Ver Hoy</button>
             </div>
 
-            <div id="specialist-services-list" style="overflow-y:auto; flex:1; padding:5px 10px 15px 5px; background:rgba(255,255,255,0.5);">
+            <div id="specialist-services-list" style="overflow-y:auto; flex:1; padding:5px 10px 15px 5px; background:rgba(255,255,255,0.02);">
                 <!-- Listado dinamico autogenerado -->
             </div>
 
             <!-- Resumen de Totales Dinámico -->
-            <div id="specialist-services-footer" style="padding:15px; background:#fff; border-top:2px solid #eee; margin-top:10px; border-radius:0 0 10px 10px;">
+            <div id="specialist-services-footer" style="padding:15px; background:var(--modal-footer-bg); border-top:2px solid var(--border-color); margin-top:10px; border-radius:0 0 10px 10px;">
                 <!-- Dinámico por JS -->
             </div>
 
@@ -1674,21 +1700,21 @@
 
     <!-- Modal: Información Personal del Especialista -->
     <div id="specialistInfoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-        <div style="background:white; padding:30px; border-radius:15px; width:95%; max-width:500px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; display:flex; flex-direction:column; align-items:center; text-align:center;">
+        <div style="background:var(--modal-panel-bg); color:var(--color-text); padding:30px; border-radius:15px; width:95%; max-width:500px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; display:flex; flex-direction:column; align-items:center; text-align:center;">
             <button onclick="closeSpecialistInfoModal()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; transition:0.3s; padding:0;">&times;</button>
             
             <div id="spec-info-photo" style="margin-bottom:20px;">
                 <!-- Foto dinámica -->
             </div>
             
-            <h3 id="spec-info-name" style="color:#1a1a1a; margin:0 0 20px 0; font-size:1.8rem; font-family:var(--font-heading);"></h3>
+            <h3 id="spec-info-name" style="color:var(--color-text); margin:0 0 20px 0; font-size:1.8rem; font-family:var(--font-heading);"></h3>
 
-            <div style="width:100%; background:#f9f9f9; padding:20px; border-radius:15px; border:1px solid #eee; display:flex; flex-direction:column; gap:15px;">
+            <div style="width:100%; background:var(--dashed-bg); padding:20px; border-radius:15px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:15px;">
                 <div style="display:flex; align-items:center; gap:12px; text-align:left;">
                     <div style="background:rgba(46, 204, 113, 0.1); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#27ae60; font-size:1.2rem;"><i class="fas fa-phone-alt"></i></div>
                     <div>
                         <div style="font-size:0.7rem; color:#999; font-weight:700; text-transform:uppercase;">Teléfono / WhatsApp</div>
-                        <div id="spec-info-phone" style="font-weight:bold; color:#333; font-size:1.1rem;"></div>
+                        <div id="spec-info-phone" style="font-weight:bold; color:var(--color-text); font-size:1.1rem;"></div>
                     </div>
                 </div>
 
@@ -1696,7 +1722,7 @@
                     <div style="background:rgba(52, 152, 219, 0.1); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#2980b9; font-size:1.2rem;"><i class="fas fa-map-marker-alt"></i></div>
                     <div>
                         <div style="font-size:0.7rem; color:#999; font-weight:700; text-transform:uppercase;">Dirección Residencial</div>
-                        <div id="spec-info-address" style="font-weight:bold; color:#333; font-size:0.95rem;"></div>
+                        <div id="spec-info-address" style="font-weight:bold; color:var(--color-text); font-size:0.95rem;"></div>
                     </div>
                 </div>
 
@@ -1705,14 +1731,14 @@
                         <div style="color:#8e44ad; font-size:1.1rem;"><i class="fas fa-birthday-cake"></i></div>
                         <div>
                             <div style="font-size:0.6rem; color:#999; font-weight:700; text-transform:uppercase;">Edad</div>
-                            <div id="spec-info-age" style="font-weight:bold; color:#333; font-size:0.9rem;"></div>
+                            <div id="spec-info-age" style="font-weight:bold; color:var(--color-text); font-size:0.9rem;"></div>
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px; text-align:left; background:rgba(230, 126, 34, 0.05); padding:10px; border-radius:10px;">
                         <div style="color:#d35400; font-size:1.1rem;"><i class="fas fa-venus-mars"></i></div>
                         <div>
                             <div style="font-size:0.6rem; color:#999; font-weight:700; text-transform:uppercase;">Sexo</div>
-                            <div id="spec-info-gender" style="font-weight:bold; color:#333; font-size:0.9rem;"></div>
+                            <div id="spec-info-gender" style="font-weight:bold; color:var(--color-text); font-size:0.9rem;"></div>
                         </div>
                     </div>
                 </div>
@@ -1720,7 +1746,7 @@
 
             <div style="margin-top:25px; display:flex; gap:15px; width:100%;">
                 <a id="spec-info-wa-btn" href="#" target="_blank" style="flex:1; background:#2ecc71; color:white; text-decoration:none; padding:12px; border-radius:10px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.3s; font-size:0.9rem;"><i class="fab fa-whatsapp"></i> Chatear</a>
-                <button onclick="closeSpecialistInfoModal()" style="flex:1; background:#eee; color:#444; border:none; padding:12px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s; font-size:0.9rem;">Cerrar</button>
+                <button onclick="closeSpecialistInfoModal()" style="flex:1; background:var(--cancel-btn-bg); color:var(--cancel-btn-color); border:none; padding:12px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.3s; font-size:0.9rem;">Cerrar</button>
             </div>
         </div>
     </div>
@@ -1733,10 +1759,10 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <!-- MODAL: AGENDA VISUAL DINÁMICA (CUADRÍCULA DE TURNOS) -->
-    <div id="visualAgendaModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:#333; overflow:hidden;">
-        <div style="background:white; border-radius:25px; width:95%; height:94%; max-width:1500px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,0.4); animation: popIn 0.3s forwards; border: 1px solid rgba(255,255,255,0.2);">
+    <div id="visualAgendaModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:var(--color-text); overflow:hidden;">
+        <div style="background:var(--modal-panel-bg); border-radius:25px; width:95%; height:94%; max-width:1500px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,0.4); animation: popIn 0.3s forwards; border: 1px solid var(--border-color);">
             <!-- Header Ventana -->
-            <div style="padding:15px 25px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center; background:#fff;">
+            <div style="padding:15px 25px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--modal-header-bg);">
                 <div style="flex:1; min-width:0;">
                     <div class="agenda-header-responsive-wrapper">
                         <i class="fas fa-th agenda-icon-responsive"></i>
@@ -1746,37 +1772,37 @@
                 </div>
                 <div style="display:flex; align-items:center; gap:15px;">
                     <div style="position:relative; display:flex; align-items:center; gap:8px;">
-                        <button id="btn-show-completed-visual" onclick="window.toggleShowRealizadasInVisual()" style="background:transparent; border:1px solid #ddd; color:#999; padding:6px 12px; border-radius:10px; font-weight:700; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.3s; white-space:nowrap; height:40px;">
+                        <button id="btn-show-completed-visual" onclick="window.toggleShowRealizadasInVisual()" style="background:transparent; border:1px solid var(--border-color); color:var(--color-text-muted); padding:6px 12px; border-radius:10px; font-weight:700; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.3s; white-space:nowrap; height:40px;">
                             <i class="fas fa-check-double" style="font-size:0.7rem;"></i> <span>VER REALIZADAS</span>
                         </button>
                         <div style="position:relative;">
-                            <input type="date" id="visual-agenda-date" class="admin-input" onchange="renderVisualAgenda()" style="width:130px; cursor:pointer; border:1px solid #eee; margin:0; height:40px; font-size:0.85rem;" onclick="this.showPicker()">
+                            <input type="date" id="visual-agenda-date" class="admin-input" onchange="renderVisualAgenda()" style="width:130px; cursor:pointer; border:1px solid var(--border-color); margin:0; height:40px; font-size:0.85rem;" onclick="this.showPicker()">
                         </div>
                     </div>
-                    <button onclick="closeVisualAgenda()" style="background:#f5f5f5; border:none; width:36px; height:36px; border-radius:50%; font-size:1.2rem; cursor:pointer; color:#777; transition:0.3s; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='#eee'; this.style.color='#e74c3c'" onmouseout="this.style.background='#f5f5f5'; this.style.color='#777'">&times;</button>
+                    <button onclick="closeVisualAgenda()" style="background:var(--cancel-btn-bg); border:none; width:36px; height:36px; border-radius:50%; font-size:1.2rem; cursor:pointer; color:var(--cancel-btn-color); transition:0.3s; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#e74c3c'" onmouseout="this.style.background='var(--cancel-btn-bg)'; this.style.color='var(--cancel-btn-color)'">&times;</button>
                 </div>
             </div>
             
             <!-- Lienzo de la Cuadrícula -->
-            <div id="visual-agenda-canvas" style="flex:1; overflow:auto; padding:15px; background:#fbfbfb;">
+            <div id="visual-agenda-canvas" style="flex:1; overflow:auto; padding:15px; background:var(--modal-canvas-bg);">
                 <!-- Generado por JS: renderVisualAgenda() -->
             </div>
 
             <!-- Footer con Leyenda -->
-            <div style="padding:15px 35px; background:#fff; border-top:1px solid #f0f0f0; display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
+            <div style="padding:15px 35px; background:var(--modal-footer-bg); border-top:1px solid var(--border-color); display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(229, 169, 180, 0.15); border:1px solid var(--color-accent); border-radius:3px;"></div> Cita Pendiente</div>
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(46, 204, 113, 0.15); border:1px solid #2ecc71; border-radius:3px;"></div> Cita Confirmada</div>
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(243, 156, 18, 0.15); border:1px solid #f39c12; border-radius:3px;"></div> Aplazada</div>
-                <div style="margin-left:auto; color:#999; font-weight:normal;">Margaritasmit Beauty Studio &copy; 2024</div>
+                <div style="margin-left:auto; color:var(--color-text-muted); font-weight:normal;">Margaritasmit Beauty Studio &copy; 2024</div>
             </div>
         </div>
     </div>
 
     <!-- MODAL: AGENDA VISUAL DINÁMICA (ELEGIR TURNO MANUAL) -->
-    <div id="manual-visual-agenda-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:#333;">
-        <div style="background:white; width:95%; height:92%; max-width:1600px; border-radius:25px; display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s forwards; box-shadow:0 40px 100px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);">
+    <div id="manual-visual-agenda-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:11000; align-items:center; justify-content:center; backdrop-filter:blur(10px); color:var(--color-text);">
+        <div style="background:var(--modal-panel-bg); width:95%; height:92%; max-width:1600px; border-radius:25px; display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s forwards; box-shadow:0 40px 100px rgba(0,0,0,0.4); border: 1px solid var(--border-color);">
             <!-- Header Ventana Calibrada -->
-            <div style="padding:15px 30px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; gap:20px; background:#fff;">
+            <div style="padding:15px 30px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:20px; background:var(--modal-header-bg);">
                 <div style="flex:1; min-width:0;">
                     <div class="agenda-header-responsive-wrapper">
                         <i class="fas fa-th agenda-icon-responsive"></i>
@@ -1785,18 +1811,18 @@
                     <p class="agenda-subtitle-responsive">Elige el espacio disponible para tu cliente.</p>
                 </div>
                 <div style="position:relative; display:flex; align-items:center;">
-                    <input type="date" id="manual-agenda-date" class="admin-input" onchange="renderManualVisualAgendaGrid()" style="width:130px; cursor:pointer; border:2px solid #eee; height:44px; font-size:0.9rem; border-radius:12px;" onclick="this.showPicker()">
+                    <input type="date" id="manual-agenda-date" class="admin-input" onchange="renderManualVisualAgendaGrid()" style="width:130px; cursor:pointer; border:2px solid var(--border-color); height:44px; font-size:0.9rem; border-radius:12px;" onclick="this.showPicker()">
                 </div>
-                <button onclick="closeManualVisualAgenda()" style="background:rgba(44, 62, 80, 0.05); border:none; width:45px; height:45px; border-radius:50%; font-size:1.6rem; cursor:pointer; color:#2c3e50; transition:0.3s; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.05); flex-shrink:0;" onmouseover="this.style.background='rgba(44, 62, 80, 0.1)'" onmouseout="this.style.background='rgba(44, 62, 80, 0.05)'">&times;</button>
+                <button onclick="closeManualVisualAgenda()" style="background:var(--cancel-btn-bg); border:none; width:45px; height:45px; border-radius:50%; font-size:1.6rem; cursor:pointer; color:var(--cancel-btn-color); transition:0.3s; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.05); flex-shrink:0;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='var(--cancel-btn-bg)'">&times;</button>
             </div>
             
             <!-- Lienzo de la Cuadrícula -->
-            <div id="manual-grid-canvas" style="flex:1; overflow:auto; padding:30px; background:#fbfbfb;">
+            <div id="manual-grid-canvas" style="flex:1; overflow:auto; padding:30px; background:var(--modal-canvas-bg);">
                 <!-- Generado por JS -->
             </div>
 
             <!-- Footer con Leyenda -->
-            <div style="padding:15px 35px; background:#fff; border-top:1px solid #f0f0f0; display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
+            <div style="padding:15px 35px; background:var(--modal-footer-bg); border-top:1px solid var(--border-color); display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(184, 115, 129, 0.15); border:1px solid var(--color-dark-pink); border-radius:3px;"></div> Horario Reservado</div>
                 <div style="margin-left:auto; color:#999; font-weight:normal;">Margaritasmit Beauty Studio &copy; 2026</div>
             </div>

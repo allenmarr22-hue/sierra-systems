@@ -321,6 +321,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 heroElement.style.backgroundImage = `linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(var(--accent-rgb),0.3) 100%), url('hero-bg.png')`;
             }
         }
+
+        // 3. Actualizar enlace del botón de ubicación pública
+        const address = localStorage.getItem('margarita_site_address') || "Calle 14 # 11-74, Sevilla";
+        const locBtn = document.getElementById('public-location-btn');
+        if (locBtn) {
+            locBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        }
     };
     window.applyPublicWhatsappLinks = function() {
         const savedWa = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
@@ -546,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data) {
                             if (data.site_name) localStorage.setItem('margarita_site_name', data.site_name);
                             if (data.whatsapp) localStorage.setItem('margarita_whatsapp_number', data.whatsapp);
+                            if (data.site_address) localStorage.setItem('margarita_site_address', data.site_address);
                             if (data.social) localStorage.setItem('margarita_social_links', JSON.stringify(data.social));
                             if (data.theme) {
                                 localStorage.setItem('margarita_client_theme', data.theme);
