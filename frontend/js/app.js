@@ -1,6 +1,57 @@
 // ==========================================================================
-// AS Sierra Systems - Main Application JS (Backend Connected)
-// ==========================================================================
+
+function injectSuperAdminStyles() {
+    const id = 'super-admin-shiny-styles';
+    if (document.getElementById(id)) return;
+
+    const style = document.createElement('style');
+    style.id = id;
+    style.innerHTML = `
+        @keyframes shine-gold {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+        @keyframes glow-pulse {
+            from {
+                filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.4)) drop-shadow(0 0 5px rgba(255, 215, 0, 0.2));
+            }
+            to {
+                filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));
+            }
+        }
+        @keyframes diamond-sparkle {
+            0%, 100% {
+                transform: scale(1) rotate(0deg);
+                filter: drop-shadow(0 0 4px rgba(255,255,255,0.75));
+            }
+            50% {
+                transform: scale(1.2) rotate(15deg);
+                filter: drop-shadow(0 0 14px rgba(255,255,255,1)) brightness(1.3);
+            }
+        }
+        .gold-glow-text {
+            background: linear-gradient(90deg, #ffe066, #f5b041, #ffd700, #ffe066);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            animation: shine-gold 3s linear infinite, glow-pulse 1.8s ease-in-out infinite alternate;
+            display: inline-block;
+            vertical-align: middle;
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-size: 0.85rem;
+        }
+        .shiny-diamond {
+            animation: diamond-sparkle 2.5s ease-in-out infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 4px;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 // --- CUSTOM TABLE DRAWING (NO DEPENDENCIES) ---
 function drawCustomTable(doc, headers, rows, startY, options = {}) {
@@ -456,7 +507,47 @@ function applyRolePermissions() {
     if (roleEl) {
         if (role === 'Super Admin') {
             if (nameEl) nameEl.style.display = 'none'; // Solo escondemos el de Super Admin para que no se repita
-            roleEl.innerHTML = '<span style="color: #ffd700; font-weight: bold; font-size: 0.85rem; white-space: nowrap;">💎 Super Admin 💎</span>';
+            
+            // Inyectar estilos para el brillo dorado y los diamantes 3D
+            injectSuperAdminStyles();
+            
+            roleEl.innerHTML = `
+                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; vertical-align: middle;">
+                    <svg class="shiny-diamond" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px; display: inline-block;">
+                        <defs>
+                            <linearGradient id="crown-grad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#ffffff" />
+                                <stop offset="100%" stop-color="#cbd5e1" />
+                            </linearGradient>
+                            <linearGradient id="pavilion-left" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#ffffff" />
+                                <stop offset="100%" stop-color="#94a3b8" />
+                            </linearGradient>
+                            <linearGradient id="pavilion-right" x1="1" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#e2e8f0" />
+                                <stop offset="100%" stop-color="#475569" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 6 9 L 9 4 L 15 4 L 18 9 Z" fill="url(#crown-grad)" />
+                        <path d="M 9 4 L 12 9 L 15 4 Z" fill="#ffffff" opacity="0.9" />
+                        <path d="M 6 9 L 9 4 L 12 9 Z" fill="#e2e8f0" />
+                        <path d="M 12 9 L 15 4 L 18 9 Z" fill="#cbd5e1" />
+                        <path d="M 6 9 L 12 20 L 12 9 Z" fill="url(#pavilion-left)" />
+                        <path d="M 12 9 L 12 20 L 18 9 Z" fill="url(#pavilion-right)" />
+                        <path d="M 9 4 L 12 14 L 15 4 Z" fill="#ffffff" opacity="0.4" />
+                    </svg>
+                    <span class="gold-glow-text">Super Admin</span>
+                    <svg class="shiny-diamond" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px; display: inline-block;">
+                        <path d="M 6 9 L 9 4 L 15 4 L 18 9 Z" fill="url(#crown-grad)" />
+                        <path d="M 9 4 L 12 9 L 15 4 Z" fill="#ffffff" opacity="0.9" />
+                        <path d="M 6 9 L 9 4 L 12 9 Z" fill="#e2e8f0" />
+                        <path d="M 12 9 L 15 4 L 18 9 Z" fill="#cbd5e1" />
+                        <path d="M 6 9 L 12 20 L 12 9 Z" fill="url(#pavilion-left)" />
+                        <path d="M 12 9 L 12 20 L 18 9 Z" fill="url(#pavilion-right)" />
+                        <path d="M 9 4 L 12 14 L 15 4 Z" fill="#ffffff" opacity="0.4" />
+                    </svg>
+                </div>
+            `;
         } else {
             if (nameEl) nameEl.style.display = 'block'; // Para los demás roles, mostramos el nombre normal
             roleEl.textContent = role;
