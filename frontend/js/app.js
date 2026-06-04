@@ -4207,6 +4207,10 @@ window.renderGlobalPaymentsHistory = function() {
         const badgeBorder = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)';
         const badgeLabel = ph.status === 'APPROVED' ? 'Aprobado' : 'Declinado';
 
+        const method = (parseFloat(ph.amount) === 0 || String(ph.transaction_id || '').includes('gift') || String(ph.desc || '').toLowerCase().includes('cortesía') || String(ph.desc || '').toLowerCase().includes('obsequio'))
+            ? 'Cortesía'
+            : 'Tarjeta de Crédito';
+
         return `
             <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
                 <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.82rem;">${dateStr}</td>
@@ -4216,7 +4220,7 @@ window.renderGlobalPaymentsHistory = function() {
                 <td style="padding:1rem 1.5rem; text-align:center;">
                     <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
                 </td>
-                <td style="padding:1rem 1.5rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">Tarjeta de Crédito</td>
+                <td style="padding:1rem 1.5rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">${method}</td>
                 <td style="padding:1rem 1.5rem; text-align:center; font-family:monospace; font-size:0.78rem; color:var(--text-muted);">${ph.transaction_id || '—'}</td>
             </tr>
         `;
