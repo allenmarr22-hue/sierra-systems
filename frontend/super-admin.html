@@ -1235,11 +1235,12 @@
                 <div class="form-group-modern">
                     <label>IMAGEN DEL MÓDULO (CAPTURA DE PANTALLA)</label>
                     <p class="field-hint-modern" style="margin-bottom:0.75rem;">Se mostrará en el carrusel de la página principal. Recomendado: 1200×680 px, formato horizontal.</p>
-                    <div id="mod-image-preview-wrap" style="width:100%; height:180px; border-radius:12px; border:2px dashed var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:0.75rem; position:relative; cursor:pointer;" onclick="document.getElementById('mod-image-input').click()">
+                    <div id="mod-image-preview-wrap" style="width:100%; height:180px; border-radius:12px; border:2px dashed var(--primary); background:var(--bg-surface-light); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:0.75rem; position:relative; cursor:pointer; transition: all 0.2s;" onclick="document.getElementById('mod-image-input').click()" onmouseover="this.style.borderColor='var(--primary-hover)';this.style.background='var(--primary-alpha)'" onmouseout="this.style.borderColor='var(--primary)';this.style.background='var(--bg-surface-light)'">
                         <img id="mod-image-preview" src="" alt="Preview" style="width:100%; height:100%; object-fit:cover; object-position:top; display:none; border-radius:10px;">
-                        <div id="mod-image-placeholder" style="text-align:center; color:var(--text-muted); pointer-events:none;">
-                            <i data-lucide="image-plus" style="width:36px; height:36px; margin-bottom:0.5rem; opacity:0.4;"></i>
-                            <p style="font-size:0.85rem; opacity:0.6;">Haz clic para seleccionar una imagen</p>
+                        <div id="mod-image-placeholder" style="text-align:center; color:var(--primary); pointer-events:none;">
+                            <i data-lucide="image-plus" style="width:36px; height:36px; margin-bottom:0.5rem; opacity:0.8;"></i>
+                            <p style="font-size:0.85rem; font-weight: 600; opacity:0.9; margin:0;">Haz clic para seleccionar una imagen</p>
+                            <p style="font-size:0.72rem; opacity:0.6; margin:0.25rem 0 0 0;">Formatos permitidos: JPG, PNG, WEBP</p>
                         </div>
                         <button type="button" id="mod-image-remove" onclick="event.stopPropagation(); removeModuleImage()" style="display:none; position:absolute; top:8px; right:8px; background:rgba(239,68,68,0.85); color:white; border:none; border-radius:8px; padding:4px 10px; font-size:0.8rem; cursor:pointer; z-index:2;">
                             <i data-lucide="trash-2" style="width:14px; height:14px;"></i> Quitar

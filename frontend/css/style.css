@@ -3663,6 +3663,13 @@ html[data-accent="orange"][data-theme="light"] {
     background-repeat: no-repeat !important;
     background-position: right 1rem center !important;
     background-size: 1.2rem !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .select-modern option,
+[data-theme="light"] select.select-modern option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
 }
 
 [data-theme="light"] .input-icon-wrap input:not([type="checkbox"]):not([type="radio"]) {
