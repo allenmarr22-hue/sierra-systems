@@ -69,10 +69,14 @@ let state = {
         { id: 'postres', name: 'Postres', icon: 'ice-cream' },
         { id: 'bebidas', name: 'Bebidas', icon: 'coffee' }
     ],
-    auth: JSON.parse(localStorage.getItem('streetfeed_auth')) || {
-        user: 'admin',
-        pass: '123456789'
-    },
+    auth: (() => {
+        const parsed = JSON.parse(localStorage.getItem('streetfeed_auth')) || {
+            user: 'admin',
+            pass: '123456789'
+        };
+        if (parsed.expensePass === undefined) parsed.expensePass = '';
+        return parsed;
+    })(),
     dishes: JSON.parse(localStorage.getItem('streetfeed_dishes')) || [
         { id: 1, cat: 'hamburguesas', name: 'La Bestia', img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=800', desc: 'Doble carne de res premium, cuádruple bacon, cheddar fundido y nuestra salsa secreta.', price: 32000, active: true },
         { id: 2, cat: 'hamburguesas', name: 'Classic Smoke', img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=800', desc: 'Carne ahumada a la leña, aros de cebolla crujientes y BBQ artesanal.', price: 28000, active: true },

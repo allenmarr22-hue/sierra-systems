@@ -306,6 +306,7 @@ function prefillConfigForm() {
         'conf-hero-rating': state.config.heroRating,
         'conf-footer': state.config.footerText,
         'conf-admin-user': '', // Start empty for better UX
+        'conf-expenses-pass': state.auth.expensePass || '',
         'conf-closed-from': state.config.storeClosedFrom,
         'conf-closed-until': state.config.storeClosedUntil,
         'conf-closed-msg': state.config.storeClosedMsg
@@ -817,18 +818,28 @@ document.addEventListener('DOMContentLoaded', () => {
             // Security Changes
             const newUser = document.getElementById('conf-admin-user').value.trim();
             const newPass = document.getElementById('conf-admin-pass').value;
+            const newExpensesPass = document.getElementById('conf-expenses-pass').value;
             const oldPassInput = document.getElementById('conf-admin-old-pass').value;
 
             const isUserChanging = newUser !== '' && newUser !== state.auth.user;
             const isPassChanging = newPass !== '';
+            const isExpensesPassChanging = newExpensesPass !== (state.auth.expensePass || '');
 
-            if (isUserChanging || isPassChanging) {
+            if (isUserChanging || isPassChanging || isExpensesPassChanging) {
                 if (oldPassInput !== state.auth.pass) {
                     showToast('Contraseña actual incorrecta. No se guardaron cambios de seguridad.', 'error');
                     return;
                 }
                 if (isUserChanging) state.auth.user = newUser;
                 if (isPassChanging) state.auth.pass = newPass;
+                if (isExpensesPassChanging) {
+                    state.auth.expensePass = newExpensesPass;
+                    if (newExpensesPass === '') {
+                        sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
+                    } else {
+                        sessionStorage.removeItem('streetfeed_expenses_unlocked');
+                    }
+                }
                 
                 document.getElementById('conf-admin-user').value = ''; // Reset after change
                 document.getElementById('conf-admin-old-pass').value = '';
@@ -3967,6 +3978,11 @@ document.addEventListener('click', (e) => {
 // LIBRETITA DE GASTOS - LOGIC & PERSISTENCE
 // =============================================
 window.checkExpensesLockState = function() {
+    const configuredPass = state.auth.expensePass || '';
+    if (configuredPass === '') {
+        sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
+    }
+
     const isUnlocked = sessionStorage.getItem('streetfeed_expenses_unlocked') === 'true';
     const lockscreen = document.getElementById('expenses-lockscreen');
     const content = document.getElementById('expenses-ledger-content');
@@ -3990,9 +4006,15 @@ window.verifyExpensesPassword = function() {
     const passInp = document.getElementById('expenses-pass-input');
     if (!passInp) return;
     const password = passInp.value.trim();
+    const configuredPass = state.auth.expensePass || '';
     
-    // Acepta "admin" o "admin123" como contraseñas válidas
-    if (password === 'admin' || password === 'admin123') {
+    if (configuredPass === '') {
+        sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
+        checkExpensesLockState();
+        return;
+    }
+    
+    if (password === configuredPass) {
         sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
         showToast('¡Acceso autorizado con éxito!', 'success');
         checkExpensesLockState();
