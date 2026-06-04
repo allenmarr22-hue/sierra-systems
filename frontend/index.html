@@ -1584,6 +1584,70 @@
                             if (actionEl && mod.name) {
                                 actionEl.href = `https://wa.me/${waNum}?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20${encodeURIComponent(mod.name)}`;
                             }
+
+                            // Controlar visibilidad y estados de disponibilidad del módulo en la landing page
+                            const cardEl = titleEl ? titleEl.closest('.product-card') : null;
+                            if (cardEl) {
+                                if (mod.status === 'hidden') {
+                                    cardEl.style.display = 'none';
+                                } else {
+                                    cardEl.style.display = '';
+                                    
+                                    const badgeEl = cardEl.querySelector('.product-badge');
+                                    
+                                    if (mod.status === 'maintenance') {
+                                        if (badgeEl) {
+                                            badgeEl.className = 'product-badge red';
+                                            badgeEl.textContent = 'En Mantenimiento';
+                                        }
+                                        if (actionEl) {
+                                            actionEl.removeAttribute('href');
+                                            actionEl.style.background = 'var(--text-muted)';
+                                            actionEl.style.cursor = 'not-allowed';
+                                            actionEl.textContent = 'En Mantenimiento';
+                                            actionEl.onclick = (e) => e.preventDefault();
+                                        }
+                                        if (priceEl) {
+                                            priceEl.innerHTML = '<span style="color:var(--danger);font-weight:700;font-size:1.25rem;">No disponible</span>';
+                                        }
+                                    } else if (mod.status === 'coming_soon') {
+                                        if (badgeEl) {
+                                            badgeEl.className = 'product-badge orange';
+                                            badgeEl.textContent = 'Próximamente';
+                                        }
+                                        if (actionEl) {
+                                            actionEl.removeAttribute('href');
+                                            actionEl.style.background = '#f59e0b';
+                                            actionEl.style.cursor = 'default';
+                                            actionEl.textContent = 'Próximamente';
+                                            actionEl.onclick = (e) => e.preventDefault();
+                                        }
+                                        if (priceEl) {
+                                            priceEl.innerHTML = '<span style="color:#f59e0b;font-weight:700;font-size:1.25rem;">Próximamente</span>';
+                                        }
+                                    } else {
+                                        // Activo: restaurar valores
+                                        if (badgeEl) {
+                                            if (mod.id === 'streetfeed') {
+                                                badgeEl.className = 'product-badge green';
+                                                badgeEl.textContent = 'Restaurantes y Cafés';
+                                            } else if (mod.id === 'agenda') {
+                                                badgeEl.className = 'product-badge purple';
+                                                badgeEl.textContent = 'Salones y Barberías';
+                                            } else {
+                                                badgeEl.className = 'product-badge green';
+                                                badgeEl.textContent = 'Solución SaaS';
+                                            }
+                                        }
+                                        if (actionEl) {
+                                            actionEl.style.background = '';
+                                            actionEl.style.cursor = '';
+                                            actionEl.textContent = 'Contratar Ahora';
+                                            actionEl.onclick = null;
+                                        }
+                                    }
+                                }
+                            }
                             
                             if (mod.id === 'streetfeed') {
                                 const faqTitleEl = document.getElementById('faq-streetfeed-title');

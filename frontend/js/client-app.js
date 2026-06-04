@@ -1409,11 +1409,11 @@ function renderDashboard() {
             ...(clientBiz.cancelledModules || []).map(cm => String(cm.id))
         ];
         const availableMods = appState.modules.filter(m =>
-            m.status === 'active' && !allClientModIds.includes(String(m.id))
+            m.status !== 'hidden' && !allClientModIds.includes(String(m.id))
         );
         const activeModIds = (clientBiz.modules || []).map(id => String(id));
         const ownedActiveMods = appState.modules.filter(m =>
-            m.status === 'active' && activeModIds.includes(String(m.id))
+            m.status !== 'hidden' && activeModIds.includes(String(m.id))
         );
 
         // 1. Grupo: NUEVAS SOLUCIONES
@@ -1426,7 +1426,13 @@ function renderDashboard() {
                 let priceHtml = '';
                 let discountBadge = '';
 
-                if (activePromo && !isNaN(basePriceVal) && basePriceVal > 0) {
+                if (mod.status === 'maintenance') {
+                    priceHtml = `<div style="font-weight:800; font-size:1.3rem; color:var(--danger); margin:1.5rem 0 1rem; text-shadow:0 0 10px rgba(239,68,68,0.15);">No disponible</div>`;
+                    discountBadge = `<div class="marketplace-badge" style="background:var(--danger); color:#ffffff; border:none; top:12px; right:12px; font-weight:800;">🔧 MANTENIMIENTO</div>`;
+                } else if (mod.status === 'coming_soon') {
+                    priceHtml = `<div style="font-weight:800; font-size:1.4rem; color:var(--warning); margin:1.5rem 0 1rem;">Próximamente</div>`;
+                    discountBadge = `<div class="marketplace-badge" style="background:var(--warning); color:#ffffff; border:none; top:12px; right:12px; font-weight:800;">⏳ PRÓXIMAMENTE</div>`;
+                } else if (activePromo && !isNaN(basePriceVal) && basePriceVal > 0) {
                     let promoPriceVal = basePriceVal;
                     if (activePromo.discountType === 'percentage') {
                         promoPriceVal = Math.round(basePriceVal * (1 - parseFloat(activePromo.discountValue) / 100));
@@ -1457,10 +1463,37 @@ function renderDashboard() {
                     priceHtml = `<div style="font-weight:800; font-size:1.5rem; color:var(--text); margin:1.5rem 0 1rem;">${priceDisplay}</div>`;
                 }
 
-                const badge = i === 0 && !activePromo ? `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">⭐ POPULAR</div>` : (discountBadge || '');
+                const badge = (mod.status === 'active' && i === 0 && !activePromo)
+                    ? `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">⭐ POPULAR</div>`
+                    : (discountBadge || '');
+
+                let buttonHtml = '';
+                if (mod.status === 'maintenance') {
+                    buttonHtml = `
+                        <button class="btn-primary" disabled
+                            style="width:100%; justify-content:center; background:#475569; border-color:#475569; cursor:not-allowed; opacity:0.8;">
+                            <i data-lucide="alert-triangle"></i> En Mantenimiento
+                        </button>
+                    `;
+                } else if (mod.status === 'coming_soon') {
+                    buttonHtml = `
+                        <button class="btn-primary" disabled
+                            style="width:100%; justify-content:center; background:#f59e0b; border-color:#f59e0b; cursor:default;">
+                            <i data-lucide="clock"></i> Próximamente
+                        </button>
+                    `;
+                } else {
+                    buttonHtml = `
+                        <button class="btn-primary btn-adquirir"
+                            data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
+                            style="width:100%; justify-content:center;">
+                            <i data-lucide="shopping-cart"></i> Adquirir Módulo
+                        </button>
+                    `;
+                }
 
                 return `
-                <div class="biz-card" style="position:relative; overflow:hidden; display:flex; flex-direction:column; min-width:320px; max-width:320px;">
+                <div class="biz-card" style="position:relative; overflow:hidden; display:flex; flex-direction:column; min-width:320px; max-width:320px; ${mod.status !== 'active' ? 'opacity:0.88;' : ''}">
                     ${badge}
                     <div class="module-card-header">
                         <div class="module-icon-large" style="background:var(--primary-bg); color:var(--primary);">
@@ -1471,11 +1504,7 @@ function renderDashboard() {
                     <p class="module-desc" style="flex:1;">${mod.desc || ''}</p>
                     ${priceHtml}
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
-                        <button class="btn-primary btn-adquirir"
-                            data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
-                            style="width:100%; justify-content:center;">
-                            <i data-lucide="shopping-cart"></i> Adquirir Módulo
-                        </button>
+                        ${buttonHtml}
                         <button class="btn-ghost btn-demo"
                             data-mod-id="${mod.id}" data-mod-name="${mod.name}"
                             style="width:100%; justify-content:center;">
@@ -1528,22 +1557,51 @@ function renderDashboard() {
                 const formattedSedePrice = `$ ${finalPriceVal.toLocaleString('es-CO')} COP/mes`;
                 const strikePrice = `$ ${promoPriceVal.toLocaleString('es-CO')} COP`;
 
-                const priceHtml = `
-                    <div style="display:flex; flex-direction:column; gap:0.25rem; margin:1.25rem 0 1rem;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="font-size:0.88rem; text-decoration:line-through; color:var(--text-muted); font-weight:600;">${strikePrice}</span>
-                            <span style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
-                                -30% MULTI-SEDE
-                            </span>
-                        </div>
-                        <div style="font-weight:800; font-size:1.6rem; color:var(--primary); text-shadow:0 0 10px var(--primary-alpha);">${formattedSedePrice}</div>
-                    </div>
-                `;
+                let priceHtml = '';
+                let discountBadge = `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">🏢 SEDE 2+</div>`;
+                let buttonHtml = '';
 
-                const discountBadge = `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">🏢 SEDE 2+</div>`;
+                if (mod.status === 'maintenance') {
+                    priceHtml = `<div style="font-weight:800; font-size:1.3rem; color:var(--danger); margin:1.25rem 0 1rem; text-shadow:0 0 10px rgba(239,68,68,0.15);">No disponible</div>`;
+                    discountBadge = `<div class="marketplace-badge" style="background:var(--danger); color:#ffffff; border:none; top:12px; right:12px; font-weight:800;">🔧 MANTENIMIENTO</div>`;
+                    buttonHtml = `
+                        <button class="btn-primary" disabled
+                            style="width:100%; justify-content:center; background:#475569; border-color:#475569; cursor:not-allowed; opacity:0.8;">
+                            <i data-lucide="alert-triangle"></i> En Mantenimiento
+                        </button>
+                    `;
+                } else if (mod.status === 'coming_soon') {
+                    priceHtml = `<div style="font-weight:800; font-size:1.4rem; color:var(--warning); margin:1.25rem 0 1rem;">Próximamente</div>`;
+                    discountBadge = `<div class="marketplace-badge" style="background:var(--warning); color:#ffffff; border:none; top:12px; right:12px; font-weight:800;">⏳ PRÓXIMAMENTE</div>`;
+                    buttonHtml = `
+                        <button class="btn-primary" disabled
+                            style="width:100%; justify-content:center; background:#f59e0b; border-color:#f59e0b; cursor:default;">
+                            <i data-lucide="clock"></i> Próximamente
+                        </button>
+                    `;
+                } else {
+                    priceHtml = `
+                        <div style="display:flex; flex-direction:column; gap:0.25rem; margin:1.25rem 0 1rem;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:0.88rem; text-decoration:line-through; color:var(--text-muted); font-weight:600;">${strikePrice}</span>
+                                <span style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
+                                    -30% MULTI-SEDE
+                                </span>
+                            </div>
+                            <div style="font-weight:800; font-size:1.6rem; color:var(--primary); text-shadow:0 0 10px var(--primary-alpha);">${formattedSedePrice}</div>
+                        </div>
+                    `;
+                    buttonHtml = `
+                        <button class="btn-primary btn-adquirir-sede"
+                            data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${formattedSedePrice}"
+                            style="width:100%; justify-content:center;">
+                            <i data-lucide="plus-circle"></i> Adquirir Nueva Sede
+                        </button>
+                    `;
+                }
                 
                 return `
-                <div class="biz-card" style="position:relative; overflow:hidden; display:flex; flex-direction:column; background: linear-gradient(180deg, var(--bg-surface) 0%, var(--primary-alpha) 100%); min-width:320px; max-width:320px;">
+                <div class="biz-card" style="position:relative; overflow:hidden; display:flex; flex-direction:column; background: linear-gradient(180deg, var(--bg-surface) 0%, var(--primary-alpha) 100%); min-width:320px; max-width:320px; ${mod.status !== 'active' ? 'opacity:0.88;' : ''}">
                     ${discountBadge}
                     <div class="module-card-header">
                         <div class="module-icon-large" style="background:var(--primary-bg); color:var(--primary);">
@@ -1554,11 +1612,7 @@ function renderDashboard() {
                     <p class="module-desc" style="flex:1;">${mod.desc || ''}</p>
                     ${priceHtml}
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
-                        <button class="btn-primary btn-adquirir-sede"
-                            data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${formattedSedePrice}"
-                            style="width:100%; justify-content:center;">
-                            <i data-lucide="plus-circle"></i> Adquirir Nueva Sede
-                        </button>
+                        ${buttonHtml}
                         <button class="btn-ghost btn-demo"
                             data-mod-id="${mod.id}" data-mod-name="${mod.name}"
                             style="width:100%; justify-content:center;">

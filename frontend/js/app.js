@@ -330,14 +330,14 @@ async function adminFetch(url, options = {}) {
         const result = await Swal.fire({
             title: 'Sesión expirada',
             html: `
-                <p style="color:#94a3b8;margin-bottom:1rem;">El servidor fue reiniciado. Ingresa tu contraseña para continuar.</p>
-                <input type="password" id="swal-reauth-pass" class="swal2-input" placeholder="Tu contraseña" autofocus>
+                <p style="color:var(--text-muted);margin-bottom:1rem;">El servidor fue reiniciado. Ingresa tu contraseña para continuar.</p>
+                <input type="password" id="swal-reauth-pass" class="swal2-input" placeholder="Tu contraseña" autofocus style="background:var(--bg-surface-light); color:var(--text-main); border:1px solid var(--border-color);">
             `,
             confirmButtonText: 'Renovar sesión',
             showCancelButton: true,
             cancelButtonText: 'Cancelar',
-            background: '#1e293b',
-            color: '#f8fafc',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-main)',
             confirmButtonColor: '#6366f1',
             preConfirm: () => {
                 const pass = document.getElementById('swal-reauth-pass').value;
@@ -1899,7 +1899,7 @@ function renderModulesGrid() {
             <div class="module-card-header">
                 <div class="module-icon-large"><i data-lucide="${mod.icon}"></i></div>
                 <div class="status-badge ${mod.status === 'active' ? 'active' : (mod.status === 'maintenance' ? 'inactive' : 'neutral')}">
-                    ${mod.status === 'active' ? 'Activo' : (mod.status === 'maintenance' ? 'Mantenimiento' : 'Próximamente')}
+                    ${mod.status === 'active' ? 'Activo' : (mod.status === 'maintenance' ? 'En Mantenimiento' : (mod.status === 'hidden' ? 'Oculto' : 'Próximamente'))}
                 </div>
             </div>
             <h3 class="module-title">${mod.name}</h3>
@@ -1911,8 +1911,8 @@ function renderModulesGrid() {
                 <button class="btn-primary edit-mod-btn" data-id="${mod.id}" style="flex:2; justify-content: center; background: #8b5cf6; border:none;">
                     <i data-lucide="settings"></i> Configurar
                 </button>
-                <button class="btn-ghost toggle-mod-btn" data-id="${mod.id}" data-status="${mod.status === 'active' ? 'maintenance' : 'active'}" 
-                        style="flex:1; justify-content: center; padding: 0.5rem;" title="${mod.status === 'active' ? 'Desactivar' : 'Activar'}">
+                <button class="btn-ghost toggle-mod-btn" data-id="${mod.id}" data-status="${mod.status === 'active' ? 'hidden' : 'active'}" 
+                        style="flex:1; justify-content: center; padding: 0.5rem;" title="${mod.status === 'active' ? 'Ocultar de la tienda' : 'Mostrar en la tienda'}">
                     <i data-lucide="${mod.status === 'active' ? 'eye-off' : 'eye'}"></i>
                 </button>
             </div>
@@ -2735,10 +2735,10 @@ window.billingShowDetail = async function(bizId) {
                 const mod = modules.find(m => String(m.id) === String(inst.moduleId));
                 const renewal = formatBillingDate(inst.renewalDate || biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
                 instLines.push(`<tr>
-                    <td style="padding:0.4rem 0.5rem;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,0.03);">${mod ? mod.name : inst.moduleId}</td>
-                    <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;border-bottom:1px solid rgba(255,255,255,0.03);">${inst.branchName || inst.sedeName || 'Sede Principal'}</td>
-                    <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03);">${renewal}</td>
-                    <td style="padding:0.4rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.03);">$${p.toLocaleString('es-CO')}</td>
+                    <td style="padding:0.4rem 0.5rem;color:var(--text-main);border-bottom:1px solid var(--border-color);">${mod ? mod.name : inst.moduleId}</td>
+                    <td style="padding:0.4rem 0.5rem;color:var(--text-muted);font-size:0.75rem;border-bottom:1px solid var(--border-color);">${inst.branchName || inst.sedeName || 'Sede Principal'}</td>
+                    <td style="padding:0.4rem 0.5rem;color:var(--text-muted);font-size:0.75rem;text-align:center;border-bottom:1px solid var(--border-color);">${renewal}</td>
+                    <td style="padding:0.4rem 0.5rem;text-align:right;color:var(--text-main);font-weight:600;border-bottom:1px solid var(--border-color);">$${p.toLocaleString('es-CO')}</td>
                 </tr>`);
             }
         });
@@ -2913,8 +2913,8 @@ window.billingGiftDays = async function(bizId) {
             title: 'Sin módulos activos',
             text: 'Este negocio no tiene módulos activos a los cuales regalarles días.',
             icon: 'warning',
-            background: '#1e293b',
-            color: '#f8fafc',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-main)',
             confirmButtonColor: '#6366f1'
         });
         return;
@@ -2930,47 +2930,47 @@ window.billingGiftDays = async function(bizId) {
 
     // Construir el formulario HTML
     const htmlContent = `
-        <div style="text-align:left; font-size:0.9rem; color:#cbd5e1;">
-            <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:1.25rem;">
+        <div style="text-align:left; font-size:0.9rem; color:var(--text-main);">
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.25rem;">
                 Selecciona el módulo y la sede a la que deseas otorgar los días de suscripción.
             </p>
             
             <div style="margin-bottom:1rem;">
                 <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Módulo</label>
-                <select id="gift-module-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(99,102,241,0.3); background:#0f172a; color:#f8fafc; font-size:0.9rem;">
+                <select id="gift-module-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:0.9rem;">
                     ${uniqueModules.map(m => `<option value="${m.moduleId}">${m.moduleName}</option>`).join('')}
                 </select>
             </div>
             
             <div style="margin-bottom:1rem;">
                 <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Sede</label>
-                <select id="gift-branch-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(99,102,241,0.3); background:#0f172a; color:#f8fafc; font-size:0.9rem;">
+                <select id="gift-branch-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:0.9rem;">
                     <!-- Se llena dinámicamente -->
                 </select>
             </div>
             
             <div style="margin-bottom:1.25rem; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.15); padding:0.6rem; border-radius:8px; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:#94a3b8;">Corte Actual:</span>
+                <span style="color:var(--text-muted);">Corte Actual:</span>
                 <span id="current-expiry-display" style="color:#10b981; font-weight:700;">—</span>
             </div>
 
             <div style="margin-bottom:0.5rem;">
                 <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Días Adicionales</label>
-                <input type="number" id="gift-days-input" min="1" max="365" value="30" style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid rgba(99,102,241,0.3); background:#0f172a; color:#f8fafc; font-size:1.2rem; font-weight:700; text-align:center;">
+                <input type="number" id="gift-days-input" min="1" max="365" value="30" style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:1.2rem; font-weight:700; text-align:center;">
             </div>
-            <p style="font-size:0.75rem; color:#64748b; text-align:center; margin:0.3rem 0 0;">días a regalar</p>
+            <p style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin:0.3rem 0 0;">días a regalar</p>
         </div>
     `;
 
     const { value: result, isConfirmed } = await Swal.fire({
-        title: `<span style="font-size:1rem;font-weight:800;">🎁 Regalar días a</span><br><span style="color:var(--primary);font-size:1.1rem;">${biz.name}</span>`,
+        title: `<span style="font-size:1rem;font-weight:800;color:var(--text-main);">🎁 Regalar días a</span><br><span style="color:var(--primary);font-size:1.1rem;">${biz.name}</span>`,
         html: htmlContent,
-        background: '#1e293b',
-        color: '#f8fafc',
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)',
         confirmButtonText: '🎁 Regalar días',
         confirmButtonColor: '#10b981',
         cancelButtonText: 'Cancelar',
-        cancelButtonColor: '#334155',
+        cancelButtonColor: '#64748b',
         showCancelButton: true,
         didOpen: (popup) => {
             const moduleSelect = popup.querySelector('#gift-module-select');
@@ -3107,11 +3107,11 @@ async function billingChargeNow(bizId) {
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#10b981',
-        cancelButtonColor: '#334155',
+        cancelButtonColor: '#64748b',
         confirmButtonText: 'Sí, cobrar ahora',
         cancelButtonText: 'Cancelar',
-        background: '#1e293b',
-        color: '#f8fafc'
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)'
     });
     if (!result.isConfirmed) return;
 
@@ -3145,11 +3145,11 @@ async function billingRemoveCard(bizId) {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#334155',
+        cancelButtonColor: '#64748b',
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
-        background: '#1e293b',
-        color: '#f8fafc'
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)'
     });
     if (!result.isConfirmed) return;
 
@@ -3181,11 +3181,11 @@ async function billingTriggerCycle(dryRun = false) {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#6366f1',
-            cancelButtonColor: '#334155',
+            cancelButtonColor: '#64748b',
             confirmButtonText: 'Sí, iniciar cobros',
             cancelButtonText: 'Cancelar',
-            background: '#1e293b',
-            color: '#f8fafc'
+            background: 'var(--bg-surface)',
+            color: 'var(--text-main)'
         });
         if (!result.isConfirmed) return;
     }
@@ -3528,11 +3528,11 @@ window.deleteTicket = async function(ticketId) {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#334155',
+        cancelButtonColor: '#64748b',
         confirmButtonText: 'Sí, eliminar permanentemente',
         cancelButtonText: 'Cancelar',
-        background: '#1e293b',
-        color: '#f8fafc'
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)'
     });
 
     if (!result.isConfirmed) return;
@@ -3567,11 +3567,11 @@ window.clearAllTickets = async function() {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#334155',
+        cancelButtonColor: '#64748b',
         confirmButtonText: 'Sí, borrar todo permanentemente',
         cancelButtonText: 'Cancelar',
-        background: '#1e293b',
-        color: '#f8fafc'
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)'
     });
 
     if (!result.isConfirmed) return;
