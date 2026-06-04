@@ -3549,7 +3549,7 @@ window.viewTicketDetails = function(ticketId) {
                         </div>
                     </div>
                     <!-- Messages -->
-                    <div id="ticket-chat-container" style="height:320px;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth;">
+                    <div id="ticket-chat-container" class="custom-scrollbar" style="height:320px;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth;">
                         <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:30px 0;color:var(--text-muted);font-size:0.82rem;">
                             <span style="display:inline-block;width:16px;height:16px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>
                             Cargando conversación...

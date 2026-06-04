@@ -97,6 +97,36 @@ function drawCustomTable(doc, headers, rows, startY, options = {}) {
     return currentY;
 }
 
+// Helper para parsear fechas de facturación de manera segura (evitando Invalid Date si ya incluye T o zona horaria)
+function parseBillingDate(dateStr) {
+    if (!dateStr) return null;
+    let dateObj;
+    if (typeof dateStr !== 'string') {
+        dateObj = new Date(dateStr);
+    } else if (dateStr.includes('T') || dateStr.includes(' ') || dateStr.length > 10) {
+        dateObj = new Date(dateStr);
+    } else {
+        dateObj = new Date(dateStr + 'T00:00:00');
+    }
+    return isNaN(dateObj.getTime()) ? null : dateObj;
+}
+
+// Helper para obtener la fecha de corte más cercana de todas las sedes activas de un negocio
+function getClosestBillingDate(biz) {
+    const billing = biz.billing || {};
+    if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+        const activeDates = biz.moduleInstances
+            .filter(inst => inst.status === 'active' && inst.renewalDate)
+            .map(inst => parseBillingDate(inst.renewalDate))
+            .filter(dObj => dObj !== null);
+        if (activeDates.length > 0) {
+            const minDateObj = new Date(Math.min(...activeDates.map(d => d.getTime())));
+            return minDateObj.toISOString();
+        }
+    }
+    return billing.next_billing_date;
+}
+
 // ====================== CONFIGURACIÓN ======================
 // --- UTILERIAS PREMIUM (NOTIFICACIONES & BUSQUEDA) ---
 window.showToast = function(message, type = 'success') {
@@ -1084,7 +1114,7 @@ function renderDashboard() {
                 if (isExpired) {
                     actionsHtml = `
                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                            <button class="btn-primary" onclick="handleRenewal('${inst.id}','${inst.name}','${priceDisplay}')" style="width:100%; justify-content:center; box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); background:var(--primary); padding:0.75rem;">
+                            <button class="btn-primary" onclick="handleRenewal('${inst.id}','${inst.name}','${priceDisplay}', '${inst.branchName}', '${inst.instanceId}')" style="width:100%; justify-content:center; box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); background:var(--primary); padding:0.75rem;">
                                 <i data-lucide="credit-card" style="width:16px;"></i> Renovar Suscripción
                             </button>
                             <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(inst.name)}','_blank')" style="width:100%; justify-content:center; font-size:0.82rem; padding:0.5rem;">
@@ -1511,32 +1541,15 @@ function renderDashboard() {
     // --- Próximo Corte ---
     const elNextPayment = document.getElementById('client-next-payment');
     if (elNextPayment) {
-        // 1. Intentar con next_billing_date del sistema de facturación
-        let nextCutDate = clientBiz?.billing?.next_billing_date;
+        const nextCutDate = getClosestBillingDate(clientBiz);
+        const parsed = parseBillingDate(nextCutDate);
 
-        // 2. Si no hay, buscar la fecha de renovación más próxima entre los módulos activos
-        if (!nextCutDate && clientBiz.moduleDates) {
-            const futureDates = Object.values(clientBiz.moduleDates)
-                .filter(d => d && new Date(d).getTime() > Date.now())
-                .sort((a, b) => new Date(a) - new Date(b));
-            if (futureDates.length > 0) nextCutDate = futureDates[0];
-        }
-
-        // 3. Si aun no hay, tomar la más cercana de las instancias activas
-        if (!nextCutDate && clientBiz.moduleInstances) {
-            const activeDates = (clientBiz.moduleInstances || [])
-                .filter(inst => inst.status === 'active' && inst.renewalDate)
-                .map(inst => inst.renewalDate)
-                .filter(d => new Date(d).getTime() > Date.now())
-                .sort((a, b) => new Date(a) - new Date(b));
-            if (activeDates.length > 0) nextCutDate = activeDates[0];
-        }
-
-        if (nextCutDate) {
-            elNextPayment.textContent = new Date(nextCutDate).toLocaleDateString('es-CO', {
+        if (parsed) {
+            elNextPayment.textContent = parsed.toLocaleDateString('es-CO', {
                 day: '2-digit', month: '2-digit', year: 'numeric'
             });
             elNextPayment.style.color = 'var(--text)';
+            elNextPayment.style.fontSize = ''; // Reset font size if was changed before
         } else {
             elNextPayment.textContent = 'Contactar Admin';
             elNextPayment.style.color = 'var(--text-muted)';
@@ -1545,6 +1558,7 @@ function renderDashboard() {
     }
 
     lucide.createIcons();
+    renderSuspensionAlerts();
     // Defer chart init to next paint cycle so canvas dimensions are settled
     requestAnimationFrame(() => {
         setTimeout(() => initClientCharts(), 0);
@@ -3048,8 +3062,31 @@ const BRAND_STYLE = {
 
 // ── Simulated storage (localStorage) ─────────────────────────────────────────
 function walletLoad() {
-    try { return JSON.parse(localStorage.getItem(WALLET_KEY()) || '[]'); }
-    catch { return []; }
+    let cards = [];
+    try { 
+        cards = JSON.parse(localStorage.getItem(WALLET_KEY()) || '[]'); 
+    } catch { 
+        cards = []; 
+    }
+
+    // Auto-sync con la tarjeta registrada en la base de datos
+    if (window.appState && appState.businesses) {
+        const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
+        if (clientBiz && clientBiz.billing && clientBiz.billing.gateway_token) {
+            const dbLast4 = clientBiz.billing.last_four || '****';
+            const hasDbCard = cards.some(c => c.last4 === dbLast4);
+            if (!hasDbCard) {
+                cards.unshift({
+                    brand: (clientBiz.billing.card_brand || 'UNKNOWN').toUpperCase(),
+                    last4: dbLast4,
+                    expiry: clientBiz.billing.card_expiry || 'MM/AA',
+                    holder: clientBiz.billing.card_holder || clientBiz.name || 'TITULAR',
+                    isDbSynced: true
+                });
+            }
+        }
+    }
+    return cards;
 }
 function walletSave(cards) {
     localStorage.setItem(WALLET_KEY(), JSON.stringify(cards));
@@ -3175,17 +3212,46 @@ window.deleteCard = function(index) {
     if (!card) return;
     Swal.fire({
         title: '¿Eliminar tarjeta?',
-        html: `<p style="color:var(--text-muted);">Se eliminará la tarjeta <strong>${card.brand} ···${card.last4}</strong>.<br>Esta acción no se puede deshacer.</p>`,
+        html: `<p style="color:var(--text-muted);">Se eliminará la tarjeta <strong>${card.brand} ···${card.last4}</strong>.<br>Esta acción deshabilitará los cobros automáticos en el servidor.</p>`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#ef4444',
         background: 'var(--bg-surface)', color: 'var(--text)',
-    }).then(r => {
+    }).then(async r => {
         if (r.isConfirmed) {
-            cards.splice(index, 1);
-            walletSave(cards);
+            // Eliminar de local storage filtrando por last4 para evitar desajustes
+            try {
+                const rawCards = JSON.parse(localStorage.getItem(WALLET_KEY()) || '[]');
+                const filtered = rawCards.filter(c => c.last4 !== card.last4);
+                localStorage.setItem(WALLET_KEY(), JSON.stringify(filtered));
+            } catch (e) {}
+
+            // Sincronizar eliminación de tarjeta con el backend
+            try {
+                const sessionRaw = sessionStorage.getItem('clientSession');
+                const session = sessionRaw ? JSON.parse(sessionRaw) : {};
+                const resp = await fetch(`/api/payment/remove-card/${CLIENT_ID}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${session.token || ''}`
+                    }
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    // Limpiar localmente en el objeto del negocio en memoria
+                    const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
+                    if (clientBiz && clientBiz.billing) {
+                        clientBiz.billing.gateway_token = null;
+                        clientBiz.billing.last_four = null;
+                        clientBiz.billing.card_brand = null;
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudo eliminar la tarjeta del servidor:', e);
+            }
+
             renderCardWallet();
             showToast('🗑️ Tarjeta eliminada.', 'info');
         }
@@ -3292,14 +3358,21 @@ window.openAddCardModal = function() {
 
         // Intentar sincronizar token con el backend
         try {
+            const sessionRaw = sessionStorage.getItem('clientSession');
+            const session = sessionRaw ? JSON.parse(sessionRaw) : {};
             await fetch('/api/payment/save-token', {
                 method: 'POST',
-                headers: {'Content-Type':'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.token || ''}`
+                },
                 body: JSON.stringify({
                     bizId: CLIENT_ID,
                     token: card.token,
                     last_four: card.last4,
                     card_brand: card.brand,
+                    card_expiry: card.expiry,
+                    card_holder: card.holder
                 }),
             });
         } catch(e) { console.warn('No se pudo sincronizar con el backend:', e); }
@@ -4087,4 +4160,164 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// ==========================================================================
+// SUSPENSION WARNING BANNERS & SELF-REACTIVATION
+// ==========================================================================
+
+function renderSuspensionAlerts() {
+    const bannerContainer = document.getElementById('suspension-banner-container');
+    const alertContainer = document.getElementById('billing-alert-container');
+    const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+
+    if (!clientBiz) return;
+
+    const isSuspended = clientBiz.billing?.subscription_status === 'suspended';
+
+    if (isSuspended) {
+        // Calcular monto total acumulado adeudado
+        let totalAmount = 0;
+        const activeInstances = clientBiz.moduleInstances ? clientBiz.moduleInstances.filter(m => m.status === 'active') : [];
+        if (activeInstances.length > 0) {
+            for (const inst of activeInstances) {
+                totalAmount += parseFloat(inst.priceApplied) || 0;
+            }
+        }
+
+        const bannerHTML = `
+            <div style="background:linear-gradient(90deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:1rem 1.5rem; margin:1rem 2rem 0; display:flex; align-items:center; justify-content:space-between; gap:1.5rem; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:0.75rem; flex:1; min-width:280px;">
+                    <span style="font-size:1.5rem; animation: pulse 2s infinite;">⚠️</span>
+                    <div>
+                        <strong style="color:#f87171; display:block; font-size:0.95rem;">Suscripción Suspendida por Impago</strong>
+                        <span style="color:#cbd5e1; font-size:0.85rem;">Registra una tarjeta activa en la pestaña 'Suscripción' y realiza el pago para restaurar tu servicio. Monto pendiente: <strong style="color:#f87171;">$${totalAmount.toLocaleString('es-CO')} COP</strong></span>
+                    </div>
+                </div>
+                <button onclick="payPendingBalance()" class="btn-primary" style="background:linear-gradient(135deg,#ef4444,#b91c1c); box-shadow:0 4px 14px rgba(239,68,68,0.3); padding:0.6rem 1.2rem; border-radius:8px; font-weight:700; color:white; font-size:0.85rem; display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Pagar y Auto-Reactivar
+                </button>
+            </div>
+        `;
+        if (bannerContainer) {
+            bannerContainer.innerHTML = bannerHTML;
+            bannerContainer.style.display = 'block';
+        }
+
+        const alertHTML = `
+            <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:0.75rem;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="alert-octagon" style="color:#ef4444; width:20px; height:20px;"></i>
+                    <strong style="color:#ef4444; font-size:0.95rem;">Suscripción Suspendida — Factura Pendiente</strong>
+                </div>
+                <p style="color:#cbd5e1; font-size:0.85rem; line-height:1.5; margin:0;">
+                    El intento de cobro automático mensual ha fallado. Tienes un saldo pendiente de <strong>$${totalAmount.toLocaleString('es-CO')} COP</strong> correspondientes a tus sedes activas. 
+                    Por favor, selecciona una tarjeta guardada en el wallet (o agrega una nueva) y haz clic en el botón de abajo para reactivar tu cuenta inmediatamente.
+                </p>
+                <div style="display:flex; gap:0.75rem; margin-top:0.25rem;">
+                    <button onclick="payPendingBalance()" class="btn-primary" style="background:linear-gradient(135deg,#ef4444,#b91c1c); box-shadow:0 4px 12px rgba(239,68,68,0.25); padding:0.55rem 1.1rem; font-size:0.85rem; border-radius:8px; font-weight:700; color:white; display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                        <i data-lucide="credit-card" style="width:14px;height:14px;"></i> Pagar Saldo Pendiente y Auto-Reactivar
+                    </button>
+                </div>
+            </div>
+        `;
+        if (alertContainer) {
+            alertContainer.innerHTML = alertHTML;
+            alertContainer.style.display = 'block';
+        }
+    } else {
+        if (bannerContainer) {
+            bannerContainer.innerHTML = '';
+            bannerContainer.style.display = 'none';
+        }
+        if (alertContainer) {
+            alertContainer.innerHTML = '';
+            alertContainer.style.display = 'none';
+        }
+    }
+    if (window.lucide) lucide.createIcons();
+}
+
+window.payPendingBalance = async function() {
+    const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+    if (!clientBiz) return;
+
+    if (!clientBiz.billing || !clientBiz.billing.gateway_token) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin Tarjeta Registrada',
+            text: 'Por favor, agrega una tarjeta de pago en tu Wallet primero para proceder con el cobro.',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)',
+            confirmButtonColor: '#6366f1'
+        });
+        return;
+    }
+
+    // Pedir confirmación antes de cobrar
+    const confirmResult = await Swal.fire({
+        title: 'Confirmar Auto-Reactivación',
+        html: `<p style="color:var(--text-muted);">Se intentará cobrar el saldo pendiente de tu suscripción usando tu tarjeta registrada.<br>¿Deseas continuar?</p>`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cobrar y reactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#334155',
+        background: 'var(--bg-surface)',
+        color: 'var(--text)',
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    let session;
+    try { session = JSON.parse(sessionStorage.getItem('clientSession') || '{}'); } catch { session = {}; }
+    if (!session.token) { Swal.fire({ icon: 'error', title: 'Sesión expirada' }); return; }
+
+    // Loading overlay
+    Swal.fire({
+        title: 'Procesando Pago',
+        text: 'Por favor espera un momento mientras validamos la transacción con tu banco...',
+        background: 'var(--bg-surface)',
+        color: 'var(--text)',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    try {
+        const res = await fetch('/api/client/pay-pending-balance', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${session.token}` 
+            }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al procesar el pago.');
+
+        Swal.fire({
+            icon: 'success',
+            title: '¡Auto-Reactivación Exitosa!',
+            text: 'Tu pago ha sido aprobado y el acceso a tus sedes fue restablecido.',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)',
+            confirmButtonColor: '#10b981'
+        });
+
+        // Recargar datos y refrescar UI
+        await loadData();
+        renderDashboard();
+    } catch (err) {
+        Swal.fire({ 
+            icon: 'error', 
+            title: 'Pago Fallido', 
+            text: err.message, 
+            background: 'var(--bg-surface)', 
+            color: 'var(--text)',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+};
 

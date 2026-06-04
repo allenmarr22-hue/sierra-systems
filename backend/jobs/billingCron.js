@@ -88,8 +88,8 @@ async function runBillingCycle(dryRun = false) {
     const allModules = db.modules || [];
 
     for (const biz of (db.businesses || [])) {
-        const billing = biz.billing;
-        if (!billing || !billing.gateway_token || billing.subscription_status === 'cancelled') continue;
+        const billing = biz.billing || {};
+        if (billing.subscription_status === 'cancelled') continue;
 
         const activeInstances = biz.moduleInstances ? biz.moduleInstances.filter(m => m.status === 'active') : [];
         let amountDue = 0;
@@ -109,9 +109,46 @@ async function runBillingCycle(dryRun = false) {
             }
         }
 
-        if (amountDue === 0) continue; // No hay sucursales por cobrar hoy
+        if (instancesToRenew.length === 0) continue; // No hay sucursales por cobrar hoy
 
         processed++;
+
+        // ❌ CASO: Sin método de pago registrado para renovar -> SUSPENDER
+        if (!billing.gateway_token) {
+            failed++;
+            console.log(`[BillingCron] ❌ ${biz.name}: Sin tarjeta registrada para cobrar $${amountDue.toLocaleString('es-CO')} COP por ${instancesToRenew.length} sucursales. Suspendiendo.`);
+            
+            const bizInDb = db.businesses.find(b => b.id === biz.id);
+            if (!bizInDb.billing) bizInDb.billing = {};
+            bizInDb.billing.subscription_status = 'suspended';
+            bizInDb.status = 'inactive';
+            bizInDb.billing.last_failed_attempt = new Date().toISOString();
+
+            // Registrar en historial de pagos como fallido SQL directo por falta de tarjeta
+            await dbHelper.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                biz.id,
+                amountDue,
+                `Intento Renovación Fallida — Sin método de pago para cobrar ${instancesToRenew.length} sucursales — ${biz.name}`,
+                'DECLINED',
+                null
+            ]);
+
+            if (!db.notifications) db.notifications = [];
+            db.notifications.unshift({
+                id: Date.now() + Math.random(),
+                title: 'Suscripción Suspendida',
+                desc: `❌ ${biz.name} — Sin método de pago registrado para renovación.`,
+                icon: 'alert-triangle',
+                color: '#ef4444',
+                time: new Date().toISOString()
+            });
+            continue;
+        }
+
         console.log(`[BillingCron] Procesando: ${biz.name} — $${amountDue.toLocaleString('es-CO')} COP por ${instancesToRenew.length} sucursales.`);
 
         if (dryRun) {
@@ -164,9 +201,11 @@ async function runBillingCycle(dryRun = false) {
             if (!db.notifications) db.notifications = [];
             db.notifications.unshift({
                 id: Date.now() + Math.random(),
-                time: new Date().toISOString(),
-                type: 'success',
-                message: `✅ Pago recibido: ${biz.name} — $${amountDue.toLocaleString('es-CO')} COP (${instancesToRenew.length} sucursales)`,
+                title: 'Pago Recibido',
+                desc: `✅ ${biz.name} — $${amountDue.toLocaleString('es-CO')} COP (${instancesToRenew.length} sucursales)`,
+                icon: 'check-circle',
+                color: '#10b981',
+                time: new Date().toISOString()
             });
         } else {
             failed++;
@@ -192,9 +231,11 @@ async function runBillingCycle(dryRun = false) {
             if (!db.notifications) db.notifications = [];
             db.notifications.unshift({
                 id: Date.now() + Math.random(),
-                time: new Date().toISOString(),
-                type: 'error',
-                message: `❌ Pago fallido: ${biz.name} — ${result.message}. Negocio suspendido.`,
+                title: 'Pago Fallido',
+                desc: `❌ ${biz.name} — ${result.message}. Negocio suspendido.`,
+                icon: 'x-circle',
+                color: '#ef4444',
+                time: new Date().toISOString()
             });
         }
 

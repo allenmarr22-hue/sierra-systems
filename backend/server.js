@@ -52,6 +52,41 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+
+// Middleware de cabeceras de seguridad personalizadas
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+});
+
+// Limites de solicitudes en memoria para mitigar fuerza bruta
+const rateLimits = {};
+function createRateLimiter(limitCount, windowMs) {
+    return (req, res, next) => {
+        const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const key = `${ip}:${req.path}`;
+        const now = Date.now();
+
+        if (!rateLimits[key]) rateLimits[key] = [];
+        rateLimits[key] = rateLimits[key].filter(timestamp => now - timestamp < windowMs);
+
+        if (rateLimits[key].length >= limitCount) {
+            console.warn(`[Security] Límite de solicitudes superado para IP: ${ip} en ruta: ${req.path}`);
+            return res.status(429).json({ error: 'Demasiados intentos. Por favor, espera unos minutos e inténtalo de nuevo.' });
+        }
+
+        rateLimits[key].push(now);
+        next();
+    };
+}
+
+const loginLimiter = createRateLimiter(15, 5 * 60 * 1000); // 15 intentos en 5 minutos
+const paymentLimiter = createRateLimiter(10, 10 * 60 * 1000); // 10 intentos en 10 minutos
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'frontend', 'uploads')));
@@ -117,7 +152,11 @@ function getActivePromoPrice(dbState, moduleId, basePrice) {
 // ============================================================
 // STATELESS CRYPTOGRAPHIC TOKENS (JWT-like HMAC-SHA256)
 // ============================================================
-const JWT_SECRET = process.env.JWT_SECRET || 'sierra_systems_secret_key_987654321';
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'sierra_systems_secret_key_987654321') {
+    console.warn('[Security] ⚠️ JWT_SECRET no está configurado en .env o tiene el valor por defecto. Generando clave criptográfica aleatoria segura para esta sesión.');
+    JWT_SECRET = crypto.randomBytes(32).toString('hex');
+}
 
 function generateSignedToken(payload) {
     const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -211,7 +250,7 @@ function requireWriteAccess(req, res, next) {
 function requireSuperAdmin(req, res, next) {
     requireAdmin(req, res, () => {
         const role = req.adminUser.role;
-        if (role !== 'Super Admin' && role !== 'Admin' && role !== 'Administrador') {
+        if (role !== 'Super Admin') {
             return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de Super Administrador.' });
         }
         next();
@@ -246,7 +285,7 @@ function requireAdminOrMatchingClient(req, res, next) {
 // ============================================================
 // AUTH ADMIN
 // ============================================================
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
     const { user, pass } = req.body;
     try {
         let loggedUser = null;
@@ -318,7 +357,7 @@ app.post('/api/admin/refresh-token', async (req, res) => {
 // ============================================================
 // AUTH CLIENTE
 // ============================================================
-app.post('/api/client/login', async (req, res) => {
+app.post('/api/client/login', loginLimiter, async (req, res) => {
     const { email, pass } = req.body;
     if (!email || !pass) return res.status(400).json({ success: false, error: 'Faltan credenciales.' });
 
@@ -1474,7 +1513,7 @@ app.post('/api/client/module/renew', async (req, res) => {
 });
 
 // ====== CLIENTE: AUTO-PAGO DE SALDO PENDIENTE Y AUTO-REACTIVACIÓN ======
-app.post('/api/client/pay-pending-balance', async (req, res) => {
+app.post('/api/client/pay-pending-balance', paymentLimiter, async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
@@ -1618,7 +1657,7 @@ app.get('/admin', (req, res) => {
 /**
  * POST /api/payment/save-token
  */
-app.post('/api/payment/save-token', requireAdminOrMatchingClient, async (req, res) => {
+app.post('/api/payment/save-token', requireAdminOrMatchingClient, paymentLimiter, async (req, res) => {
     try {
         const { bizId, token, last_four, card_brand, card_expiry, card_holder, next_billing_date } = req.body;
         if (!bizId || !token || !last_four || !card_brand) {
