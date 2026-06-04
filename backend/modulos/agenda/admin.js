@@ -9549,7 +9549,8 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
     });
     const sortedServices = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1]);
     const topService = sortedServices[0]?.[0] || '---';
-    document.getElementById('stat-top-service').textContent = topService;
+    const topServiceEl = document.getElementById('stat-top-service');
+    if (topServiceEl) topServiceEl.textContent = topService;
 
     const specCounts = {};
     filteredApts.forEach(a => {
@@ -9557,7 +9558,8 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
     });
     const sortedSpecs = Object.entries(specCounts).sort((a, b) => b[1] - a[1]);
     const topSpecialist = sortedSpecs[0]?.[0] || '---';
-    document.getElementById('stat-top-specialist').textContent = topSpecialist;
+    const topSpecialistEl = document.getElementById('stat-top-specialist');
+    if (topSpecialistEl) topSpecialistEl.textContent = topSpecialist;
 
     // --- GRÁFICO 1: TENDENCIA DIARIA (LÍNEA) ---
     let trendLabels = [];

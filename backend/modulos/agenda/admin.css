@@ -1891,6 +1891,7 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
 .kpi-card:nth-child(2) .metric-value { color: #38bdf8 !important; } /* Azul/Cian para Neto */
 .kpi-card:nth-child(3) .metric-value { color: #e74c3c !important; } /* Rojo para Gastos */
 .kpi-card:nth-child(4) .metric-value { color: #f1c40f !important; } /* Dorado/Amarillo para Balance */
+.kpi-card:nth-child(5) .metric-value { color: #9b59b6 !important; } /* Púrpura para Citas */
 
 .charts-container-grid {
     display: grid;
