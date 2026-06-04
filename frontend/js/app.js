@@ -3451,6 +3451,40 @@ async function updateTicketStatus(ticketId, currentStatus) {
     }
 }
 
+window.updateTicketStatusFromChat = async function(ticketId, newStatus) {
+    try {
+        const res = await adminFetch(`/api/admin/tickets/${ticketId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            const ticket = appState.adminTickets.find(t => t.id === ticketId);
+            if (ticket) ticket.status = newStatus;
+            renderAdminTickets();
+            updateTicketBadge();
+            
+            // Actualizar badge del chat en tiempo real
+            const badge = document.getElementById('chat-ticket-status-badge');
+            if (badge) {
+                const st = TICKET_STATUS_MAP[newStatus] || TICKET_STATUS_MAP['abierto'];
+                badge.style.background = st.bg;
+                badge.style.color = st.color;
+                badge.style.borderColor = st.color + '33';
+                badge.textContent = st.label;
+            }
+            
+            showToast(`Solicitud actualizada a: ${TICKET_STATUS_MAP[newStatus]?.label || newStatus}`, 'success');
+        } else {
+            showToast(data.error || 'Error al actualizar la solicitud', 'error');
+        }
+    } catch (err) {
+        console.error('Error actualizando solicitud desde chat:', err);
+        showToast('Error de conexión', 'error');
+    }
+};
+
 window.deleteTicket = async function(ticketId) {
     const ticket = appState.adminTickets.find(t => t.id === ticketId);
     const label = ticket ? `#${String(ticket.id).substring(0, 8).toUpperCase()} - ${ticket.business_name}` : `#${String(ticketId).substring(0, 8).toUpperCase()}`;
@@ -3591,7 +3625,7 @@ window.viewTicketDetails = function(ticketId) {
                     </div>
                     <div style="display:flex;gap:6px;align-items:center;">
                         <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${pr.color}18;color:${pr.color};border:1px solid ${pr.color}33;white-space:nowrap;">${pr.label}</span>
-                        <span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${st.bg};color:${st.color};border:1px solid ${st.color}33;white-space:nowrap;">${st.label}</span>
+                        <span id="chat-ticket-status-badge" style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${st.bg};color:${st.color};border:1px solid ${st.color}33;white-space:nowrap;">${st.label}</span>
                     </div>
                 </div>
 
@@ -3671,15 +3705,30 @@ window.viewTicketDetails = function(ticketId) {
                     `}
                 </div>
 
+                <!-- Modal Footer Actions -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px; border-top:1px solid var(--border-color); padding-top:16px;">
+                    <!-- Dropdown next to Cerrar -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Estado:</span>
+                        <select onchange="updateTicketStatusFromChat('${ticket.id}', this.value)" style="background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:var(--text-main); font-size:0.8rem; padding:6px 12px; border-radius:8px; outline:none; cursor:pointer; font-family:'Outfit',sans-serif; font-weight:700; transition: border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
+                            ${Object.entries(TICKET_STATUS_MAP).filter(([key]) => key !== 'resuelto').map(([key, val]) => `
+                                <option value="${key}" ${key === ticket.status ? 'selected' : ''} style="background:var(--bg-surface); color:${val.color}; font-weight:700;">${val.label}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <!-- Cerrar button -->
+                    <button class="btn-primary" onclick="Swal.close()" style="padding:8px 24px; font-size:0.85rem; border:none; border-radius:8px; cursor:pointer; font-weight:700; background:linear-gradient(135deg,var(--primary),#818cf8); color:white; transition: opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                        Cerrar
+                    </button>
+                </div>
+
             </div>
         `,
         background: 'var(--bg-surface)',
         color: 'var(--text-main)',
         width: '680px',
         padding: '1.5rem',
-        showConfirmButton: true,
-        confirmButtonText: 'Cerrar',
-        confirmButtonColor: 'var(--primary)',
+        showConfirmButton: false,
         didOpen: () => {
             lucide.createIcons();
             fetchAndRenderChatMessages(ticketId, 'admin');
