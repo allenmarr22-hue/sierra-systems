@@ -2656,10 +2656,10 @@ window.billingShowDetail = async function(bizId) {
                 const mod = modules.find(m => String(m.id) === String(inst.moduleId));
                 const renewal = formatBillingDate(inst.renewalDate || biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
                 instLines.push(`<tr>
-                    <td style="padding:0.3rem 0.5rem;color:#cbd5e1;">${mod ? mod.name : inst.moduleId}</td>
-                    <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;">${inst.branchName || inst.sedeName || 'Sede Principal'}</td>
-                    <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;">${renewal}</td>
-                    <td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td>
+                    <td style="padding:0.4rem 0.5rem;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,0.03);">${mod ? mod.name : inst.moduleId}</td>
+                    <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;border-bottom:1px solid rgba(255,255,255,0.03);">${inst.branchName || inst.sedeName || 'Sede Principal'}</td>
+                    <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03);">${renewal}</td>
+                    <td style="padding:0.4rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.03);">$${p.toLocaleString('es-CO')}</td>
                 </tr>`);
             }
         });
@@ -2672,10 +2672,10 @@ window.billingShowDetail = async function(bizId) {
                     monthlyAmount += p; 
                     const renewal = formatBillingDate(biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
                     instLines.push(`<tr>
-                        <td style="padding:0.3rem 0.5rem;color:#cbd5e1;">${mod.name}</td>
-                        <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;">Sede Principal</td>
-                        <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;">${renewal}</td>
-                        <td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td>
+                        <td style="padding:0.4rem 0.5rem;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,0.03);">${mod.name}</td>
+                        <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;border-bottom:1px solid rgba(255,255,255,0.03);">Sede Principal</td>
+                        <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03);">${renewal}</td>
+                        <td style="padding:0.4rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.03);">$${p.toLocaleString('es-CO')}</td>
                     </tr>`); 
                 }
             }
@@ -2760,11 +2760,23 @@ window.billingShowDetail = async function(bizId) {
                 <!-- Desglose de Módulos Activos -->
                 ${instLines.length > 0 ? `
                     <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Módulos / Sedes activas</div>
-                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-                        <thead><tr style="border-bottom:1px solid rgba(99,102,241,0.2);"><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Módulo</th><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Sede</th><th style="padding:0.3rem 0.5rem;text-align:center;color:#64748b;font-weight:600;">Corte</th><th style="padding:0.3rem 0.5rem;text-align:right;color:#64748b;font-weight:600;">Precio</th></tr></thead>
-                        <tbody>${instLines.join('')}</tbody>
-                        <tfoot><tr style="border-top:1px solid rgba(99,102,241,0.2);"><td colspan="3" style="padding:0.4rem 0.5rem;font-weight:700;color:#f8fafc;">Total</td><td style="padding:0.4rem 0.5rem;text-align:right;font-weight:800;color:#10b981;">$${monthlyAmount.toLocaleString('es-CO')}</td></tr></tfoot>
-                    </table>
+                    <div class="custom-scrollbar" style="max-height:190px; overflow-y:auto; border:1px solid rgba(255,255,255,0.05); border-radius:8px; background:rgba(255,255,255,0.01); margin-bottom:0.75rem; padding:0 0.25rem;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                            <thead>
+                                <tr style="border-bottom:1px solid rgba(99,102,241,0.2); position:sticky; top:0; background:#1e293b; z-index:10;">
+                                    <th style="padding:0.4rem 0.5rem;text-align:left;color:#64748b;font-weight:600;background:#1e293b;">Módulo</th>
+                                    <th style="padding:0.4rem 0.5rem;text-align:left;color:#64748b;font-weight:600;background:#1e293b;">Sede</th>
+                                    <th style="padding:0.4rem 0.5rem;text-align:center;color:#64748b;font-weight:600;background:#1e293b;">Corte</th>
+                                    <th style="padding:0.4rem 0.5rem;text-align:right;color:#64748b;font-weight:600;background:#1e293b;">Precio</th>
+                                </tr>
+                            </thead>
+                            <tbody>${instLines.join('')}</tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(99,102,241,0.2); padding-top:0.6rem; font-size:0.85rem; font-weight:700;">
+                        <span style="color:#f8fafc;">Total de Suscripciones</span>
+                        <span style="color:#10b981; font-size:1.05rem; font-weight:800;">$${monthlyAmount.toLocaleString('es-CO')}</span>
+                    </div>
                 ` : '<span style="color:#64748b;">Sin módulos asignados.</span>'}
             </div>
         `,
