@@ -2638,7 +2638,13 @@ window.billingShowDetail = async function(bizId) {
                 const p = parseFloat(inst.priceApplied) || 0;
                 monthlyAmount += p;
                 const mod = modules.find(m => String(m.id) === String(inst.moduleId));
-                instLines.push(`<tr><td style="padding:0.3rem 0.5rem;color:#cbd5e1;">${mod ? mod.name : inst.moduleId}</td><td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;">${inst.branchName || inst.sedeName || 'Principal'}</td><td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td></tr>`);
+                const renewal = formatBillingDate(inst.renewalDate || biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+                instLines.push(`<tr>
+                    <td style="padding:0.3rem 0.5rem;color:#cbd5e1;">${mod ? mod.name : inst.moduleId}</td>
+                    <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;">${inst.branchName || inst.sedeName || 'Sede Principal'}</td>
+                    <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;">${renewal}</td>
+                    <td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td>
+                </tr>`);
             }
         });
     } else {
@@ -2646,7 +2652,16 @@ window.billingShowDetail = async function(bizId) {
             const mod = modules.find(m => m.id === modId);
             if (mod?.price) {
                 const p = parseInt(String(mod.price).replace(/\D/g, ''), 10);
-                if (!isNaN(p)) { monthlyAmount += p; instLines.push(`<tr><td style="padding:0.3rem 0.5rem;color:#cbd5e1;" colspan="2">${mod.name}</td><td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td></tr>`); }
+                if (!isNaN(p)) { 
+                    monthlyAmount += p; 
+                    const renewal = formatBillingDate(biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+                    instLines.push(`<tr>
+                        <td style="padding:0.3rem 0.5rem;color:#cbd5e1;">${mod.name}</td>
+                        <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;">Sede Principal</td>
+                        <td style="padding:0.3rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;">${renewal}</td>
+                        <td style="padding:0.3rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;">$${p.toLocaleString('es-CO')}</td>
+                    </tr>`); 
+                }
             }
         });
     }
@@ -2712,23 +2727,27 @@ window.billingShowDetail = async function(bizId) {
                         <span style="color:#64748b;font-size:0.75rem;display:block;">Email</span>
                         <span style="color:#cbd5e1;font-weight:600;word-break:break-all;">${biz.clientEmail || '—'}</span>
                     </div>
-                    <div style="grid-column: span 2;">
+                    <div>
                         <span style="color:#64748b;font-size:0.75rem;display:block;">Dirección</span>
-                        <span style="color:#cbd5e1;font-weight:600;">${biz.address || '—'} ${biz.city ? `(${biz.city})` : ''}</span>
+                        <span style="color:#cbd5e1;font-weight:600;word-break:break-all;">${biz.address || '—'} ${biz.city ? `(${biz.city})` : ''}</span>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Tarjeta Registrada</span>
+                        <span style="color:#cbd5e1;font-weight:600;display:flex;align-items:center;gap:4px;">
+                            ${billing.gateway_token 
+                                ? `💳 ${billing.card_brand || ''} ···${billing.last_four || '****'}` 
+                                : '<span style="color:#64748b;">Sin tarjeta</span>'}
+                        </span>
                     </div>
                 </div>
-
-                <!-- Método de Pago -->
-                <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Tarjeta registrada</div>
-                <div style="margin-bottom:1.25rem;background:rgba(255,255,255,0.02);padding:0.6rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.04);">${billing.gateway_token ? `💳 ${billing.card_brand || ''} ···${billing.last_four || '****'} (Token: <code style="font-size:0.7rem;color:#94a3b8;">${billing.gateway_token.slice(0,20)}…</code>)` : '<span style="color:#64748b;">Sin tarjeta registrada</span>'}</div>
 
                 <!-- Desglose de Módulos Activos -->
                 ${instLines.length > 0 ? `
                     <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Módulos / Sedes activas</div>
                     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
-                        <thead><tr style="border-bottom:1px solid rgba(99,102,241,0.2);"><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Módulo</th><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Sede</th><th style="padding:0.3rem 0.5rem;text-align:right;color:#64748b;font-weight:600;">Precio</th></tr></thead>
+                        <thead><tr style="border-bottom:1px solid rgba(99,102,241,0.2);"><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Módulo</th><th style="padding:0.3rem 0.5rem;text-align:left;color:#64748b;font-weight:600;">Sede</th><th style="padding:0.3rem 0.5rem;text-align:center;color:#64748b;font-weight:600;">Corte</th><th style="padding:0.3rem 0.5rem;text-align:right;color:#64748b;font-weight:600;">Precio</th></tr></thead>
                         <tbody>${instLines.join('')}</tbody>
-                        <tfoot><tr style="border-top:1px solid rgba(99,102,241,0.2);"><td colspan="2" style="padding:0.4rem 0.5rem;font-weight:700;color:#f8fafc;">Total</td><td style="padding:0.4rem 0.5rem;text-align:right;font-weight:800;color:#10b981;">$${monthlyAmount.toLocaleString('es-CO')}</td></tr></tfoot>
+                        <tfoot><tr style="border-top:1px solid rgba(99,102,241,0.2);"><td colspan="3" style="padding:0.4rem 0.5rem;font-weight:700;color:#f8fafc;">Total</td><td style="padding:0.4rem 0.5rem;text-align:right;font-weight:800;color:#10b981;">$${monthlyAmount.toLocaleString('es-CO')}</td></tr></tfoot>
                     </table>
                 ` : '<span style="color:#64748b;">Sin módulos asignados.</span>'}
             </div>
@@ -4504,18 +4523,42 @@ window.downloadIndividualBusinessPDF = function(bizId) {
         const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
         const modules = appState.modules || [];
 
-        // Módulos activos del negocio
-        const activeModules = (biz.modules || []).map(mid => {
-            const m = modules.find(x => String(x.id) === String(mid));
-            return m || { id: mid, name: mid, price: '—' };
-        });
-
-        // Calcular MRR
+        // Módulos y sedes activas del negocio
+        const activeInstances = [];
         let mrr = 0;
-        activeModules.forEach(m => {
-            const p = parseInt(String(m.price || '0').replace(/\D/g, ''), 10);
-            if (!isNaN(p)) mrr += p;
-        });
+        if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+            biz.moduleInstances.forEach(inst => {
+                if (inst.status === 'active') {
+                    const price = parseFloat(inst.priceApplied) || 0;
+                    mrr += price;
+                    const mod = modules.find(m => String(m.id) === String(inst.moduleId));
+                    const renewal = formatBillingDate(inst.renewalDate || biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+                    activeInstances.push({
+                        name: mod ? mod.name : inst.moduleId,
+                        branch: inst.branchName || inst.sedeName || 'Sede Principal',
+                        renewal: renewal,
+                        price: price
+                    });
+                }
+            });
+        } else {
+            (biz.modules || []).forEach(mid => {
+                const m = modules.find(x => String(x.id) === String(mid));
+                let price = 0;
+                if (m?.price) {
+                    price = parseInt(String(m.price).replace(/\D/g, ''), 10);
+                    if (isNaN(price)) price = 0;
+                }
+                mrr += price;
+                const renewal = formatBillingDate(biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+                activeInstances.push({
+                    name: m ? m.name : mid,
+                    branch: 'Sede Principal',
+                    renewal: renewal,
+                    price: price
+                });
+            });
+        }
 
         const billing = biz.billing || {};
         const statusLabel = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' }[billing.subscription_status || 'pending'] || '—';
@@ -4589,22 +4632,23 @@ window.downloadIndividualBusinessPDF = function(bizId) {
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(79, 70, 229);
-        doc.text('Módulos Contratados', 14, yPos + 8);
+        doc.text('Módulos / Sedes Contratadas', 14, yPos + 8);
         doc.line(14, yPos + 10, 196, yPos + 10);
 
-        if (activeModules.length === 0) {
+        if (activeInstances.length === 0) {
             doc.setFont('Helvetica', 'normal');
             doc.setFontSize(9);
             doc.setTextColor(100, 116, 139);
             doc.text('Sin módulos activos contratados.', 14, yPos + 18);
         } else {
-            const bodyData = activeModules.map(m => [
-                m.name || m.id,
-                String(m.id),
-                m.price ? '$ ' + String(m.price).replace(/\D/g, '').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.') + ' COP' : '—'
+            const bodyData = activeInstances.map(inst => [
+                inst.name,
+                inst.branch,
+                inst.renewal,
+                `$ ${inst.price.toLocaleString('es-CO')} COP`
             ]);
-            const finalY = drawCustomTable(doc, [['Módulo', 'ID', 'Precio Mensual']], bodyData, yPos + 14, {
-                colWidths: [80, 52, 50]
+            const finalY = drawCustomTable(doc, [['Módulo', 'Sede', 'Fecha de Corte', 'Precio Mensual']], bodyData, yPos + 14, {
+                colWidths: [60, 42, 40, 40]
             });
             // Draw custom footer row for summary
             doc.setFillColor(30, 41, 59); // Dark grey background
@@ -4613,7 +4657,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
             doc.setFontSize(8.5);
             doc.setTextColor(255, 255, 255);
             doc.text('TOTAL MRR', 14 + 4, finalY + 6.5);
-            doc.text('$ ' + mrr.toLocaleString('es-CO') + ' COP', 14 + 80 + 52 + 4, finalY + 6.5);
+            doc.text('$ ' + mrr.toLocaleString('es-CO') + ' COP', 14 + 60 + 42 + 40 + 4, finalY + 6.5);
         }
 
         // Footer
