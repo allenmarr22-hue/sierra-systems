@@ -227,7 +227,7 @@ if (!localStorage.getItem('margarita_categories')) {
 // Global state initialized from local storage first for instant UI response
 let categories = JSON.parse(localStorage.getItem('margarita_categories'));
 let services = JSON.parse(localStorage.getItem('margarita_services') || '[]');
-let dashboardCharts = { categories: null, topServices: null, monthlyRevenue: null, salesTrend: null };
+window.dashboardCharts = { categories: null, topServices: null, monthlyRevenue: null, salesTrend: null };
 
 function getCategoryName(idOrName) {
     if (!idOrName) return 'General';
@@ -9524,11 +9524,20 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
     const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
     const netBalance = totalNetRevenue - totalExpenses;
 
-    document.getElementById('stat-revenue').textContent = fmt(totalRevenue);
-    document.getElementById('stat-net-revenue').textContent = fmt(totalNetRevenue);
-    document.getElementById('stat-expenses').textContent = fmt(totalExpenses);
-    document.getElementById('stat-net-balance').textContent = fmt(netBalance);
-    document.getElementById('stat-appointments-count').textContent = filteredApts.length;
+    const revEl = document.getElementById('stat-revenue');
+    if (revEl) revEl.textContent = fmt(totalRevenue);
+
+    const netRevEl = document.getElementById('stat-net-revenue');
+    if (netRevEl) netRevEl.textContent = fmt(totalNetRevenue);
+
+    const expEl = document.getElementById('stat-expenses');
+    if (expEl) expEl.textContent = fmt(totalExpenses);
+
+    const balEl = document.getElementById('stat-net-balance');
+    if (balEl) balEl.textContent = fmt(netBalance);
+
+    const apptsEl = document.getElementById('stat-appointments-count');
+    if (apptsEl) apptsEl.textContent = filteredApts.length;
 
     const balanceEl = document.getElementById('stat-net-balance');
     if (balanceEl) {
