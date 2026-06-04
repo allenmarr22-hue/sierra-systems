@@ -141,7 +141,7 @@ async function initializeDatabase() {
                 name VARCHAR(150) NOT NULL,
                 \`desc\` TEXT NULL,
                 icon VARCHAR(100) NULL,
-                status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+                status VARCHAR(50) NOT NULL DEFAULT 'active',
                 price VARCHAR(50) NOT NULL DEFAULT '$ 0',
                 url VARCHAR(255) NULL,
                 admin_url VARCHAR(255) NULL,
@@ -149,6 +149,13 @@ async function initializeDatabase() {
                 image VARCHAR(255) NULL
             )
         `);
+
+        // Modificar columna status de modules para soportar todos los estados (coming_soon, maintenance, hidden, etc)
+        try {
+            await pool.query("ALTER TABLE modules MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'active'");
+        } catch (alterErr) {
+            console.log('[DB] Columna status de modules ya modificada o error al alterar:', alterErr.message);
+        }
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS businesses (

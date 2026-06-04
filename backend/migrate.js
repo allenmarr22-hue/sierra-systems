@@ -178,7 +178,7 @@ async function runMigration() {
                 name VARCHAR(150) NOT NULL,
                 \`desc\` TEXT NULL,
                 icon VARCHAR(100) NULL,
-                status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+                status VARCHAR(50) NOT NULL DEFAULT 'active',
                 price VARCHAR(50) NOT NULL DEFAULT '$ 0',
                 url VARCHAR(255) NULL,
                 admin_url VARCHAR(255) NULL,

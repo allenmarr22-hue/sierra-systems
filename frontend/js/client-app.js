@@ -1206,10 +1206,38 @@ function renderDashboard() {
                 // Determinar si está vencido
                 const isExpired = rawDate && (new Date(rawDate).getTime() <= Date.now());
 
-                // Badge de estado
-                const badgeHtml = isExpired
-                    ? `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">⚠️ Pago Vencido</div>`
-                    : `<div class="status-badge active" style="position:absolute; top:1.5rem; right:1.5rem;">Activo</div>`;
+                // Badge de estado y banner
+                let badgeHtml = '';
+                let borderColor = '';
+                let noticeHtml = '';
+                let isServiceUnavailable = false;
+
+                if (inst.status === 'maintenance') {
+                    isServiceUnavailable = true;
+                    borderColor = 'rgba(239,68,68,0.3)';
+                    badgeHtml = `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">🔧 En Mantenimiento</div>`;
+                    noticeHtml = `
+                        <div style="margin:0.5rem 0 0.75rem; padding:0.65rem 0.85rem; border-radius:8px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.18); display:flex; align-items:center; gap:0.5rem; color:#ef4444; font-size:0.82rem; font-weight:600;">
+                            <i data-lucide="alert-triangle" style="width:16px;height:16px;flex-shrink:0;"></i>
+                            <span>Módulo en mantenimiento temporal.</span>
+                        </div>
+                    `;
+                } else if (inst.status === 'coming_soon') {
+                    isServiceUnavailable = true;
+                    borderColor = 'rgba(245,158,11,0.3)';
+                    badgeHtml = `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(245,158,11,0.1); color:#f59e0b; border-color:rgba(245,158,11,0.2);">⏳ Próximamente</div>`;
+                    noticeHtml = `
+                        <div style="margin:0.5rem 0 0.75rem; padding:0.65rem 0.85rem; border-radius:8px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.18); display:flex; align-items:center; gap:0.5rem; color:#f59e0b; font-size:0.82rem; font-weight:600;">
+                            <i data-lucide="clock" style="width:16px;height:16px;flex-shrink:0;"></i>
+                            <span>Próximamente disponible.</span>
+                        </div>
+                    `;
+                } else {
+                    borderColor = isExpired ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.12)';
+                    badgeHtml = isExpired
+                        ? `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">⚠️ Pago Vencido</div>`
+                        : `<div class="status-badge active" style="position:absolute; top:1.5rem; right:1.5rem;">Activo</div>`;
+                }
 
                 // Badge de sede (siempre mostrar cuando hay branchName y es diferente de Principal, o cuando hay más de 1 instancia del mismo módulo)
                 const showSedeBadge = inst.branchName && (inst.isMultiSede || inst.branchName !== 'Sede Principal');
@@ -1217,7 +1245,6 @@ function renderDashboard() {
                     ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
                     : '';
 
-                const borderColor = isExpired ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.12)';
                 const dateBoxColor = isExpired ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)';
                 const dateBorderColor = isExpired ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
                 const dateTextColor = isExpired ? '#ef4444' : '#10b981';
@@ -1232,7 +1259,18 @@ function renderDashboard() {
                     : 'Consultar';
 
                 let actionsHtml = '';
-                if (isExpired) {
+                if (isServiceUnavailable) {
+                    actionsHtml = `
+                        <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                            <button class="btn-primary" disabled style="width:100%; justify-content:center; background:#475569; border-color:#475569; cursor:not-allowed; opacity:0.8;">
+                                <i data-lucide="alert-triangle" style="width:16px;"></i> Módulo no disponible
+                            </button>
+                            <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(inst.name)}','_blank')" style="width:100%; justify-content:center; font-size:0.82rem; padding:0.5rem;">
+                                <i data-lucide="headset" style="width:14px;"></i> Contactar Soporte
+                            </button>
+                        </div>
+                    `;
+                } else if (isExpired) {
                     actionsHtml = `
                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
                             <button class="btn-primary" onclick="handleRenewal('${inst.id}','${inst.name}','${priceDisplay}', '${inst.branchName}', '${inst.instanceId}')" style="width:100%; justify-content:center; box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); background:var(--primary); padding:0.75rem;">
@@ -1272,6 +1310,7 @@ function renderDashboard() {
                     ${sedeBadgeHtml}
                     <h3 class="module-title" style="margin-top:${sedeBadgeHtml ? '0.4rem' : '1rem'}; font-size:1.2rem;">${inst.name}</h3>
                     <p class="module-desc" style="font-size:0.85rem; margin-bottom:0.5rem;">${inst.desc || ''}</p>
+                    ${noticeHtml}
 
                     <div style="margin:0.5rem 0 0.75rem; display:inline-flex; align-items:center; gap:0.4rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); border-radius:20px; padding:0.3rem 0.85rem;">
                         <i data-lucide="tag" style="width:13px;height:13px;color:var(--primary);"></i>
@@ -1329,8 +1368,50 @@ function renderDashboard() {
                     ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
                     : '';
 
+                // Determinar estado de disponibilidad global del módulo
+                let badgeHtml = '';
+                let borderColor = '';
+                let noticeHtml = '';
+                let isServiceUnavailable = false;
+
+                if (inst.status === 'maintenance') {
+                    isServiceUnavailable = true;
+                    borderColor = 'rgba(239,68,68,0.3)';
+                    badgeHtml = `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">🔧 En Mantenimiento</div>`;
+                    noticeHtml = `
+                        <div style="margin:0.5rem 0 0.75rem; padding:0.65rem 0.85rem; border-radius:8px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.18); display:flex; align-items:center; gap:0.5rem; color:#ef4444; font-size:0.82rem; font-weight:600;">
+                            <i data-lucide="alert-triangle" style="width:16px;height:16px;flex-shrink:0;"></i>
+                            <span>Módulo en mantenimiento temporal.</span>
+                        </div>
+                    `;
+                } else if (inst.status === 'coming_soon') {
+                    isServiceUnavailable = true;
+                    borderColor = 'rgba(245,158,11,0.3)';
+                    badgeHtml = `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(245,158,11,0.1); color:#f59e0b; border-color:rgba(245,158,11,0.2);">⏳ Próximamente</div>`;
+                    noticeHtml = `
+                        <div style="margin:0.5rem 0 0.75rem; padding:0.65rem 0.85rem; border-radius:8px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.18); display:flex; align-items:center; gap:0.5rem; color:#f59e0b; font-size:0.82rem; font-weight:600;">
+                            <i data-lucide="clock" style="width:16px;height:16px;flex-shrink:0;"></i>
+                            <span>Próximamente disponible.</span>
+                        </div>
+                    `;
+                } else {
+                    borderColor = 'rgba(245,158,11,0.25)';
+                    badgeHtml = `<div style="position:absolute; top:1.5rem; right:1.5rem; background:var(--warning-bg); color:var(--warning); font-size:0.7rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:20px; border:1px solid var(--warning-border);">Suspendido</div>`;
+                }
+
                 let actionsHtml = '';
-                if (accessUntilMs <= Date.now()) {
+                if (isServiceUnavailable) {
+                    actionsHtml = `
+                        <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                            <button class="btn-primary" disabled style="width:100%; justify-content:center; background:#475569; border-color:#475569; cursor:not-allowed; opacity:0.8;">
+                                <i data-lucide="alert-triangle" style="width:16px;"></i> Módulo no disponible
+                            </button>
+                            <button class="btn-ghost" onclick="window.open('https://wa.me/${WHATSAPP_NUMBER}?text=Soporte%20para%20${encodeURIComponent(inst.name)}','_blank')" style="width:100%; justify-content:center; font-size:0.85rem; padding:0.6rem;">
+                                <i data-lucide="headset" style="width:14px;"></i> Contactar Soporte
+                            </button>
+                        </div>
+                    `;
+                } else if (accessUntilMs <= Date.now()) {
                     actionsHtml = `
                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
                             <button class="btn-primary" onclick="handleRenewal('${inst.id}','${inst.name}','${priceDisplay}', '${inst.branchName}', '${inst.instanceId}')" style="width:100%; justify-content:center; background:var(--primary); box-shadow:0 4px 14px 0 rgba(16,185,129,0.39); padding:0.75rem;">
@@ -1355,18 +1436,19 @@ function renderDashboard() {
                 }
 
                 htmlCancelled += `
-                <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid var(--warning-border); opacity:0.9;">
+                <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid ${borderColor}; opacity:0.9;">
                     <div class="module-card-header">
                         <div class="module-icon-large" style="background:var(--warning-bg); color:var(--warning);">
                             <i data-lucide="${inst.icon || 'package'}"></i>
                         </div>
-                        <div style="position:absolute; top:1.5rem; right:1.5rem; background:var(--warning-bg); color:var(--warning); font-size:0.7rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:20px; border:1px solid var(--warning-border);">Suspendido</div>
+                        ${badgeHtml}
                     </div>
                     ${sedeBadgeHtml}
                     <h3 class="module-title" style="margin-top:${sedeBadgeHtml ? '0.4rem' : '1rem'}; font-size:1.2rem;">${inst.name}</h3>
                     <p class="module-desc" style="font-size:0.82rem;">${inst.desc || ''}</p>
+                    ${noticeHtml}
 
-                    <div style="margin:1rem 0; padding:0.85rem 1rem; background:var(--warning-bg); border-radius:10px; border:1px solid var(--warning-border);">
+                    <div style="margin:1rem 0; padding:0.85rem 1rem; background:var(--warning-bg); border-radius:10px; border:1px solid ${borderColor};">
                         <div style="font-size:0.78rem; color:${urgencyColor}; font-weight:700; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.4rem;">
                             <i data-lucide="hourglass" style="width:14px; height:14px;"></i>
                             Acceso hasta: ${accessDate}
@@ -1374,7 +1456,7 @@ function renderDashboard() {
                         <div class="countdown-timer" data-endtime="${accessUntilMs}" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-family: monospace; font-weight: 600;">
                             ${daysLeft} día${daysLeft !== 1 ? 's' : ''} restante${daysLeft !== 1 ? 's' : ''} de acceso
                         </div>
-                        <!-- Barra de progreso de tiempo restante -->
+                        <!-- Barra de progreso de timepo restante -->
                         <div style="height:4px; background:var(--border-color); border-radius:99px; overflow:hidden;">
                             <div style="height:100%; width:${Math.min(100, (daysLeft / 30) * 100)}%; background:${urgencyColor}; border-radius:99px; transition:width 0.5s ease;"></div>
                         </div>
@@ -1943,6 +2025,41 @@ function generatePassword(length = 12) {
 function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null) {
     if (instanceId === 'null' || instanceId === 'undefined') instanceId = null;
     if (branchName === 'null' || branchName === 'undefined') branchName = null;
+
+    // Verificación de mantenimiento o próximamente
+    const globalMod = appState.modules.find(m => String(m.id) === String(modId));
+    if (globalMod) {
+        if (globalMod.status === 'maintenance') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Módulo en Mantenimiento',
+                text: 'Este módulo se encuentra actualmente en mantenimiento para mejoras del sistema. Por favor intenta más tarde.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+            return;
+        }
+        if (globalMod.status === 'coming_soon') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Próximamente',
+                text: 'Este módulo estará disponible próximamente.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+            return;
+        }
+        if (globalMod.status === 'hidden') {
+            Swal.fire({
+                icon: 'error',
+                title: 'No Disponible',
+                text: 'Este módulo no está disponible actualmente.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+            return;
+        }
+    }
 
     // Verificación estricta de caducidad
     const currentBizDateCheck = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));

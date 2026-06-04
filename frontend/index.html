@@ -457,6 +457,16 @@
             color: #8b5cf6;
             border: 1px solid rgba(139, 92, 246, 0.18);
         }
+        .product-badge.red {
+            background: rgba(239, 68, 68, 0.08);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.18);
+        }
+        .product-badge.orange {
+            background: rgba(245, 158, 11, 0.08);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.18);
+        }
 
         .product-card {
             background: var(--landing-surface);
@@ -1596,6 +1606,7 @@
                                     const badgeEl = cardEl.querySelector('.product-badge');
                                     
                                     if (mod.status === 'maintenance') {
+                                        cardEl.style.opacity = '0.75';
                                         if (badgeEl) {
                                             badgeEl.className = 'product-badge red';
                                             badgeEl.textContent = 'En Mantenimiento';
@@ -1611,6 +1622,7 @@
                                             priceEl.innerHTML = '<span style="color:var(--danger);font-weight:700;font-size:1.25rem;">No disponible</span>';
                                         }
                                     } else if (mod.status === 'coming_soon') {
+                                        cardEl.style.opacity = '0.75';
                                         if (badgeEl) {
                                             badgeEl.className = 'product-badge orange';
                                             badgeEl.textContent = 'Próximamente';
@@ -1627,6 +1639,7 @@
                                         }
                                     } else {
                                         // Activo: restaurar valores
+                                        cardEl.style.opacity = '1';
                                         if (badgeEl) {
                                             if (mod.id === 'streetfeed') {
                                                 badgeEl.className = 'product-badge green';

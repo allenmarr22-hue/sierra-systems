@@ -1276,6 +1276,27 @@ app.post('/api/client/module/reactivate', async (req, res) => {
 
         const biz = dbState.businesses[bizIndex];
 
+        // Verificar estado global del módulo antes de reactivar
+        let targetModuleId = moduleId;
+        if (instanceId && biz.moduleInstances) {
+            const inst = biz.moduleInstances.find(i => i.instanceId === instanceId);
+            if (inst) targetModuleId = inst.moduleId;
+        }
+        if (targetModuleId) {
+            const baseModule = (dbState.modules || []).find(m => String(m.id) === String(targetModuleId));
+            if (baseModule) {
+                if (baseModule.status === 'maintenance') {
+                    return res.status(400).json({ error: 'El módulo se encuentra actualmente en mantenimiento y no puede ser reactivado.' });
+                }
+                if (baseModule.status === 'coming_soon') {
+                    return res.status(400).json({ error: 'El módulo estará disponible próximamente y no puede ser reactivado.' });
+                }
+                if (baseModule.status === 'hidden') {
+                    return res.status(400).json({ error: 'El módulo no está disponible.' });
+                }
+            }
+        }
+
         // Sincronizar/inicializar moduleInstances y modules si es necesario
         if (!biz.moduleInstances) biz.moduleInstances = [];
         if (!biz.modules) biz.modules = [];
@@ -1368,6 +1389,16 @@ app.post('/api/client/module/renew', async (req, res) => {
         const biz = dbState.businesses[bizIndex];
         const allModules = dbState.modules || [];
         const baseModule = allModules.find(m => String(m.id) === String(moduleId));
+        if (!baseModule) return res.status(404).json({ error: 'Módulo no encontrado.' });
+        if (baseModule.status === 'maintenance') {
+            return res.status(400).json({ error: 'El módulo se encuentra actualmente en mantenimiento y no puede ser adquirido o renovado.' });
+        }
+        if (baseModule.status === 'coming_soon') {
+            return res.status(400).json({ error: 'El módulo estará disponible próximamente y aún no puede ser adquirido.' });
+        }
+        if (baseModule.status === 'hidden') {
+            return res.status(400).json({ error: 'El módulo no está disponible.' });
+        }
         
         let basePrice = 0;
         if (baseModule && baseModule.price) {
