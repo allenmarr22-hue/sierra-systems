@@ -2079,11 +2079,13 @@ app.get('/api/client/payments', requireAdminOrMatchingClient, async (req, res) =
 
 // CLIENT: Crear nuevo ticket
 app.post('/api/tickets', async (req, res) => {
+    console.log('[DEBUG /api/tickets] Headers:', req.headers);
+    console.log('[DEBUG /api/tickets] Body:', req.body);
     const token = req.headers.authorization?.split(' ')[1];
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
 
-    const { module: ticketModule, priority, description } = req.body;
+    const { module: ticketModule, priority, description } = req.body || {};
     if (!ticketModule || !description || description.length < 10) {
         return res.status(400).json({ error: 'Módulo y descripción (mín. 10 caracteres) son requeridos.' });
     }

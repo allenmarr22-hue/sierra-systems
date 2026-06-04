@@ -212,20 +212,30 @@ window.handleChatSearch = function(query) {
             text = bubble.textContent || '';
             bubble.setAttribute('data-original-text', text);
         }
-        const parent = bubble.closest('div[style*="max-width:75%"]');
+        const parent = bubble.parentElement;
         if (!parent) return;
 
         if (q === '') {
             bubble.textContent = text;
             parent.style.opacity = '1';
-        } else if (text.toLowerCase().includes(q)) {
-            const regex = new RegExp(`(${q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
-            const escaped = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            bubble.innerHTML = escaped.replace(regex, '<mark style="background:#f59e0b;color:black;border-radius:2px;padding:0 2px;">$1</mark>');
-            parent.style.opacity = '1';
         } else {
-            bubble.textContent = text;
-            parent.style.opacity = '0.35';
+            const normText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normQuery = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            if (normText.includes(normQuery)) {
+                // Intentar resaltar la palabra buscada
+                const escaped = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                try {
+                    const regex = new RegExp(`(${q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
+                    bubble.innerHTML = escaped.replace(regex, '<mark style="background:#f59e0b;color:black;border-radius:2px;padding:0 2px;">$1</mark>');
+                } catch(e) {
+                    bubble.textContent = text;
+                }
+                parent.style.opacity = '1';
+            } else {
+                bubble.textContent = text;
+                parent.style.opacity = '0.35';
+            }
         }
     });
 };
@@ -3283,8 +3293,8 @@ const TICKET_STATUS_MAP = {
 };
 
 const TICKET_PRIORITY_MAP = {
-    baja:    { label: 'Baja',         color: '#94a3b8' },
-    normal:  { label: 'Normal',       color: '#64748b' },
+    baja:    { label: '🟢 Baja',         color: '#10b981' },
+    normal:  { label: '🟠 Normal',       color: '#f59e0b' },
     urgente: { label: '🔴 Urgente',    color: '#ef4444' }
 };
 

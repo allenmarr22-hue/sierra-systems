@@ -235,20 +235,30 @@ window.handleChatSearch = function(query) {
             text = bubble.textContent || '';
             bubble.setAttribute('data-original-text', text);
         }
-        const parent = bubble.closest('div[style*="max-width:75%"]');
+        const parent = bubble.parentElement;
         if (!parent) return;
 
         if (q === '') {
             bubble.textContent = text;
             parent.style.opacity = '1';
-        } else if (text.toLowerCase().includes(q)) {
-            const regex = new RegExp(`(${q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
-            const escaped = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            bubble.innerHTML = escaped.replace(regex, '<mark style="background:#f59e0b;color:black;border-radius:2px;padding:0 2px;">$1</mark>');
-            parent.style.opacity = '1';
         } else {
-            bubble.textContent = text;
-            parent.style.opacity = '0.35';
+            const normText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normQuery = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            if (normText.includes(normQuery)) {
+                // Intentar resaltar la palabra buscada
+                const escaped = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                try {
+                    const regex = new RegExp(`(${q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
+                    bubble.innerHTML = escaped.replace(regex, '<mark style="background:#f59e0b;color:black;border-radius:2px;padding:0 2px;">$1</mark>');
+                } catch(e) {
+                    bubble.textContent = text;
+                }
+                parent.style.opacity = '1';
+            } else {
+                bubble.textContent = text;
+                parent.style.opacity = '0.35';
+            }
         }
     });
 };
@@ -825,10 +835,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const data = await res.json();
                     
                     if (res.ok && data.success) {
-                        const msg = encodeURIComponent(`🎫 NUEVO TICKET\nID: ${data.ticketId}\nMódulo: ${mod}\nPrioridad: ${priority.toUpperCase()}\n\n${desc}`);
-                        // Enviar por WhatsApp
-                        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
-                        
                         // Recargar lista de tickets local
                         if (typeof loadMyTickets === 'function') {
                             loadMyTickets();
@@ -837,7 +843,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         Swal.fire({
                             icon: 'success',
                             title: '¡Ticket enviado!',
-                            html: `<p style="color:var(--text-muted);">Tu ticket de soporte fue creado y enviado. Un agente te responderá por WhatsApp pronto.</p>`,
+                            html: `<p style="color:var(--text-muted);">Tu ticket de soporte fue creado correctamente. Un agente te responderá pronto a través de nuestro chat de soporte.</p>`,
                             background: 'var(--bg-surface)',
                             color: 'var(--text)',
                             confirmButtonColor: 'var(--primary)',
@@ -3635,9 +3641,9 @@ function renderClientTickets() {
         cerrado:    { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
     };
     const priorityMap = {
-        normal:  { label: 'Normal',  color: '#64748b' },
+        normal:  { label: '🟠 Normal',  color: '#f59e0b' },
         urgente: { label: '🔴 Urgente', color: '#ef4444' },
-        baja:    { label: 'Baja',    color: '#94a3b8' },
+        baja:    { label: '🟢 Baja',    color: '#10b981' },
     };
 
     tbody.innerHTML = tickets.map(t => {
@@ -3679,9 +3685,9 @@ window.viewClientTicketDetails = function(ticketId) {
         cerrado:    { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
     };
     const priorityMap = {
-        normal:  { label: 'Normal',       color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
-        urgente: { label: '\uD83D\uDD34 Urgente', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-        baja:    { label: 'Baja',         color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+        normal:  { label: '🟠 Normal',       color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+        urgente: { label: '🔴 Urgente',      color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+        baja:    { label: '🟢 Baja',         color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
     };
 
     const st = statusMap[ticket.status] || statusMap['abierto'];
