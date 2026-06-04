@@ -214,6 +214,7 @@
 .appointment-group-card, .reminder-card {
     position: relative;
     border-left: none !important; /* overrides inline */
+    overflow: hidden; /* clips pseudo-elements to the card's border-radius curve */
 }
 .appointment-group-card::before {
     content: '';
@@ -239,8 +240,10 @@
 }
 
 /* Appointment Group Card Status/Paid BG overrides using data attributes */
-.dark-theme .appointment-group-card {
+.dark-theme .appointment-group-card,
+.dark-theme .reminder-card {
     background: rgba(30, 41, 59, 0.7) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
 }
 .dark-theme .appointment-group-card[data-paid="full"] {
     background: rgba(34, 197, 94, 0.12) !important;
@@ -2228,6 +2231,16 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
 
 .dark-theme .modal-content-scrollable::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* Automatic inline light background correction for Dark Theme */
+.dark-theme [style*="background:#f9f9f9"],
+.dark-theme [style*="background: #f9f9f9"],
+.dark-theme [style*="background:#fff"],
+.dark-theme [style*="background: #fff"],
+.dark-theme [style*="background:white"],
+.dark-theme [style*="background: white"] {
+    background: rgba(255, 255, 255, 0.05) !important;
 }
 
 
