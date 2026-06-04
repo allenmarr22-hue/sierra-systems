@@ -211,7 +211,7 @@ function requireWriteAccess(req, res, next) {
 function requireSuperAdmin(req, res, next) {
     requireAdmin(req, res, () => {
         const role = req.adminUser.role;
-        if (role !== 'Super Admin' && role !== 'Admin') {
+        if (role !== 'Super Admin' && role !== 'Admin' && role !== 'Administrador') {
             return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de Super Administrador.' });
         }
         next();
@@ -595,7 +595,7 @@ app.get('/api/data', async (req, res) => {
             if (session && ['Super Admin', 'Admin', 'Administrador', 'Soporte'].includes(session.role)) {
                 isAdmin = true;
             }
-            if (session && (session.role === 'Super Admin' || session.role === 'Admin')) {
+            if (session && (session.role === 'Super Admin' || session.role === 'Admin' || session.role === 'Administrador')) {
                 isSuperAdmin = true;
             }
         }
@@ -604,7 +604,7 @@ app.get('/api/data', async (req, res) => {
         const safeDb = {
             ...dbState,
             config: isSuperAdmin ? dbState.config : { ...dbState.config, adminUser: undefined, adminPass: undefined },
-            users: isSuperAdmin ? dbState.users : [], // Clientes/Público no deben ver a los usuarios admin
+            users: isAdmin ? dbState.users : [], // Clientes/Público no deben ver a los usuarios admin
             businesses: dbState.businesses.map(biz => {
                 const safeBiz = { ...biz };
                 

@@ -1335,8 +1335,8 @@ function initDashboard() {
     const kpiMods = document.getElementById('kpi-modules');
     if (kpiMods) kpiMods.textContent = activeMods;
 
-    // KPI: Usuarios totales (Solo parte administrativa)
-    const totalUsers = appState.users.length;
+    // KPI: Usuarios totales (Solo parte administrativa, sumando 1 por el administrador principal)
+    const totalUsers = appState.users.length + 1;
     const kpiUsers = document.getElementById('kpi-users');
     if (kpiUsers) kpiUsers.textContent = totalUsers;
 
