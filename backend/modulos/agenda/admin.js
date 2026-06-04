@@ -8468,6 +8468,59 @@ window.applyTheme = function(themeName, silent = false) {
             window.syncAdminMetaToCloud(true);
         }
     }
+    
+    if (typeof window.updateSidebarThemeToggleUI === 'function') {
+        window.updateSidebarThemeToggleUI();
+    }
+    
+    const activeTab = document.querySelector('.tab-content.active');
+    if (activeTab && activeTab.id === 'dashboard-tab' && typeof window.renderDashboardStats === 'function') {
+        const dateInput = document.getElementById('stats-date-filter');
+        let range = 'today';
+        let month = null;
+        let dateVal = null;
+        if (dateInput && dateInput.value) {
+            dateVal = dateInput.value;
+            range = null;
+        } else {
+            const activeRangeLi = document.querySelector('#range-dropdown li.active');
+            const activeMonthLi = document.querySelector('#month-dropdown li.active');
+            if (activeRangeLi) {
+                range = activeRangeLi.getAttribute('data-value');
+            } else if (activeMonthLi) {
+                range = 'month';
+                month = activeMonthLi.getAttribute('data-value');
+            }
+        }
+        window.renderDashboardStats(range, month, dateVal);
+    }
+};
+
+window.updateSidebarThemeToggleUI = function() {
+    const toggleBtn = document.getElementById('sidebar-theme-toggle');
+    if (!toggleBtn) return;
+    const currentTheme = localStorage.getItem('margarita_admin_theme') || 'rose';
+    if (currentTheme === 'slate') {
+        toggleBtn.innerHTML = '<i class="fas fa-sun" style="color: #f1c40f;"></i>';
+        toggleBtn.title = 'Modo Día';
+    } else {
+        toggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        toggleBtn.title = 'Modo Noche';
+    }
+};
+
+window.toggleNightMode = function(event) {
+    if (event) event.preventDefault();
+    const currentTheme = localStorage.getItem('margarita_admin_theme') || 'rose';
+    if (currentTheme === 'slate') {
+        const targetTheme = localStorage.getItem('margarita_admin_last_light_theme') || 'rose';
+        window.applyTheme(targetTheme);
+    } else {
+        localStorage.setItem('margarita_admin_last_light_theme', currentTheme);
+        window.applyTheme('slate');
+    }
+    if (window.renderThemeSelector) window.renderThemeSelector();
+    window.updateSidebarThemeToggleUI();
 };
 
 // Inicialización
@@ -8476,6 +8529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('margarita_admin_theme') || 'rose';
     applyTheme(savedTheme, true); // true = no toast on load
     if (window.renderThemeSelector) window.renderThemeSelector();
+    if (typeof window.updateSidebarThemeToggleUI === 'function') window.updateSidebarThemeToggleUI();
 
     initKeyboardShortcuts();
     
