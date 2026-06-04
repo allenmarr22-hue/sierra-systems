@@ -4428,7 +4428,7 @@ window.renderCalendar = function() {
     const agendaData = JSON.parse(localStorage.getItem('margarita_appointments')) || [];
     const datesWithAppointments = new Set(
         agendaData
-            .filter(a => a.status === 'pending' || a.status === 'postponed')
+            .filter(a => a && (a.status === 'pending' || a.status === 'postponed'))
             .map(a => a.date)
     );
 
@@ -6877,232 +6877,246 @@ window.setSpecialistView = function(view) {
 };
 
 function renderSpecialists() {
-    const container = document.getElementById('specialists-container');
-    if (!container) return;
-    
-    let specialists = [];
-    let agenda = [];
     try {
-        specialists = JSON.parse(localStorage.getItem('margarita_specialists')) || [];
-        if (!Array.isArray(specialists)) specialists = [];
-    } catch(e) { specialists = []; }
-    try {
-        agenda = JSON.parse(localStorage.getItem('margarita_appointments')) || [];
-        if (!Array.isArray(agenda)) agenda = [];
-    } catch(e) { agenda = []; }
-
-    // Migración temprana por si venían como strings (incluso mezclados)
-    let needsSave = false;
-    specialists = specialists.map(s => {
-        if (typeof s === 'string') {
-            needsSave = true;
-            return {name: s, image: '', phone: '', address: '', specialty: 'Todos'};
-        }
-        return s;
-    });
-
-    if (needsSave) {
-        localStorage.setItem('margarita_specialists', JSON.stringify(specialists));
-    }
-    
-    // Quitar corruptos que no tengan nombre
-    specialists = specialists.filter(s => s && s.name);
-
-    // Filter by search
-    if (specialistSearchQuery) {
-        specialists = specialists.filter(s => s.name.toLowerCase().includes(specialistSearchQuery));
-    }
-    
-    if (specialists.length === 0) {
-        container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding:40px; color:#999; border:1px dashed #ccc; border-radius:12px;">No hay personal registrado. Añade profesionales arriba.</p>`;
-        return;
-    }
-
-    const fmt = (num) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
-    const parsePrice = (priceStr) => {
-        if (!priceStr || priceStr === 'Gratis') return 0;
-        return parseInt(priceStr.toString().replace(/\D/g, '')) || 0;
-    };
-    
-    const today = new Date().toISOString().split('T')[0];
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    container.innerHTML = specialists.map(spec => {
-        let dayCount = 0; let monthCount = 0;
-        let dayTotal = 0; let monthTotal = 0;
+        const container = document.getElementById('specialists-container');
+        if (!container) return;
         
-        agenda.forEach(a => {
-            if (a.specialist === spec.name && a.status !== 'cancelled') {
-                const isToday = (a.date === today);
-                const aptDate = new Date(`${a.date}T00:00:00`);
-                const isThisMonth = (!isNaN(aptDate) && aptDate.getMonth() === currentMonth && aptDate.getFullYear() === currentYear);
+        let specialists = [];
+        let agenda = [];
+        try {
+            specialists = JSON.parse(localStorage.getItem('margarita_specialists')) || [];
+            if (!Array.isArray(specialists)) specialists = [];
+        } catch(e) { specialists = []; }
+        try {
+            agenda = JSON.parse(localStorage.getItem('margarita_appointments')) || [];
+            if (!Array.isArray(agenda)) agenda = [];
+        } catch(e) { agenda = []; }
 
-                // Incrementar contadores para cualquier cita activa
-                if (isToday) dayCount++;
-                if (isThisMonth) monthCount++;
-
-                // Sumar totales solo si la cita fue realizada (accepted)
-                if (a.status === 'accepted') {
-                    // Priorizar splitPrice (valor real prorrateado a COMBO) sobre el precio normal
-                    const parsedFacial = parsePrice(a.price);
-                    const val = parsePrice(a.splitPrice || a.price);
-                    if (isToday) dayTotal += val;
-                    if (isThisMonth) monthTotal += val;
-                }
+        // Migración temprana por si venían como strings (incluso mezclados)
+        let needsSave = false;
+        specialists = specialists.map(s => {
+            if (typeof s === 'string') {
+                needsSave = true;
+                return {name: s, image: '', phone: '', address: '', specialty: 'Todos'};
             }
+            return s;
         });
 
-        const profitPercent = spec.profitPercent || 50;
-        const studioPercent = 100 - profitPercent;
-
-        const halfEarned = (dayTotal * profitPercent) / 100;
-        const studioEarned = (dayTotal * studioPercent) / 100;
-
-        const fallbackIcon = `<div style="background:var(--gold-primary)22; width:65px; height:65px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:1.8rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
-        const profileImg = spec.image ? `<img src="${spec.image}" style="width:65px; height:65px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : fallbackIcon;
-
-        const infoBtn = `
-            <button onclick="viewSpecialistInfo('${spec.name}')" style="background:rgba(160, 93, 107, 0.08); color:var(--color-dark-pink); border:1px solid var(--color-dark-pink); padding:8px 18px; border-radius:30px; font-weight:700; font-size:0.85rem; cursor:pointer; transition:0.3s; display:flex; align-items:center; gap:8px;">
-                <i class="fas fa-info-circle"></i> DETALLES / INF
-            </button>`;
+        if (needsSave) {
+            localStorage.setItem('margarita_specialists', JSON.stringify(specialists));
+        }
         
-        const specId = spec.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        const specialtiesArray = (spec.specialty || 'Todos').split(', ');
+        // Quitar corruptos que no tengan nombre
+        specialists = specialists.filter(s => s && s.name);
+
+        // Filter by search
+        if (specialistSearchQuery) {
+            specialists = specialists.filter(s => s && s.name && typeof s.name === 'string' && s.name.toLowerCase().includes(specialistSearchQuery));
+        }
         
-        // --- MODO LISTA COMPACTA ---
-        const isActive = spec.active !== false;
-        if (specialistViewMode === 'list') {
-            return `
-            <div class="glass-module" style="padding:12px 20px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:15px; border-left:4px solid ${isActive ? 'var(--color-dark-pink)' : '#ccc'}; opacity:${isActive ? '1' : '0.65'}; transition:0.3s;">
-                <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                    <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; border:1px solid #eee; flex-shrink:0;">
-                        ${spec.image ? `<img src="${spec.image}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="background:#f0f0f0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#999;"><i class="fas fa-user"></i></div>`}
-                    </div>
-                    <div style="min-width:150px;">
-                        <h5 style="margin:0; font-size:1rem; color:var(--color-text);">${spec.name}</h5>
-                        <small style="color:var(--color-text-muted); font-size:0.75rem;">${spec.specialty || 'General'}</small>
-                    </div>
-                    <div style="display:flex; gap:15px; margin-left:20px; font-size:0.85rem; color:var(--color-text-muted);">
-                        <span><i class="fas fa-calendar-check" style="color:var(--color-dark-pink);"></i> Hoy: <strong>${dayCount}</strong></span>
-                        <span><i class="fas fa-chart-line" style="color:#2ecc71;"></i> Mes: <strong>${fmt(monthTotal)}</strong></span>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button onclick="viewSpecialistReport('${spec.name}')" class="btn-primary" style="padding:6px 12px; font-size:0.75rem; border-radius:8px; width:auto; background:var(--color-dark-pink);">REPORTES</button>
-                    <button onclick="openEditSpecialistModal('${spec.name}')" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.2); color:#3498db; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-pen" style="font-size:0.8rem;"></i></button>
-                    <button onclick="deleteSpecialist('${spec.name}')" style="background:rgba(231, 76, 60, 0.1); border:1px solid rgba(231, 76, 60, 0.2); color:#e74c3c; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-trash-alt" style="font-size:0.8rem;"></i></button>
-                </div>
-            </div>`;
+        if (specialists.length === 0) {
+            container.innerHTML = `<p style="grid-column: 1/-1; text-align:center; padding:40px; color:#999; border:1px dashed #ccc; border-radius:12px;">No hay personal registrado. Añade profesionales arriba.</p>`;
+            return;
         }
 
-        // --- MODO CUADRÍCULA (GRID) ---
-        const specialtiesHtml = specialtiesArray.map(s => `
-            <div style="background:rgba(var(--accent-rgb), 0.05); padding:6px 10px; border-radius:8px; border:1px solid rgba(var(--accent-rgb), 0.1); text-align:center; font-size:0.7rem; color:var(--color-dark-pink); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">${s}</div>
-        `).join('');
+        const fmt = (num) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+        const parsePrice = (priceStr) => {
+            if (!priceStr || priceStr === 'Gratis') return 0;
+            return parseInt(priceStr.toString().replace(/\D/g, '')) || 0;
+        };
+        
+        const today = new Date().toISOString().split('T')[0];
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
 
-        const specProfileImg = spec.image ? `<img src="${spec.image}" style="width:55px; height:55px; border-radius:12px; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : `<div style="background:var(--gold-primary)15; width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:1.5rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
-
-        return `
-        <div class="glass-module" style="padding:20px; border-radius:20px; position:relative; display:flex; flex-direction:column; gap:15px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); opacity:${isActive ? '1' : '0.6'}; transition:0.3s; border: 1px solid ${isActive ? 'rgba(184, 115, 129, 0.2)' : 'var(--border-color)'};">
-            
-            <!-- HEADER COMPACTO -->
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:15px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    ${specProfileImg}
-                    <div style="max-width: 140px;">
-                        <h4 style="margin:0; font-size:1.2rem; color:var(--color-text); font-family:var(--font-heading); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${spec.name}">${spec.name}</h4>
-                        <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
-                             <button onclick="viewSpecialistInfo('${spec.name}')" style="background:none; border:none; padding:0; color:var(--color-dark-pink); font-size:0.75rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:3px;"><i class="fas fa-id-card"></i> Perfil</button>
-                        </div>
-                    </div>
-                </div>
+        container.innerHTML = specialists.map(spec => {
+            try {
+                let dayCount = 0; let monthCount = 0;
+                let dayTotal = 0; let monthTotal = 0;
                 
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <!-- Toggle Switch ON/OFF -->
-                    <div onclick="toggleSpecialistActive('${spec.name}')" style="display:flex; align-items:center; gap:8px; cursor:pointer; background:${isActive ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)'}; border-radius:30px; padding:0 12px; border:1px solid ${isActive ? '#2ecc71' : '#e74c3c'}; transition:0.3s; flex-shrink:0; height:28px; box-sizing:border-box;">
-                        <span style="font-size:0.75rem; font-weight:800; color:${isActive ? '#2ecc71' : '#e74c3c'}; min-width:25px;">${isActive ? 'ON' : 'OFF'}</span>
-                        <div style="width:28px; height:14px; background:${isActive ? '#2ecc71' : '#e74c3c'}; border-radius:10px; position:relative;">
-                            <div style="width:12px; height:12px; background:white; border-radius:50%; position:absolute; top:1px; left:${isActive ? '15px' : '1px'}; transition:0.2s;"></div>
+                agenda.forEach(a => {
+                    if (a && a.specialist === spec.name && a.status !== 'cancelled') {
+                        const isToday = (a.date === today);
+                        const aptDate = new Date(`${a.date}T00:00:00`);
+                        const isThisMonth = (!isNaN(aptDate) && aptDate.getMonth() === currentMonth && aptDate.getFullYear() === currentYear);
+
+                        // Incrementar contadores para cualquier cita activa
+                        if (isToday) dayCount++;
+                        if (isThisMonth) monthCount++;
+
+                        // Sumar totales solo si la cita fue realizada (accepted)
+                        if (a.status === 'accepted') {
+                            const val = parsePrice(a.splitPrice || a.price);
+                            if (isToday) dayTotal += val;
+                            if (isThisMonth) monthTotal += val;
+                        }
+                    }
+                });
+
+                const profitPercent = spec.profitPercent || 50;
+                const studioPercent = 100 - profitPercent;
+
+                const halfEarned = (dayTotal * profitPercent) / 100;
+                const studioEarned = (dayTotal * studioPercent) / 100;
+
+                const fallbackIcon = `<div style="background:var(--gold-primary)22; width:65px; height:65px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:1.8rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
+                const profileImg = spec.image ? `<img src="${spec.image}" style="width:65px; height:65px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : fallbackIcon;
+
+                const infoBtn = `
+                    <button onclick="viewSpecialistInfo('${spec.name}')" style="background:rgba(160, 93, 107, 0.08); color:var(--color-dark-pink); border:1px solid var(--color-dark-pink); padding:8px 18px; border-radius:30px; font-weight:700; font-size:0.85rem; cursor:pointer; transition:0.3s; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-info-circle"></i> DETALLES / INF
+                    </button>`;
+                
+                const specId = String(spec.name).toLowerCase().replace(/[^a-z0-9]/g, '-');
+                
+                let specStr = spec.specialty;
+                if (Array.isArray(specStr)) {
+                    specStr = specStr.join(', ');
+                } else if (typeof specStr !== 'string') {
+                    specStr = 'Todos';
+                }
+                const specialtiesArray = specStr.split(', ');
+                
+                // --- MODO LISTA COMPACTA ---
+                const isActive = spec.active !== false;
+                if (specialistViewMode === 'list') {
+                    return `
+                    <div class="glass-module" style="padding:12px 20px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:15px; border-left:4px solid ${isActive ? 'var(--color-dark-pink)' : '#ccc'}; opacity:${isActive ? '1' : '0.65'}; transition:0.3s;">
+                        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                            <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; border:1px solid #eee; flex-shrink:0;">
+                                ${spec.image ? `<img src="${spec.image}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="background:#f0f0f0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#999;"><i class="fas fa-user"></i></div>`}
+                            </div>
+                            <div style="min-width:150px;">
+                                <h5 style="margin:0; font-size:1rem; color:var(--color-text);">${spec.name}</h5>
+                                <small style="color:var(--color-text-muted); font-size:0.75rem;">${specStr || 'General'}</small>
+                            </div>
+                            <div style="display:flex; gap:15px; margin-left:20px; font-size:0.85rem; color:var(--color-text-muted);">
+                                <span><i class="fas fa-calendar-check" style="color:var(--color-dark-pink);"></i> Hoy: <strong>${dayCount}</strong></span>
+                                <span><i class="fas fa-chart-line" style="color:#2ecc71;"></i> Mes: <strong>${fmt(monthTotal)}</strong></span>
+                            </div>
                         </div>
-                    </div>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="viewSpecialistReport('${spec.name}')" class="btn-primary" style="padding:6px 12px; font-size:0.75rem; border-radius:8px; width:auto; background:var(--color-dark-pink);">REPORTES</button>
+                            <button onclick="openEditSpecialistModal('${spec.name}')" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.2); color:#3498db; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-pen" style="font-size:0.8rem;"></i></button>
+                            <button onclick="deleteSpecialist('${spec.name}')" style="background:rgba(231, 76, 60, 0.1); border:1px solid rgba(231, 76, 60, 0.2); color:#e74c3c; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-trash-alt" style="font-size:0.8rem;"></i></button>
+                        </div>
+                    </div>`;
+                }
+
+                // --- MODO CUADRÍCULA (GRID) ---
+                const specialtiesHtml = specialtiesArray.map(s => `
+                    <div style="background:rgba(var(--accent-rgb), 0.05); padding:6px 10px; border-radius:8px; border:1px solid rgba(var(--accent-rgb), 0.1); text-align:center; font-size:0.7rem; color:var(--color-dark-pink); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">${s}</div>
+                `).join('');
+
+                const specProfileImg = spec.image ? `<img src="${spec.image}" style="width:55px; height:55px; border-radius:12px; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : `<div style="background:var(--gold-primary)15; width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:1.5rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
+
+                return `
+                <div class="glass-module" style="padding:20px; border-radius:20px; position:relative; display:flex; flex-direction:column; gap:15px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); opacity:${isActive ? '1' : '0.6'}; transition:0.3s; border: 1px solid ${isActive ? 'rgba(184, 115, 129, 0.2)' : 'var(--border-color)'};">
                     
-                    <!-- Menú de Acciones (Engranaje) -->
-                    <div class="spec-actions-container">
-                        <button onclick="toggleSpecActionsMenu('${spec.name}', event)" style="background:rgba(0,0,0,0.03); border:1px solid var(--border-color); color:var(--color-text-muted); width:28px; height:28px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;" class="hover-scale">
-                            <i class="fas fa-cog" style="font-size:0.9rem;"></i>
-                        </button>
-                        <div id="actions-menu-${spec.name.replace(/\s+/g, '')}" class="spec-actions-menu">
-                            <button onclick="openEditSpecialistModal('${spec.name}')" class="spec-action-item">
-                                <i class="fas fa-edit" style="color:#3498db;"></i> Editar
-                            </button>
-                            <button onclick="deleteSpecialist('${spec.name}')" class="spec-action-item delete">
-                                <i class="fas fa-trash-alt"></i> Borrar
-                            </button>
+                    <!-- HEADER COMPACTO -->
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:15px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            ${specProfileImg}
+                            <div style="max-width: 140px;">
+                                <h4 style="margin:0; font-size:1.2rem; color:var(--color-text); font-family:var(--font-heading); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${spec.name}">${spec.name}</h4>
+                                <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
+                                     <button onclick="viewSpecialistInfo('${spec.name}')" style="background:none; border:none; padding:0; color:var(--color-dark-pink); font-size:0.75rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:3px;"><i class="fas fa-id-card"></i> Perfil</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <!-- Toggle Switch ON/OFF -->
+                            <div onclick="toggleSpecialistActive('${spec.name}')" style="display:flex; align-items:center; gap:8px; cursor:pointer; background:${isActive ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)'}; border-radius:30px; padding:0 12px; border:1px solid ${isActive ? '#2ecc71' : '#e74c3c'}; transition:0.3s; flex-shrink:0; height:28px; box-sizing:border-box;">
+                                <span style="font-size:0.75rem; font-weight:800; color:${isActive ? '#2ecc71' : '#e74c3c'}; min-width:25px;">${isActive ? 'ON' : 'OFF'}</span>
+                                <div style="width:28px; height:14px; background:${isActive ? '#2ecc71' : '#e74c3c'}; border-radius:10px; position:relative;">
+                                    <div style="width:12px; height:12px; background:white; border-radius:50%; position:absolute; top:1px; left:${isActive ? '15px' : '1px'}; transition:0.2s;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Menú de Acciones (Engranaje) -->
+                            <div class="spec-actions-container">
+                                <button onclick="toggleSpecActionsMenu('${spec.name}', event)" style="background:rgba(0,0,0,0.03); border:1px solid var(--border-color); color:var(--color-text-muted); width:28px; height:28px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;" class="hover-scale">
+                                    <i class="fas fa-cog" style="font-size:0.9rem;"></i>
+                                </button>
+                                <div id="actions-menu-${spec.name.replace(/\s+/g, '')}" class="spec-actions-menu">
+                                    <button onclick="openEditSpecialistModal('${spec.name}')" class="spec-action-item">
+                                        <i class="fas fa-edit" style="color:#3498db;"></i> Editar
+                                    </button>
+                                    <button onclick="deleteSpecialist('${spec.name}')" class="spec-action-item delete">
+                                        <i class="fas fa-trash-alt"></i> Borrar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- ESPECIALIDADES (DESPLEGABLE) -->
-            <div style="border-top: 1px dashed rgba(var(--accent-rgb), 0.1); padding-top: 10px;">
-                <button id="btn-spec-${specId}" onclick="toggleSpecDetails('${specId}')" class="spec-toggle-btn" style="background:none; border:none; padding:0; color:var(--color-text-muted); font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; text-transform:uppercase; letter-spacing:0.5px;">
-                    <i class="fas fa-magic" style="color:var(--color-dark-pink); opacity:0.6;"></i> SERVICIOS QUE REALIZA <i class="fas fa-chevron-down chevron-icon" style="margin-left:auto; transition:0.3s; font-size:0.6rem;"></i>
-                </button>
-                <div id="collapse-spec-${specId}" class="smooth-collapse">
-                    <div style="display:flex; flex-wrap:wrap; gap:6px; padding: 12px 0 5px 0;">
-                        ${specialtiesHtml}
+                    <!-- ESPECIALIDADES (DESPLEGABLE) -->
+                    <div style="border-top: 1px dashed rgba(var(--accent-rgb), 0.1); padding-top: 10px;">
+                        <button id="btn-spec-${specId}" onclick="toggleSpecDetails('${specId}')" class="spec-toggle-btn" style="background:none; border:none; padding:0; color:var(--color-text-muted); font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; text-transform:uppercase; letter-spacing:0.5px;">
+                            <i class="fas fa-magic" style="color:var(--color-dark-pink); opacity:0.6;"></i> SERVICIOS QUE REALIZA <i class="fas fa-chevron-down chevron-icon" style="margin-left:auto; transition:0.3s; font-size:0.6rem;"></i>
+                        </button>
+                        <div id="collapse-spec-${specId}" class="smooth-collapse">
+                            <div style="display:flex; flex-wrap:wrap; gap:6px; padding: 12px 0 5px 0;">
+                                ${specialtiesHtml}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- CONTADORES RÁPIDOS -->
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <!-- Cuadro Interactivo para Citas de Hoy -->
-                <div onclick="viewSpecialistServices('${spec.name}')" style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center; cursor:pointer;" class="hover-scale">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Citas Hoy</span>
-                        <i class="fas fa-history" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
+                    <!-- CONTADORES RÁPIDOS -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <!-- Cuadro Interactivo para Citas de Hoy -->
+                        <div onclick="viewSpecialistServices('${spec.name}')" style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center; cursor:pointer;" class="hover-scale">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Citas Hoy</span>
+                                <i class="fas fa-history" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
+                            </div>
+                            <div style="font-size:1.7rem; font-weight:900; color:var(--color-dark-pink); line-height:1; margin: 4px 0;">${dayCount}</div>
+                            <div style="font-size:0.6rem; color:var(--color-text-muted); font-weight:800; text-transform:uppercase;">
+                                VER CITAS <i class="fas fa-chevron-right" style="font-size:0.5rem;"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Info Estática para Total Mes -->
+                        <div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Servicios Mes</span>
+                                <i class="fas fa-chart-line" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
+                            </div>
+                            <div style="font-size:1.7rem; font-weight:900; color:var(--color-text); line-height:1; margin: 4px 0;">${monthCount}</div>
+                            <div style="font-size:0.6rem; color:var(--color-text-muted); font-weight:800; text-transform:uppercase;">Historial Mes</div>
+                        </div>
                     </div>
-                    <div style="font-size:1.7rem; font-weight:900; color:var(--color-dark-pink); line-height:1; margin: 4px 0;">${dayCount}</div>
-                    <div style="font-size:0.6rem; color:var(--color-text-muted); font-weight:800; text-transform:uppercase;">
-                        VER CITAS <i class="fas fa-chevron-right" style="font-size:0.5rem;"></i>
-                    </div>
-                </div>
-                
-                <!-- Info Estática para Total Mes -->
-                <div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Servicios Mes</span>
-                        <i class="fas fa-chart-line" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
-                    </div>
-                    <div style="font-size:1.7rem; font-weight:900; color:var(--color-text); line-height:1; margin: 4px 0;">${monthCount}</div>
-                    <div style="font-size:0.6rem; color:var(--color-text-muted); font-weight:800; text-transform:uppercase;">Historial Mes</div>
-                </div>
-            </div>
 
-            <!-- RESUMEN FINANCIERO HOY (MUY COMPACTO) -->
-            <div style="background: var(--earnings-bg); padding:12px; border-radius:15px; border:1px solid var(--earnings-border);">
-                <div style="font-size:0.65rem; color:var(--color-dark-pink); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; text-align:center; border-bottom:1px dashed rgba(var(--accent-rgb), 0.3); padding-bottom:5px;">
-                    💰 Ganancias Hoy
-                </div>
-                <div style="display:flex; flex-direction:column; gap:4px;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--color-text-muted);">
-                         <span>Bruto:</span>
-                         <span style="font-weight:700; color:var(--color-text);">${fmt(dayTotal)}</span>
+                    <!-- RESUMEN FINANCIERO HOY (MUY COMPACTO) -->
+                    <div style="background: var(--earnings-bg); padding:12px; border-radius:15px; border:1px solid var(--earnings-border);">
+                        <div style="font-size:0.65rem; color:var(--color-dark-pink); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; text-align:center; border-bottom:1px dashed rgba(var(--accent-rgb), 0.3); padding-bottom:5px;">
+                            💰 Ganancias Hoy
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--color-text-muted);">
+                                 <span>Bruto:</span>
+                                 <span style="font-weight:700; color:var(--color-text);">${fmt(dayTotal)}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:0.8rem; border-top:1px solid var(--border-color); padding-top:4px;">
+                                 <span style="color:var(--color-dark-pink); font-weight:600;">Estudio (${studioPercent}%):</span>
+                                 <span style="font-weight:800; color:var(--color-dark-pink);">${fmt(studioEarned)}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                                 <span style="color:#2ecc71; font-weight:600;">Ella (${profitPercent}%):</span>
+                                 <span style="font-weight:800; color:#27ae60;">${fmt(halfEarned)}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; border-top:1px solid var(--border-color); padding-top:4px;">
-                         <span style="color:var(--color-dark-pink); font-weight:600;">Estudio (${studioPercent}%):</span>
-                         <span style="font-weight:800; color:var(--color-dark-pink);">${fmt(studioEarned)}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                         <span style="color:#2ecc71; font-weight:600;">Ella (${profitPercent}%):</span>
-                         <span style="font-weight:800; color:#27ae60;">${fmt(halfEarned)}</span>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
+                </div>`;
+            } catch(e) {
+                console.error("Error rendering specialist object:", spec, e);
+                return '';
+            }
+        }).join('');
+    } catch(globalError) {
+        console.error("Global error in renderSpecialists:", globalError);
+    }
 }
 
 // Toggle activar/desactivar profesional
