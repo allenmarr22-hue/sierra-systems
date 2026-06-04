@@ -264,6 +264,22 @@ function formatBillingDate(dateStr, options = { day: '2-digit', month: 'short', 
     return parsed ? parsed.toLocaleDateString('es-CO', options) : '—';
 }
 
+// Helper para obtener la fecha de corte más cercana de todas las sedes activas de un negocio
+function getClosestBillingDate(biz) {
+    const billing = biz.billing || {};
+    if (biz.moduleInstances && biz.moduleInstances.length > 0) {
+        const activeDates = biz.moduleInstances
+            .filter(inst => inst.status === 'active' && inst.renewalDate)
+            .map(inst => parseBillingDate(inst.renewalDate))
+            .filter(dObj => dObj !== null);
+        if (activeDates.length > 0) {
+            const minDateObj = new Date(Math.min(...activeDates.map(d => d.getTime())));
+            return minDateObj.toISOString();
+        }
+    }
+    return billing.next_billing_date;
+}
+
 
 // State Management
 const appState = {
@@ -2557,8 +2573,8 @@ function renderBillingTab() {
             ? `<span title="Token: ${billing.gateway_token}" style="font-size:0.8rem;">💳 ${billing.card_brand || ''} ···${billing.last_four || '****'}</span>`
             : `<span style="color:#94a3b8;font-size:0.8rem;">Sin tarjeta</span>`;
 
-        // Próximo corte
-        const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+        // Próximo corte (fecha más cercana de todas las sedes activas)
+        const nextCut = formatBillingDate(getClosestBillingDate(biz), { day: '2-digit', month: 'short', year: 'numeric' });
 
         const amountDisplay = monthlyAmount > 0
             ? `$${monthlyAmount.toLocaleString('es-CO')}`
@@ -2668,7 +2684,7 @@ window.billingShowDetail = async function(bizId) {
 
     const statusLabels = { active: '✓ Activo', suspended: '⛔ Suspendido', pending: '⏳ Pendiente', cancelled: '🚫 Cancelado' };
     const status = billing.subscription_status || 'pending';
-    const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'long', year: 'numeric' });
+    const nextCut = formatBillingDate(getClosestBillingDate(biz), { day: '2-digit', month: 'long', year: 'numeric' });
     const lastPayment = billing.last_payment_date
         ? new Date(billing.last_payment_date).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
@@ -4431,7 +4447,7 @@ window.downloadGlobalBillingPDF = async function() {
                 });
             }
 
-            const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+            const nextCut = formatBillingDate(getClosestBillingDate(biz), { day: '2-digit', month: 'short', year: 'numeric' });
 
             const modNames = (biz.modules || []).map(mid => {
                 const m = modules.find(x => String(x.id) === String(mid));
@@ -4566,7 +4582,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
 
         const billing = biz.billing || {};
         const statusLabel = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' }[billing.subscription_status || 'pending'] || '—';
-        const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+        const nextCut = formatBillingDate(getClosestBillingDate(biz), { day: '2-digit', month: 'short', year: 'numeric' });
 
         const pageCount = 1;
 
