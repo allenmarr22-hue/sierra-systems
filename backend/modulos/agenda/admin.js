@@ -7152,7 +7152,7 @@ window.toggleSpecDetails = function(specId) {
     }
 };
 
-function resizeImageBase64(file, callback) {
+function resizeImageFileToBase64(file, callback) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const img = new Image();
@@ -7265,7 +7265,7 @@ window.addSpecialist = function() {
     };
 
     if (photoInput && photoInput.files && photoInput.files[0]) {
-        resizeImageBase64(photoInput.files[0], saveSpec);
+        resizeImageFileToBase64(photoInput.files[0], saveSpec);
     } else {
         saveSpec('');
     }
@@ -7454,7 +7454,7 @@ window.saveSpecialistEdit = function() {
     };
 
     if (photoInput && photoInput.files && photoInput.files[0]) {
-        resizeImageBase64(photoInput.files[0], finalizeSave);
+        resizeImageFileToBase64(photoInput.files[0], finalizeSave);
     } else {
         finalizeSave(); // No new photo uploaded
     }
