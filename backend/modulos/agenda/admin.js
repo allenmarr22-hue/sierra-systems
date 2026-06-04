@@ -7608,6 +7608,7 @@ window.exportSpecialistReportToPDF = function() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const name = activeReportingSpecialist;
+    const businessName = localStorage.getItem('margarita_site_name') || 'StyleSync Pro';
     
     // Obtener datos actuales
     const agenda = JSON.parse(localStorage.getItem('margarita_appointments')) || [];
@@ -7663,17 +7664,18 @@ window.exportSpecialistReportToPDF = function() {
     
     doc.setFontSize(14);
     doc.setTextColor(30, 30, 30);
-    doc.text(`Profesional: ${name}`, 20, 35);
-    doc.text(`Periodo: ${periodLabel}`, 20, 42);
+    doc.text(`Establecimiento: ${businessName}`, 20, 35);
+    doc.text(`Profesional: ${name}`, 20, 42);
+    doc.text(`Periodo: ${periodLabel}`, 20, 49);
     
     doc.autoTable({
-        startY: 50,
+        startY: 55,
         head: [['Fecha', 'Hora', 'Servicio', 'Cliente', 'WhatsApp', 'Precio']],
         body: tableData,
         headStyles: { fillColor: [160, 93, 107], textColor: 255 },
         alternateRowStyles: { fillColor: [249, 249, 249] },
         styles: { fontSize: 9, cellPadding: 3 }, // Reduced font size slightly for extra column
-        margin: { top: 50 }
+        margin: { top: 55 }
     });
 
     const finalY = doc.lastAutoTable.finalY + 15;
@@ -7697,7 +7699,8 @@ window.exportSpecialistReportToPDF = function() {
     doc.text(`Ganancia Profesional (${profitPct}%):`, 25, finalY + 25);
     doc.text(`${fmt(halfEarned)}`, 185, finalY + 25, { align: "right" });
 
-    doc.save(`Reporte_Margarita_${name.replace(/\s+/g, '_')}_${periodLabel.replace(/[:\s]/g, '_')}.pdf`);
+    const cleanBusinessName = businessName.replace(/\s+/g, '_');
+    doc.save(`Reporte_${cleanBusinessName}_${name.replace(/\s+/g, '_')}_${periodLabel.replace(/[:\s]/g, '_')}.pdf`);
     showToast('Reporte PDF generado con éxito.');
 };
 
