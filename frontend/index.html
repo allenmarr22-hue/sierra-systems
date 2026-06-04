@@ -314,6 +314,9 @@
             }
             .carousel-track > .product-card {
                 flex: none !important;
+                max-width: 100% !important;
+            }
+            .carousel-track.has-single-card > .product-card {
                 max-width: 500px !important;
                 margin: 0 auto !important;
             }
@@ -1690,6 +1693,17 @@
                                 }
                             }
                         });
+
+                        // Controlar si queda un solo módulo visible para ajustar su diseño
+                        const trackEl = document.getElementById('products-grid');
+                        if (trackEl) {
+                            const visibleCards = Array.from(trackEl.querySelectorAll('.product-card')).filter(card => card.style.display !== 'none');
+                            if (visibleCards.length === 1) {
+                                trackEl.classList.add('has-single-card');
+                            } else {
+                                trackEl.classList.remove('has-single-card');
+                            }
+                        }
 
                         // Guardar módulos en el estado global para uso de modales y guías de ayuda
                         window.appModules = data.modules;
