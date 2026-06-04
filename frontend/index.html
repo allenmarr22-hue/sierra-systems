@@ -317,7 +317,7 @@
                 max-width: 100% !important;
             }
             .carousel-track.has-single-card > .product-card {
-                max-width: 500px !important;
+                max-width: 420px !important;
                 margin: 0 auto !important;
             }
         }
@@ -1432,6 +1432,7 @@
             });
         });
 
+        let lastConfigStr = '';
         // Cargar Configuración Dinámica (Logo) desde el Backend
         async function loadDynamicConfig() {
             const defaultIcon = document.getElementById('default-logo-icon');
@@ -1443,6 +1444,13 @@
                 const res = await fetch('/api/settings');
                 if (res.ok) {
                     const data = await res.json();
+                    
+                    // Comparar respuesta para evitar re-renderizado parpadeante en el polleo
+                    const currentStr = JSON.stringify(data);
+                    if (currentStr === lastConfigStr) {
+                        return;
+                    }
+                    lastConfigStr = currentStr;
                     
                     let waNum = '1234567890';
                     if (data.config && data.config.supportPhone) {
@@ -1741,6 +1749,9 @@
         // Ejecutar al cargar la página
         document.addEventListener('DOMContentLoaded', () => {
             loadDynamicConfig();
+            
+            // Consultar periódicamente cada 1.5 segundos para reflejar cambios en tiempo real
+            setInterval(loadDynamicConfig, 1500);
 
             // Lógica del menú móvil
             const mobileToggle = document.getElementById('mobile-nav-toggle');
