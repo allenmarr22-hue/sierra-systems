@@ -3747,32 +3747,32 @@ window.viewClientTicketDetails = function(ticketId) {
 
                 <!-- Meta chips -->
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                    <div style="flex:1;min-width:120px;background:var(--chat-meta-bg);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
                         <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Módulo</div>
                         <div style="font-weight:700;font-size:0.84rem;color:var(--text-main);">${(() => {
                             const found = appState.modules.find(m => String(m.id) === String(ticket.module) || String(m.name) === String(ticket.module));
                             return found ? found.name : (ticket.module || '—');
                         })()}</div>
                     </div>
-                    <div style="flex:1;min-width:100px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                    <div style="flex:1;min-width:100px;background:var(--chat-meta-bg);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
                         <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Creado</div>
                         <div style="font-weight:600;font-size:0.78rem;color:var(--text-main);">${fullDate}</div>
                     </div>
                 </div>
 
                 <!-- Chat area -->
-                <div style="border:1px solid var(--border-color);border-radius:14px;overflow:hidden;background:rgba(0,0,0,0.18);">
-                    <div style="padding:8px 14px;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="border:1px solid var(--border-color);border-radius:14px;overflow:hidden;background:var(--chat-outer-bg);">
+                    <div style="padding:8px 14px;background:var(--chat-header-bg);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;"></div>
                             <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">Chat con Soporte</span>
                         </div>
-                        <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border-color);border-radius:8px;padding:4px 10px;width:140px;transition:all 0.2s;" onfocusin="this.style.width='200px';this.style.borderColor='var(--primary)';" onfocusout="this.style.width='140px';this.style.borderColor='var(--border-color)';">
+                        <div style="display:flex;align-items:center;background:var(--chat-search-bg);border:1px solid var(--border-color);border-radius:8px;padding:4px 10px;width:140px;transition:all 0.2s;" onfocusin="this.style.width='200px';this.style.borderColor='var(--primary)';" onfocusout="this.style.width='140px';this.style.borderColor='var(--border-color)';">
                             <i data-lucide="search" style="width:14px;height:14px;color:var(--text-muted);margin-right:6px;"></i>
                             <input type="text" id="chat-search-input" placeholder="Buscar..." oninput="handleChatSearch(this.value)" style="border:none;background:none;color:var(--text-main);font-size:0.8rem;outline:none;width:100%;font-family:'Outfit',sans-serif;" />
                         </div>
                     </div>
-                    <div id="ticket-chat-container" style="height:320px;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth;">
+                    <div id="ticket-chat-container" class="custom-scrollbar" style="height:320px;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth;">
                         <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:30px 0;color:var(--text-muted);font-size:0.82rem;">
                             <span style="display:inline-block;width:16px;height:16px;border:2px solid var(--text-muted);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>
                             Cargando conversación...
@@ -3784,12 +3784,12 @@ window.viewClientTicketDetails = function(ticketId) {
                             Solicitud cerrada — abre una nueva para continuar
                         </div>
                     ` : `
-                        <div style="padding:10px 12px;background:rgba(255,255,255,0.02);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;">
+                        <div style="padding:10px 12px;background:var(--chat-input-bar-bg);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;">
                             <input type="file" id="chat-image-input" accept="image/*" style="display:none;" onchange="handleTicketImageSelect(event)" />
-                            <button onclick="document.getElementById('chat-image-input').click()" title="Enviar imagen" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)'">
+                            <button onclick="document.getElementById('chat-image-input').click()" title="Enviar imagen" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:var(--chat-button-bg);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='var(--chat-button-bg)';this.style.color='var(--text-muted)'">
                                 <i data-lucide="image" style="width:15px;height:15px;"></i>
                             </button>
-                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.05);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
+                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--chat-input-bg);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
                             <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','client')" style="width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary),#818cf8);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
                                 <i data-lucide="send" style="width:14px;height:14px;"></i>
                             </button>
@@ -3974,11 +3974,11 @@ window.fetchAndRenderChatMessages = async function(ticketId, role) {
             let dateSeparator = '';
             const fullDateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
             if (idx === 0) {
-                dateSeparator = `<div style="text-align:center;margin:6px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+                dateSeparator = `<div style="text-align:center;margin:6px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--chat-date-text);background:var(--chat-date-bg);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
             } else {
                 const prevDate = new Date(prevMsg.created_at);
                 if (prevDate.toDateString() !== d.toDateString()) {
-                    dateSeparator = `<div style="text-align:center;margin:8px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+                    dateSeparator = `<div style="text-align:center;margin:8px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--chat-date-text);background:var(--chat-date-bg);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
                 }
             }
 
@@ -3992,7 +3992,7 @@ window.fetchAndRenderChatMessages = async function(ticketId, role) {
 
             const bubbleStyle = isMe
                 ? `background:linear-gradient(135deg,rgba(99,102,241,0.28),rgba(129,140,248,0.18));border:1px solid rgba(99,102,241,0.35);border-radius:14px 14px 4px 14px;`
-                : `background:rgba(255,255,255,0.06);border:1px solid var(--border-color);border-radius:14px 14px 14px 4px;`;
+                : `background:var(--chat-bubble-incoming);border:1px solid var(--border-color);border-radius:14px 14px 14px 4px;`;
 
             return `
                 ${dateSeparator}

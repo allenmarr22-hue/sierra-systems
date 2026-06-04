@@ -56,6 +56,23 @@
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    /* Dynamic Support Chat Variables */
+    --chat-outer-bg: rgba(0, 0, 0, 0.18);
+    --chat-header-bg: rgba(255, 255, 255, 0.03);
+    --chat-search-bg: rgba(255, 255, 255, 0.05);
+    --chat-meta-bg: rgba(255, 255, 255, 0.03);
+    --chat-input-bar-bg: rgba(255, 255, 255, 0.02);
+    --chat-input-bg: rgba(255, 255, 255, 0.05);
+    --chat-button-bg: rgba(255, 255, 255, 0.04);
+    --chat-canned-bg: rgba(30, 41, 59, 0.95);
+    --chat-canned-border: rgba(255, 255, 255, 0.08);
+    --chat-bubble-incoming: rgba(255, 255, 255, 0.06);
+    --chat-date-bg: rgba(0, 0, 0, 0.3);
+    --chat-date-text: var(--text-muted);
+    --chat-option-hover: rgba(255, 255, 255, 0.05);
+    --chat-status-btn-bg: rgba(255, 255, 255, 0.04);
+    --chat-status-btn-hover: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="light"] {
@@ -100,6 +117,23 @@
     --shadow-sm: 0 1px 3px 0 rgba(99, 102, 241, 0.06), 0 1px 2px -1px rgba(0,0,0,0.04);
     --shadow-md: 0 4px 12px -1px rgba(99, 102, 241, 0.1), 0 2px 6px -2px rgba(0,0,0,0.05);
     --shadow-lg: 0 12px 24px -4px rgba(99, 102, 241, 0.12), 0 4px 8px -2px rgba(0,0,0,0.06);
+
+    /* Dynamic Support Chat Variables */
+    --chat-outer-bg: #f8fafc;
+    --chat-header-bg: #f1f5f9;
+    --chat-search-bg: #ffffff;
+    --chat-meta-bg: #f1f5f9;
+    --chat-input-bar-bg: #f8fafc;
+    --chat-input-bg: #ffffff;
+    --chat-button-bg: #e2e8f0;
+    --chat-canned-bg: #ffffff;
+    --chat-canned-border: rgba(99, 102, 241, 0.15);
+    --chat-bubble-incoming: #ffffff;
+    --chat-date-bg: rgba(99, 102, 241, 0.08);
+    --chat-date-text: var(--primary);
+    --chat-option-hover: rgba(99, 102, 241, 0.06);
+    --chat-status-btn-bg: #f1f5f9;
+    --chat-status-btn-hover: #e2e8f0;
 }
 
 * {
@@ -2271,7 +2305,7 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
 [data-theme="light"] .input-modern,
 [data-theme="light"] select,
 [data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]) {
-    background: #f5f7ff;
+    background-color: #f5f7ff;
     border: 1px solid rgba(99, 102, 241, 0.18);
     color: #0f172a;
 }
@@ -2279,7 +2313,7 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
 [data-theme="light"] .form-input-modern:focus,
 [data-theme="light"] .input-modern:focus,
 [data-theme="light"] input:focus {
-    background: #ffffff;
+    background-color: #ffffff;
     border-color: #6366f1;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
@@ -2333,10 +2367,29 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
 
 /* --- Select dropdown arrow (light) --- */
 [data-theme="light"] .select-modern {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 1.2rem !important;
 }
 
 [data-theme="light"] .select-modern option {
+    background: #ffffff;
+    color: #0f172a;
+}
+
+[data-theme="light"] .form-group select {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 1.1rem !important;
+    color: #0f172a !important;
+    border-color: rgba(99, 102, 241, 0.18) !important;
+}
+
+[data-theme="light"] .form-group select option {
     background: #ffffff;
     color: #0f172a;
 }
@@ -3537,6 +3590,116 @@ html[data-accent="orange"][data-theme="light"] {
 .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(99, 102, 241, 0.28) rgba(255, 255, 255, 0.01);
+}
+
+/* ==========================================================================
+   DAY MODE (LIGHT MODE) MODAL AND INPUT FIXES
+   ========================================================================== */
+/* ==========================================================================
+   DAY MODE (LIGHT MODE) MODAL AND INPUT FIXES
+   ========================================================================== */
+[data-theme="light"] .modern-modal,
+[data-theme="light"] .modal-box {
+    background: rgba(255, 255, 255, 0.98) !important;
+    border: 1px solid rgba(99, 102, 241, 0.12) !important;
+    box-shadow: 0 30px 60px rgba(99, 102, 241, 0.15) !important;
+}
+
+[data-theme="light"] .modal-header,
+[data-theme="light"] .modal-header-modern {
+    background: linear-gradient(to bottom, rgba(99, 102, 241, 0.03), transparent) !important;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.08) !important;
+}
+
+[data-theme="light"] .modal-header h3,
+[data-theme="light"] .modal-header-modern h3,
+[data-theme="light"] .modern-modal h3,
+[data-theme="light"] .modal-box h3 {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .modal-actions,
+[data-theme="light"] .modal-actions-modern {
+    border-top: 1px solid rgba(99, 102, 241, 0.08) !important;
+    background: rgba(99, 102, 241, 0.02) !important;
+}
+
+[data-theme="light"] .modern-modal label,
+[data-theme="light"] .modal-box label {
+    color: #475569 !important;
+}
+
+[data-theme="light"] .modern-modal .field-hint-modern,
+[data-theme="light"] .modal-box .field-hint-modern,
+[data-theme="light"] .modal-box .field-hint {
+    color: #64748b !important;
+}
+
+[data-theme="light"] .input-modern-wrap input,
+[data-theme="light"] .input-modern-wrap textarea,
+[data-theme="light"] .select-modern,
+[data-theme="light"] .modal-form input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]),
+[data-theme="light"] .modal-form select,
+[data-theme="light"] .modal-form textarea {
+    background: #ffffff !important;
+    border: 1px solid rgba(99, 102, 241, 0.15) !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .input-modern-wrap input:focus,
+[data-theme="light"] .input-modern-wrap textarea:focus,
+[data-theme="light"] .select-modern:focus,
+[data-theme="light"] .modal-form input:focus,
+[data-theme="light"] .modal-form select:focus,
+[data-theme="light"] .modal-form textarea:focus {
+    background: #ffffff !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+}
+
+[data-theme="light"] .select-modern {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 1.2rem !important;
+}
+
+[data-theme="light"] .input-icon-wrap input:not([type="checkbox"]):not([type="radio"]) {
+    background: #ffffff !important;
+    border: 1px solid rgba(99, 102, 241, 0.15) !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .input-icon-wrap input:focus {
+    background: #ffffff !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Light Theme Scrollbars */
+[data-theme="light"] ::-webkit-scrollbar-track {
+    background: rgba(99, 102, 241, 0.03) !important;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.15) !important;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.25) !important;
+}
+
+[data-theme="light"] .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(99, 102, 241, 0.02) !important;
+}
+
+[data-theme="light"] .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-theme="light"] .custom-scrollbar {
+    scrollbar-color: rgba(99, 102, 241, 0.2) rgba(99, 102, 241, 0.02);
 }
 
 

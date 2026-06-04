@@ -2751,10 +2751,10 @@ window.billingShowDetail = async function(bizId) {
                     monthlyAmount += p; 
                     const renewal = formatBillingDate(biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
                     instLines.push(`<tr>
-                        <td style="padding:0.4rem 0.5rem;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,0.03);">${mod.name}</td>
-                        <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;border-bottom:1px solid rgba(255,255,255,0.03);">Sede Principal</td>
-                        <td style="padding:0.4rem 0.5rem;color:#94a3b8;font-size:0.75rem;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03);">${renewal}</td>
-                        <td style="padding:0.4rem 0.5rem;text-align:right;color:#f8fafc;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.03);">$${p.toLocaleString('es-CO')}</td>
+                        <td style="padding:0.4rem 0.5rem;color:var(--text-main);border-bottom:1px solid var(--border-color);">${mod.name}</td>
+                        <td style="padding:0.4rem 0.5rem;color:var(--text-muted);font-size:0.75rem;border-bottom:1px solid var(--border-color);">Sede Principal</td>
+                        <td style="padding:0.4rem 0.5rem;color:var(--text-muted);font-size:0.75rem;text-align:center;border-bottom:1px solid var(--border-color);">${renewal}</td>
+                        <td style="padding:0.4rem 0.5rem;text-align:right;color:var(--text-main);font-weight:600;border-bottom:1px solid var(--border-color);">$${p.toLocaleString('es-CO')}</td>
                     </tr>`); 
                 }
             }
@@ -2769,14 +2769,14 @@ window.billingShowDetail = async function(bizId) {
         : '—';
 
     await Swal.fire({
-        title: `<span style="font-size:1.1rem;font-weight:800;">📄 ${biz.name}</span>`,
+        title: `<span style="font-size:1.1rem;font-weight:800;color:var(--text-main);">📄 ${biz.name}</span>`,
         html: `
-            <div style="text-align:left;font-size:0.88rem;color:#cbd5e1;">
+            <div style="text-align:left;font-size:0.88rem;color:var(--text-main);">
                 <!-- Botón de descarga de PDF individual -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; background:rgba(99,102,241,0.05); padding:0.6rem 0.8rem; border-radius:10px; border:1px solid rgba(99,102,241,0.15);">
                     <div>
                         <div style="font-size:0.7rem; color:#818cf8; text-transform:uppercase; font-weight:700;">Ficha del Negocio</div>
-                        <div style="font-weight:700; color:#f8fafc; font-size:0.85rem;">Exportar reporte actual</div>
+                        <div style="font-weight:700; color:var(--text-main); font-size:0.85rem;">Exportar reporte actual</div>
                     </div>
                     <button class="btn-primary" style="font-size:0.75rem; padding:0.4rem 0.8rem; background:#6366f1; border:none; border-radius:6px; color:#fff; font-weight:600; display:flex; align-items:center; gap:0.3rem; cursor:pointer;" onclick="downloadIndividualBusinessPDF(${biz.id})">
                         <i data-lucide="download" style="width:13px;height:13px;"></i> Descargar PDF
@@ -2787,51 +2787,51 @@ window.billingShowDetail = async function(bizId) {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
                     <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);padding:0.75rem;border-radius:10px;">
                         <div style="font-size:0.7rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Estado</div>
-                        <div style="font-weight:700;color:#f8fafc;">${statusLabels[status] || status}</div>
+                        <div style="font-weight:700;color:var(--text-main);">${statusLabels[status] || status}</div>
                     </div>
                     <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);padding:0.75rem;border-radius:10px;">
                         <div style="font-size:0.7rem;color:#10b981;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Monto/Mes</div>
-                        <div style="font-weight:700;color:#f8fafc;">$${monthlyAmount.toLocaleString('es-CO')}</div>
+                        <div style="font-weight:700;color:var(--text-main);">$${monthlyAmount.toLocaleString('es-CO')}</div>
                     </div>
                     <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);padding:0.75rem;border-radius:10px;">
                         <div style="font-size:0.7rem;color:#f59e0b;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Próximo Corte</div>
-                        <div style="font-weight:700;color:#f8fafc;">${nextCut}</div>
+                        <div style="font-weight:700;color:var(--text-main);">${nextCut}</div>
                     </div>
                     <div style="background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.15);padding:0.75rem;border-radius:10px;">
                         <div style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Último Pago</div>
-                        <div style="font-weight:700;color:#f8fafc;">${lastPayment}</div>
+                        <div style="font-weight:700;color:var(--text-main);">${lastPayment}</div>
                     </div>
                 </div>
 
                 <!-- Datos del Cliente / Propietario -->
                 <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Información del Cliente</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;background:rgba(255,255,255,0.02);padding:0.75rem;border-radius:10px;border:1px solid rgba(255,255,255,0.05);">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;background:var(--bg-surface-light);padding:0.75rem;border-radius:10px;border:1px solid var(--border-color);">
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Propietario / Cliente</span>
-                        <span style="color:#cbd5e1;font-weight:600;">${biz.ownerName || '—'}</span>
+                        <span style="color:var(--text-muted);font-size:0.75rem;display:block;">Propietario / Cliente</span>
+                        <span style="color:var(--text-main);font-weight:600;">${biz.ownerName || '—'}</span>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">NIT / CC</span>
-                        <span style="color:#cbd5e1;font-weight:600;">${biz.nit || '—'}</span>
+                        <span style="color:var(--text-muted);font-size:0.75rem;display:block;">NIT / CC</span>
+                        <span style="color:var(--text-main);font-weight:600;">${biz.nit || '—'}</span>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Teléfono</span>
-                        <span style="color:#cbd5e1;font-weight:600;">${biz.phone || '—'}</span>
+                        <span style="color:var(--text-muted);font-size:0.75rem;display:block;">Teléfono</span>
+                        <span style="color:var(--text-main);font-weight:600;">${biz.phone || '—'}</span>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Email</span>
-                        <span style="color:#cbd5e1;font-weight:600;word-break:break-all;">${biz.clientEmail || '—'}</span>
+                        <span style="color:var(--text-muted);font-size:0.75rem;display:block;">Email</span>
+                        <span style="color:var(--text-main);font-weight:600;word-break:break-all;">${biz.clientEmail || '—'}</span>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Dirección</span>
-                        <span style="color:#cbd5e1;font-weight:600;word-break:break-all;">${biz.address || '—'} ${biz.city ? `(${biz.city})` : ''}</span>
+                        <span style="color:var(--text-muted);font-size:0.75rem;display:block;">Dirección</span>
+                        <span style="color:var(--text-main);font-weight:600;word-break:break-all;">${biz.address || '—'} ${biz.city ? `(${biz.city})` : ''}</span>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Tarjeta Registrada</span>
-                        <span style="color:#cbd5e1;font-weight:600;display:flex;align-items:center;gap:4px;">
+                        <span style="color:var(--text-muted);font-size:0.75rem;display:block;">Tarjeta Registrada</span>
+                        <span style="color:var(--text-main);font-weight:600;display:flex;align-items:center;gap:4px;">
                             ${billing.gateway_token 
                                 ? `💳 ${billing.card_brand || ''} ···${billing.last_four || '****'}` 
-                                : '<span style="color:#64748b;">Sin tarjeta</span>'}
+                                : '<span style="color:var(--text-muted);">Sin tarjeta</span>'}
                         </span>
                     </div>
                 </div>
@@ -2839,28 +2839,28 @@ window.billingShowDetail = async function(bizId) {
                 <!-- Desglose de Módulos Activos -->
                 ${instLines.length > 0 ? `
                     <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Módulos / Sedes activas</div>
-                    <div class="custom-scrollbar" style="max-height:190px; overflow-y:auto; border:1px solid rgba(255,255,255,0.05); border-radius:8px; background:rgba(255,255,255,0.01); margin-bottom:0.75rem; padding:0 0.25rem;">
+                    <div class="custom-scrollbar" style="max-height:190px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-surface-light); margin-bottom:0.75rem; padding:0 0.25rem;">
                         <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
                             <thead>
-                                <tr style="border-bottom:1px solid rgba(99,102,241,0.2); position:sticky; top:0; background:#1e293b; z-index:10;">
-                                    <th style="padding:0.4rem 0.5rem;text-align:left;color:#64748b;font-weight:600;background:#1e293b;">Módulo</th>
-                                    <th style="padding:0.4rem 0.5rem;text-align:left;color:#64748b;font-weight:600;background:#1e293b;">Sede</th>
-                                    <th style="padding:0.4rem 0.5rem;text-align:center;color:#64748b;font-weight:600;background:#1e293b;">Corte</th>
-                                    <th style="padding:0.4rem 0.5rem;text-align:right;color:#64748b;font-weight:600;background:#1e293b;">Precio</th>
+                                <tr style="border-bottom:1px solid var(--border-color); position:sticky; top:0; background:var(--bg-surface-light); z-index:10;">
+                                    <th style="padding:0.4rem 0.5rem;text-align:left;color:var(--text-muted);font-weight:600;background:var(--bg-surface-light);">Módulo</th>
+                                    <th style="padding:0.4rem 0.5rem;text-align:left;color:var(--text-muted);font-weight:600;background:var(--bg-surface-light);">Sede</th>
+                                    <th style="padding:0.4rem 0.5rem;text-align:center;color:var(--text-muted);font-weight:600;background:var(--bg-surface-light);">Corte</th>
+                                    <th style="padding:0.4rem 0.5rem;text-align:right;color:var(--text-muted);font-weight:600;background:var(--bg-surface-light);">Precio</th>
                                 </tr>
                             </thead>
                             <tbody>${instLines.join('')}</tbody>
                         </table>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(99,102,241,0.2); padding-top:0.6rem; font-size:0.85rem; font-weight:700;">
-                        <span style="color:#f8fafc;">Total de Suscripciones</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:0.6rem; font-size:0.85rem; font-weight:700;">
+                        <span style="color:var(--text-main);">Total de Suscripciones</span>
                         <span style="color:#10b981; font-size:1.05rem; font-weight:800;">$${monthlyAmount.toLocaleString('es-CO')}</span>
                     </div>
-                ` : '<span style="color:#64748b;">Sin módulos asignados.</span>'}
+                ` : '<span style="color:var(--text-muted);">Sin módulos asignados.</span>'}
             </div>
         `,
-        background: '#1e293b',
-        color: '#f8fafc',
+        background: 'var(--bg-surface)',
+        color: 'var(--text-main)',
         confirmButtonText: 'Cerrar',
         confirmButtonColor: '#6366f1',
         width: '600px',
@@ -3664,32 +3664,32 @@ window.viewTicketDetails = function(ticketId) {
 
                 <!-- Meta chips row -->
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                    <div style="flex:1;min-width:120px;background:var(--chat-meta-bg);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
                         <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Negocio</div>
                         <div style="font-weight:700;font-size:0.84rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ticket.business_name || '—'}</div>
                     </div>
-                    <div style="flex:1;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                    <div style="flex:1;min-width:120px;background:var(--chat-meta-bg);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
                         <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Módulo</div>
                         <div style="font-weight:700;font-size:0.84rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${(() => {
                             const found = appState.modules.find(m => String(m.id) === String(ticket.module) || String(m.name) === String(ticket.module));
                             return found ? found.name : (ticket.module || '—');
                         })()}</div>
                     </div>
-                    <div style="flex:1;min-width:100px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
+                    <div style="flex:1;min-width:100px;background:var(--chat-meta-bg);border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;text-align:left;">
                         <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Creado</div>
                         <div style="font-weight:600;font-size:0.78rem;color:var(--text-main);">${fullDate}</div>
                     </div>
                 </div>
 
                 <!-- Chat area -->
-                <div style="border:1px solid var(--border-color);border-radius:14px;overflow:hidden;background:rgba(0,0,0,0.18);">
+                <div style="border:1px solid var(--border-color);border-radius:14px;overflow:hidden;background:var(--chat-outer-bg);">
                     <!-- Chat header bar -->
-                    <div style="padding:8px 14px;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="padding:8px 14px;background:var(--chat-header-bg);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;"></div>
                             <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">Conversación de la Solicitud</span>
                         </div>
-                        <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border-color);border-radius:8px;padding:4px 10px;width:140px;transition:all 0.2s;" onfocusin="this.style.width='200px';this.style.borderColor='var(--primary)';" onfocusout="this.style.width='140px';this.style.borderColor='var(--border-color)';">
+                        <div style="display:flex;align-items:center;background:var(--chat-search-bg);border:1px solid var(--border-color);border-radius:8px;padding:4px 10px;width:140px;transition:all 0.2s;" onfocusin="this.style.width='200px';this.style.borderColor='var(--primary)';" onfocusout="this.style.width='140px';this.style.borderColor='var(--border-color)';">
                             <i data-lucide="search" style="width:14px;height:14px;color:var(--text-muted);margin-right:6px;"></i>
                             <input type="text" id="chat-search-input" placeholder="Buscar..." oninput="handleChatSearch(this.value)" style="border:none;background:none;color:var(--text-main);font-size:0.8rem;outline:none;width:100%;font-family:'Outfit',sans-serif;" />
                         </div>
@@ -3708,28 +3708,28 @@ window.viewTicketDetails = function(ticketId) {
                             Solicitud cerrada — abre una nueva para continuar
                         </div>
                     ` : `
-                        <div style="padding:10px 12px;background:rgba(255,255,255,0.02);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;position:relative;">
+                        <div style="padding:10px 12px;background:var(--chat-input-bar-bg);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;position:relative;">
                             <input type="file" id="chat-image-input" accept="image/*" style="display:none;" onchange="handleTicketImageSelect(event)" />
                             
-                            <button onclick="document.getElementById('chat-image-input').click()" title="Enviar imagen" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)'">
+                            <button onclick="document.getElementById('chat-image-input').click()" title="Enviar imagen" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:var(--chat-button-bg);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='var(--chat-button-bg)';this.style.color='var(--text-muted)'">
                                 <i data-lucide="image" style="width:15px;height:15px;"></i>
                             </button>
 
                             <!-- Canned responses ray button -->
-                            <button onclick="toggleCannedResponsesDropdown(event)" title="Respuestas rápidas" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;position:relative;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)'">
+                            <button onclick="toggleCannedResponsesDropdown(event)" title="Respuestas rápidas" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border-color);background:var(--chat-button-bg);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;position:relative;" onmouseover="this.style.background='rgba(99,102,241,0.15)';this.style.color='var(--primary)'" onmouseout="this.style.background='var(--chat-button-bg)';this.style.color='var(--text-muted)'">
                                 <i data-lucide="zap" style="width:15px;height:15px;"></i>
                             </button>
 
-                            <!-- Custom Canned Responses Dropdown Menu (Glassmorphism dark style) -->
-                            <div id="canned-responses-dropdown" style="display:none; position:absolute; bottom:48px; left:52px; z-index:9999; background:rgba(30,41,59,0.95); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.08); border-radius:12px; width:280px; box-shadow:0 10px 25px rgba(0,0,0,0.3); padding:8px 0; animation: slideUp 0.15s ease;">
-                                <div style="padding:6px 12px; font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:4px; text-align:left;">Respuestas Rápidas</div>
-                                <a href="javascript:void(0)" onclick="selectCannedResponse('¡Hola! Claro que sí, estamos revisando tu caso en este momento y te daremos respuesta a la brevedad.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.02);" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">🕒 Revisando caso...</a>
-                                <a href="javascript:void(0)" onclick="selectCannedResponse('Hemos verificado y solucionado el inconveniente con tu módulo. Por favor pruébalo y confírmanos.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.02);" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">✅ Solucionado</a>
-                                <a href="javascript:void(0)" onclick="selectCannedResponse('Para procesar esta solicitud de facturación, requerimos que verifiques el estado de tu medio de pago registrado.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.02);" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">💳 Facturación</a>
-                                <a href="javascript:void(0)" onclick="selectCannedResponse('¿Nos podrías proporcionar más detalles o capturas de pantalla del error que estás experimentando?')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='none'">📸 Solicitar captura</a>
+                            <!-- Custom Canned Responses Dropdown Menu -->
+                            <div id="canned-responses-dropdown" style="display:none; position:absolute; bottom:48px; left:52px; z-index:9999; background:var(--chat-canned-bg); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid var(--chat-canned-border); border-radius:12px; width:280px; box-shadow:0 10px 25px rgba(0,0,0,0.3); padding:8px 0; animation: slideUp 0.15s ease;">
+                                <div style="padding:6px 12px; font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--chat-canned-border); margin-bottom:4px; text-align:left;">Respuestas Rápidas</div>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('¡Hola! Claro que sí, estamos revisando tu caso en este momento y te daremos respuesta a la brevedad.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid var(--border-color);" onmouseover="this.style.background='var(--chat-option-hover)'" onmouseout="this.style.background='none'">🕒 Revisando caso...</a>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('Hemos verificado y solucionado el inconveniente con tu módulo. Por favor pruébalo y confírmanos.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid var(--border-color);" onmouseover="this.style.background='var(--chat-option-hover)'" onmouseout="this.style.background='none'">✅ Solucionado</a>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('Para procesar esta solicitud de facturación, requerimos que verifiques el estado de tu medio de pago registrado.')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; border-bottom:1px solid var(--border-color);" onmouseover="this.style.background='var(--chat-option-hover)'" onmouseout="this.style.background='none'">💳 Facturación</a>
+                                <a href="javascript:void(0)" onclick="selectCannedResponse('¿Nos podrías proporcionar más detalles o capturas de pantalla del error que estás experimentando?')" style="display:block; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s;" onmouseover="this.style.background='var(--chat-option-hover)'" onmouseout="this.style.background='none'">📸 Solicitar captura</a>
                             </div>
 
-                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:rgba(255,255,255,0.05);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
+                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--chat-input-bg);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
                             
                             <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','admin')" style="width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary),#818cf8);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
                                 <i data-lucide="send" style="width:14px;height:14px;"></i>
@@ -3744,16 +3744,16 @@ window.viewTicketDetails = function(ticketId) {
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Estado:</span>
                         <div style="position:relative; display:inline-block;">
-                            <button id="chat-status-dropdown-btn" onclick="toggleChatStatusDropdown(event)" style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); color:${st.color}; font-size:0.8rem; padding:6px 14px; border-radius:8px; outline:none; cursor:pointer; font-family:'Outfit',sans-serif; font-weight:700; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)';" onmouseout="this.style.background='rgba(255,255,255,0.04)';">
+                            <button id="chat-status-dropdown-btn" onclick="toggleChatStatusDropdown(event)" style="background:var(--chat-status-btn-bg); border:1px solid var(--border-color); color:${st.color}; font-size:0.8rem; padding:6px 14px; border-radius:8px; outline:none; cursor:pointer; font-family:'Outfit',sans-serif; font-weight:700; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s;" onmouseover="this.style.background='var(--chat-status-btn-hover)';" onmouseout="this.style.background='var(--chat-status-btn-bg)';">
                                 <span id="chat-status-dot" style="width:7px; height:7px; border-radius:50%; background:${st.color}; display:inline-block;"></span>
                                 <span id="chat-status-text">${st.label}</span>
                                 <i data-lucide="chevron-down" style="width:12px; height:12px; opacity:0.7;"></i>
                             </button>
                             
                             <!-- Custom Dropdown Menu -->
-                            <div id="chat-status-dropdown-menu" style="display:none; position:absolute; bottom:42px; left:0; z-index:9999; background:rgba(30,41,59,0.98); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.08); border-radius:10px; width:160px; box-shadow:0 8px 20px rgba(0,0,0,0.4); padding:6px 0; animation: slideUp 0.15s ease;">
+                            <div id="chat-status-dropdown-menu" style="display:none; position:absolute; bottom:42px; left:0; z-index:9999; background:var(--chat-canned-bg); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid var(--chat-canned-border); border-radius:10px; width:160px; box-shadow:0 8px 20px rgba(0,0,0,0.4); padding:6px 0; animation: slideUp 0.15s ease;">
                                 ${Object.entries(TICKET_STATUS_MAP).filter(([key]) => key !== 'resuelto').map(([key, val]) => `
-                                    <a href="javascript:void(0)" onclick="selectChatStatusOption('${key}')" style="display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; font-weight:700;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">
+                                    <a href="javascript:void(0)" onclick="selectChatStatusOption('${key}')" style="display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:0.8rem; color:var(--text-main); text-decoration:none; text-align:left; transition:background 0.15s; font-weight:700;" onmouseover="this.style.background='var(--chat-option-hover)'" onmouseout="this.style.background='none'">
                                         <span style="width:6px; height:6px; border-radius:50%; background:${val.color};"></span>
                                         <span style="color:${val.color};">${val.label}</span>
                                     </a>
@@ -3945,11 +3945,11 @@ window.fetchAndRenderChatMessages = async function(ticketId, role) {
             let dateSeparator = '';
             const fullDateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
             if (idx === 0) {
-                dateSeparator = `<div style="text-align:center;margin:6px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+                dateSeparator = `<div style="text-align:center;margin:6px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--chat-date-text);background:var(--chat-date-bg);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
             } else {
                 const prevDate = new Date(prevMsg.created_at);
                 if (prevDate.toDateString() !== d.toDateString()) {
-                    dateSeparator = `<div style="text-align:center;margin:8px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
+                    dateSeparator = `<div style="text-align:center;margin:8px 0 10px;"><span style="font-size:0.65rem;font-weight:700;color:var(--chat-date-text);background:var(--chat-date-bg);padding:3px 10px;border-radius:20px;">${fullDateStr}</span></div>`;
                 }
             }
 
@@ -3963,7 +3963,7 @@ window.fetchAndRenderChatMessages = async function(ticketId, role) {
 
             const bubbleStyle = isMe
                 ? `background:linear-gradient(135deg,rgba(99,102,241,0.28),rgba(129,140,248,0.18));border:1px solid rgba(99,102,241,0.35);border-radius:14px 14px 4px 14px;`
-                : `background:rgba(255,255,255,0.06);border:1px solid var(--border-color);border-radius:14px 14px 14px 4px;`;
+                : `background:var(--chat-bubble-incoming);border:1px solid var(--border-color);border-radius:14px 14px 14px 4px;`;
 
             return `
                 ${dateSeparator}
