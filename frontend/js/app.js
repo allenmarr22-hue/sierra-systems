@@ -3383,10 +3383,6 @@ function renderAdminTickets() {
                 <td style="padding:1rem 1.5rem; font-size:0.82rem; color:var(--text-muted);">${dateStr}</td>
                 <td style="padding:1rem 1.5rem; text-align:center;">
                     <div style="display:inline-flex; gap:6px; align-items:center; justify-content:center;">
-                        <button class="btn-ghost" style="padding:0.35rem 0.85rem; font-size:0.8rem; border:1px solid var(--border-color); border-radius:8px; cursor:pointer;"
-                            onclick="updateTicketStatus('${t.id}', '${t.status}')">
-                            <i data-lucide="edit-3" style="width:13px;"></i> Estado
-                        </button>
                         <button class="btn-ghost delete-ticket-btn" style="padding:0.35rem 0.5rem; font-size:0.8rem; border:1px solid rgba(239,68,68,0.25); color:#ef4444; border-radius:8px; cursor:pointer; background:rgba(239,68,68,0.05); display:inline-flex; align-items:center; justify-content:center;"
                             onclick="deleteTicket('${t.id}')" title="Eliminar ticket permanentemente">
                             <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
