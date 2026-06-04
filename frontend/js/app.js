@@ -244,6 +244,27 @@ window.scrollCarousel = function(btn, direction) {
 };
 
 
+// Helper para parsear fechas de facturación de manera segura (evitando Invalid Date si ya incluye T o zona horaria)
+function parseBillingDate(dateStr) {
+    if (!dateStr) return null;
+    let dateObj;
+    if (typeof dateStr !== 'string') {
+        dateObj = new Date(dateStr);
+    } else if (dateStr.includes('T') || dateStr.includes(' ') || dateStr.length > 10) {
+        dateObj = new Date(dateStr);
+    } else {
+        dateObj = new Date(dateStr + 'T00:00:00');
+    }
+    return isNaN(dateObj.getTime()) ? null : dateObj;
+}
+
+// Helper para formatear fechas en español de Colombia de manera segura
+function formatBillingDate(dateStr, options = { day: '2-digit', month: 'short', year: 'numeric' }) {
+    const parsed = parseBillingDate(dateStr);
+    return parsed ? parsed.toLocaleDateString('es-CO', options) : '—';
+}
+
+
 // State Management
 const appState = {
     theme: localStorage.getItem('as_theme') || 'light',
@@ -2537,9 +2558,7 @@ function renderBillingTab() {
             : `<span style="color:#94a3b8;font-size:0.8rem;">Sin tarjeta</span>`;
 
         // Próximo corte
-        const nextCut = billing.next_billing_date
-            ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
-            : '—';
+        const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
 
         const amountDisplay = monthlyAmount > 0
             ? `$${monthlyAmount.toLocaleString('es-CO')}`
@@ -2634,9 +2653,7 @@ window.billingShowDetail = async function(bizId) {
 
     const statusLabels = { active: '✓ Activo', suspended: '⛔ Suspendido', pending: '⏳ Pendiente', cancelled: '🚫 Cancelado' };
     const status = billing.subscription_status || 'pending';
-    const nextCut = billing.next_billing_date
-        ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-        : '—';
+    const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'long', year: 'numeric' });
     const lastPayment = billing.last_payment_date
         ? new Date(billing.last_payment_date).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
@@ -2852,8 +2869,7 @@ window.billingGiftDays = async function(bizId) {
                 if (selectedOption) {
                     const expiry = selectedOption.getAttribute('data-expiry');
                     if (expiry) {
-                        const dateObj = new Date(expiry + 'T00:00:00');
-                        expiryDisplay.textContent = dateObj.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+                        expiryDisplay.textContent = formatBillingDate(expiry, { day: '2-digit', month: 'short', year: 'numeric' });
                     } else {
                         expiryDisplay.textContent = '—';
                     }
@@ -4340,8 +4356,8 @@ window.downloadGlobalBillingPDF = async function() {
         if (yearVal !== 'all' || monthVal !== 'all') {
             filteredBiz = filteredBiz.filter(biz => {
                 const billing = biz.billing || {};
-                if (!billing.next_billing_date) return false;
-                const d = new Date(billing.next_billing_date + 'T00:00:00');
+                const d = parseBillingDate(billing.next_billing_date);
+                if (!d) return false;
                 const yearMatch = yearVal === 'all' || String(d.getFullYear()) === yearVal;
                 const monthMatch = monthVal === 'all' || String(d.getMonth()) === monthVal;
                 return yearMatch && monthMatch;
@@ -4392,9 +4408,7 @@ window.downloadGlobalBillingPDF = async function() {
                 });
             }
 
-            const nextCut = billing.next_billing_date
-                ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
-                : '—';
+            const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
 
             const modNames = (biz.modules || []).map(mid => {
                 const m = modules.find(x => String(x.id) === String(mid));
@@ -4505,9 +4519,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
 
         const billing = biz.billing || {};
         const statusLabel = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' }[billing.subscription_status || 'pending'] || '—';
-        const nextCut = billing.next_billing_date
-            ? new Date(billing.next_billing_date + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
-            : '—';
+        const nextCut = formatBillingDate(billing.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
 
         const pageCount = 1;
 
