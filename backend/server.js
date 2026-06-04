@@ -1824,6 +1824,9 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
         }
 
         let newDateStr = '';
+        let moduleName = '';
+        let branchName = '';
+
         if (targetInstance) {
             // Calcular nueva fecha de corte para esta instancia específica
             const currentRenewal = targetInstance.renewalDate || biz.billing?.next_billing_date;
@@ -1841,6 +1844,10 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
                 next_billing_date: newDateStr,
                 subscription_status: biz.billing?.subscription_status === 'suspended' ? 'active' : (biz.billing?.subscription_status || 'active')
             };
+
+            const mod = dbState.modules.find(m => m.id === targetInstance.moduleId);
+            moduleName = mod ? mod.name : targetInstance.moduleId;
+            branchName = targetInstance.branchName || 'Sede Principal';
         } else {
             // Caso general o legacy (sin instanceId)
             const currentNext = biz.billing?.next_billing_date;
@@ -1861,6 +1868,32 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
                 }
             }
         }
+
+        // Registrar en historial de pagos SQL directo (Obsequio de Días)
+        const concept = `Cortesía / Obsequio de ${daysInt} días — ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}`;
+        try {
+            await db.pool.query(`
+                INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                `pay_gift_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                bizId,
+                0.00, // $0 COP
+                concept,
+                'APPROVED',
+                `gift_txn_${Date.now()}_${Math.floor(Math.random()*1000)}`
+            ]);
+        } catch (dbErr) {
+            console.error('[ExtendBilling] Error registrando historial de obsequio:', dbErr.message);
+        }
+
+        // Registrar notificación en tiempo real para auditoría
+        pushNotification(dbState, {
+            title: 'Días de Cortesía Otorgados',
+            desc: `Se obsequiaron ${daysInt} días adicionales a "${biz.name}" en ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}.`,
+            icon: 'gift',
+            color: '#10b981'
+        });
 
         await writeDb(dbState);
         broadcastUpdate();
