@@ -1246,7 +1246,7 @@ window.showTab = function(tabId, element) {
     }
 
     if (tabId === 'expenses-tab') {
-        renderExpenses();
+        window.checkExpensesLockState();
     }
 
     if (tabId === 'dashboard-tab') {
@@ -8260,6 +8260,11 @@ window.saveSecurityDetails = function() {
     }
     if (isExpensePassChanged) {
         localStorage.setItem('margarita_expense_pass', newExpensePass);
+        if (newExpensePass === '') {
+            window._expensesUnlocked = true;
+        } else {
+            window._expensesUnlocked = false; // Lock if new password is set
+        }
     }
 
     showToast("Datos de acceso actualizados correctamente.", "success");
@@ -9336,26 +9341,45 @@ window.exportExpensesToExcel = function() {
 
 // GESTION DE SEGURIDAD PARA LIBRETA DE GASTOS
 window._expensesUnlocked = false;
-window.unlockExpenses = function() {
-    const passInput = document.getElementById('expense-unlock-pass');
+
+window.checkExpensesLockState = function() {
+    const customExpensePass = localStorage.getItem('margarita_expense_pass');
     const lockScreen = document.getElementById('expenses-lock-screen');
     const content = document.getElementById('expenses-restricted-content');
-    
-    const enteredPass = passInput.value;
-    const adminPass = localStorage.getItem('margarita_admin_pass') || '12345';
-    const customExpensePass = localStorage.getItem('margarita_expense_pass'); // Por si se quiere una distinta luego
-    
-    const correctPass = customExpensePass || adminPass;
 
-    if (enteredPass === correctPass) {
-        window._expensesUnlocked = true;
+    // Si la clave no está configurada (null, undefined o vacío), entra directo
+    const hasNoPassword = (customExpensePass === null || customExpensePass.trim() === '');
+
+    if (hasNoPassword || window._expensesUnlocked) {
         if (lockScreen) lockScreen.style.display = 'none';
         if (content) content.style.display = 'block';
-        
-        showToast("Acceso financiero concedido.", "success");
         if (typeof window.renderExpenses === 'function') {
             window.renderExpenses();
         }
+    } else {
+        if (lockScreen) lockScreen.style.display = 'flex';
+        if (content) content.style.display = 'none';
+    }
+};
+
+window.unlockExpenses = function() {
+    const passInput = document.getElementById('expense-unlock-pass');
+    if (!passInput) return;
+    const enteredPass = passInput.value;
+    const customExpensePass = localStorage.getItem('margarita_expense_pass');
+    
+    // Si no hay contraseña configurada
+    const hasNoPassword = (customExpensePass === null || customExpensePass.trim() === '');
+    if (hasNoPassword) {
+        window._expensesUnlocked = true;
+        window.checkExpensesLockState();
+        return;
+    }
+
+    if (enteredPass === customExpensePass) {
+        window._expensesUnlocked = true;
+        window.checkExpensesLockState();
+        showToast("Acceso financiero concedido.", "success");
     } else {
         showToast("Clave de acceso incorrecta.", "error");
         passInput.value = "";
