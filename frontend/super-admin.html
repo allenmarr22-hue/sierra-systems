@@ -504,38 +504,6 @@
                 </div>
             </div>
 
-            <!-- Widget de Soporte y Tickets -->
-            <div class="biz-card glass-card" data-roles="Super Admin,Soporte" style="padding: 1.5rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
-                <h3 style="margin-bottom: 1.25rem; font-size: 1.15rem; display: flex; align-items: center; justify-content: space-between; color: var(--text-main);">
-                    <span style="display: flex; align-items: center; gap: 0.5rem;">
-                        <i data-lucide="ticket-check" style="color: var(--warning);"></i> Resumen de Soporte y Tickets
-                    </span>
-                    <button class="btn-ghost" onclick="showView('tab-tickets')" style="font-size: 0.8rem; color: var(--primary); font-weight: 600; text-decoration: none; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                        Ver todos los tickets <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
-                    </button>
-                </h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.25rem;">
-                    <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.15); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s;" class="hover-scale">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: #3b82f6; margin-bottom: 0.25rem;" id="dash-tickets-open">0</div>
-                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Abiertos / Nuevos</div>
-                    </div>
-                    <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s;" class="hover-scale">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: #f59e0b; margin-bottom: 0.25rem;" id="dash-tickets-progress">0</div>
-                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">En Proceso</div>
-                    </div>
-                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s;" class="hover-scale">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: #10b981; margin-bottom: 0.25rem;" id="dash-tickets-resolved">0</div>
-                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Finalizados</div>
-                    </div>
-                    <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s; position: relative; overflow: hidden;" class="hover-scale pulse-border">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: #ef4444; margin-bottom: 0.25rem;" id="dash-tickets-urgent">0</div>
-                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                            <span class="pulse-dot"></span> Urgentes
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         <!-- CHARTS SECTION -->
         <div class="charts-grid">
             <div class="biz-card" style="padding: 1.5rem;">
