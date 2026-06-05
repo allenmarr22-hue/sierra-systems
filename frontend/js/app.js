@@ -461,6 +461,7 @@ function applyRolePermissions() {
     const initials = (appState.user?.name || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
 
     if (role === 'Super Admin') {
+        document.documentElement.classList.add('is-super-admin');
         // Show the unified pill, hide the fallback
         const unifiedPill = document.getElementById('sa-unified-pill');
         const normalPill  = document.getElementById('user-pill-normal');
@@ -472,6 +473,7 @@ function applyRolePermissions() {
         const footer = document.querySelector('.sidebar-footer');
         if (footer) { footer.style.justifyContent = 'center'; footer.style.padding = '0.75rem 1rem'; }
     } else {
+        document.documentElement.classList.remove('is-super-admin');
         // Hide unified pill, show normal layout
         const unifiedPill = document.getElementById('sa-unified-pill');
         const normalPill  = document.getElementById('user-pill-normal');

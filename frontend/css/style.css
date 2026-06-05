@@ -3828,8 +3828,8 @@ html[data-accent="orange"][data-theme="light"] {
     align-items: center;
     justify-content: center;
     align-self: center;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     flex-shrink: 0;
     margin-left: 3px;
     z-index: 2;
@@ -3841,8 +3841,8 @@ html[data-accent="orange"][data-theme="light"] {
     display: inline-flex;
     align-items: center;
     align-self: center;
-    gap: 3.5px;
-    padding: 0 5px;
+    gap: 5px;
+    padding: 0 8px;
     position: relative;
     z-index: 2;
     flex-shrink: 0;
@@ -3855,7 +3855,7 @@ html[data-accent="orange"][data-theme="light"] {
     justify-content: center;
     /* Fill the full height of the pill — no more tiny corner target */
     align-self: stretch;
-    width: 36px;
+    width: 42px;
     flex-shrink: 0;
     background: transparent !important;
     border: none !important;
@@ -3865,7 +3865,7 @@ html[data-accent="orange"][data-theme="light"] {
     border-radius: 0 999px 999px 0 !important;
     transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
     margin-right: 0;
-    padding: 0 8px !important;
+    padding: 0 10px !important;
     z-index: 2;
     position: relative;
     box-shadow: none !important;
