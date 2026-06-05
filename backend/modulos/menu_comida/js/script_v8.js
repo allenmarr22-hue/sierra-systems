@@ -376,7 +376,11 @@ function applyTheme(accentColor, bgUrl, logoUrl) {
     // Update Browser Favicon
     const favicon = document.getElementById('app-favicon');
     if (favicon && logoUrl) {
-        favicon.href = logoUrl;
+        if (typeof window.setRoundedFavicon === 'function') {
+            window.setRoundedFavicon(logoUrl);
+        } else {
+            favicon.href = logoUrl;
+        }
     }
 
     // Update Collapsed Sidebar Logo
@@ -540,7 +544,13 @@ function updateUIFromConfig() {
         // Update Browser Favicon if a custom logo image exists
         if (c.themeLogo) {
             const favicon = document.getElementById('app-favicon');
-            if (favicon) favicon.href = c.themeLogo;
+            if (favicon) {
+                if (typeof window.setRoundedFavicon === 'function') {
+                    window.setRoundedFavicon(c.themeLogo);
+                } else {
+                    favicon.href = c.themeLogo;
+                }
+            }
         }
 
         const hasName = c.restaurantName && c.restaurantName.trim().length > 0;

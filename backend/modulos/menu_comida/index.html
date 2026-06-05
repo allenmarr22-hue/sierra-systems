@@ -53,15 +53,55 @@
                 var link = document.createElement('link');
                 link.id = 'app-favicon';
                 link.rel = 'icon';
-                if (logoSrc) {
-                    link.type = logoSrc.startsWith('data:image/svg') || logoSrc.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
-                    link.href = logoSrc;
-                } else {
-                    // Cargar el favicon por defecto de la plantilla (logo de comida/hamburguesa), NO el de AS
-                    link.type = 'image/png';
-                    link.href = 'assets/logo-default.png';
-                }
+                
+                var originalUrl = logoSrc || 'assets/logo-default.png';
+                
+                window.setRoundedFavicon = function(src) {
+                    var img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = src;
+                    img.onload = function() {
+                        try {
+                            var canvas = document.createElement('canvas');
+                            canvas.width = 128;
+                            canvas.height = 128;
+                            var ctx = canvas.getContext('2d');
+                            
+                            ctx.beginPath();
+                            var r = 28; // Radio de curvatura (tipo squircle suave como el logo de AS)
+                            ctx.moveTo(r, 0);
+                            ctx.lineTo(128 - r, 0);
+                            ctx.quadraticCurveTo(128, 0, 128, r);
+                            ctx.lineTo(128, 128 - r);
+                            ctx.quadraticCurveTo(128, 128, 128 - r, 128);
+                            ctx.lineTo(r, 128);
+                            ctx.quadraticCurveTo(0, 128, 0, 128 - r);
+                            ctx.lineTo(0, r);
+                            ctx.quadraticCurveTo(0, 0, r, 0);
+                            ctx.closePath();
+                            ctx.clip();
+                            
+                            ctx.drawImage(img, 0, 0, 128, 128);
+                            link.type = 'image/png';
+                            link.href = canvas.toDataURL('image/png');
+                        } catch(err) {
+                            link.type = src.startsWith('data:image/svg') || src.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                            link.href = src;
+                        }
+                    };
+                    img.onerror = function() {
+                        link.type = src.startsWith('data:image/svg') || src.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                        link.href = src;
+                    };
+                };
+                
+                // Carga inicial rápida antes del redondeo
+                link.type = originalUrl.startsWith('data:image/svg') || originalUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+                link.href = originalUrl;
                 document.getElementsByTagName('head')[0].appendChild(link);
+                
+                // Aplicar redondeo dinámico
+                window.setRoundedFavicon(originalUrl);
             } catch(e) {}
         })();
 
