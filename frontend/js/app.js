@@ -402,7 +402,7 @@ const ROLE_PERMISSIONS = {
         canDelete: true
     },
     'Administrador': {
-        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules', 'tab-promotions'],
+        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules', 'tab-promotions', 'tab-tickets'],
         canCreate: true,
         canEdit: true,
         canDelete: false
@@ -433,14 +433,10 @@ function applyRolePermissions() {
     const role = getCurrentRole();
     const perms = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS['Soporte'];
 
-    // Show/hide nav buttons
-    document.querySelectorAll('.nav-btn[data-roles]').forEach(btn => {
-        const allowed = btn.getAttribute('data-roles').split(',').map(r => r.trim());
-        if (allowed.includes(role)) {
-            btn.style.display = '';
-        } else {
-            btn.style.display = 'none';
-        }
+    // Show/hide ALL elements with data-roles (nav buttons, action buttons, etc.)
+    document.querySelectorAll('[data-roles]').forEach(el => {
+        const allowed = el.getAttribute('data-roles').split(',').map(r => r.trim());
+        el.style.display = allowed.includes(role) ? '' : 'none';
     });
 
     // Hide/show the Gestión section label if no items visible
@@ -516,18 +512,7 @@ function applyRolePermissions() {
     }
     if (topbarAvatar) topbarAvatar.textContent = initials;
 
-    // Show limited access banner for Soporte
-    if (role === 'Soporte') {
-        const existing = document.getElementById('readonly-banner');
-        if (!existing) {
-            const banner = document.createElement('div');
-            banner.id = 'readonly-banner';
-            banner.innerHTML = '<i data-lucide="shield" style="width:14px;height:14px;"></i> Acceso limitado — Puede responder tickets, solo lectura en lo demás';
-            banner.style.cssText = 'position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:var(--primary);padding:0.5rem 1.25rem;border-radius:20px;font-size:0.78rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;z-index:9000;backdrop-filter:blur(8px);';
-            document.body.appendChild(banner);
-            lucide.createIcons();
-        }
-    }
+
 }
 
 

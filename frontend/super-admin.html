@@ -610,7 +610,7 @@
                     <h2 class="page-title">Negocios</h2>
                     <p class="page-subtitle">Gestiona todos los clientes del sistema</p>
                 </div>
-                <button class="btn-primary" id="btn-new-business">
+                <button class="btn-primary" id="btn-new-business" data-roles="Super Admin,Administrador">
                     <i data-lucide="plus"></i> Nuevo Negocio
                 </button>
             </div>
@@ -1013,7 +1013,7 @@
                                 <button class="pill" onclick="setTicketFilter('en_proceso')">En Proceso</button>
                                 <button class="pill" onclick="setTicketFilter('finalizado')">Finalizados</button>
                             </div>
-                            <button id="btn-clear-all-tickets" onclick="clearAllTickets()" style="display:flex; align-items:center; gap:6px; font-size:0.85rem; padding:0.5rem 1rem; border-radius:8px; border:none; background:rgba(239,68,68,0.1); color:#f87171; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
+                            <button id="btn-clear-all-tickets" onclick="clearAllTickets()" data-roles="Super Admin" style="display:flex; align-items:center; gap:6px; font-size:0.85rem; padding:0.5rem 1rem; border-radius:8px; border:none; background:rgba(239,68,68,0.1); color:#f87171; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
                                 <i data-lucide="trash-2" style="width:14px; height:14px;"></i> Eliminar todos
                             </button>
                         </div>
