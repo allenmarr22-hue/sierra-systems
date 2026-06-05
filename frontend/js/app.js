@@ -615,11 +615,15 @@ async function loadData() {
     try {
         const res = await adminFetch('/api/data');
         const data = await res.json();
+        
+        const oldBusinessesStr = JSON.stringify(appState.businesses);
+        const oldModulesStr = JSON.stringify(appState.modules);
+        const oldUsersStr = JSON.stringify(appState.users);
+        const oldConfigStr = JSON.stringify(appState.config);
+
         appState.businesses = data.businesses || [];
         appState.modules = data.modules || [];
         appState.users = data.users || [];
-        appState.config = data.config || {};
-        
         appState.config = data.config || {};
 
         if (appState.config.adminUser) {
@@ -646,13 +650,18 @@ async function loadData() {
             appState.customLogo = appState.config.logo;
         }
 
+        let ticketsChanged = false;
         // Preload tickets if admin token is present to feed the charts
         if (getAdminToken()) {
             try {
                 const resTickets = await adminFetch('/api/admin/tickets');
                 const dataTickets = await resTickets.json();
                 if (resTickets.ok && dataTickets.success) {
+                    const oldTicketsStr = JSON.stringify(appState.adminTickets);
                     appState.adminTickets = dataTickets.tickets || [];
+                    if (JSON.stringify(appState.adminTickets) !== oldTicketsStr) {
+                        ticketsChanged = true;
+                    }
                     if (typeof updateTicketBadge === 'function') updateTicketBadge();
                     if (typeof updateTicketKPIs === 'function') updateTicketKPIs();
                 }
@@ -661,8 +670,22 @@ async function loadData() {
             }
         }
         
-        initDashboard();
-        initCharts();
+        const businessesChanged = JSON.stringify(appState.businesses) !== oldBusinessesStr;
+        const modulesChanged = JSON.stringify(appState.modules) !== oldModulesStr;
+        const usersChanged = JSON.stringify(appState.users) !== oldUsersStr;
+        const configChanged = JSON.stringify(appState.config) !== oldConfigStr;
+        const anyDataChanged = businessesChanged || modulesChanged || usersChanged || configChanged || ticketsChanged;
+
+        if (anyDataChanged) {
+            initDashboard();
+            if (!document.getElementById('tab-dashboard').classList.contains('hidden')) {
+                initCharts();
+                window.chartsNeedRebuild = false;
+            } else {
+                window.chartsNeedRebuild = true;
+            }
+        }
+        
         applyRolePermissions();
 
         // Cargar notificaciones reales y arrancar polling cada 30s
@@ -672,10 +695,18 @@ async function loadData() {
         }
         
         // Re-render active tabs if needed
-        if (!document.getElementById('tab-businesses').classList.contains('hidden')) renderBusinessesGrid();
-        if (!document.getElementById('tab-modules').classList.contains('hidden')) renderModulesGrid();
-        if (!document.getElementById('tab-users').classList.contains('hidden')) renderUsersList();
-        if (!document.getElementById('tab-billing').classList.contains('hidden')) renderBillingTab();
+        if (!document.getElementById('tab-businesses').classList.contains('hidden') && businessesChanged) {
+            renderBusinessesGrid();
+        }
+        if (!document.getElementById('tab-modules').classList.contains('hidden') && modulesChanged) {
+            renderModulesGrid();
+        }
+        if (!document.getElementById('tab-users').classList.contains('hidden') && usersChanged) {
+            renderUsersList();
+        }
+        if (!document.getElementById('tab-billing').classList.contains('hidden') && (businessesChanged || modulesChanged)) {
+            renderBillingTab();
+        }
     } catch (err) {
         console.error(err);
         showToast('Error de conexión con el servidor', 'error');
@@ -991,6 +1022,12 @@ function setupEventListeners() {
             const title = btn.querySelector('span').textContent;
             document.getElementById('topbar-page-name').textContent = title;
             
+            if (target === 'tab-dashboard') {
+                if (window.chartsNeedRebuild) {
+                    initCharts();
+                    window.chartsNeedRebuild = false;
+                }
+            }
             if (target === 'tab-businesses') renderBusinessesGrid();
             if (target === 'tab-modules') renderModulesGrid();
             if (target === 'tab-users') renderUsersList();
@@ -2390,6 +2427,7 @@ let growthChart = null;
 let modulesChart = null;
 let revenueChart = null;
 let ticketsChart = null;
+window.chartsNeedRebuild = false;
 
 function initCharts() {
     // Destruir instancias previas si existen para evitar solapamientos
