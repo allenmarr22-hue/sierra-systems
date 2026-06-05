@@ -523,6 +523,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check Auth
     if (localStorage.getItem('as_auth') === 'true' && appState.user) {
         showView('dashboard-view');
+        // Aplicar permisos INMEDIATAMENTE con el rol guardado en localStorage,
+        // sin esperar a que loadData() termine su llamada async a la API.
+        // Esto evita que el menú muestre opciones incorrectas al cargar la página.
+        applyRolePermissions();
         loadData();
 
         // ==========================================
