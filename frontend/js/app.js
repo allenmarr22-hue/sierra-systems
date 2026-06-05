@@ -499,7 +499,11 @@ function applyRolePermissions() {
         if (normalLogout) normalLogout.style.display  = 'none';
         // Hide sidebar-footer justify-content space-between when unified
         const footer = document.querySelector('.sidebar-footer');
-        if (footer) { footer.style.justifyContent = 'center'; footer.style.padding = '0.75rem 1rem'; }
+        if (footer) {
+            footer.style.justifyContent = 'center';
+            footer.style.padding = '0.75rem 1rem';
+            footer.classList.add('sa-footer-unified');
+        }
     } else {
         document.documentElement.classList.remove('is-super-admin');
         // Hide unified pill, show normal layout
@@ -511,7 +515,11 @@ function applyRolePermissions() {
         if (normalLogout) normalLogout.style.display  = 'block';
         // Reset sidebar-footer styles back to default (space-between)
         const footer = document.querySelector('.sidebar-footer');
-        if (footer) { footer.style.justifyContent = ''; footer.style.padding = ''; }
+        if (footer) {
+            footer.style.justifyContent = '';
+            footer.style.padding = '';
+            footer.classList.remove('sa-footer-unified');
+        }
 
         if (nameEl) nameEl.textContent = appState.user?.name || 'Usuario';
         if (avatarEl) {
