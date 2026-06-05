@@ -62,28 +62,30 @@
                     img.src = src;
                     img.onload = function() {
                         try {
+                            // 1. Dibujar la imagen en canvas para obtener su base64 (seguro contra restricciones de sandbox de data URIs)
                             var canvas = document.createElement('canvas');
-                            canvas.width = 128;
-                            canvas.height = 128;
+                            canvas.width = img.naturalWidth || 128;
+                            canvas.height = img.naturalHeight || 128;
                             var ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            var pngBase64 = canvas.toDataURL('image/png');
                             
-                            ctx.beginPath();
-                            var r = 28; // Radio de curvatura (tipo squircle suave como el logo de AS)
-                            ctx.moveTo(r, 0);
-                            ctx.lineTo(128 - r, 0);
-                            ctx.quadraticCurveTo(128, 0, 128, r);
-                            ctx.lineTo(128, 128 - r);
-                            ctx.quadraticCurveTo(128, 128, 128 - r, 128);
-                            ctx.lineTo(r, 128);
-                            ctx.quadraticCurveTo(0, 128, 0, 128 - r);
-                            ctx.lineTo(0, r);
-                            ctx.quadraticCurveTo(0, 0, r, 0);
-                            ctx.closePath();
-                            ctx.clip();
-                            
-                            ctx.drawImage(img, 0, 0, 128, 128);
-                            link.type = 'image/png';
-                            link.href = canvas.toDataURL('image/png');
+                            // 2. Insertar el base64 en un SVG vectorial para que las curvas se rendericen 100% nítidas (como el de AS)
+                            var svgContent = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+                                '<defs>' +
+                                '  <clipPath id="squircle">' +
+                                '    <rect width="100" height="100" rx="22" />' +
+                                '  </clipPath>' +
+                                '</defs>' +
+                                '<g clip-path="url(#squircle)">' +
+                                '  <rect width="100" height="100" fill="#000000" />' + // Fondo negro de respaldo
+                                '  <image href="' + pngBase64 + '" width="100" height="100" preserveAspectRatio="xMidYMid slice" />' +
+                                '</g>' +
+                                '</svg>';
+                                
+                            var svgBase64 = btoa(unescape(encodeURIComponent(svgContent)));
+                            link.type = 'image/svg+xml';
+                            link.href = 'data:image/svg+xml;base64,' + svgBase64;
                         } catch(err) {
                             link.type = src.startsWith('data:image/svg') || src.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
                             link.href = src;
