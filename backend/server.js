@@ -1154,9 +1154,9 @@ app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
 });
 
 // ============================================================
-// MÓDULOS (SUPER ADMIN)
+// MÓDULOS (WRITE ACCESS)
 // ============================================================
-app.put('/api/modules/:id', requireSuperAdmin, async (req, res) => {
+app.put('/api/modules/:id', requireWriteAccess, async (req, res) => {
     const modId = req.params.id;
     const updatedFields = req.body;
     try {
