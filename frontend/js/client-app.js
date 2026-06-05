@@ -636,30 +636,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================
-    // SSE REAL-TIME SYNC
+    // SSE REAL-TIME SYNC — Backoff Exponencial
     // ==========================================
-    const evtSource = new EventSource('/api/stream');
-    evtSource.onmessage = function(event) {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'update') {
-                console.log('Update received via SSE, reloading data...');
-                loadData();
-                if (typeof loadMyTickets === 'function') {
-                    loadMyTickets();
-                }
-                if (window.activeChatTicketId) {
-                    fetchAndRenderChatMessages(window.activeChatTicketId, 'client');
-                }
-            } else if (data.type === 'typing') {
-                if (window.activeChatTicketId === data.ticketId && data.role !== 'client') {
-                    showChatTypingIndicator('Soporte está escribiendo...');
-                }
-            }
-        } catch (err) {
-            console.error('SSE Error:', err);
+    let _sseRetryDelay = 1000;
+    let _sseSource = null;
+    let _sseReconnectTimer = null;
+    let _sseReconnectToastShown = false;
+
+    function _connectSSE() {
+        if (_sseSource) {
+            _sseSource.close();
+            _sseSource = null;
         }
-    };
+        _sseSource = new EventSource('/api/stream');
+
+        _sseSource.onopen = function() {
+            _sseRetryDelay = 1000; // Reset delay on successful connection
+            if (_sseReconnectToastShown) {
+                showToast('✅ Conexión en tiempo real restaurada', 'success');
+                _sseReconnectToastShown = false;
+            }
+        };
+
+        _sseSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'update') {
+                    console.log('Update received via SSE, reloading data...');
+                    loadData();
+                    if (typeof loadMyTickets === 'function') {
+                        loadMyTickets();
+                    }
+                    if (window.activeChatTicketId) {
+                        fetchAndRenderChatMessages(window.activeChatTicketId, 'client');
+                    }
+                } else if (data.type === 'typing') {
+                    if (window.activeChatTicketId === data.ticketId && data.role !== 'client') {
+                        showChatTypingIndicator('Soporte está escribiendo...');
+                    }
+                }
+            } catch (err) {
+                console.error('SSE Error:', err);
+            }
+        };
+
+        _sseSource.onerror = function() {
+            _sseSource.close();
+            _sseSource = null;
+            if (!_sseReconnectToastShown) {
+                showToast(`⚡ Reconectando en ${Math.round(_sseRetryDelay / 1000)}s...`, 'info');
+                _sseReconnectToastShown = true;
+            }
+            console.warn(`[SSE] Reconectando en ${_sseRetryDelay}ms...`);
+            clearTimeout(_sseReconnectTimer);
+            _sseReconnectTimer = setTimeout(() => {
+                _sseRetryDelay = Math.min(_sseRetryDelay * 2, 30000); // Max 30s
+                _connectSSE();
+            }, _sseRetryDelay);
+        };
+    }
+
+    _connectSSE();
 
     // Billing button (attached after DOM is ready)
     document.querySelectorAll('#tab-billing button').forEach(btn => {
@@ -1899,7 +1936,6 @@ function initClientCharts() {
                 .filter(Boolean);
         }
 
-        console.log('[initClientCharts] activeMods:', activeMods.length, activeMods.map(m => m.name));
 
         // Calcular total mensual usando priceApplied si existe, sino price del módulo
         const monthlyTotal = activeMods.reduce((sum, mod) => {
@@ -1909,7 +1945,6 @@ function initClientCharts() {
             return sum + price;
         }, 0);
 
-        console.log('[initClientCharts] monthlyTotal:', monthlyTotal);
 
         // ── 1. Line Chart: Consumo y Proyección Mensual ──
         const gradient = ctxBilling.createLinearGradient(0, 0, 0, 200);
@@ -2027,7 +2062,6 @@ function initClientCharts() {
             }
         });
 
-        console.log('[initClientCharts] ✅ Gráficas renderizadas correctamente');
 
     } catch (err) {
         console.error('[initClientCharts] ❌ Error:', err);
@@ -3974,9 +4008,9 @@ window.viewClientTicketDetails = function(ticketId) {
                         </div>
                     </div>
                     ${ticket.status === 'cerrado' ? `
-                        <div style="padding:10px 14px;background:rgba(239,68,68,0.06);border-top:1px solid rgba(239,68,68,0.2);color:#ef4444;display:flex;align-items:center;gap:8px;font-size:0.78rem;font-weight:700;justify-content:center;">
-                            <i data-lucide="lock" style="width:12px;height:12px;"></i>
-                            Solicitud cerrada — abre una nueva para continuar
+                        <div class="chat-closed-banner">
+                            <i data-lucide="lock" style="width:14px;height:14px;"></i>
+                            Solicitud cerrada — Abre una nueva para continuar
                         </div>
                     ` : `
                         <div style="padding:10px 12px;background:var(--chat-input-bar-bg);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;">

@@ -4140,4 +4140,114 @@ html[data-accent="orange"][data-theme="light"] {
     50% { box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.45); }
 }
 
+/* ==========================================================================
+   Premium Interface Polish, Animations and Upgrades
+   ========================================================================== */
+
+/* ── SweetAlert2 Glassmorphism ── */
+.swal2-popup {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: var(--shadow-lg), 0 20px 50px rgba(0, 0, 0, 0.3) !important;
+    border-radius: 24px !important;
+}
+
+/* ── Entrance FadeInUp Animation ── */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.kpi-card, .biz-card, .section-card, .glass-card {
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kpi-card:nth-child(1) { animation-delay: 0.04s; }
+.kpi-card:nth-child(2) { animation-delay: 0.08s; }
+.kpi-card:nth-child(3) { animation-delay: 0.12s; }
+.kpi-card:nth-child(4) { animation-delay: 0.16s; }
+
+/* ── Table Rows Hover Micro-Animations ── */
+.data-table tbody tr {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.data-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.04) !important;
+    transform: scale(1.004) translateZ(0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Urgent Ticket Pulse & Glow Animations ── */
+@keyframes badgePulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    }
+    50% {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+}
+
+.pulse-border {
+    position: relative;
+}
+.pulse-border::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1.5px solid #ef4444;
+    animation: badgePulse 2s infinite;
+    pointer-events: none;
+    opacity: 0.35;
+}
+
+.pulse-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #ef4444;
+    border-radius: 50%;
+    animation: badgePulse 1.6s infinite;
+}
+
+.nav-badge-urgent {
+    animation: badgePulse 1.8s infinite;
+}
+
+/* ── Closed Chat Banner Styling ── */
+.chat-closed-banner {
+    padding: 12px 18px;
+    background: rgba(239, 68, 68, 0.06) !important;
+    border-top: 1px solid rgba(239, 68, 68, 0.2) !important;
+    color: #ef4444 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    justify-content: center !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    letter-spacing: 0.02em;
+    animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Hover Scale Utility ── */
+.hover-scale {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+}
+.hover-scale:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
 

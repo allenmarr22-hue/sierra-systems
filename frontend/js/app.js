@@ -396,7 +396,7 @@ async function adminFetch(url, options = {}) {
 // Permission definitions per role
 const ROLE_PERMISSIONS = {
     'Super Admin': {
-        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules', 'tab-users', 'tab-billing', 'tab-settings', 'tab-promotions'],
+        tabs: ['tab-dashboard', 'tab-businesses', 'tab-modules', 'tab-users', 'tab-billing', 'tab-settings', 'tab-promotions', 'tab-tickets'],
         canCreate: true,
         canEdit: true,
         canDelete: true
@@ -526,30 +526,66 @@ document.addEventListener('DOMContentLoaded', () => {
         loadData();
 
         // ==========================================
-        // SSE REAL-TIME SYNC
+        // SSE REAL-TIME SYNC — Backoff Exponencial
         // ==========================================
-        const evtSource = new EventSource('/api/stream');
-        evtSource.onmessage = function(event) {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'update') {
-                    console.log('Update received via SSE, reloading data...');
-                    loadData();
-                    if (typeof loadAdminTickets === 'function') {
-                        loadAdminTickets();
-                    }
-                    if (window.activeChatTicketId) {
-                        fetchAndRenderChatMessages(window.activeChatTicketId, 'admin');
-                    }
-                } else if (data.type === 'typing') {
-                    if (window.activeChatTicketId === data.ticketId && data.role !== 'admin') {
-                        showChatTypingIndicator('El cliente está escribiendo...');
-                    }
-                }
-            } catch (err) {
-                console.error('SSE Error:', err);
+        let _sseRetryDelay = 1000;
+        let _sseSource = null;
+        let _sseReconnectTimer = null;
+        let _sseReconnectToastShown = false;
+
+        function _connectSSE() {
+            if (_sseSource) {
+                _sseSource.close();
+                _sseSource = null;
             }
-        };
+            _sseSource = new EventSource('/api/stream');
+
+            _sseSource.onopen = function() {
+                _sseRetryDelay = 1000; // Reset delay on successful connection
+                if (_sseReconnectToastShown) {
+                    showToast('✅ Conexión en tiempo real restaurada', 'success');
+                    _sseReconnectToastShown = false;
+                }
+            };
+
+            _sseSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'update') {
+                        loadData();
+                        if (typeof loadAdminTickets === 'function') {
+                            loadAdminTickets();
+                        }
+                        if (window.activeChatTicketId) {
+                            fetchAndRenderChatMessages(window.activeChatTicketId, 'admin');
+                        }
+                    } else if (data.type === 'typing') {
+                        if (window.activeChatTicketId === data.ticketId && data.role !== 'admin') {
+                            showChatTypingIndicator('El cliente está escribiendo...');
+                        }
+                    }
+                } catch (err) {
+                    console.error('SSE parse error:', err);
+                }
+            };
+
+            _sseSource.onerror = function() {
+                _sseSource.close();
+                _sseSource = null;
+                if (!_sseReconnectToastShown) {
+                    showToast(`⚡ Reconectando en ${Math.round(_sseRetryDelay / 1000)}s...`, 'info');
+                    _sseReconnectToastShown = true;
+                }
+                console.warn(`[SSE] Reconectando en ${_sseRetryDelay}ms...`);
+                clearTimeout(_sseReconnectTimer);
+                _sseReconnectTimer = setTimeout(() => {
+                    _sseRetryDelay = Math.min(_sseRetryDelay * 2, 30000); // Max 30s
+                    _connectSSE();
+                }, _sseRetryDelay);
+            };
+        }
+
+        _connectSSE();
     } else {
         localStorage.removeItem('as_auth');
         localStorage.removeItem('as_user');
@@ -618,6 +654,7 @@ async function loadData() {
                 if (resTickets.ok && dataTickets.success) {
                     appState.adminTickets = dataTickets.tickets || [];
                     if (typeof updateTicketBadge === 'function') updateTicketBadge();
+                    if (typeof updateTicketKPIs === 'function') updateTicketKPIs();
                 }
             } catch (err) {
                 console.error('Error preloading tickets:', err);
@@ -900,7 +937,7 @@ function setupEventListeners() {
     document.getElementById('notif-clear-btn')?.addEventListener('click', async (e) => {
         e.stopPropagation();
         try {
-            await fetch('/api/notifications', { method: 'DELETE' });
+            await adminFetch('/api/notifications', { method: 'DELETE' });
             appState.notifications = [];
             renderNotifications();
             showToast('Notificaciones borradas', 'info');
@@ -1088,7 +1125,7 @@ function setupEventListeners() {
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        const res = await fetch(`/api/businesses/${id}/credentials`, {
+                        const res = await adminFetch(`/api/businesses/${id}/credentials`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ clientEmail: result.value.email, clientPass: result.value.pass })
@@ -1146,8 +1183,8 @@ function setupEventListeners() {
         saveUser();
     });
 
-    // Settings Form Submit
-    document.getElementById('settings-form')?.addEventListener('submit', (e) => {
+    // Settings Form Submit (auth-settings-form is the correct ID in HTML)
+    document.getElementById('auth-settings-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         saveSettings();
     });
@@ -1414,19 +1451,20 @@ function setupEventListeners() {
             const endpoint = id ? `/api/businesses/${id}` : '/api/businesses/new';
 
             try {
-                const res = await fetch(endpoint, {
+                const res = await adminFetch(endpoint, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(bizData)
                 });
 
+                const data = await res.json();
                 if (res.ok) {
                     closeBusinessModal();
                     showToast(`Negocio ${id ? 'actualizado' : 'creado'} exitosamente`);
                     bizForm.reset();
                     loadData(); // reload
                 } else {
-                    showToast('Error al guardar negocio', 'error');
+                    showToast(data.error || 'Error al guardar negocio', 'error');
                 }
             } catch (err) {
                 showToast('Error interno del servidor', 'error');
@@ -1451,7 +1489,7 @@ function setupEventListeners() {
 
 async function deleteBusiness(id) {
     try {
-        const res = await fetch(`/api/businesses/${id}`, { method: 'DELETE' });
+        const res = await adminFetch(`/api/businesses/${id}`, { method: 'DELETE' });
         if (res.ok) {
             showToast('Negocio eliminado', 'success');
             document.getElementById('delete-modal').classList.add('hidden');
@@ -1654,10 +1692,12 @@ async function saveUser() {
 
 async function saveSettings() {
     requestSecurityCheck(async () => {
-        const logo = document.getElementById('settings-logo-url').value;
-        const adminUser = document.getElementById('settings-admin-user').value;
-        const adminPass = document.getElementById('settings-admin-pass').value;
-        const currentPass = document.getElementById('security-pass-input').value; // Usamos la que puso en el modal
+        // Logo: se gestiona vía file upload (logo-upload-input). Si existe el campo legacy de URL, úsalo; si no, lee del localStorage
+        const logoUrlInput = document.getElementById('settings-logo-url');
+        const logo = logoUrlInput ? logoUrlInput.value : (localStorage.getItem('as_systems_logo_url') || '');
+        const adminUser = document.getElementById('settings-admin-user')?.value || '';
+        const adminPass = document.getElementById('settings-admin-pass')?.value || '';
+        const currentPass = document.getElementById('security-pass-input')?.value || ''; // Usamos la que puso en el modal
 
         const settingsData = { logo, adminUser, adminPass, currentPass };
 
@@ -3320,6 +3360,7 @@ async function loadAdminTickets() {
             appState.adminTickets = data.tickets || [];
             renderAdminTickets();
             updateTicketBadge();
+            updateTicketKPIs();
         } else {
             tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--danger);">Error: ${data.error || 'No se pudieron cargar los tickets'}</td></tr>`;
         }
@@ -3330,15 +3371,52 @@ async function loadAdminTickets() {
 }
 
 function updateTicketBadge() {
-    const badge = document.getElementById('badge-tickets');
-    if (!badge) return;
-    const openCount = appState.adminTickets.filter(t => t.status === 'abierto').length;
-    if (openCount > 0) {
-        badge.textContent = openCount;
-        badge.classList.remove('hidden');
-    } else {
-        badge.classList.add('hidden');
+    const badgeOpen = document.getElementById('badge-tickets');
+    const badgeUrgent = document.getElementById('badge-tickets-urgent');
+    
+    if (badgeOpen) {
+        const openCount = appState.adminTickets.filter(t => t.status === 'abierto').length;
+        if (openCount > 0) {
+            badgeOpen.textContent = openCount;
+            badgeOpen.classList.remove('hidden');
+        } else {
+            badgeOpen.classList.add('hidden');
+        }
     }
+    
+    if (badgeUrgent) {
+        const urgentCount = appState.adminTickets.filter(t => t.status !== 'cerrado' && t.status !== 'resuelto' && t.priority === 'urgente').length;
+        if (urgentCount > 0) {
+            badgeUrgent.textContent = urgentCount;
+            badgeUrgent.classList.remove('hidden');
+        } else {
+            badgeUrgent.classList.add('hidden');
+        }
+    }
+}
+
+function updateTicketKPIs() {
+    const all = appState.adminTickets || [];
+    
+    const openVal = all.filter(t => t.status === 'abierto').length;
+    const progressVal = all.filter(t => t.status === 'en_proceso').length;
+    const resolvedVal = all.filter(t => t.status === 'resuelto').length;
+    const closedVal = all.filter(t => t.status === 'cerrado').length;
+    const urgentVal = all.filter(t => t.status !== 'cerrado' && t.status !== 'resuelto' && t.priority === 'urgente').length;
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    setVal('dash-tickets-open', openVal);
+    setVal('dash-tickets-progress', progressVal);
+    setVal('dash-tickets-resolved', resolvedVal + closedVal);
+    setVal('dash-tickets-urgent', urgentVal);
+
+    setVal('ticket-kpi-open', openVal);
+    setVal('ticket-kpi-in-progress', progressVal);
+    setVal('ticket-kpi-resolved', resolvedVal + closedVal);
 }
 
 window.setTicketFilter = function(filter) {
@@ -3368,6 +3446,8 @@ function renderAdminTickets() {
     
     const search = (document.getElementById('ticket-search')?.value || '').toLowerCase().trim();
     const filter = window._currentTicketFilter || 'all';
+    const priorityFilter = document.getElementById('ticket-priority-filter')?.value || 'all';
+    const moduleFilter = document.getElementById('ticket-module-filter')?.value || 'all';
     
     let list = appState.adminTickets || [];
     
@@ -3378,6 +3458,20 @@ function renderAdminTickets() {
         } else {
             list = list.filter(t => t.status === filter);
         }
+    }
+
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+        list = list.filter(t => t.priority === priorityFilter);
+    }
+
+    // Apply module filter
+    if (moduleFilter !== 'all') {
+        list = list.filter(t => {
+            const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
+            const moduleDisplayName = targetMod ? targetMod.name : (t.module || '');
+            return moduleDisplayName === moduleFilter || String(t.module) === moduleFilter;
+        });
     }
     
     // Apply search filter
@@ -3392,15 +3486,8 @@ function renderAdminTickets() {
         });
     }
     
-    // Update KPI counters (group closed and resolved under Finalizados)
-    const all = appState.adminTickets || [];
-    const setKPI = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-    };
-    setKPI('ticket-kpi-open',        all.filter(t => t.status === 'abierto').length);
-    setKPI('ticket-kpi-in-progress', all.filter(t => t.status === 'en_proceso').length);
-    setKPI('ticket-kpi-resolved',    all.filter(t => t.status === 'resuelto' || t.status === 'cerrado').length);
+    // Update KPI counters
+    updateTicketKPIs();
     
     if (list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted);">No se encontraron tickets.</td></tr>`;
@@ -3767,9 +3854,9 @@ window.viewTicketDetails = function(ticketId) {
                     </div>
                     <!-- Input area -->
                     ${ticket.status === 'cerrado' ? `
-                        <div style="padding:10px 14px;background:rgba(239,68,68,0.06);border-top:1px solid rgba(239,68,68,0.2);color:#ef4444;display:flex;align-items:center;gap:8px;font-size:0.78rem;font-weight:700;justify-content:center;">
-                            <i data-lucide="lock" style="width:12px;height:12px;"></i>
-                            Solicitud cerrada — abre una nueva para continuar
+                        <div class="chat-closed-banner">
+                            <i data-lucide="lock" style="width:14px;height:14px;"></i>
+                            Solicitud cerrada — Abre una nueva para continuar
                         </div>
                     ` : `
                         <div style="padding:10px 12px;background:var(--chat-input-bar-bg);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;position:relative;">

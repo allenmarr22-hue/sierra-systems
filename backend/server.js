@@ -91,6 +91,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'frontend', 'uploads')));
 
+app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.url}`);
+    next();
+});
+
 // ============================================================
 // HELPERS: Lectura y Escritura Relacional de Base de Datos
 // ============================================================
@@ -282,9 +287,6 @@ function requireAdminOrMatchingClient(req, res, next) {
 // ============================================================
 // AUTH ADMIN
 // ============================================================
-// ============================================================
-// AUTH ADMIN
-// ============================================================
 app.post('/api/login', loginLimiter, async (req, res) => {
     const { user, pass } = req.body;
     try {
@@ -426,7 +428,7 @@ app.post('/api/client/verify', async (req, res) => {
 // ============================================================
 // ADMIN: Gestionar credenciales de cliente por negocio
 // ============================================================
-app.post('/api/businesses/:id/credentials', async (req, res) => {
+app.post('/api/businesses/:id/credentials', requireWriteAccess, async (req, res) => {
     const { id } = req.params;
     const { clientEmail, clientPass } = req.body;
     if (!clientEmail) return res.status(400).json({ error: 'Email requerido.' });
@@ -458,7 +460,8 @@ app.post('/api/businesses/:id/credentials', async (req, res) => {
         broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: 'Error del servidor al guardar credenciales.' });
+        console.error('[Server] Error al guardar credenciales:', err);
+        res.status(500).json({ error: 'Error del servidor al guardar credenciales: ' + err.message });
     }
 });
 
@@ -743,7 +746,8 @@ app.post('/api/businesses/new', requireWriteAccess, async (req, res) => {
         broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: 'Error del servidor.' });
+        console.error('[Server] Error al crear negocio:', err);
+        res.status(500).json({ error: 'Error del servidor al crear negocio: ' + err.message });
     }
 });
 
@@ -771,7 +775,8 @@ app.put('/api/businesses/:id', requireWriteAccess, async (req, res) => {
             res.status(404).json({ error: 'Negocio no encontrado' });
         }
     } catch (err) {
-        res.status(500).json({ error: 'Error del servidor.' });
+        console.error('[Server] Error al editar negocio:', err);
+        res.status(500).json({ error: 'Error del servidor al editar negocio: ' + err.message });
     }
 });
 
@@ -1013,7 +1018,7 @@ app.post('/api/users/new', requireSuperAdmin, async (req, res) => {
     try {
         let dbState = await readDb();
         if (!dbState.users) dbState.users = [];
-        newUser.id = Date.now();
+        newUser.id = newUser.id || Date.now();
         dbState.users.push(newUser);
 
         pushNotification(dbState, {
@@ -2110,8 +2115,6 @@ app.get('/api/client/payments', requireAdminOrMatchingClient, async (req, res) =
 
 // CLIENT: Crear nuevo ticket
 app.post('/api/tickets', async (req, res) => {
-    console.log('[DEBUG /api/tickets] Headers:', req.headers);
-    console.log('[DEBUG /api/tickets] Body:', req.body);
     const token = req.headers.authorization?.split(' ')[1];
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });

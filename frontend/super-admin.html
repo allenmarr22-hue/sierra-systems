@@ -306,7 +306,8 @@
             <button class="nav-btn" data-tab="tab-tickets" data-roles="Super Admin,Administrador,Soporte">
                 <i data-lucide="ticket"></i>
                 <span>Soporte</span>
-                <span class="nav-badge hidden" id="badge-tickets">0</span>
+                <span class="nav-badge hidden" id="badge-tickets" title="Tickets abiertos">0</span>
+                <span class="nav-badge nav-badge-urgent hidden" id="badge-tickets-urgent" style="background:#ef4444; margin-left:4px;" title="Tickets urgentes">0</span>
             </button>
 
             <div class="nav-section-label" id="nav-label-sistema">Sistema</div>
@@ -499,6 +500,38 @@
                     <div class="kpi-info">
                         <div class="kpi-value" id="kpi-revenue"><span class="sa-skeleton"></span></div>
                         <div class="kpi-label">Ingresos del Mes</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget de Soporte y Tickets -->
+            <div class="biz-card glass-card" data-roles="Administrador,Soporte" style="padding: 1.5rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                <h3 style="margin-bottom: 1.25rem; font-size: 1.15rem; display: flex; align-items: center; justify-content: space-between; color: var(--text-main);">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i data-lucide="ticket-check" style="color: var(--warning);"></i> Resumen de Soporte y Tickets
+                    </span>
+                    <button class="btn-ghost" onclick="showView('tab-tickets')" style="font-size: 0.8rem; color: var(--primary); font-weight: 600; text-decoration: none; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        Ver todos los tickets <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                    </button>
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.25rem;">
+                    <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.15); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s;" class="hover-scale">
+                        <div style="font-size: 1.75rem; font-weight: 800; color: #3b82f6; margin-bottom: 0.25rem;" id="dash-tickets-open">0</div>
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Abiertos / Nuevos</div>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s;" class="hover-scale">
+                        <div style="font-size: 1.75rem; font-weight: 800; color: #f59e0b; margin-bottom: 0.25rem;" id="dash-tickets-progress">0</div>
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">En Proceso</div>
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s;" class="hover-scale">
+                        <div style="font-size: 1.75rem; font-weight: 800; color: #10b981; margin-bottom: 0.25rem;" id="dash-tickets-resolved">0</div>
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Finalizados</div>
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); padding: 1rem; border-radius: 12px; text-align: center; transition: transform 0.2s; position: relative; overflow: hidden;" class="hover-scale pulse-border">
+                        <div style="font-size: 1.75rem; font-weight: 800; color: #ef4444; margin-bottom: 0.25rem;" id="dash-tickets-urgent">0</div>
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            <span class="pulse-dot"></span> Urgentes
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1001,10 +1034,25 @@
                         </h3>
                         <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Filtra y actualiza el estado de cada solicitud de soporte.</p>
                     </div>
-                    <div class="search-filter-bar" style="margin-bottom:0; width:100%; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
-                        <div class="search-wrap" style="max-width:300px;">
-                            <i data-lucide="search"></i>
-                            <input type="text" id="ticket-search" placeholder="Buscar por negocio o módulo..." oninput="renderAdminTickets()">
+                    <div class="search-filter-bar" style="margin-bottom:0; width:100%; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                            <div class="search-wrap" style="width:220px; margin-right:0.25rem;">
+                                <i data-lucide="search"></i>
+                                <input type="text" id="ticket-search" placeholder="Buscar por negocio o desc..." oninput="renderAdminTickets()">
+                            </div>
+                            <select id="ticket-priority-filter" onchange="renderAdminTickets()" style="padding:0.5rem 1.5rem 0.5rem 0.75rem; border-radius:8px; background:var(--bg-surface-light); border:1px solid var(--border-color); color:var(--text-main); font-size:0.85rem; outline:none; cursor:pointer; width:150px; text-overflow:ellipsis; overflow:hidden; font-family:inherit;">
+                                <option value="all">Prioridad (Todas)</option>
+                                <option value="baja">🟢 Baja</option>
+                                <option value="normal">🟠 Normal</option>
+                                <option value="urgente">🔴 Urgente</option>
+                            </select>
+                            <select id="ticket-module-filter" onchange="renderAdminTickets()" style="padding:0.5rem 1.5rem 0.5rem 0.75rem; border-radius:8px; background:var(--bg-surface-light); border:1px solid var(--border-color); color:var(--text-main); font-size:0.85rem; outline:none; cursor:pointer; width:185px; text-overflow:ellipsis; overflow:hidden; font-family:inherit;">
+                                <option value="all">Módulo (Todos)</option>
+                                <option value="StreetFeed Pro">StreetFeed Pro</option>
+                                <option value="StyleSync Pro">StyleSync Pro</option>
+                                <option value="Facturación / Pagos">Facturación / Pagos</option>
+                                <option value="Otro">Otro</option>
+                            </select>
                         </div>
                         <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
                             <div class="filter-pills" id="ticket-filters">
