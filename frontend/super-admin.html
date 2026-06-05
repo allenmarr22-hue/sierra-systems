@@ -59,7 +59,10 @@
     </script>
     <style>
         .hidden{display:none!important}
-        /* Evitar flash de login cuando ya se está autenticado */
+        /* Anti-FOUC NUCLEAR: ambas vistas ocultas por defecto hasta que el estado de auth sea conocido */
+        #login-view { display: none !important; }
+        #dashboard-view { display: none !important; }
+        /* Mostrar la vista correcta según estado de auth */
         html.is-logged-in #login-view { display: none !important; }
         html.is-logged-in #dashboard-view { display: flex !important; }
         /* Evitar flash de dashboard cuando no se está autenticado */
