@@ -866,6 +866,9 @@ function setupEventListeners() {
                     if (data.token) localStorage.setItem('as_admin_token', data.token);
                     appState.user = data.user;
                     initTheme(); // Initialize user-specific theme/accent
+                    // Aplicar permisos del rol INMEDIATAMENTE para que el menú
+                    // se reconstruya antes de que loadData() termine (bug: menú viejo)
+                    applyRolePermissions();
                     showView('dashboard-view');
                     document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
                     loadData();
