@@ -867,6 +867,7 @@ function setupEventListeners() {
                     appState.user = data.user;
                     initTheme(); // Initialize user-specific theme/accent
                     showView('dashboard-view');
+                    document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
                     loadData();
                 } else {
                     document.getElementById('login-error').classList.remove('hidden');
@@ -912,6 +913,7 @@ function setupEventListeners() {
                 appState.user = null;
                 initTheme(); // Revert to global/anonymous theme/accent
                 showView('login-view');
+                document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
                 lucide.createIcons();
                 showToast('Sesión cerrada correctamente', 'info');
             }
