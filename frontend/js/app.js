@@ -699,7 +699,10 @@ async function loadData() {
             renderBusinessesGrid();
         }
         if (!document.getElementById('tab-modules').classList.contains('hidden') && modulesChanged) {
-            renderModulesGrid();
+            // Evitar re-render completo si hay un toggle local activo (evita parpadeo doble por SSE)
+            if (!window.activeModuleToggles || window.activeModuleToggles.size === 0) {
+                renderModulesGrid();
+            }
         }
         if (!document.getElementById('tab-users').classList.contains('hidden') && usersChanged) {
             renderUsersList();
@@ -2036,7 +2039,7 @@ function renderModulesGrid() {
         const priceDisplay = (mod.price && !isNaN(priceNum) && priceNum > 0) ? `<span style="white-space: nowrap;">$ ${priceNum.toLocaleString('es-CO')} <span style="font-size: 0.8em;">COP</span></span>` : 'Cotizar';
         
         return `
-        <div class="biz-card">
+        <div class="biz-card" data-module-id="${mod.id}">
             <div class="module-card-header">
                 <div class="module-icon-large"><i data-lucide="${mod.icon}"></i></div>
                 <div class="status-badge ${mod.status === 'active' ? 'active' : (mod.status === 'maintenance' ? 'inactive' : 'neutral')}">
@@ -2163,12 +2166,19 @@ function saveModule() {
     });
 }
 
+// Set para rastrear toggles locales activos y evitar re-renders SSE duplicados
+if (!window.activeModuleToggles) window.activeModuleToggles = new Set();
+
 async function updateModuleState(id, updates) {
     const mod = appState.modules.find(m => m.id == id);
     if (!mod) return;
 
     const updated = { ...mod, ...updates };
-    
+    const newStatus = updated.status;
+
+    // Marcar toggle como activo ANTES del fetch para bloquear SSE re-render
+    window.activeModuleToggles.add(String(id));
+
     try {
         const res = await adminFetch(`/api/modules/${id}`, {
             method: 'PUT',
@@ -2177,9 +2187,37 @@ async function updateModuleState(id, updates) {
         });
         
         if (res.ok) {
-            // Actualizar localmente
+            // 1. Actualizar estado local en memoria
             appState.modules = appState.modules.map(m => m.id == id ? updated : m);
-            renderModulesGrid();
+
+            // 2. Actualización quirúrgica in-place de la tarjeta afectada (sin re-render del grid)
+            const card = document.querySelector(`.biz-card[data-module-id="${id}"]`);
+            if (card) {
+                // Actualizar badge de estado
+                const badge = card.querySelector('.status-badge');
+                if (badge) {
+                    badge.className = `status-badge ${newStatus === 'active' ? 'active' : (newStatus === 'maintenance' ? 'inactive' : 'neutral')}`;
+                    badge.textContent = newStatus === 'active' ? 'Activo' : (newStatus === 'maintenance' ? 'En Mantenimiento' : (newStatus === 'hidden' ? 'Oculto' : 'Próximamente'));
+                }
+                // Actualizar botón toggle (data-status, title, icono)
+                const toggleBtn = card.querySelector('.toggle-mod-btn');
+                if (toggleBtn) {
+                    const nextStatus = newStatus === 'active' ? 'hidden' : 'active';
+                    const nextIcon  = newStatus === 'active' ? 'eye-off' : 'eye';
+                    const nextTitle = newStatus === 'active' ? 'Ocultar de la tienda' : 'Mostrar en la tienda';
+                    toggleBtn.setAttribute('data-status', nextStatus);
+                    toggleBtn.setAttribute('title', nextTitle);
+                    const iconEl = toggleBtn.querySelector('i');
+                    if (iconEl) {
+                        iconEl.setAttribute('data-lucide', nextIcon);
+                        if (window.lucide) lucide.createIcons({ nodes: [iconEl] });
+                    }
+                }
+            } else {
+                // Fallback: si la tarjeta no está en el DOM, re-render completo
+                renderModulesGrid();
+            }
+
             initDashboard();
             showToast(`Estado de ${mod.name} actualizado`);
         } else {
@@ -2188,6 +2226,9 @@ async function updateModuleState(id, updates) {
     } catch (e) {
         console.error(e);
         showToast('Error de conexión', 'error');
+    } finally {
+        // Liberar el bloqueo después de que el SSE tenga tiempo de asentarse
+        setTimeout(() => window.activeModuleToggles.delete(String(id)), 2000);
     }
 }
 
