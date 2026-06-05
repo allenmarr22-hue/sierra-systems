@@ -4097,10 +4097,24 @@ window.exportExecutiveReportPDF = async function() {
         let filteredBiz = appState.businesses || [];
         if (yearVal !== 'all' || monthVal !== 'all') {
             filteredBiz = filteredBiz.filter(biz => {
+                if (!biz.created_at) return true; // Sin fecha → siempre incluir
                 const d = new Date(biz.created_at);
-                const yearMatch = yearVal === 'all' || String(d.getFullYear()) === yearVal;
-                const monthMatch = monthVal === 'all' || String(d.getMonth()) === monthVal;
-                return yearMatch && monthMatch;
+
+                // Calcular el último instante del período seleccionado
+                let periodEnd;
+                if (yearVal !== 'all' && monthVal !== 'all') {
+                    // Mes y año concreto → fin de ese mes
+                    periodEnd = new Date(Number(yearVal), Number(monthVal) + 1, 0, 23, 59, 59);
+                } else if (yearVal !== 'all') {
+                    // Solo año → fin del 31 de diciembre de ese año
+                    periodEnd = new Date(Number(yearVal), 11, 31, 23, 59, 59);
+                } else {
+                    // Solo mes sin año → incluir todos hasta hoy
+                    periodEnd = new Date();
+                }
+
+                // Incluir negocios que existían al final del período
+                return d <= periodEnd;
             });
         }
         

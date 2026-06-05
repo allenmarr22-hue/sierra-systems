@@ -3782,7 +3782,7 @@ html[data-accent="orange"][data-theme="light"] {
 /* Wrapper that replaces the old user-pill + separate logout */
 .sa-unified {
     display: inline-flex;
-    align-items: center;
+    align-items: stretch;
     gap: 0;
     border-radius: 999px;
     background: linear-gradient(135deg,
@@ -3827,6 +3827,7 @@ html[data-accent="orange"][data-theme="light"] {
     display: flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
     width: 34px;
     height: 34px;
     flex-shrink: 0;
@@ -3839,6 +3840,7 @@ html[data-accent="orange"][data-theme="light"] {
 .sa-unified-center {
     display: inline-flex;
     align-items: center;
+    align-self: center;
     gap: 5px;
     padding: 0 8px;
     position: relative;
@@ -3851,8 +3853,9 @@ html[data-accent="orange"][data-theme="light"] {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    /* Fill the full height of the pill — no more tiny corner target */
+    align-self: stretch;
+    width: 42px;
     flex-shrink: 0;
     background: transparent !important;
     border: none !important;
@@ -3860,9 +3863,9 @@ html[data-accent="orange"][data-theme="light"] {
     color: rgba(253,230,138,0.7) !important;
     cursor: pointer;
     border-radius: 0 999px 999px 0 !important;
-    transition: all 0.3s ease !important;
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
     margin-right: 0;
-    padding: 0 !important;
+    padding: 0 10px !important;
     z-index: 2;
     position: relative;
     box-shadow: none !important;
@@ -3872,17 +3875,22 @@ html[data-accent="orange"][data-theme="light"] {
     background: rgba(239, 68, 68, 0.75) !important;
     color: #ffffff !important;
     border-left-color: rgba(239,68,68,0.5) !important;
+    /* Premium glow shadow on hover — no color change on the pill itself */
+    box-shadow:
+        inset -6px 0 18px rgba(239, 68, 68, 0.25),
+        4px 0 16px rgba(239, 68, 68, 0.18) !important;
 }
 .sa-unified-logout svg,
 .sa-unified-logout i {
     transition: transform 0.3s ease, filter 0.3s ease;
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
 }
 .sa-unified-logout:hover svg,
 .sa-unified-logout:hover i {
     transform: translateX(2px);
-    filter: drop-shadow(0 0 3px #fff);
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
 }
 
 /* Collapsed sidebar: hide the unified pill, show logout standalone */
