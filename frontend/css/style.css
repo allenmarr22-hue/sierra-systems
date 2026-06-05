@@ -429,8 +429,22 @@ input, select, textarea { font-family: inherit; }
 
 .sidebar-brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 800; font-size: 1.25rem; }
 .sidebar-brand span { color: var(--primary); }
-.brand-icon { width: 32px; height: 32px; flex-shrink: 0; }
-.brand-icon svg, .logo-icon-wrap svg { display: none; /* Oculto por defecto para evitar parpadeos */ }
+.brand-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: var(--primary-bg, rgba(99,102,241,0.12));
+    border: 1px solid var(--primary-border, rgba(99,102,241,0.25));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.brand-icon svg { display: block; color: inherit; }
+.logo-icon-wrap svg { display: none; /* Oculto por defecto para evitar parpadeos */ }
+.brand-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .sidebar-toggle-btn { color: var(--text-muted); transition: color 0.2s; }
 .sidebar-toggle-btn:hover { color: var(--text-main); }
