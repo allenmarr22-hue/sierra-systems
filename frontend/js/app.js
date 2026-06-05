@@ -2209,11 +2209,9 @@ async function updateModuleState(id, updates) {
                     const nextTitle = newStatus === 'active' ? 'Ocultar de la tienda' : 'Mostrar en la tienda';
                     toggleBtn.setAttribute('data-status', nextStatus);
                     toggleBtn.setAttribute('title', nextTitle);
-                    const iconEl = toggleBtn.querySelector('i');
-                    if (iconEl) {
-                        iconEl.setAttribute('data-lucide', nextIcon);
-                        if (window.lucide) lucide.createIcons({ nodes: [iconEl] });
-                    }
+                    // Reemplazar el elemento <i> completo — Lucide no re-procesa elementos ya renderizados
+                    toggleBtn.innerHTML = `<i data-lucide="${nextIcon}"></i>`;
+                    if (window.lucide) lucide.createIcons();
                 }
             } else {
                 // Fallback: si la tarjeta no está en el DOM, re-render completo
