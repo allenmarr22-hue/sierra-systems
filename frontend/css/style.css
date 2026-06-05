@@ -387,6 +387,35 @@ input, select, textarea { font-family: inherit; }
 .sidebar.collapsed .user-info,
 .sidebar.collapsed .nav-badge { display: none; }
 
+/* ── Stagger entrance when sidebar expands ── */
+@keyframes nav-text-in {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.sidebar.is-expanding .nav-btn span,
+.sidebar.is-expanding .nav-section-label,
+.sidebar.is-expanding .sidebar-brand,
+.sidebar.is-expanding .sa-unified,
+.sidebar.is-expanding .nav-badge {
+    animation: nav-text-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger delay per nav item (nth-child on nav-btn) */
+.sidebar.is-expanding .nav-btn:nth-child(1) span  { animation-delay: 0.05s; }
+.sidebar.is-expanding .nav-btn:nth-child(2) span  { animation-delay: 0.08s; }
+.sidebar.is-expanding .nav-btn:nth-child(3) span  { animation-delay: 0.11s; }
+.sidebar.is-expanding .nav-btn:nth-child(4) span  { animation-delay: 0.14s; }
+.sidebar.is-expanding .nav-btn:nth-child(5) span  { animation-delay: 0.17s; }
+.sidebar.is-expanding .nav-btn:nth-child(6) span  { animation-delay: 0.20s; }
+.sidebar.is-expanding .nav-btn:nth-child(7) span  { animation-delay: 0.23s; }
+.sidebar.is-expanding .nav-btn:nth-child(8) span  { animation-delay: 0.26s; }
+.sidebar.is-expanding .nav-btn:nth-child(9) span  { animation-delay: 0.29s; }
+.sidebar.is-expanding .nav-btn:nth-child(10) span { animation-delay: 0.32s; }
+.sidebar.is-expanding .nav-section-label          { animation-delay: 0.04s; }
+.sidebar.is-expanding .sidebar-brand              { animation-delay: 0.02s; }
+.sidebar.is-expanding .sa-unified                 { animation-delay: 0.18s; }
+
 .sidebar-header {
     height: 70px;
     flex-shrink: 0;
@@ -507,6 +536,12 @@ input, select, textarea { font-family: inherit; }
     justify-content: space-between;
 }
 .sidebar.collapsed .sidebar-footer { justify-content: center; padding: 1rem 0.5rem; }
+
+/* Super Admin footer: pill is centered */
+.sidebar-footer.sa-footer-unified {
+    justify-content: center;
+    padding: 0.75rem 1rem;
+}
 
 .user-pill {
     display: flex;
@@ -3707,6 +3742,394 @@ html[data-accent="orange"][data-theme="light"] {
 
 [data-theme="light"] .custom-scrollbar {
     scrollbar-color: rgba(99, 102, 241, 0.2) rgba(99, 102, 241, 0.02);
+}
+
+/* ==========================================================================
+   SUPER ADMIN SHINY STYLES (PREMIUM GOLD/PURPLE THEME)
+   ========================================================================== */
+
+/* ── Keyframes ── */
+@keyframes sa-shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+}
+@keyframes sa-sweep {
+    0%   { left: -80%; }
+    100% { left: 130%; }
+}
+@keyframes sa-crown-float {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50%       { transform: translateY(-2px) scale(1.08); }
+}
+@keyframes sa-orb-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50%       { transform: scale(1.35); opacity: 1; }
+}
+@keyframes sa-spark-float {
+    0%   { transform: translateY(0px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(-14px) rotate(180deg); opacity: 0; }
+}
+@keyframes sa-badge-glow {
+    0%, 100% { box-shadow: 0 0 8px 1px rgba(168,85,247,0.35), 0 0 20px 2px rgba(251,191,36,0.15), inset 0 1px 0 rgba(255,255,255,0.25); }
+    50%       { box-shadow: 0 0 16px 4px rgba(168,85,247,0.55), 0 0 35px 6px rgba(251,191,36,0.30), inset 0 1px 0 rgba(255,255,255,0.35); }
+}
+
+/* ══════════════════════════════════════════
+   SUPER ADMIN — UNIFIED PILL
+   (avatar + badge + logout in one capsule)
+   ══════════════════════════════════════════ */
+
+/* Wrapper that replaces the old user-pill + separate logout */
+.sa-unified {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg,
+        rgba(88,28,135,0.92) 0%,
+        rgba(109,40,217,0.88) 35%,
+        rgba(79,70,229,0.90) 65%,
+        rgba(124,58,237,0.92) 100%);
+    border: 1.5px solid rgba(196,167,255,0.45);
+    overflow: hidden;
+    position: relative;
+    animation: sa-badge-glow 2.5s ease-in-out infinite;
+    white-space: nowrap;
+    max-width: 100%;
+}
+[data-theme="light"] .sa-unified {
+    background: linear-gradient(135deg,
+        rgba(76,29,149,0.95) 0%,
+        rgba(109,40,217,0.92) 35%,
+        rgba(67,56,202,0.93) 65%,
+        rgba(109,40,217,0.95) 100%);
+    border: 1.5px solid rgba(167,139,250,0.6);
+}
+/* Aurora sweep on unified pill */
+.sa-unified::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -80%; width: 60%; height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255,255,255,0.22),
+        rgba(251,191,36,0.14),
+        rgba(255,255,255,0.22),
+        transparent);
+    transform: skewX(-15deg);
+    animation: sa-sweep 3.2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Left section: diamond avatar */
+.sa-unified-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    margin-left: 3px;
+    z-index: 2;
+    position: relative;
+}
+
+/* Center section: crown + label + orbs */
+.sa-unified-center {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 8px;
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+}
+
+/* Right section: logout button */
+.sa-unified-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    background: transparent !important;
+    border: none !important;
+    border-left: 1px solid rgba(196,167,255,0.25) !important;
+    color: rgba(253,230,138,0.7) !important;
+    cursor: pointer;
+    border-radius: 0 999px 999px 0 !important;
+    transition: all 0.3s ease !important;
+    margin-right: 0;
+    padding: 0 !important;
+    z-index: 2;
+    position: relative;
+    box-shadow: none !important;
+    animation: none !important;
+}
+.sa-unified-logout:hover {
+    background: rgba(239, 68, 68, 0.75) !important;
+    color: #ffffff !important;
+    border-left-color: rgba(239,68,68,0.5) !important;
+}
+.sa-unified-logout svg,
+.sa-unified-logout i {
+    transition: transform 0.3s ease, filter 0.3s ease;
+    width: 14px;
+    height: 14px;
+}
+.sa-unified-logout:hover svg,
+.sa-unified-logout:hover i {
+    transform: translateX(2px);
+    filter: drop-shadow(0 0 3px #fff);
+}
+
+/* Collapsed sidebar: hide the unified pill, show logout standalone */
+.sidebar.collapsed .sa-unified {
+    background: transparent;
+    border: none;
+    animation: none;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+    padding: 0;
+}
+.sidebar.collapsed .sa-unified::before {
+    display: none;
+}
+.sidebar.collapsed .sa-unified-avatar,
+.sidebar.collapsed .sa-unified-center {
+    display: none;
+}
+.sidebar.collapsed .sa-unified-logout {
+    border-left: none !important;
+    border-radius: 10px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(239, 68, 68, 0.04) !important;
+    border: 1.5px solid rgba(239, 68, 68, 0.25) !important;
+    color: rgba(239, 68, 68, 0.75) !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.05) !important;
+    animation: sa-logout-glow 2.5s infinite ease-in-out !important;
+}
+.sidebar.collapsed .sa-unified-logout:hover {
+    color: #ffffff !important;
+    background: rgba(239, 68, 68, 0.85) !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 18px 4px rgba(239, 68, 68, 0.6), 0 0 30px 10px rgba(239, 68, 68, 0.2) !important;
+    transform: scale(1.1) translateY(-1px);
+}
+
+/* ── Badge container (legacy, kept for compatibility) ── */
+.sa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px 5px 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg,
+        rgba(88,28,135,0.92) 0%,
+        rgba(109,40,217,0.88) 30%,
+        rgba(79,70,229,0.90) 60%,
+        rgba(124,58,237,0.92) 100%);
+    border: 1.5px solid rgba(196,167,255,0.45);
+    position: relative;
+    overflow: hidden;
+    animation: sa-badge-glow 2.5s ease-in-out infinite;
+    cursor: default;
+    user-select: none;
+}
+/* Light mode: darker, richly visible */
+[data-theme="light"] .sa-badge {
+    background: linear-gradient(135deg,
+        rgba(76,29,149,0.95) 0%,
+        rgba(109,40,217,0.92) 35%,
+        rgba(67,56,202,0.93) 65%,
+        rgba(109,40,217,0.95) 100%);
+    border: 1.5px solid rgba(167,139,250,0.6);
+}
+
+/* Aurora sweep */
+.sa-badge::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -80%; width: 60%; height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255,255,255,0.22),
+        rgba(251,191,36,0.14),
+        rgba(255,255,255,0.22),
+        transparent);
+    transform: skewX(-15deg);
+    animation: sa-sweep 3.2s ease-in-out infinite;
+}
+
+/* ── Crown icon ── */
+.sa-crown {
+    animation: sa-crown-float 2.8s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+/* ── Text ── */
+.sa-label {
+    font-family: 'Outfit', 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 0.78rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #fde68a, #fbbf24, #f59e0b, #fde68a);
+    background-size: 250% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: sa-shimmer 2.8s linear infinite;
+    display: inline-block;
+}
+
+/* ── Orbs / dots ── */
+.sa-orb {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fde68a, #f59e0b);
+    flex-shrink: 0;
+    animation: sa-orb-pulse 1.8s ease-in-out infinite;
+}
+.sa-orb:nth-child(2) { animation-delay: 0.9s; }
+
+/* ── Sparkle particles ── */
+.sa-sparks {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+.sa-spark {
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: #fde68a;
+    animation: sa-spark-float 2s ease-out infinite;
+}
+.sa-spark:nth-child(1) { left: 15%; bottom: 20%; animation-delay: 0s; }
+.sa-spark:nth-child(2) { left: 45%; bottom: 10%; animation-delay: 0.7s; background: #c4b5fd; }
+.sa-spark:nth-child(3) { left: 75%; bottom: 20%; animation-delay: 1.4s; background: #a5f3fc; }
+
+/* ── Avatar ring for Super Admin ── */
+.sa-avatar-ring {
+    position: relative;
+}
+.sa-avatar-ring::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        #7c3aed, #fbbf24, #a855f7, #06b6d4, #7c3aed
+    );
+    z-index: -1;
+    animation: sa-shimmer 2s linear infinite;
+    background-size: 200%;
+}
+
+/* ── Premium Avatar ── */
+.sa-avatar-premium {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #6366f1 100%) !important;
+    border: 1.5px solid rgba(251,191,36,0.65) !important;
+    box-shadow: 0 0 12px 2px rgba(168,85,247,0.4), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    animation: sa-avatar-pulse 3s infinite ease-in-out;
+}
+.sa-avatar-premium::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transform: skewX(-20deg);
+    animation: sa-avatar-sweep 3s infinite ease-in-out;
+}
+.sa-avatar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+@keyframes sa-avatar-pulse {
+    0%, 100% { box-shadow: 0 0 12px 2px rgba(168,85,247,0.4), 0 0 0 0px rgba(251,191,36,0.2); }
+    50% { box-shadow: 0 0 20px 5px rgba(168,85,247,0.6), 0 0 0 4px rgba(251,191,36,0.4); }
+}
+@keyframes sa-avatar-sweep {
+    0% { left: -100%; }
+    50%, 100% { left: 150%; }
+}
+
+/* ── Premium Logout Button (Shining/Glow) ── */
+/* Default: Clean and borderless when sidebar is expanded */
+.logout-btn {
+    position: relative;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: var(--text-muted) !important;
+    box-shadow: none !important;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 8px;
+    animation: none !important;
+}
+.logout-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.logout-btn:hover {
+    color: #ffffff !important;
+    background: rgba(239, 68, 68, 0.85) !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 15px 3px rgba(239, 68, 68, 0.5) !important;
+    transform: scale(1.08) translateY(-1px);
+}
+.logout-btn:hover::before {
+    opacity: 1;
+}
+.logout-btn i, .logout-btn svg {
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 2;
+}
+.logout-btn:hover i, .logout-btn:hover svg {
+    transform: translateX(2px) scale(1.15);
+    filter: drop-shadow(0 0 3px #fff);
+}
+
+/* Collapsed: Show as a premium glowing button box as requested when sidebar is collapsed */
+.sidebar.collapsed .logout-btn {
+    background: rgba(239, 68, 68, 0.04) !important;
+    border: 1.5px solid rgba(239, 68, 68, 0.25) !important;
+    color: rgba(239, 68, 68, 0.75) !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.05) !important;
+    animation: sa-logout-glow 2.5s infinite ease-in-out !important;
+}
+.sidebar.collapsed .logout-btn:hover {
+    color: #ffffff !important;
+    background: rgba(239, 68, 68, 0.85) !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 18px 4px rgba(239, 68, 68, 0.6), 0 0 30px 10px rgba(239, 68, 68, 0.2) !important;
+    transform: scale(1.1) translateY(-1px);
+}
+@keyframes sa-logout-glow {
+    0%, 100% { box-shadow: 0 0 6px 0px rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.2); }
+    50% { box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.45); }
 }
 
 

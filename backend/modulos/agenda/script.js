@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DYNAMIC BRANDING & SOCIAL SYNC ---
     window.applyPublicDynamicBranding = function() {
-        const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+        const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
         document.querySelectorAll('.dynamic-brand-text').forEach(el => { el.innerText = name; });
         const yearSpan = document.getElementById('current-year-footer');
         if(yearSpan) yearSpan.innerText = new Date().getFullYear();
@@ -1103,7 +1103,7 @@ document.addEventListener('keydown', (e) => {
 
         let html = '';
         gallery.forEach(item => {
-            html += `<img src="${item.img}" alt="Gallería Margaritasmit" class="reveal">`;
+            html += `<img src="${item.img}" alt="Galería StyleSync Pro" class="reveal">`;
         });
         container.innerHTML = html;
         
@@ -1767,7 +1767,7 @@ window.sendCartToWhatsApp = async function() {
 
     // Asignar los especialistas definitivos y calcular duraciones reales
     const dbServices = JSON.parse(localStorage.getItem('margarita_services') || '[]');
-    const businessName = localStorage.getItem('margarita_site_name') || "Margarita Studio";
+    const businessName = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
     cart.forEach(item => {
         item._finalSpecialist = item.specialist === "Sin preferencia" ? businessName : item.specialist;
         
@@ -2092,7 +2092,7 @@ window.sendCartToWhatsApp = async function() {
 
     // Build WhatsApp message
     const savedWa = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
-    const businessName = localStorage.getItem('margarita_site_name') || "Margarita Studio";
+    const businessName = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
     let cleanNum = savedWa.replace(/\D/g, '');
     const waNumber = cleanNum.length === 10 ? "57" + cleanNum : cleanNum;
     let waText = encodeURIComponent(`Hola ${businessName}!\n\n*Mi Nombre:* ${name}\n*Celular:* ${phone}\n\nQuiero agendar los siguientes servicios:\n`);
@@ -3169,7 +3169,7 @@ window.selectSlot = function(time, date) {
     const timeToMins = (t) => { if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
     const minsToTime = (m) => { const h=Math.floor(m/60); const mm=m%60; return `${h.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}`; };
 
-    const businessName = localStorage.getItem('margarita_site_name') || "Margarita Studio";
+    const businessName = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
     let chosenSpec = businessName;
     
     const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');

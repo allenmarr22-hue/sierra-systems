@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Administrativo | Margaritasmit</title>
+    <title>Panel Administrativo | StyleSync Pro</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
@@ -41,11 +41,11 @@
         (function() {
             try {
                 // 1. Título de Pestaña y Favicon
-                const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+                const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
                 document.title = "Panel Administrativo | " + name;
 
                 const logoUrl = localStorage.getItem('margarita_logo_url');
-                const DEFAULT_M_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2220%22%20fill%3D%22%23111111%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2275%22%20font-size%3D%2265%22%20fill%3D%22%23B87381%22%20font-family%3D%22Georgia%2Cserif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22bold%22%3EM%3C%2Ftext%3E%3Ctext%20x%3D%2280%22%20y%3D%2235%22%20font-size%3D%2230%22%20text-anchor%3D%22middle%22%3E%E2%9C%A8%3C%2Ftext%3E%3C%2Fsvg%3E";
+                const DEFAULT_S_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2220%22%20fill%3D%22%23111111%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2275%22%20font-size%3D%2265%22%20fill%3D%22%23B87381%22%20font-family%3D%22Georgia%2Cserif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22bold%22%3ES%3C%2Ftext%3E%3Ctext%20x%3D%2280%22%20y%3D%2235%22%20font-size%3D%2230%22%20text-anchor%3D%22middle%22%3E%E2%9C%A8%3C%2Ftext%3E%3C%2Fsvg%3E";
                 const link = document.createElement('link');
                 link.id = 'dynamic-favicon';
                 link.rel = 'icon';
@@ -54,7 +54,7 @@
                     link.href = logoUrl;
                 } else {
                     link.type = 'image/svg+xml';
-                    link.href = DEFAULT_M_SVG;
+                    link.href = DEFAULT_S_SVG;
                 }
                 document.getElementsByTagName('head')[0].appendChild(link);
 
@@ -137,10 +137,10 @@
 </head>
 <body>
     <div id="auth-section" class="text-center">
-        <h1 class="logo dynamic-brand-name" id="auth-brand-logo"><a href="admin.html" style="text-decoration: none; color: inherit;">Margaritasmit<span>.</span> Admin</a></h1>
+        <h1 class="logo dynamic-brand-name" id="auth-brand-logo"><a href="admin.html" style="text-decoration: none; color: inherit;">StyleSync Pro<span>.</span> Admin</a></h1>
         <script>
             (function() {
-                const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+                const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
                 document.getElementById('auth-brand-logo').firstChild.innerHTML = name + '<span>.</span> Admin';
             })();
         </script>
@@ -193,11 +193,12 @@
 
             <!-- MAIN CONTENT AREA -->
             <main class="main-content">
+                <div id="license-banner-container"></div>
                 <header class="admin-header">
-                    <h1 class="logo dynamic-brand-name" id="main-brand-logo"><a href="admin.html" style="text-decoration: none; color: inherit;">Margaritasmit<span>.</span> Admin</a></h1>
+                    <h1 class="logo dynamic-brand-name" id="main-brand-logo"><a href="admin.html" style="text-decoration: none; color: inherit;">StyleSync Pro<span>.</span> Admin</a></h1>
                     <script>
                         (function() {
-                            const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+                            const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
                             document.getElementById('main-brand-logo').firstChild.innerHTML = name + '<span>.</span> Admin';
                         })();
                     </script>
@@ -1220,7 +1221,7 @@
                                     
                                     <div class="form-group" style="margin-top:20px; padding-top:10px;">
                                         <label style="font-weight:700; color:var(--color-dark-pink);">Nombre de la Página</label>
-                                        <input type="text" id="settings-site-name" class="admin-input" placeholder="Ej: Margarita Smit" style="margin-top:5px;">
+                                        <input type="text" id="settings-site-name" class="admin-input" placeholder="Ej: StyleSync Pro" style="margin-top:5px;">
                                         <small style="color:#999; display:block; margin-top:4px;">Esto cambiará los títulos y logos en el panel y la web principal.</small>
                                     </div>
                                     
@@ -1796,7 +1797,7 @@
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(229, 169, 180, 0.15); border:1px solid var(--color-accent); border-radius:3px;"></div> Cita Pendiente</div>
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(46, 204, 113, 0.15); border:1px solid #2ecc71; border-radius:3px;"></div> Cita Confirmada</div>
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(243, 156, 18, 0.15); border:1px solid #f39c12; border-radius:3px;"></div> Aplazada</div>
-                <div style="margin-left:auto; color:var(--color-text-muted); font-weight:normal;">Margaritasmit Beauty Studio &copy; 2024</div>
+                <div style="margin-left:auto; color:var(--color-text-muted); font-weight:normal;">StyleSync Pro &copy; 2024</div>
             </div>
         </div>
     </div>
@@ -1827,7 +1828,7 @@
             <!-- Footer con Leyenda -->
             <div style="padding:15px 35px; background:var(--modal-footer-bg); border-top:1px solid var(--border-color); display:flex; gap:25px; font-size:0.8rem; font-weight:700;">
                 <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; background:rgba(184, 115, 129, 0.15); border:1px solid var(--color-dark-pink); border-radius:3px;"></div> Horario Reservado</div>
-                <div style="margin-left:auto; color:#999; font-weight:normal;">Margaritasmit Beauty Studio &copy; 2026</div>
+                <div style="margin-left:auto; color:#999; font-weight:normal;">StyleSync Pro &copy; 2026</div>
             </div>
         </div>
     </div>
@@ -1902,6 +1903,86 @@
                     <button onclick="document.getElementById('maintConfigModal').classList.remove('show')" style="background:#eee; color:#666; border:none; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer;">Cancelar</button>
                     <button onclick="saveAdvancedTimeConfig()" class="btn-primary" style="width:auto; padding:10px 25px; border-radius:10px; background:var(--color-dark-pink); color:white; border:none; cursor:pointer; font-weight:700;">GUARDAR CAMBIOS</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LICENSE CONTROL MODULE -->
+    <style>
+        @keyframes licenseSlideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes licenseScaleUp {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+    <div id="license-block-screen" style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(10, 10, 10, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 999999;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        color: #fff;
+        padding: 20px;
+        box-sizing: border-box;
+    ">
+        <div style="
+            max-width: 500px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+            animation: licenseScaleUp 0.3s ease;
+        ">
+            <div style="
+                width: 80px;
+                height: 80px;
+                background: rgba(255, 76, 76, 0.1);
+                border: 1px solid rgba(255, 76, 76, 0.2);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 24px;
+                color: #ff4c4c;
+                box-shadow: 0 10px 25px rgba(255, 76, 76, 0.15);
+            ">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h2 style="font-size: 1.8rem; margin: 0 0 12px 0; font-weight: 700; color: #fff;">Acceso Restringido</h2>
+            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.95rem; line-height: 1.6; margin: 0 0 32px 0;">
+                La licencia de este módulo (<span id="license-module-name">StyleSync Pro</span>) ha vencido o se encuentra suspendida por falta de pago. Por favor, ponte en contacto con administración o realiza tu pago desde tu panel de facturación.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <a href="/client-login.html" target="_top" style="
+                    background: linear-gradient(135deg, #ff6b00 0%, #ff8c00 100%);
+                    color: #fff;
+                    text-decoration: none;
+                    padding: 14px 28px;
+                    border-radius: 12px;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    transition: all 0.2s ease;
+                    display: inline-block;
+                    box-shadow: 0 8px 24px rgba(255, 107, 0, 0.3);
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 30px rgba(255, 107, 0, 0.45)';"
+                   onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 24px rgba(255, 107, 0, 0.3)';">
+                    Ir a Facturación
+                </a>
             </div>
         </div>
     </div>

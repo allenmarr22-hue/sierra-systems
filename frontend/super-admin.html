@@ -31,6 +31,17 @@
                     link.href = DEFAULT_SVG;
                 }
                 document.getElementsByTagName('head')[0].appendChild(link);
+
+                // Anti-FOUC para el unified Super Admin pill
+                try {
+                    var userRaw = localStorage.getItem('as_user');
+                    if (userRaw) {
+                        var user = JSON.parse(userRaw);
+                        if (user && user.role === 'Super Admin') {
+                            document.documentElement.classList.add('is-super-admin');
+                        }
+                    }
+                } catch(e) {}
             } catch (e) {}
         })();
     </script>
@@ -42,6 +53,31 @@
         /* Evitar flash de dashboard cuando no se está autenticado */
         html.is-logged-out #dashboard-view { display: none !important; }
         html.is-logged-out #login-view { display: flex !important; }
+
+        /* Anti-FOUC: Super Admin unified pill — ocultar el pill normal antes de que cargue JS */
+        html.is-super-admin #user-pill-normal { display: none !important; }
+        html.is-super-admin #logout-btn-normal { display: none !important; }
+        html.is-super-admin #sa-unified-pill { display: inline-flex !important; }
+        html.is-super-admin .sidebar-footer { justify-content: center !important; padding: 0.75rem 1rem !important; }
+
+        /* Premium Skeleton Loading */
+        .sa-skeleton {
+            display: inline-block;
+            width: 70px;
+            height: 24px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.13) 50%, rgba(255,255,255,0.06) 75%);
+            background-size: 200% 100%;
+            animation: sa-skeleton-shimmer 1.4s infinite linear;
+            border-radius: 6px;
+            vertical-align: middle;
+        }
+        [data-theme="light"] .sa-skeleton {
+            background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.13) 50%, rgba(0,0,0,0.06) 75%);
+        }
+        @keyframes sa-skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
     </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -100,9 +136,24 @@
     </div>
     <div class="login-card glass">
         <div class="login-logo">
-            <div class="logo-icon-wrap">
+            <div class="logo-icon-wrap" id="login-logo-wrap">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="url(#grad1)"/><defs><linearGradient id="grad1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>
             </div>
+            <script>
+                (function() {
+                    var logoUrl = localStorage.getItem('as_systems_logo_url');
+                    if (logoUrl) {
+                        var wrap = document.getElementById('login-logo-wrap');
+                        if (wrap) {
+                            wrap.innerHTML = '<img src="' + logoUrl + '" alt="Logo" style="width:100%; height:100%; object-fit:contain; object-position: center;">';
+                            wrap.style.width = 'auto';
+                            wrap.style.minWidth = '80px';
+                            wrap.style.height = '60px';
+                            wrap.style.background = 'transparent';
+                        }
+                    }
+                })();
+            </script>
             <div>
                 <div class="login-brand">AS <span>Sierra</span> Systems</div>
                 <div class="login-tagline">Plataforma Empresarial SaaS</div>
@@ -148,11 +199,29 @@
 
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
+        <script>
+            if (localStorage.getItem('as_sidebar') === 'true') {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
+        </script>
         <div class="sidebar-header">
             <div class="sidebar-brand">
-                <div class="brand-icon">
+                <div class="brand-icon" id="sidebar-brand-icon">
                     <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="url(#grad2)"/><defs><linearGradient id="grad2" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>
                 </div>
+                <script>
+                    (function() {
+                        var logoUrl = localStorage.getItem('as_systems_logo_url');
+                        if (logoUrl) {
+                            var iconContainer = document.getElementById('sidebar-brand-icon');
+                            if (iconContainer) {
+                                iconContainer.innerHTML = '<img src="' + logoUrl + '" alt="Logo" style="width:100%; height:100%; object-fit:contain; object-position: center;">';
+                                iconContainer.style.width = '60px';
+                                iconContainer.style.height = '40px';
+                            }
+                        }
+                    })();
+                </script>
                 <div class="brand-text">AS <span>Sierra</span></div>
             </div>
             <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Colapsar menú">
@@ -207,15 +276,80 @@
             </button>
         </nav>
 
-        <div class="sidebar-footer">
-            <div class="user-pill">
+        <div class="sidebar-footer sa-footer-super">
+            <script>
+                (function() {
+                    try {
+                        var userRaw = localStorage.getItem('as_user');
+                        if (userRaw) {
+                            var user = JSON.parse(userRaw);
+                            if (user && user.role === 'Super Admin') {
+                                document.querySelector('.sidebar-footer').classList.add('sa-footer-unified');
+                            }
+                        }
+                    } catch(e) {}
+                })();
+            </script>
+
+            <!-- UNIFIED SUPER ADMIN PILL (rendered by app.js for SA role) -->
+            <div class="sa-unified" id="sa-unified-pill" style="display:none;">
+                <!-- Left: diamond avatar -->
+                <div class="sa-unified-avatar">
+                    <div class="sa-avatar-inner">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#fde68a;filter:drop-shadow(0 0 3px rgba(253,230,138,0.7));">
+                            <path d="M6 3h12l4 6-10 13L2 9z"/>
+                            <path d="M11 3 8 9l4 13 4-13-3-6"/>
+                            <path d="M2 9h20"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Center: sparkles + orb + crown + label + orb -->
+                <div class="sa-unified-center">
+                    <div class="sa-sparks">
+                        <div class="sa-spark"></div>
+                        <div class="sa-spark"></div>
+                        <div class="sa-spark"></div>
+                    </div>
+                    <div class="sa-orb"></div>
+                    <svg class="sa-crown" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="sa-crown-g2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%"   stop-color="#fde68a"/>
+                                <stop offset="40%"  stop-color="#fbbf24"/>
+                                <stop offset="70%"  stop-color="#f59e0b"/>
+                                <stop offset="100%" stop-color="#fde68a"/>
+                            </linearGradient>
+                            <filter id="sa-crown-glow2">
+                                <feGaussianBlur stdDeviation="0.8" result="blur"/>
+                                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                            </filter>
+                        </defs>
+                        <path d="M3 17L5 9L9 13L12 6L15 13L19 9L21 17H3Z" fill="url(#sa-crown-g2)" filter="url(#sa-crown-glow2)"/>
+                        <circle cx="12" cy="6" r="1.5" fill="#e879f9" opacity="0.95"/>
+                        <circle cx="5"  cy="9" r="1.2" fill="#38bdf8" opacity="0.9"/>
+                        <circle cx="19" cy="9" r="1.2" fill="#34d399" opacity="0.9"/>
+                        <rect x="3" y="17" width="18" height="2" rx="1" fill="url(#sa-crown-g2)" opacity="0.85"/>
+                    </svg>
+                    <span class="sa-label" style="font-size:0.73rem;letter-spacing:1px;">Super Admin</span>
+                    <div class="sa-orb" style="animation-delay:0.9s;"></div>
+                </div>
+
+                <!-- Right: logout button -->
+                <button class="sa-unified-logout logout-btn" id="logout-btn" title="Cerrar sesión">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
+
+            <!-- Fallback for non-SA roles -->
+            <div class="user-pill" id="user-pill-normal">
                 <div class="user-avatar" id="sidebar-avatar">SA</div>
                 <div class="user-info">
-                    <div class="user-name" id="sidebar-username">Super Admin</div>
-                    <div class="user-role">Super Administrador</div>
+                    <div class="user-name" id="sidebar-username">Admin</div>
+                    <div class="user-role"></div>
                 </div>
             </div>
-            <button class="logout-btn" id="logout-btn" title="Cerrar sesión">
+            <button class="logout-btn" id="logout-btn-normal" title="Cerrar sesión" style="display:none;">
                 <i data-lucide="log-out"></i>
             </button>
         </div>
@@ -299,7 +433,7 @@
                 <div class="kpi-card">
                     <div class="kpi-icon kpi-purple"><i data-lucide="building-2"></i></div>
                     <div class="kpi-info">
-                        <div class="kpi-value" id="kpi-businesses">0</div>
+                        <div class="kpi-value" id="kpi-businesses"><span class="sa-skeleton"></span></div>
                         <div class="kpi-label">Negocios Activos</div>
                     </div>
                     <div class="kpi-trend up">+0%</div>
@@ -307,7 +441,7 @@
                 <div class="kpi-card">
                     <div class="kpi-icon kpi-blue"><i data-lucide="grid-2x2"></i></div>
                     <div class="kpi-info">
-                        <div class="kpi-value" id="kpi-modules">4</div>
+                        <div class="kpi-value" id="kpi-modules"><span class="sa-skeleton"></span></div>
                         <div class="kpi-label">Módulos Disponibles</div>
                     </div>
                     <div class="kpi-trend up">+1 nuevo</div>
@@ -315,7 +449,7 @@
                 <div class="kpi-card">
                     <div class="kpi-icon kpi-green"><i data-lucide="users"></i></div>
                     <div class="kpi-info">
-                        <div class="kpi-value" id="kpi-users">1</div>
+                        <div class="kpi-value" id="kpi-users"><span class="sa-skeleton"></span></div>
                         <div class="kpi-label">Usuarios Totales</div>
                     </div>
                     <div class="kpi-trend up">Activo</div>
@@ -323,7 +457,7 @@
                 <div class="kpi-card">
                     <div class="kpi-icon kpi-orange"><i data-lucide="zap"></i></div>
                     <div class="kpi-info">
-                        <div class="kpi-value" id="kpi-revenue">$0</div>
+                        <div class="kpi-value" id="kpi-revenue"><span class="sa-skeleton"></span></div>
                         <div class="kpi-label">Ingresos del Mes</div>
                     </div>
                 </div>

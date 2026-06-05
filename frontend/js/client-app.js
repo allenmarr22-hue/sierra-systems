@@ -1817,6 +1817,7 @@ function renderDashboard() {
 
     lucide.createIcons();
     renderSuspensionAlerts();
+    if (typeof syncModuleLicenses === "function") syncModuleLicenses();
     // Defer chart init to next paint cycle so canvas dimensions are settled
     requestAnimationFrame(() => {
         setTimeout(() => initClientCharts(), 0);
@@ -2025,6 +2026,8 @@ function generatePassword(length = 12) {
 function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null) {
     if (instanceId === 'null' || instanceId === 'undefined') instanceId = null;
     if (branchName === 'null' || branchName === 'undefined') branchName = null;
+
+    if (typeof syncModuleLicenses === "function") syncModuleLicenses();
 
     // Verificación de mantenimiento o próximamente
     const globalMod = appState.modules.find(m => String(m.id) === String(modId));
@@ -2367,7 +2370,7 @@ function handlePurchase(modName, modPrice) {
                     </div>
                     <div>
                         <p style="margin:0 0 0.75rem; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">${walletCards.length > 1 ? 'Selecciona una tarjeta guardada:' : 'Tarjeta guardada:'}</p>
-                        <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:230px; overflow-y:auto; padding-right:2px;">
+                        <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:230px; overflow-y:auto; padding: 4px 4px 4px 0;">
                             ${cardsListHTML}
                         </div>
                     </div>
@@ -2634,7 +2637,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
                     </div>
                     <div>
                         <p style="margin:0 0 0.75rem; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">${walletCards.length > 1 ? 'Selecciona una tarjeta guardada:' : 'Tarjeta guardada:'}</p>
-                        <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:230px; overflow-y:auto; padding-right:2px;">
+                        <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:230px; overflow-y:auto; padding: 4px 4px 4px 0;">
                             ${cardsListHTML}
                         </div>
                     </div>
@@ -2998,13 +3001,13 @@ function setupSidebar() {
 function initTheme() {
     const themeToggle = document.getElementById('theme-toggle');
     const html = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'light';
+    const savedTheme = localStorage.getItem('as_client_theme') || 'light';
 
     html.setAttribute('data-theme', savedTheme);
     updateThemeIcon(themeToggle, savedTheme);
 
     // Initialize Accent Color
-    const savedAccent = localStorage.getItem('as_accent') || 'indigo';
+    const savedAccent = localStorage.getItem('as_client_accent') || 'indigo';
     html.setAttribute('data-accent', savedAccent);
     
     // Mark the correct accent-option as active in UI
@@ -3020,7 +3023,7 @@ function initTheme() {
         const current = html.getAttribute('data-theme');
         const next = current === 'light' ? 'dark' : 'light';
         html.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
+        localStorage.setItem('as_client_theme', next);
         updateThemeIcon(themeToggle, next);
     });
 
@@ -3037,7 +3040,7 @@ function initTheme() {
         opt.addEventListener('click', (e) => {
             const val = opt.getAttribute('data-accent-val');
             html.setAttribute('data-accent', val);
-            localStorage.setItem('as_accent', val);
+            localStorage.setItem('as_client_accent', val);
             
             document.querySelectorAll('.accent-option').forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
@@ -4487,6 +4490,76 @@ document.addEventListener('keydown', (e) => {
 // ==========================================================================
 // SUSPENSION WARNING BANNERS & SELF-REACTIVATION
 // ==========================================================================
+
+function syncModuleLicenses() {
+    try {
+        const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+        if (!clientBiz) return;
+
+        const isSuspended = clientBiz.billing?.subscription_status === 'suspended';
+
+        if (clientBiz.moduleInstances && clientBiz.moduleInstances.length > 0) {
+            clientBiz.moduleInstances.forEach(inst => {
+                const modId = inst.moduleId;
+                let licensePrefix = '';
+                let moduleName = '';
+                if (modId === 'agenda') {
+                    licensePrefix = 'margarita_license';
+                    moduleName = 'StyleSync Pro';
+                } else if (modId === 'streetfeed') {
+                    licensePrefix = 'streetfeed_license';
+                    moduleName = 'StreetFeed Pro';
+                }
+
+                if (licensePrefix) {
+                    const accessUntil = inst.status === 'cancelled' ? inst.accessUntil : inst.renewalDate;
+                    const isExpired = accessUntil ? (new Date(accessUntil).getTime() <= Date.now()) : false;
+                    const finalStatus = (isSuspended || isExpired || inst.status === 'suspended' || inst.status === 'inactive') ? 'suspended' : 'active';
+
+                    const licenseData = {
+                        subscription_status: finalStatus,
+                        renewalDate: accessUntil || null,
+                        moduleName: moduleName
+                    };
+
+                    // Store both with and without instanceId for safety
+                    localStorage.setItem(`${licensePrefix}_${inst.instanceId}`, JSON.stringify(licenseData));
+                    localStorage.setItem(licensePrefix, JSON.stringify(licenseData));
+                }
+            });
+        } else {
+            // Legacy fallback
+            const activeModules = clientBiz.modules || [];
+            activeModules.forEach(modId => {
+                let licensePrefix = '';
+                let moduleName = '';
+                if (modId === 'agenda') {
+                    licensePrefix = 'margarita_license';
+                    moduleName = 'StyleSync Pro';
+                } else if (modId === 'streetfeed') {
+                    licensePrefix = 'streetfeed_license';
+                    moduleName = 'StreetFeed Pro';
+                }
+
+                if (licensePrefix) {
+                    const rawDate = clientBiz?.moduleDates?.[modId];
+                    const isExpired = rawDate ? (new Date(rawDate).getTime() <= Date.now()) : false;
+                    const finalStatus = (isSuspended || isExpired) ? 'suspended' : 'active';
+
+                    const licenseData = {
+                        subscription_status: finalStatus,
+                        renewalDate: rawDate || null,
+                        moduleName: moduleName
+                    };
+
+                    localStorage.setItem(licensePrefix, JSON.stringify(licenseData));
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Error syncing module licenses:', e);
+    }
+}
 
 function renderSuspensionAlerts() {
     const bannerContainer = document.getElementById('suspension-banner-container');

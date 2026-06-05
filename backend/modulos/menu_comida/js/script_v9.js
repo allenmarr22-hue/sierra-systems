@@ -512,6 +512,89 @@ function saveStateToLocal() {
     }
 }
 
+function checkLicenseStatus() {
+    try {
+        const licenseDataRaw = localStorage.getItem('streetfeed_license');
+        if (!licenseDataRaw) {
+            return;
+        }
+
+        const license = JSON.parse(licenseDataRaw);
+        const blockScreen = document.getElementById('license-block-screen');
+        const bannerContainer = document.getElementById('license-banner-container');
+
+        if (!blockScreen) return;
+
+        if (license.subscription_status === 'suspended') {
+            blockScreen.style.display = 'flex';
+            const adminView = document.getElementById('admin-view');
+            if (adminView) adminView.classList.add('hidden');
+            return;
+        } else {
+            blockScreen.style.display = 'none';
+        }
+
+        if (license.renewalDate) {
+            const renewalTime = new Date(license.renewalDate).getTime();
+            const diffMs = renewalTime - Date.now();
+            const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+            if (daysLeft >= 0 && daysLeft <= 5) {
+                if (bannerContainer) {
+                    bannerContainer.innerHTML = `
+                        <div id="license-warning-banner" style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            background: rgba(247, 147, 30, 0.1);
+                            border: 1px solid rgba(247, 147, 30, 0.3);
+                            color: #f7931e;
+                            padding: 12px 24px;
+                            border-radius: 12px;
+                            margin: 15px;
+                            font-family: inherit;
+                            font-size: 0.9rem;
+                            font-weight: 500;
+                            gap: 15px;
+                            backdrop-filter: blur(10px);
+                            box-shadow: 0 4px 20px rgba(247, 147, 30, 0.08);
+                            animation: licenseSlideDown 0.4s ease;
+                            box-sizing: border-box;
+                            width: calc(100% - 30px);
+                        ">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <span>Tu suscripción vencerá en <strong>${daysLeft}</strong> ${daysLeft === 1 ? 'día' : 'días'}. Por favor, realiza la renovación para evitar la suspensión del servicio.</span>
+                            </div>
+                            <a href="/client-login.html" target="_top" style="
+                                background: #f7931e;
+                                color: #fff;
+                                text-decoration: none;
+                                padding: 8px 16px;
+                                border-radius: 8px;
+                                font-weight: 700;
+                                font-size: 0.85rem;
+                                transition: all 0.2s ease;
+                                white-space: nowrap;
+                                box-shadow: 0 4px 12px rgba(247, 147, 30, 0.25);
+                            " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(247, 147, 30, 0.4)';"
+                               onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 12px rgba(247, 147, 30, 0.25)';">
+                                Renovar Licencia
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                if (bannerContainer) bannerContainer.innerHTML = '';
+            }
+        } else {
+            if (bannerContainer) bannerContainer.innerHTML = '';
+        }
+    } catch (e) {
+        console.error('Error handling license check:', e);
+    }
+}
+
 function switchView(viewName) {
     const isPageAdmin = window.location.pathname.endsWith('admin.html');
     
@@ -549,6 +632,7 @@ function switchView(viewName) {
     } else if (viewName === 'login') {
         if (loginView) loginView.classList.remove('hidden');
     } else if (viewName === 'admin') {
+        checkLicenseStatus();
         if (adminView) adminView.classList.remove('hidden');
         if (typeof renderAdmin === 'function') renderAdmin();
         if (typeof prefillConfigForm === 'function') prefillConfigForm();

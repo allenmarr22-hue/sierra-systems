@@ -1,6 +1,6 @@
-# Margarita Studio - Sistema de Gestión de Citas
+# StyleSync Pro - Sistema de Gestión de Citas
 
-Este proyecto es una plataforma web completa para la administración de un estudio de estética (Margarita Studio), que incluye una landing page para clientes y un panel de administración avanzado para la gestión de citas y especialistas.
+Este proyecto es una plataforma web completa para la administración de un estudio de estética (StyleSync Pro), que incluye una landing page para clientes y un panel de administración avanzado para la gestión de citas y especialistas.
 
 ## 🚀 Funcionalidades Principales
 
@@ -36,4 +36,4 @@ Este proyecto es una plataforma web completa para la administración de un estud
 3. Abre `admin.html` para acceder al panel de control (Usuario: `admin`, Clave: `12345`).
 
 ---
-Desarrollado con ❤️ para **Margarita Studio**.
+Desarrollado con ❤️ para **StyleSync Pro**.

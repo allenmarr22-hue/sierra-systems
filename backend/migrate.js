@@ -210,8 +210,13 @@ async function runMigration() {
                 type VARCHAR(100) NOT NULL,
                 status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
                 city VARCHAR(100) NULL,
+                nit VARCHAR(100) NULL,
+                phone VARCHAR(100) NULL,
+                address VARCHAR(255) NULL,
                 client_email VARCHAR(150) NOT NULL UNIQUE,
                 client_pass VARCHAR(255) NOT NULL,
+                owner_name VARCHAR(150) NULL,
+                registration_source VARCHAR(100) NULL DEFAULT 'admin',
                 avatar_url VARCHAR(255) NULL,
                 
                 -- Facturación
@@ -359,15 +364,20 @@ async function runMigration() {
 
             await pool.query(`
                 INSERT INTO businesses (
-                    id, name, type, status, city, client_email, client_pass, avatar_url,
+                    id, name, type, status, city, nit, phone, address, client_email, client_pass, owner_name, registration_source, avatar_url,
                     gateway_token, last_four, card_brand, subscription_status, next_billing_date,
                     last_payment_date, last_payment_amount, last_failed_attempt, last_transaction_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                     name = VALUES(name),
                     type = VALUES(type),
                     status = VALUES(status),
                     city = VALUES(city),
+                    nit = VALUES(nit),
+                    phone = VALUES(phone),
+                    address = VALUES(address),
+                    owner_name = VALUES(owner_name),
+                    registration_source = VALUES(registration_source),
                     client_email = VALUES(client_email),
                     client_pass = VALUES(client_pass),
                     avatar_url = VALUES(avatar_url),
@@ -386,8 +396,13 @@ async function runMigration() {
                 biz.type,
                 biz.status || 'active',
                 biz.city || null,
+                biz.nit || null,
+                biz.phone || null,
+                biz.address || null,
                 biz.clientEmail,
                 hashPassword(biz.clientPass),
+                biz.ownerName || null,
+                biz.registrationSource || 'admin',
                 biz.avatarUrl || null,
                 billing.gateway_token || null,
                 billing.last_four || null,

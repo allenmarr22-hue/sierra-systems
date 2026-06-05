@@ -23,6 +23,24 @@
     }
 })();
 
+// ====== INICIALIZACIÓN DE CREDENCIALES DESDE EL PANEL DE CONTROL ======
+(function() {
+    try {
+        const storedUser = localStorage.getItem('margarita_admin_user');
+        const storedPass = localStorage.getItem('margarita_admin_pass');
+        if (!storedUser || !storedPass) {
+            const authObj = JSON.parse(localStorage.getItem('agenda_auth'));
+            if (authObj && authObj.user && authObj.pass) {
+                localStorage.setItem('margarita_admin_user', authObj.user);
+                localStorage.setItem('margarita_admin_pass', authObj.pass);
+                console.log("🔑 [Credenciales] Inicializadas desde agenda_auth:", authObj.user);
+            }
+        }
+    } catch(e) {
+        console.error("Error inicializando credenciales desde agenda_auth:", e);
+    }
+})();
+
 // Backend Firebase Config (Proyecto: margaritasmitbeautystudio)
 window.normalizeText = function(s) {
     return s ? s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
@@ -5269,9 +5287,9 @@ window.sendReminderWhatsApp = function(index, isMaintenance = false) {
         timeLabel = window.formatTime12h(timeLabel);
     }
     
-    const docName = apt.specialist || 'Margarita Smit';
+    const docName = apt.specialist || 'StyleSync Pro';
     const clientName = (apt.name || 'hermosa').split(' ')[0]; // Solo primer nombre para calidez
-    const businessName = localStorage.getItem('margarita_site_name') || 'Margaritasmit';
+    const businessName = localStorage.getItem('margarita_site_name') || 'StyleSync Pro';
     
     let msg = "";
     if (isMaintenance || currentAgendaTray === 'reminders') {
@@ -5500,7 +5518,7 @@ function generateExcelFile(historyData, monthParam, yearParam) {
       <thead>
         <tr>
           <th colspan="10" style="font-size: 16pt; font-weight: bold; background-color: #A05D6B; color: white; padding: 15px; text-align: center; border: 1px solid #ccc;">
-            REGISTRO DE SERVICIOS - MARGARITA SMITH (${monthText} ${yearText})
+            REGISTRO DE SERVICIOS - STYLESYNC PRO (${monthText} ${yearText})
           </th>
         </tr>
         <tr style="background-color: #f2f2f2; color: #000;">
@@ -6653,10 +6671,94 @@ window.setAgendaTray = function(tray) {
     renderAgenda();
 };
 
+function checkLicenseStatus() {
+    try {
+        const licenseDataRaw = localStorage.getItem('margarita_license');
+        if (!licenseDataRaw) {
+            return;
+        }
+
+        const license = JSON.parse(licenseDataRaw);
+        const blockScreen = document.getElementById('license-block-screen');
+        const bannerContainer = document.getElementById('license-banner-container');
+
+        if (!blockScreen) return;
+
+        if (license.subscription_status === 'suspended') {
+            blockScreen.style.display = 'flex';
+            const dashboard = document.getElementById('dashboard-section');
+            if (dashboard) dashboard.style.display = 'none';
+            return;
+        } else {
+            blockScreen.style.display = 'none';
+        }
+
+        if (license.renewalDate) {
+            const renewalTime = new Date(license.renewalDate).getTime();
+            const diffMs = renewalTime - Date.now();
+            const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+            if (daysLeft >= 0 && daysLeft <= 5) {
+                if (bannerContainer) {
+                    bannerContainer.innerHTML = `
+                        <div id="license-warning-banner" style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            background: rgba(247, 147, 30, 0.1);
+                            border: 1px solid rgba(247, 147, 30, 0.3);
+                            color: #f7931e;
+                            padding: 12px 24px;
+                            border-radius: 12px;
+                            margin: 15px;
+                            font-family: inherit;
+                            font-size: 0.9rem;
+                            font-weight: 500;
+                            gap: 15px;
+                            backdrop-filter: blur(10px);
+                            box-shadow: 0 4px 20px rgba(247, 147, 30, 0.08);
+                            animation: licenseSlideDown 0.4s ease;
+                            box-sizing: border-box;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <span>Tu suscripción vencerá en <strong>${daysLeft}</strong> ${daysLeft === 1 ? 'día' : 'días'}. Por favor, realiza la renovación para evitar la suspensión del servicio.</span>
+                            </div>
+                            <a href="/client-login.html" target="_top" style="
+                                background: #f7931e;
+                                color: #fff;
+                                text-decoration: none;
+                                padding: 8px 16px;
+                                border-radius: 8px;
+                                font-weight: 700;
+                                font-size: 0.85rem;
+                                transition: all 0.2s ease;
+                                white-space: nowrap;
+                                box-shadow: 0 4px 12px rgba(247, 147, 30, 0.25);
+                            " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(247, 147, 30, 0.4)';"
+                               onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 12px rgba(247, 147, 30, 0.25)';">
+                                Renovar Licencia
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                if (bannerContainer) bannerContainer.innerHTML = '';
+            }
+        } else {
+            if (bannerContainer) bannerContainer.innerHTML = '';
+        }
+    } catch (e) {
+        console.error('Error handling license check:', e);
+    }
+}
+
 function toggleView(isLoggedIn) {
     if (isLoggedIn) {
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('dashboard-section').style.display = 'block';
+        
+        checkLicenseStatus();
         
         // Show default tab (Agenda)
         showTab('agenda-tab', document.querySelector('.sidebar-nav nav a:first-child'));
@@ -6682,6 +6784,7 @@ function toggleView(isLoggedIn) {
 // Inicializar sesión al cargar la página
 if (localStorage.getItem('margarita_admin_session') === 'true') {
     toggleView(true);
+    checkLicenseStatus();
 } else {
     toggleView(false);
 }
@@ -7954,7 +8057,7 @@ window.syncAdminMetaToCloud = async function(silent = false) {
 
     const meta = {
         theme: localStorage.getItem('margarita_admin_theme') || 'rose',
-        site_name: localStorage.getItem('margarita_site_name') || 'Margaritasmit',
+        site_name: localStorage.getItem('margarita_site_name') || 'StyleSync Pro',
         admin_gender: localStorage.getItem('margarita_admin_gender') || 'Femenino',
         whatsapp_number: localStorage.getItem('margarita_whatsapp_number') || '3057726115',
         site_address: localStorage.getItem('margarita_site_address') || 'Calle 14 # 11-74, Sevilla',
@@ -8155,7 +8258,7 @@ function _showSavedPreview(previewId, src) {
 
 
 function applyDynamicBranding() {
-    const name = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+    const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
     const customLogo = localStorage.getItem('margarita_logo_url');
 
     // Auto-optimizar logos gigantescos existentes en el navegador
@@ -8296,7 +8399,7 @@ window.saveSocialLinks = function() {
 };
 
 function loadCurrentSettings() {
-    document.getElementById('settings-site-name').value = localStorage.getItem('margarita_site_name') || "Margaritasmit";
+    document.getElementById('settings-site-name').value = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
     document.getElementById('settings-admin-gender').value = localStorage.getItem('margarita_admin_gender') || "Femenino";
     document.getElementById('settings-site-whatsapp').value = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
     document.getElementById('settings-site-address').value = localStorage.getItem('margarita_site_address') || "Calle 14 # 11-74, Sevilla";
@@ -9270,7 +9373,7 @@ window.exportExpensesToExcel = function() {
     const expenses = JSON.parse(localStorage.getItem('margarita_expenses')) || [];
     if (expenses.length === 0) return showToast('No hay datos para exportar.', 'error');
 
-    const businessName = localStorage.getItem('margarita_site_name') || 'Margaritasmit Beauty Studio';
+    const businessName = localStorage.getItem('margarita_site_name') || 'StyleSync Pro';
     const reportDate = new Date().toLocaleDateString();
     
     let total = 0;
@@ -9323,7 +9426,7 @@ window.exportExpensesToExcel = function() {
                     </tr>
                 </tfoot>
             </table>
-            <p style="text-align:center; color:#ccc; font-size:10px; margin-top:20px;">Reporte autogenerado por Sistema Administrativo Margaritasmit.</p>
+            <p style="text-align:center; color:#ccc; font-size:10px; margin-top:20px;">Reporte autogenerado por Sistema Administrativo StyleSync Pro.</p>
         </body>
         </html>`;
 
