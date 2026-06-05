@@ -408,10 +408,11 @@ const ROLE_PERMISSIONS = {
         canDelete: false
     },
     'Soporte': {
-        tabs: ['tab-dashboard', 'tab-businesses'],
+        tabs: ['tab-dashboard', 'tab-businesses', 'tab-tickets'],
         canCreate: false,
         canEdit: false,
-        canDelete: false
+        canDelete: false,
+        canTicketReply: true
     }
 };
 
@@ -515,14 +516,14 @@ function applyRolePermissions() {
     }
     if (topbarAvatar) topbarAvatar.textContent = initials;
 
-    // Show read-only banner for Soporte
+    // Show limited access banner for Soporte
     if (role === 'Soporte') {
         const existing = document.getElementById('readonly-banner');
         if (!existing) {
             const banner = document.createElement('div');
             banner.id = 'readonly-banner';
-            banner.innerHTML = '<i data-lucide="eye" style="width:14px;height:14px;"></i> Modo solo lectura — Rol: Soporte';
-            banner.style.cssText = 'position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:var(--warning);padding:0.5rem 1.25rem;border-radius:20px;font-size:0.78rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;z-index:9000;backdrop-filter:blur(8px);';
+            banner.innerHTML = '<i data-lucide="shield" style="width:14px;height:14px;"></i> Acceso limitado — Puede responder tickets, solo lectura en lo demás';
+            banner.style.cssText = 'position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:var(--primary);padding:0.5rem 1.25rem;border-radius:20px;font-size:0.78rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;z-index:9000;backdrop-filter:blur(8px);';
             document.body.appendChild(banner);
             lucide.createIcons();
         }
