@@ -4011,7 +4011,7 @@ window.fetchAndRenderChatMessages = async function(ticketId, role) {
             ` : '';
 
             const contentHtml = msg.image_url
-                ? `<img src="${msg.image_url}" alt="imagen" onclick="openChatImageLightbox('${msg.image_url}')" style="max-width:200px;max-height:200px;border-radius:8px;cursor:zoom-in;object-fit:cover;display:block;" />`
+                ? `<img src="${msg.image_url}" alt="imagen" onload="const c = document.getElementById('ticket-chat-container'); if(c) c.scrollTop = c.scrollHeight;" onclick="openChatImageLightbox('${msg.image_url}')" style="max-width:200px;max-height:200px;border-radius:8px;cursor:zoom-in;object-fit:cover;display:block;" />`
                 : `<span class="chat-message-text" style="white-space:pre-wrap;word-break:break-word;">${msg.message.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
 
             const bubbleStyle = isMe
@@ -4030,7 +4030,11 @@ window.fetchAndRenderChatMessages = async function(ticketId, role) {
             `;
         }).join('');
 
+        // Scroll immediately, and schedule follow-ups to ensure it scrolls to bottom after DOM layout/animations settle
         container.scrollTop = container.scrollHeight;
+        setTimeout(() => { container.scrollTop = container.scrollHeight; }, 30);
+        setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+        setTimeout(() => { container.scrollTop = container.scrollHeight; }, 300);
     } catch (err) {
         console.error('Error cargando chat:', err);
         container.innerHTML = `
