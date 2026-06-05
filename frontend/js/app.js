@@ -704,12 +704,23 @@ async function fetchNotifications() {
     }
 }
 
+function getUserThemeKey() {
+    return appState.user && appState.user.user ? `as_theme_${appState.user.user}` : 'as_theme';
+}
+
+function getUserAccentKey() {
+    return appState.user && appState.user.user ? `as_accent_${appState.user.user}` : 'as_accent';
+}
+
 function initTheme() {
+    const themeKey = getUserThemeKey();
+    appState.theme = localStorage.getItem(themeKey) || 'light';
     document.documentElement.setAttribute('data-theme', appState.theme);
     updateThemeIcon();
     
     // Initialize Accent Color
-    const accent = localStorage.getItem('as_accent') || 'indigo';
+    const accentKey = getUserAccentKey();
+    const accent = localStorage.getItem(accentKey) || 'indigo';
     document.documentElement.setAttribute('data-accent', accent);
     document.querySelectorAll('.accent-option').forEach(opt => {
         if (opt.getAttribute('data-accent-val') === accent) {
@@ -722,7 +733,8 @@ function initTheme() {
 
 function toggleTheme() {
     appState.theme = appState.theme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('as_theme', appState.theme);
+    const themeKey = getUserThemeKey();
+    localStorage.setItem(themeKey, appState.theme);
     document.documentElement.setAttribute('data-theme', appState.theme);
     updateThemeIcon();
 }
@@ -770,6 +782,7 @@ function setupEventListeners() {
                     localStorage.setItem('as_user', JSON.stringify(data.user));
                     if (data.token) localStorage.setItem('as_admin_token', data.token);
                     appState.user = data.user;
+                    initTheme(); // Initialize user-specific theme/accent
                     showView('dashboard-view');
                     loadData();
                 } else {
@@ -814,6 +827,7 @@ function setupEventListeners() {
                 localStorage.removeItem('as_auth');
                 localStorage.removeItem('as_user');
                 appState.user = null;
+                initTheme(); // Revert to global/anonymous theme/accent
                 showView('login-view');
                 lucide.createIcons();
                 showToast('Sesión cerrada correctamente', 'info');
@@ -839,7 +853,8 @@ function setupEventListeners() {
         opt.addEventListener('click', (e) => {
             const val = opt.getAttribute('data-accent-val');
             document.documentElement.setAttribute('data-accent', val);
-            localStorage.setItem('as_accent', val);
+            const accentKey = getUserAccentKey();
+            localStorage.setItem(accentKey, val);
             
             document.querySelectorAll('.accent-option').forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
