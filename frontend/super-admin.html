@@ -44,13 +44,17 @@
                 }
                 document.getElementsByTagName('head')[0].appendChild(link);
 
-                // Anti-FOUC para el unified Super Admin pill
+                // Anti-FOUC para el unified Super Admin pill y los botones de navegación por rol
                 try {
                     var userRaw = localStorage.getItem('as_user');
                     if (userRaw) {
                         var user = JSON.parse(userRaw);
-                        if (user && user.role === 'Super Admin') {
-                            document.documentElement.classList.add('is-super-admin');
+                        if (user && user.role) {
+                            if (user.role === 'Super Admin' || user.role === 'root') {
+                                document.documentElement.classList.add('is-super-admin');
+                            }
+                            var roleClass = 'role-' + user.role.toLowerCase().replace(/\s+/g, '-');
+                            document.documentElement.classList.add(roleClass);
                         }
                     }
                 } catch(e) {}
@@ -74,6 +78,27 @@
         html.is-super-admin #logout-btn-normal { display: none !important; }
         html.is-super-admin #sa-unified-pill { display: inline-flex !important; }
         html.is-super-admin .sidebar-footer { justify-content: center !important; padding: 0.75rem 1rem !important; }
+
+        /* Anti-FOUC: Ocultar botones de navegación restringidos según el rol del usuario */
+        /* Si es Administrador, ocultar opciones de Super Admin */
+        html.role-administrador .nav-btn[data-tab="tab-users"],
+        html.role-administrador .nav-btn[data-tab="tab-billing"],
+        html.role-administrador .nav-btn[data-tab="tab-payment-history"],
+        html.role-administrador .nav-btn[data-tab="tab-settings"],
+        html.role-administrador #nav-label-sistema {
+            display: none !important;
+        }
+
+        /* Si es Soporte, ocultar opciones de Super Admin y Administrador */
+        html.role-soporte .nav-btn[data-tab="tab-modules"],
+        html.role-soporte .nav-btn[data-tab="tab-promotions"],
+        html.role-soporte .nav-btn[data-tab="tab-users"],
+        html.role-soporte .nav-btn[data-tab="tab-billing"],
+        html.role-soporte .nav-btn[data-tab="tab-payment-history"],
+        html.role-soporte .nav-btn[data-tab="tab-settings"],
+        html.role-soporte #nav-label-sistema {
+            display: none !important;
+        }
 
         /* Premium Skeleton Loading */
         .sa-skeleton {
