@@ -429,22 +429,8 @@ input, select, textarea { font-family: inherit; }
 
 .sidebar-brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 800; font-size: 1.25rem; }
 .sidebar-brand span { color: var(--primary); }
-.brand-icon {
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-    border-radius: 10px;
-    background: var(--primary-bg, rgba(99,102,241,0.12));
-    border: 1px solid var(--primary-border, rgba(99,102,241,0.25));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--primary);
-    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-}
-.brand-icon svg { display: block; color: inherit; }
-.logo-icon-wrap svg { display: none; /* Oculto por defecto para evitar parpadeos */ }
-.brand-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.brand-icon { width: 32px; height: 32px; flex-shrink: 0; }
+.brand-icon svg, .logo-icon-wrap svg { display: none; /* Oculto por defecto para evitar parpadeos */ }
 
 .sidebar-toggle-btn { color: var(--text-muted); transition: color 0.2s; }
 .sidebar-toggle-btn:hover { color: var(--text-main); }
@@ -3863,7 +3849,7 @@ html[data-accent="orange"][data-theme="light"] {
 }
 
 /* Right section: logout button */
-.sa-unified-logout {
+.sa-unified .sa-unified-logout {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3874,7 +3860,7 @@ html[data-accent="orange"][data-theme="light"] {
     background: transparent !important;
     border: none !important;
     border-left: 1px solid rgba(196,167,255,0.25) !important;
-    color: rgba(253,230,138,0.7) !important;
+    color: #fbbf24 !important; /* Gold color matching the letters */
     cursor: pointer;
     border-radius: 0 999px 999px 0 !important;
     transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
@@ -3885,7 +3871,7 @@ html[data-accent="orange"][data-theme="light"] {
     box-shadow: none !important;
     animation: none !important;
 }
-.sa-unified-logout:hover {
+.sa-unified .sa-unified-logout:hover {
     background: rgba(239, 68, 68, 0.75) !important;
     color: #ffffff !important;
     border-left-color: rgba(239,68,68,0.5) !important;
@@ -3894,15 +3880,15 @@ html[data-accent="orange"][data-theme="light"] {
         inset -6px 0 18px rgba(239, 68, 68, 0.25),
         4px 0 16px rgba(239, 68, 68, 0.18) !important;
 }
-.sa-unified-logout svg,
-.sa-unified-logout i {
+.sa-unified .sa-unified-logout svg,
+.sa-unified .sa-unified-logout i {
     transition: transform 0.3s ease, filter 0.3s ease;
     width: 14px;
     height: 14px;
     flex-shrink: 0;
 }
-.sa-unified-logout:hover svg,
-.sa-unified-logout:hover i {
+.sa-unified .sa-unified-logout:hover svg,
+.sa-unified .sa-unified-logout:hover i {
     transform: translateX(2px);
     filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
 }
@@ -3924,7 +3910,7 @@ html[data-accent="orange"][data-theme="light"] {
 .sidebar.collapsed .sa-unified-center {
     display: none;
 }
-.sidebar.collapsed .sa-unified-logout {
+.sidebar.collapsed .sa-unified .sa-unified-logout {
     border-left: none !important;
     border-radius: 10px !important;
     width: 40px;
@@ -3935,7 +3921,7 @@ html[data-accent="orange"][data-theme="light"] {
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.05) !important;
     animation: sa-logout-glow 2.5s infinite ease-in-out !important;
 }
-.sidebar.collapsed .sa-unified-logout:hover {
+.sidebar.collapsed .sa-unified .sa-unified-logout:hover {
     color: #ffffff !important;
     background: rgba(239, 68, 68, 0.85) !important;
     border-color: #ef4444 !important;
