@@ -207,6 +207,9 @@ window.handleChatSearch = function(query) {
     
     // Buscar en todas las burbujas que contengan texto usando la clase robusta
     const bubbles = container.querySelectorAll('.chat-message-text');
+    
+    let firstMatch = null;
+    
     bubbles.forEach(bubble => {
         let text = bubble.getAttribute('data-original-text');
         if (text === null) {
@@ -233,12 +236,30 @@ window.handleChatSearch = function(query) {
                     bubble.textContent = text;
                 }
                 parent.style.opacity = '1';
+                if (!firstMatch) {
+                    firstMatch = bubble;
+                }
             } else {
                 bubble.textContent = text;
                 parent.style.opacity = '0.35';
             }
         }
     });
+
+    if (q === '') {
+        // Al limpiar la búsqueda, ir al final del chat
+        container.scrollTop = container.scrollHeight;
+    } else if (firstMatch) {
+        // Centrar el primer mensaje coincidente en el contenedor
+        const containerRect = container.getBoundingClientRect();
+        const elemRect = firstMatch.getBoundingClientRect();
+        const relativeTop = elemRect.top - containerRect.top + container.scrollTop;
+        
+        container.scrollTo({
+            top: relativeTop - (container.clientHeight / 2) + (elemRect.height / 2),
+            behavior: 'smooth'
+        });
+    }
 };
 
 
