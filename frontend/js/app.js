@@ -423,11 +423,19 @@ function applyRolePermissions() {
 
     // Hide/show the Gestión section label if no items visible
     const gestionLabel = document.getElementById('nav-label-gestion');
-    const gestionVisible = ['tab-users', 'tab-billing'].some(tab => {
+    const gestionVisible = ['tab-users', 'tab-billing', 'tab-payment-history', 'tab-tickets'].some(tab => {
         const btn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
         return btn && btn.style.display !== 'none';
     });
     if (gestionLabel) gestionLabel.style.display = gestionVisible ? '' : 'none';
+
+    // Hide/show the Sistema section label if no items visible
+    const sistemaLabel = document.getElementById('nav-label-sistema');
+    const sistemaVisible = ['tab-settings'].some(tab => {
+        const btn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+        return btn && btn.style.display !== 'none';
+    });
+    if (sistemaLabel) sistemaLabel.style.display = sistemaVisible ? '' : 'none';
 
     // Hide action buttons for roles without permission
     if (!perms.canCreate) {
