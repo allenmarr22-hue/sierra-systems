@@ -2180,12 +2180,14 @@ async function updateModuleState(id, updates) {
     window.activeModuleToggles.add(String(id));
 
     try {
-        const res = await adminFetch(`/api/modules/${id}`, {
-            method: 'PUT',
+        // Usar POST /api/modules/toggle (acepta Administrador con requireWriteAccess)
+        // en lugar de PUT /api/modules/:id (solo Super Admin)
+        const res = await adminFetch('/api/modules/toggle', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updated)
+            body: JSON.stringify({ id, status: newStatus })
         });
-        
+
         if (res.ok) {
             // 1. Actualizar estado local en memoria
             appState.modules = appState.modules.map(m => m.id == id ? updated : m);
@@ -2233,6 +2235,7 @@ async function updateModuleState(id, updates) {
 }
 
 function openBusinessModal(id = null) {
+
     document.getElementById('business-modal').classList.remove('hidden');
     document.getElementById('business-form').reset();
     document.getElementById('biz-id').value = '';
