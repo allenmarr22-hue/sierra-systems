@@ -2351,7 +2351,9 @@ app.post('/api/tickets/:id/messages', requireAdminOrMatchingClient, async (req, 
         if (req.userRole === 'client') {
             senderName = ticket.business_name || 'Cliente';
         } else {
-            senderName = req.adminUser.name || req.adminUser.user || 'Soporte';
+            const adminName = req.adminUser.name || req.adminUser.user || 'Soporte';
+            const adminRole = req.adminUser.role || 'Soporte';
+            senderName = `${adminName} · ${adminRole}`;
         }
 
         await db.pool.query(
@@ -2406,7 +2408,9 @@ app.post('/api/tickets/:id/messages/image', requireAdminOrMatchingClient, (req, 
         if (req.userRole === 'client') {
             senderName = ticket.business_name || 'Cliente';
         } else {
-            senderName = req.adminUser.name || req.adminUser.user || 'Soporte';
+            const adminName = req.adminUser.name || req.adminUser.user || 'Soporte';
+            const adminRole = req.adminUser.role || 'Soporte';
+            senderName = `${adminName} · ${adminRole}`;
         }
 
         const imageUrl = `/uploads/ticket-images/${req.file.filename}`;

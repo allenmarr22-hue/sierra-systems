@@ -4177,8 +4177,16 @@ window.fetchAndRenderChatMessages = async function(ticketId, role) {
                 }
             }
 
+            const isAdminMsg = msg.sender === 'admin';
+            const nameLabel = msg.sender_name || (isAdminMsg ? 'Soporte AS Sierra' : 'Tú');
+            const nameParts = nameLabel.split('·').map(s => s.trim());
+            const displayName = nameParts[0];
+            const displayRole = nameParts[1] || '';
+
             const nameRow = (!sameAsPrev || dateSeparator) ? `
-                <span style="font-size:0.63rem;font-weight:700;color:${isMe ? 'rgba(129,140,248,0.9)' : 'var(--text-muted)'};${isMe ? 'text-align:right;' : ''}display:block;margin-bottom:2px;padding:0 4px;">${isMe ? 'Tú' : msg.sender_name}</span>
+                <span style="font-size:0.63rem;font-weight:700;display:block;margin-bottom:2px;padding:0 4px;${isMe ? 'text-align:right;' : ''}">
+                    <span style="color:${isAdminMsg ? 'rgba(129,140,248,0.95)' : 'var(--text-muted)'};">${isMe ? 'Tú' : displayName}</span>${(!isMe && displayRole) ? ` <span style="color:rgba(129,140,248,0.55);font-weight:600;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.04em;">· ${displayRole}</span>` : ''}
+                </span>
             ` : '';
 
             const contentHtml = msg.image_url
