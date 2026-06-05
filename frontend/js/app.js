@@ -1924,19 +1924,23 @@ function filterBusinesses(filterType, searchQuery = '') {
                         <button class="dropdown-item cred-biz-btn" data-id="${biz.id}">
                             <i data-lucide="key"></i> Accesos
                         </button>
+                        ${ROLE_PERMISSIONS[getCurrentRole()]?.canEdit ? `
                         <button class="dropdown-item edit-biz-btn" data-id="${biz.id}">
                             <i data-lucide="edit"></i> Editar
                         </button>
                         <button class="dropdown-item toggle-biz-btn" data-id="${biz.id}" data-status="${biz.status === 'active' ? 'inactive' : 'active'}">
                             ${biz.status === 'active' ? '<i data-lucide="power-off"></i> Desactivar' : '<i data-lucide="power" style="color:var(--success)"></i> Activar'}
                         </button>
+                        ` : ''}
                         <button class="dropdown-item" onclick="downloadIndividualBusinessPDF('${biz.id}')">
                             <i data-lucide="file-text"></i> Descargar Ficha PDF
                         </button>
+                        ${ROLE_PERMISSIONS[getCurrentRole()]?.canDelete ? `
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item text-danger delete-biz-btn" data-id="${biz.id}">
                             <i data-lucide="trash-2"></i> Eliminar
                         </button>
+                        ` : ''}
                     </div>
                 </div>
             </div>
