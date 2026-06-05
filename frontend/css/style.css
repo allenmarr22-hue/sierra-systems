@@ -4120,13 +4120,13 @@ html[data-accent="orange"][data-theme="light"] {
     filter: drop-shadow(0 0 3px #fff);
 }
 
-/* Collapsed: Show as a premium glowing button box as requested when sidebar is collapsed */
+/* Collapsed: Show as a subtle icon-only button, red glow only on hover */
 .sidebar.collapsed .logout-btn {
-    background: rgba(239, 68, 68, 0.04) !important;
-    border: 1.5px solid rgba(239, 68, 68, 0.25) !important;
-    color: rgba(239, 68, 68, 0.75) !important;
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.05) !important;
-    animation: sa-logout-glow 2.5s infinite ease-in-out !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: var(--text-muted) !important;
+    box-shadow: none !important;
+    animation: none !important;
 }
 .sidebar.collapsed .logout-btn:hover {
     color: #ffffff !important;
