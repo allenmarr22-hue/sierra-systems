@@ -481,6 +481,9 @@ function applyRolePermissions() {
         if (unifiedPill)  unifiedPill.style.display  = 'none';
         if (normalPill)   normalPill.style.display    = 'flex';
         if (normalLogout) normalLogout.style.display  = 'block';
+        // Reset sidebar-footer styles back to default (space-between)
+        const footer = document.querySelector('.sidebar-footer');
+        if (footer) { footer.style.justifyContent = ''; footer.style.padding = ''; }
 
         if (nameEl) nameEl.textContent = appState.user?.name || 'Usuario';
         if (avatarEl) {
