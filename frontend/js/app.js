@@ -1598,7 +1598,7 @@ async function saveUser() {
         try {
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/users/${id}` : '/api/users/new';
-            const res = await fetch(url, {
+            const res = await adminFetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData)
@@ -1663,7 +1663,7 @@ async function deleteUser(id) {
     });
     if (!result.isConfirmed) return;
     try {
-        const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+        const res = await adminFetch(`/api/users/${id}`, { method: 'DELETE' });
         if (res.ok) {
             showToast('Usuario eliminado', 'success');
             loadData();
