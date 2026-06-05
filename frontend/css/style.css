@@ -566,7 +566,7 @@ input, select, textarea { font-family: inherit; }
 
 .logout-btn { color: var(--text-muted); padding: 0.5rem; border-radius: 8px; }
 .logout-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
-.sidebar.collapsed .user-pill { display: none; }
+.sidebar.collapsed .user-pill { display: none !important; }
 .sidebar.collapsed .logout-btn { display: block; margin: 0 auto; }
 
 /* MAIN CONTENT */
@@ -3915,11 +3915,11 @@ html[data-accent="orange"][data-theme="light"] {
     border-radius: 10px !important;
     width: 40px;
     height: 40px;
-    background: rgba(239, 68, 68, 0.04) !important;
-    border: 1.5px solid rgba(239, 68, 68, 0.25) !important;
-    color: rgba(239, 68, 68, 0.75) !important;
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.05) !important;
-    animation: sa-logout-glow 2.5s infinite ease-in-out !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: var(--text-muted) !important;
+    box-shadow: none !important;
+    animation: none !important;
 }
 .sidebar.collapsed .sa-unified .sa-unified-logout:hover {
     color: #ffffff !important;
