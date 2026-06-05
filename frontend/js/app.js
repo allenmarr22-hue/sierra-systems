@@ -433,6 +433,16 @@ function applyRolePermissions() {
     const role = getCurrentRole();
     const perms = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS['Soporte'];
 
+    // Limpiar clases de rol anteriores para evitar que las reglas CSS del rol previo
+    // sigan ocultando las opciones del nuevo rol (ej: al cambiar de Soporte a Super Admin)
+    Array.from(document.documentElement.classList).forEach(cls => {
+        if (cls.startsWith('role-')) {
+            document.documentElement.classList.remove(cls);
+        }
+    });
+    const roleClass = 'role-' + role.toLowerCase().replace(/\s+/g, '-');
+    document.documentElement.classList.add(roleClass);
+
     // Show/hide ALL elements with data-roles (nav buttons, action buttons, etc.)
     document.querySelectorAll('[data-roles]').forEach(el => {
         const allowed = el.getAttribute('data-roles').split(',').map(r => r.trim());
