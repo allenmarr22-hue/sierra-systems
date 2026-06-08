@@ -1154,6 +1154,41 @@ app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
 });
 
 // ============================================================
+// BACKUP Y RESTAURACIÓN DE BASE DE DATOS (SUPER ADMIN ONLY)
+// ============================================================
+
+app.get('/api/admin/backup', requireSuperAdmin, async (req, res) => {
+    try {
+        const backupData = await db.exportBackupData();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const filename = `sierra_backup_${timestamp}.json`;
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.json(backupData);
+        console.log(`[Backup] ✅ Backup exportado exitosamente: ${filename}`);
+    } catch (err) {
+        console.error('[Backup] ❌ Error al exportar backup:', err.message);
+        res.status(500).json({ success: false, error: 'Error al generar el backup: ' + err.message });
+    }
+});
+
+app.post('/api/admin/backup/restore', requireSuperAdmin, async (req, res) => {
+    const backup = req.body;
+    try {
+        if (!backup || typeof backup !== 'object') {
+            return res.status(400).json({ success: false, error: 'Cuerpo de la petición inválido. Se esperaba JSON.' });
+        }
+        await db.importBackupData(backup);
+        broadcastUpdate();
+        console.log(`[Backup] ✅ Restauración completada por: ${req.adminUser?.name || req.adminUser?.user}`);
+        res.json({ success: true, message: 'Base de datos restaurada correctamente.' });
+    } catch (err) {
+        console.error('[Backup] ❌ Error al restaurar backup:', err.message);
+        res.status(500).json({ success: false, error: 'Error al restaurar: ' + err.message });
+    }
+});
+
+// ============================================================
 // MÓDULOS (WRITE ACCESS)
 // ============================================================
 app.put('/api/modules/:id', requireWriteAccess, async (req, res) => {

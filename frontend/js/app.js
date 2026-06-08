@@ -1456,6 +1456,121 @@ function setupEventListeners() {
         } catch (err) { showToast('Error de conexión', 'error'); }
     });
 
+    // ── Copias de Seguridad ──────────────────────────────────────────────
+    async function exportSystemBackup() {
+        try {
+            const token = localStorage.getItem('as_admin_token');
+            const res = await fetch('/api/admin/backup', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                return showToast('Error al exportar: ' + (err.error || res.statusText), 'error');
+            }
+            const data = await res.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            a.href = url;
+            a.download = `sierra_backup_${ts}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('✅ Copia de seguridad descargada correctamente', 'success');
+        } catch (err) {
+            showToast('Error de conexión al exportar backup', 'error');
+        }
+    }
+
+    async function restoreSystemBackup(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            let backupData;
+            try {
+                backupData = JSON.parse(e.target.result);
+            } catch {
+                return showToast('El archivo seleccionado no es un JSON válido', 'error');
+            }
+
+            const confirm = await Swal.fire({
+                title: '⚠️ ¿Restaurar base de datos?',
+                html: `<p style="color:var(--text-muted); font-size:0.92rem; line-height:1.6;">
+                    Esto <strong style="color:#ef4444">reemplazará todo</strong> el contenido actual de la base de datos con el archivo:<br><br>
+                    <code style="font-size:0.8rem; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:6px;">${file.name}</code><br><br>
+                    <span style="color:#f59e0b; font-size:0.82rem;">📅 Backup de: ${backupData._meta?.exported_at ? new Date(backupData._meta.exported_at).toLocaleString('es-CO') : 'Desconocido'}</span>
+                </p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, restaurar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ef4444',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                reverseButtons: true
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            Swal.fire({
+                title: 'Restaurando...',
+                html: '<p style="color:var(--text-muted)">Importando datos a la base de datos. Por favor espera.</p>',
+                allowOutsideClick: false,
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const token = localStorage.getItem('as_admin_token');
+                const res = await fetch('/api/admin/backup/restore', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(backupData)
+                });
+                const data = await res.json();
+                Swal.close();
+                if (res.ok && data.success) {
+                    await Swal.fire({
+                        title: '✅ Restauración Completa',
+                        text: 'La base de datos ha sido restaurada exitosamente.',
+                        icon: 'success',
+                        confirmButtonText: 'Recargar Panel',
+                        confirmButtonColor: '#10b981',
+                        background: 'var(--bg-card)',
+                        color: 'var(--text-main)'
+                    });
+                    location.reload();
+                } else {
+                    showToast('Error: ' + (data.error || 'No se pudo restaurar'), 'error');
+                }
+            } catch (err) {
+                Swal.close();
+                showToast('Error de conexión al restaurar', 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    document.getElementById('btn-export-backup')?.addEventListener('click', exportSystemBackup);
+
+    document.getElementById('btn-restore-backup')?.addEventListener('click', () => {
+        document.getElementById('backup-restore-input')?.click();
+    });
+
+    document.getElementById('backup-restore-input')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            restoreSystemBackup(file);
+            e.target.value = ''; // Reset so same file can be selected again
+        }
+    });
+
     // Filter Pills
     document.querySelectorAll('.filter-pills .pill').forEach(pill => {
         pill.addEventListener('click', (e) => {

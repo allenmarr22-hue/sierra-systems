@@ -1092,6 +1092,164 @@ async function renewBusinessModule(businessId, moduleId, newRenewalDate) {
     );
 }
 
+// ============================================================
+// BACKUP Y RESTAURACIÓN COMPLETA DEL SISTEMA
+// ============================================================
+
+/**
+ * Exporta el estado completo de todas las tablas críticas a un
+ * objeto JSON estructurado y portable (para descarga como archivo).
+ */
+async function exportBackupData() {
+    const [configRows]       = await pool.query('SELECT * FROM system_config WHERE id = 1');
+    const [userRows]         = await pool.query('SELECT * FROM users ORDER BY id ASC');
+    const [moduleRows]       = await pool.query('SELECT * FROM modules ORDER BY id ASC');
+    const [bizRows]          = await pool.query('SELECT * FROM businesses ORDER BY id ASC');
+    const [bizModRows]       = await pool.query('SELECT * FROM business_modules ORDER BY instance_id ASC');
+    const [notifRows]        = await pool.query('SELECT * FROM notifications ORDER BY id ASC');
+    const [payHistRows]      = await pool.query('SELECT * FROM payment_history ORDER BY created_at ASC');
+    const [promoRows]        = await pool.query('SELECT * FROM promotions ORDER BY created_at ASC');
+
+    return {
+        _meta: {
+            version: '1.0',
+            exported_at: new Date().toISOString(),
+            platform: 'AS Sierra Systems'
+        },
+        system_config:    configRows,
+        users:            userRows,
+        modules:          moduleRows,
+        businesses:       bizRows,
+        business_modules: bizModRows,
+        notifications:    notifRows,
+        payment_history:  payHistRows,
+        promotions:       promoRows
+    };
+}
+
+/**
+ * Restaura el estado completo de la base de datos desde un objeto
+ * JSON exportado previamente. Operación atómica: todo o nada.
+ */
+async function importBackupData(backup) {
+    if (!backup || !backup._meta || backup._meta.platform !== 'AS Sierra Systems') {
+        throw new Error('Archivo de respaldo inválido o incompatible con esta plataforma.');
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // Deshabilitar FK constraints temporalmente para limpiar en orden seguro
+        await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+
+        // Limpiar tablas en orden (hijas primero)
+        await conn.query('DELETE FROM business_modules');
+        await conn.query('DELETE FROM payment_history');
+        await conn.query('DELETE FROM promotions');
+        await conn.query('DELETE FROM notifications');
+        await conn.query('DELETE FROM businesses');
+        await conn.query('DELETE FROM modules');
+        await conn.query('DELETE FROM users');
+
+        // Re-habilitar FK constraints
+        await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+
+        // Restaurar modules
+        for (const m of (backup.modules || [])) {
+            await conn.query(
+                'INSERT IGNORE INTO modules (id, name, `desc`, icon, status, price, url, admin_url, video_url, image) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                [m.id, m.name, m.desc, m.icon, m.status, m.price, m.url, m.admin_url, m.video_url, m.image]
+            );
+        }
+
+        // Restaurar users
+        for (const u of (backup.users || [])) {
+            await conn.query(
+                'INSERT IGNORE INTO users (id, user, email, pass, name, role, status, created_at) VALUES (?,?,?,?,?,?,?,?)',
+                [u.id, u.user, u.email, u.pass, u.name, u.role, u.status, u.created_at]
+            );
+        }
+
+        // Restaurar businesses
+        for (const b of (backup.businesses || [])) {
+            await conn.query(
+                `INSERT IGNORE INTO businesses 
+                 (id, name, type, status, city, nit, phone, address, client_email, client_pass, owner_name, 
+                  registration_source, avatar_url, gateway_token, last_four, card_brand, subscription_status,
+                  next_billing_date, last_payment_date, last_payment_amount, last_failed_attempt, last_transaction_id, created_at)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                [b.id, b.name, b.type, b.status, b.city, b.nit, b.phone, b.address,
+                 b.client_email, b.client_pass, b.owner_name, b.registration_source, b.avatar_url,
+                 b.gateway_token, b.last_four, b.card_brand, b.subscription_status,
+                 b.next_billing_date, b.last_payment_date, b.last_payment_amount,
+                 b.last_failed_attempt, b.last_transaction_id, b.created_at]
+            );
+        }
+
+        // Restaurar business_modules
+        for (const bm of (backup.business_modules || [])) {
+            await conn.query(
+                'INSERT IGNORE INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until, renewal_date) VALUES (?,?,?,?,?,?,?,?,?)',
+                [bm.instance_id, bm.business_id, bm.module_id, bm.branch_name, bm.status, bm.price_applied, bm.cancelled_at, bm.access_until, bm.renewal_date]
+            );
+        }
+
+        // Restaurar notifications
+        for (const n of (backup.notifications || [])) {
+            await conn.query(
+                'INSERT IGNORE INTO notifications (id, title, `desc`, icon, color, created_at) VALUES (?,?,?,?,?,?)',
+                [n.id, n.title, n.desc, n.icon, n.color, n.created_at]
+            );
+        }
+
+        // Restaurar payment_history
+        for (const p of (backup.payment_history || [])) {
+            await conn.query(
+                'INSERT IGNORE INTO payment_history (id, business_id, amount, `desc`, status, transaction_id, created_at) VALUES (?,?,?,?,?,?,?)',
+                [p.id, p.business_id, p.amount, p.desc, p.status, p.transaction_id, p.created_at]
+            );
+        }
+
+        // Restaurar promotions
+        for (const pr of (backup.promotions || [])) {
+            await conn.query(
+                'INSERT IGNORE INTO promotions (id, module_id, discount_type, discount_value, start_date, end_date, status, created_at) VALUES (?,?,?,?,?,?,?,?)',
+                [pr.id, pr.module_id, pr.discount_type, pr.discount_value, pr.start_date, pr.end_date, pr.status, pr.created_at]
+            );
+        }
+
+        // Restaurar system_config (upsert para mantener la fila id=1)
+        if (backup.system_config && backup.system_config[0]) {
+            const c = backup.system_config[0];
+            await conn.query(
+                `INSERT INTO system_config (id, company_name, admin_user, admin_pass, admin_name, logo, support_email, support_phone)
+                 VALUES (1,?,?,?,?,?,?,?)
+                 ON DUPLICATE KEY UPDATE
+                     company_name = VALUES(company_name),
+                     admin_user   = VALUES(admin_user),
+                     admin_pass   = VALUES(admin_pass),
+                     admin_name   = VALUES(admin_name),
+                     logo         = VALUES(logo),
+                     support_email = VALUES(support_email),
+                     support_phone = VALUES(support_phone)`,
+                [c.company_name, c.admin_user, c.admin_pass, c.admin_name, c.logo,
+                 c.support_email || 'soporte@assierrasystems.com',
+                 c.support_phone || '573001234567']
+            );
+        }
+
+        await conn.commit();
+        console.log('[DB] ✅ Restauración de backup completada correctamente.');
+    } catch (err) {
+        await conn.rollback();
+        console.error('[DB] ❌ Error durante la restauración del backup:', err.message);
+        throw err;
+    } finally {
+        conn.release();
+    }
+}
+
 // --- EXPORTAR ---
 module.exports = {
     pool,
@@ -1100,6 +1258,8 @@ module.exports = {
     initializeDatabase,
     getCompleteState,
     saveCompleteState,
+    exportBackupData,
+    importBackupData,
     
     // Config
     getSystemConfig,
@@ -1135,3 +1295,4 @@ module.exports = {
     reactivateBusinessModule,
     renewBusinessModule
 };
+
