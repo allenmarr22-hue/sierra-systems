@@ -1469,10 +1469,7 @@ function setupEventListeners() {
     // ── Copias de Seguridad ──────────────────────────────────────────────
     async function exportSystemBackup() {
         try {
-            const token = localStorage.getItem('as_admin_token');
-            const res = await fetch('/api/admin/backup', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await adminFetch('/api/admin/backup');
             if (!res.ok) {
                 const err = await res.json();
                 return showToast('Error al exportar: ' + (err.error || res.statusText), 'error');
@@ -1534,13 +1531,9 @@ function setupEventListeners() {
             });
 
             try {
-                const token = localStorage.getItem('as_admin_token');
-                const res = await fetch('/api/admin/backup/restore', {
+                const res = await adminFetch('/api/admin/backup/restore', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(backupData)
                 });
                 const data = await res.json();

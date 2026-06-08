@@ -1140,7 +1140,7 @@ async function importBackupData(backup) {
     try {
         await conn.beginTransaction();
 
-        // Deshabilitar FK constraints temporalmente para limpiar en orden seguro
+        // Deshabilitar FK constraints DENTRO de la transacción
         await conn.query('SET FOREIGN_KEY_CHECKS = 0');
 
         // Limpiar tablas en orden (hijas primero)
@@ -1151,9 +1151,6 @@ async function importBackupData(backup) {
         await conn.query('DELETE FROM businesses');
         await conn.query('DELETE FROM modules');
         await conn.query('DELETE FROM users');
-
-        // Re-habilitar FK constraints
-        await conn.query('SET FOREIGN_KEY_CHECKS = 1');
 
         // Restaurar modules
         for (const m of (backup.modules || [])) {
@@ -1239,10 +1236,14 @@ async function importBackupData(backup) {
             );
         }
 
+        // Re-habilitar FK constraints y hacer commit
+        await conn.query('SET FOREIGN_KEY_CHECKS = 1');
         await conn.commit();
         console.log('[DB] ✅ Restauración de backup completada correctamente.');
     } catch (err) {
         await conn.rollback();
+        // Asegurar que FK checks queden habilitados incluso si hubo error
+        try { await conn.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (_) {}
         console.error('[DB] ❌ Error durante la restauración del backup:', err.message);
         throw err;
     } finally {
