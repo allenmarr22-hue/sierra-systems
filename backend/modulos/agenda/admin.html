@@ -903,7 +903,7 @@
                             <!-- CARD 2: COMBO PRECIO FIJO -->
                             <div class="glass-module" style="padding: 25px; border: 1px solid var(--color-dark-pink); border-top: 5px solid var(--color-dark-pink);">
                                 <h3 style="margin-top:0; color:var(--color-dark-pink); font-size:1.2rem;"><i class="fas fa-tags"></i> 2. Combo de Precio Fijo ($)</h3>
-                                <p style="font-size:0.85rem; color:#888; margin-bottom:20px;">Fija un precio total único por elegir varias categorías.</p>
+                                <p style="font-size:0.85rem; color:#888; margin-bottom:20px;">Fija un precio total único por elegir varios servicios específicos.</p>
 
                                 <div class="form-group" style="margin-bottom: 20px;">
                                     <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Estado</label>
@@ -915,13 +915,12 @@
 
                                 <div class="form-group" style="margin-bottom: 20px;">
                                     <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">El combo se basa en:</label>
-                                    <select id="promo-combo-mode" class="admin-input" style="width:100%;" onchange="window.togglePromoMode('combo', this.value)">
-                                        <option value="category">Categorías (Elige una de cada)</option>
+                                    <select id="promo-combo-mode" class="admin-input" style="width:100%;">
                                         <option value="service">Servicios (Items fijos)</option>
                                     </select>
                                 </div>
 
-                                <div id="promo-combo-cat-group" class="form-group" style="margin-bottom: 20px;">
+                                <div id="promo-combo-cat-group" class="form-group" style="margin-bottom: 20px; display: none;">
                                     <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Categorías</label>
                                     <div id="promo-combo-categories-wrapper" class="promo-cat-checklist glass-module">
                                         <!-- Dinámico -->
@@ -929,7 +928,7 @@
                                     <small style="color:#888; font-size:0.75rem;">El cliente debe elegir UN servicio de cada categoría marcada.</small>
                                 </div>
 
-                                <div id="promo-combo-svc-group" class="form-group" style="margin-bottom: 20px; display: none;">
+                                <div id="promo-combo-svc-group" class="form-group" style="margin-bottom: 20px;">
                                     <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Servicios</label>
                                     
                                     <div class="custom-multi-select-container">

@@ -6038,7 +6038,40 @@ window.loadPromoSettings = function() {
     document.getElementById('promo-combo-expiry').value = promos.combo.expiry || "";
 
     // Set Mode and Visibility
-    const comboMode = promos.combo.mode || (promos.combo.services?.length > 0 ? 'service' : 'category');
+    let comboMode = promos.combo.mode || (promos.combo.services?.length > 0 ? 'service' : 'category');
+    
+    // MIGRATION: If it was category, convert it to service mode
+    if (comboMode === 'category') {
+        comboMode = 'service';
+        promos.combo.mode = 'service';
+        
+        const allServices = JSON.parse(localStorage.getItem('margarita_services')) || [];
+        if (!promos.combo.services) promos.combo.services = [];
+        
+        if (promos.combo.category === 'all') {
+            allServices.forEach(s => {
+                if (!promos.combo.services.includes(s.title)) {
+                    promos.combo.services.push(s.title);
+                }
+            });
+        } else {
+            const categories = promos.combo.category || [];
+            const servicesInCats = allServices.filter(s => categories.includes(s.cat)).map(s => s.title);
+            servicesInCats.forEach(svcTitle => {
+                if (!promos.combo.services.includes(svcTitle)) {
+                    promos.combo.services.push(svcTitle);
+                }
+            });
+        }
+        promos.combo.category = []; // clear category selection
+        
+        // Save migrated config back
+        localStorage.setItem('margarita_promos', JSON.stringify(promos));
+        if (window.saveDataToCloud) {
+            window.saveDataToCloud('config_v2', 'promos', promos);
+        }
+    }
+    
     document.getElementById('promo-combo-mode').value = comboMode;
     togglePromoMode('combo', comboMode);
 
