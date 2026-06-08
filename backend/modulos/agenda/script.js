@@ -3252,6 +3252,7 @@ window.renderPublicAgenda = function() {
 
     const specialists = safeParse('margarita_specialists', []);
     const appointments = safeParse('margarita_appointments', []);
+    const dbServices = safeParse('margarita_services', []);
     
     // Fecha de hoy en formato local (YYYY-MM-DD)
     const today = new Date();

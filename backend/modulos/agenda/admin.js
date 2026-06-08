@@ -33,7 +33,6 @@
             if (authObj && authObj.user && authObj.pass) {
                 localStorage.setItem('margarita_admin_user', authObj.user);
                 localStorage.setItem('margarita_admin_pass', authObj.pass);
-                console.log("🔑 [Credenciales] Inicializadas desde agenda_auth:", authObj.user);
             }
         }
     } catch(e) {
@@ -72,7 +71,7 @@ window.normDate = function(d) {
 };
 
 // SOPORTE DE DASHBOARD
-console.log("ADMIN JS V4 LOADED - Slot Conflict Logic Active");
+// SOPORTE DE DASHBOARD
 
 let editingIndex = null;
 let base64Image = "";
@@ -5717,8 +5716,10 @@ window.autoCancelOverdueAppointments = function(avoidRender = false) {
     }
 };
 
-// Iniciar chequeo cada 1 minuto
-setInterval(window.autoCancelOverdueAppointments, 60000);
+// Iniciar chequeo cada 1 minuto (guardado para evitar duplicados)
+if (!window._autoCancelInterval) {
+    window._autoCancelInterval = setInterval(window.autoCancelOverdueAppointments, 60000);
+}
 
 window.confirmReschedule = function() {
     const newDate = document.getElementById('reschedule-date').value;

@@ -951,10 +951,12 @@ async function createBusiness(biz) {
         billing.last_failed_attempt || null, billing.last_transaction_id || null
     ]);
 
-    for (const modId of (biz.modules || [])) {
+    for (let i = 0; i < (biz.modules || []).length; i++) {
+        const modId = biz.modules[i];
+        const instanceId = `${id}-${modId}-${i}`;
         await pool.query(
-            'INSERT INTO business_modules (business_id, module_id, status) VALUES (?, ?, "active")',
-            [id, modId]
+            'INSERT INTO business_modules (instance_id, business_id, module_id, status, price_applied) VALUES (?, ?, ?, "active", 0)',
+            [instanceId, id, modId]
         );
     }
     return id;

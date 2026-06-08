@@ -59,9 +59,12 @@ function calculateMonthlyAmount(business) {
             total += priceNum;
         }
     }
-    // Fallback legacy por si acaso
+    // Fallback legacy: negocios que aún usan modules[] en vez de moduleInstances[]
     if (moduleInstances.length === 0 && business.modules && business.modules.length > 0) {
-        // En un mundo ideal esto ya no pasa gracias a db.js
+        // Los módulos legacy no tienen precio propio en el negocio,
+        // así que se omiten del cálculo (precio = 0 por diseño hasta migrar).
+        // Este bloque existe como guardia para evitar cobros incorrectos.
+        console.warn(`[BillingCron] ⚠️ ${business.name || business.id}: Usa estructura legacy (modules[]). No se calculará monto hasta migrar a moduleInstances[].`);
     }
     return total;
 }

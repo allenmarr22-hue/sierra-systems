@@ -825,7 +825,11 @@ function initTheme() {
     
     // Initialize Accent Color
     const accentKey = getUserAccentKey();
-    const accent = localStorage.getItem(accentKey) || 'indigo';
+    let accent = localStorage.getItem(accentKey) || 'indigo';
+    if (accent === 'rose' || accent === 'amber') {
+        accent = 'indigo';
+        localStorage.setItem(accentKey, 'indigo');
+    }
     document.documentElement.setAttribute('data-accent', accent);
     document.querySelectorAll('.accent-option').forEach(opt => {
         if (opt.getAttribute('data-accent-val') === accent) {
@@ -2452,7 +2456,7 @@ async function fetchPublicConfig() {
             }
         }
     } catch (e) {
-        console.log("No se pudo cargar config", e);
+        console.warn("No se pudo cargar config", e);
     }
     showDefaultLogos();
 }
@@ -3370,6 +3374,7 @@ window.billingGiftDays = async function(bizId) {
     try {
         const resp = await adminFetch(`/api/payment/extend-billing/${bizId}`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 days: result.days,
                 instanceId: result.instanceId
@@ -3522,6 +3527,7 @@ async function billingTriggerCycle(dryRun = false) {
     try {
         const resp = await adminFetch('/api/payment/trigger-billing', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ dryRun }),
         });
         const data = await resp.json();

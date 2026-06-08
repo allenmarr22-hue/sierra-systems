@@ -12,11 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return; // Detener si estamos en paneles de administración u otras páginas
     }
 
-    // Para pruebas: Eliminamos el valor guardado para asegurar que salga en CADA refresco.
-    localStorage.removeItem('as_sierra_consent');
+    // No mostrar el banner si el usuario ya aceptó anteriormente
+    if (localStorage.getItem('as_sierra_consent') === 'true') {
+        return;
+    }
     
-    // Mostramos el banner más rápido (en 800ms) para que sea evidente en las pruebas.
-    setTimeout(showConsentBanner, 800);
+    setTimeout(showConsentBanner, 1500);
 });
 
 function showConsentBanner() {

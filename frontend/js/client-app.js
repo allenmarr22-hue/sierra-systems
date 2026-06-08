@@ -3062,7 +3062,11 @@ function initTheme() {
     updateThemeIcon(themeToggle, savedTheme);
 
     // Initialize Accent Color
-    const savedAccent = localStorage.getItem('as_client_accent') || 'indigo';
+    let savedAccent = localStorage.getItem('as_client_accent') || 'indigo';
+    if (savedAccent === 'rose' || savedAccent === 'amber') {
+        savedAccent = 'indigo';
+        localStorage.setItem('as_client_accent', 'indigo');
+    }
     html.setAttribute('data-accent', savedAccent);
     
     // Mark the correct accent-option as active in UI
