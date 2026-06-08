@@ -1395,6 +1395,16 @@ function setupEventListeners() {
             
             document.querySelectorAll('.config-nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+
+            // Ocultar botón global de guardar en la sección de Copia de Seguridad
+            const saveSettingsContainer = document.getElementById('save-settings-container');
+            if (saveSettingsContainer) {
+                if (target === 'config-backup') {
+                    saveSettingsContainer.classList.add('hidden');
+                } else {
+                    saveSettingsContainer.classList.remove('hidden');
+                }
+            }
         });
     });
 
