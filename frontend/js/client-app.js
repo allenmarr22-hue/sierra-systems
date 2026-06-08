@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (avatarUrl) {
                         wrap.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
                     } else {
-                        wrap.innerHTML = `<span id="client-avatar">${activeDisplayName.substring(0, 2).toUpperCase()}</span>`;
+                        wrap.innerHTML = `<span id="client-avatar">${businessName.substring(0, 2).toUpperCase()}</span>`;
                     }
                 }
                 

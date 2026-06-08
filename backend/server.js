@@ -409,14 +409,14 @@ app.post('/api/client/verify', async (req, res) => {
         const biz = await db.findBusinessById(session.clientId);
         if (!biz) return res.json({ valid: false });
 
-        // 1. Verificar si el administrador lo desactivó manualmente (no por pago)
-        if (biz.status !== 'active' && biz.subscription_status !== 'suspended') {
+        // 1. Primero: verificar si el admin desactivó manualmente la cuenta
+        if (biz.status !== 'active') {
             return res.json({ valid: false, reason: 'account_inactive' });
         }
 
-        // 2. Verificar si la facturación está suspendida por impago
+        // 2. Segundo: verificar si la facturación está suspendida por impago
         if (biz.subscription_status === 'suspended') {
-            return res.json({ valid: true, clientId: session.clientId, isSuspended: true });
+            return res.json({ valid: false, reason: 'payment_required' });
         }
 
         return res.json({ valid: true, clientId: session.clientId });
@@ -434,29 +434,26 @@ app.post('/api/businesses/:id/credentials', requireWriteAccess, async (req, res)
     if (!clientEmail) return res.status(400).json({ error: 'Email requerido.' });
 
     try {
-        let dbState = await readDb();
-        const bizIndex = dbState.businesses.findIndex(b => b.id == id);
-        if (bizIndex === -1) return res.status(404).json({ error: 'Negocio no encontrado' });
+        const biz = await db.findBusinessById(id);
+        if (!biz) return res.status(404).json({ error: 'Negocio no encontrado.' });
 
         // Verificar que el email no esté en uso por otro negocio
-        const emailInUse = dbState.businesses.some((b, i) =>
-            i !== bizIndex && b.clientEmail && b.clientEmail.toLowerCase() === clientEmail.toLowerCase()
-        );
+        const emailInUse = await db.emailInUseByOtherBusiness(clientEmail, id);
         if (emailInUse) return res.status(409).json({ error: 'Ese correo ya está asignado a otro negocio.' });
 
-        dbState.businesses[bizIndex].clientEmail = clientEmail;
+        const fieldsToUpdate = { clientEmail };
         if (clientPass && clientPass !== '__NO_CHANGE__') {
-            dbState.businesses[bizIndex].clientPass = db.hashPassword(clientPass);
+            fieldsToUpdate.clientPass = clientPass; // db.updateBusiness se encarga del hash
         }
+        await db.updateBusiness(id, fieldsToUpdate);
 
-        pushNotification(dbState, {
+        await db.pushNotification({
             title: 'Credenciales Actualizadas',
-            desc: `Acceso de cliente configurado para "${dbState.businesses[bizIndex].name}".`,
+            desc: `Acceso de cliente configurado para "${biz.name}".`,
             icon: 'key',
             color: '#6366f1'
         });
 
-        await writeDb(dbState);
         broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
