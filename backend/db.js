@@ -201,6 +201,18 @@ async function initializeDatabase() {
             await pool.query('ALTER TABLE system_config ADD COLUMN support_phone VARCHAR(100) NULL DEFAULT "573001234567"');
             console.log('[DB] 🛠️ Column "support_phone" added to "system_config" table.');
         }
+        if (!existingConfigColumns.includes('recommended_module_id')) {
+            await pool.query('ALTER TABLE system_config ADD COLUMN recommended_module_id VARCHAR(100) NULL');
+            console.log('[DB] 🛠️ Column "recommended_module_id" added to "system_config" table.');
+        }
+        if (!existingConfigColumns.includes('multi_sede_discount')) {
+            await pool.query('ALTER TABLE system_config ADD COLUMN multi_sede_discount INT NULL DEFAULT 30');
+            console.log('[DB] 🛠️ Column "multi_sede_discount" added to "system_config" table.');
+        }
+        if (!existingConfigColumns.includes('recommended_label')) {
+            await pool.query('ALTER TABLE system_config ADD COLUMN recommended_label VARCHAR(150) NULL DEFAULT "RECOMENDADO"');
+            console.log('[DB] 🛠️ Column "recommended_label" added to "system_config" table.');
+        }
 
         const [bizColumns] = await pool.query(`
             SELECT COLUMN_NAME 
@@ -328,7 +340,10 @@ async function getCompleteState() {
             adminName: configRows[0].admin_name,
             logo: configRows[0].logo,
             supportEmail: configRows[0].support_email || 'soporte@assierrasystems.com',
-            supportPhone: configRows[0].support_phone || '573001234567'
+            supportPhone: configRows[0].support_phone || '573001234567',
+            recommendedModuleId: configRows[0].recommended_module_id || null,
+            multiSedeDiscount: configRows[0].multi_sede_discount !== null && configRows[0].multi_sede_discount !== undefined ? configRows[0].multi_sede_discount : 30,
+            recommendedLabel: configRows[0].recommended_label || 'RECOMENDADO'
         } : {
             companyName: "AS Sierra Systems",
             adminUser: "admin",
@@ -336,7 +351,10 @@ async function getCompleteState() {
             adminName: "Allenmar",
             logo: null,
             supportEmail: 'soporte@assierrasystems.com',
-            supportPhone: '573001234567'
+            supportPhone: '573001234567',
+            recommendedModuleId: null,
+            multiSedeDiscount: 30,
+            recommendedLabel: 'RECOMENDADO'
         };
 
         // 3.2. Consultar Módulos
@@ -511,8 +529,8 @@ async function saveCompleteState(db) {
         // 1. Sincronizar Configuración Global
         if (db.config) {
             await connection.query(`
-                INSERT INTO system_config (id, company_name, admin_user, admin_pass, admin_name, logo, support_email, support_phone)
-                VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO system_config (id, company_name, admin_user, admin_pass, admin_name, logo, support_email, support_phone, recommended_module_id, multi_sede_discount, recommended_label)
+                VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                     company_name = VALUES(company_name),
                     admin_user = VALUES(admin_user),
@@ -520,7 +538,10 @@ async function saveCompleteState(db) {
                     admin_name = VALUES(admin_name),
                     logo = VALUES(logo),
                     support_email = VALUES(support_email),
-                    support_phone = VALUES(support_phone)
+                    support_phone = VALUES(support_phone),
+                    recommended_module_id = VALUES(recommended_module_id),
+                    multi_sede_discount = VALUES(multi_sede_discount),
+                    recommended_label = VALUES(recommended_label)
             `, [
                 db.config.companyName || 'AS Sierra Systems',
                 db.config.adminUser || 'admin',
@@ -528,7 +549,10 @@ async function saveCompleteState(db) {
                 db.config.adminName || 'Allenmar',
                 db.config.logo || null,
                 db.config.supportEmail || 'soporte@assierrasystems.com',
-                db.config.supportPhone || '573001234567'
+                db.config.supportPhone || '573001234567',
+                db.config.recommendedModuleId || null,
+                db.config.multiSedeDiscount !== undefined ? db.config.multiSedeDiscount : 30,
+                db.config.recommendedLabel || 'RECOMENDADO'
             ]);
         }
 
@@ -787,7 +811,10 @@ async function updateSystemConfig(fields) {
         adminName: 'admin_name',
         logo: 'logo',
         supportEmail: 'support_email',
-        supportPhone: 'support_phone'
+        supportPhone: 'support_phone',
+        recommendedModuleId: 'recommended_module_id',
+        multiSedeDiscount: 'multi_sede_discount',
+        recommendedLabel: 'recommended_label'
     };
 
     const sets = [];
