@@ -1818,7 +1818,7 @@ function renderDashboard() {
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-size:0.88rem; text-decoration:line-through; color:var(--text-muted); font-weight:600;">${strikePrice}</span>
                                 <span style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:12px; text-transform:uppercase; letter-spacing:0.05em;">
-                                    -30% MULTI-SEDE
+                                    -${discPct}% MULTI-SEDE
                                 </span>
                             </div>
                             <div style="font-weight:800; font-size:1.6rem; color:var(--primary); text-shadow:0 0 10px var(--primary-alpha);">${formattedSedePrice}</div>
