@@ -1691,9 +1691,13 @@ function renderDashboard() {
                     priceHtml = `<div style="font-weight:800; font-size:1.5rem; color:var(--text); margin:1.5rem 0 1rem;">${priceDisplay}</div>`;
                 }
 
-                const badge = (mod.status === 'active' && i === 0 && !activePromo)
-                    ? `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">⭐ POPULAR</div>`
-                    : (discountBadge || '');
+                const isRecommended = String(mod.id) === String(appState.config?.recommendedModuleId);
+                const recLabel = appState.config?.recommendedLabel || 'RECOMENDADO';
+                const badge = (mod.status === 'active' && isRecommended)
+                    ? `<div class="marketplace-badge" style="background:linear-gradient(135deg, #a855f7 0%, #ec4899 100%); color:#ffffff; box-shadow:0 0 15px rgba(236,72,153,0.4); border:none; top:12px; right:12px; font-weight:800;">✨ ${recLabel}</div>`
+                    : ((mod.status === 'active' && i === 0 && !activePromo)
+                        ? `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">⭐ POPULAR</div>`
+                        : (discountBadge || ''));
 
                 let buttonHtml = '';
                 if (mod.status === 'maintenance') {
@@ -1781,7 +1785,8 @@ function renderDashboard() {
                     }
                 }
                 
-                finalPriceVal = Math.round(promoPriceVal * 0.70); // Descuento permanente 30%
+                const discPct = appState.config?.multiSedeDiscount !== undefined ? parseFloat(appState.config.multiSedeDiscount) : 30;
+                finalPriceVal = Math.round(promoPriceVal * (1 - discPct / 100)); // Descuento permanente configurable
                 const formattedSedePrice = `$ ${finalPriceVal.toLocaleString('es-CO')} COP/mes`;
                 const strikePrice = `$ ${promoPriceVal.toLocaleString('es-CO')} COP`;
 
@@ -1850,12 +1855,13 @@ function renderDashboard() {
                 </div>`;
             }).join('');
 
+            const discPctMarketplace = appState.config?.multiSedeDiscount !== undefined ? parseFloat(appState.config.multiSedeDiscount) : 30;
             htmlMarketplace += `
             <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; padding: 0 0.5rem;">
                 <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
                     <span style="display: inline-block; width: 4px; height: 18px; background: var(--primary); border-radius: 4px;"></span>
                     Expandir tus Módulos (Sedes Adicionales)
-                    <span style="background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-border); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase;">30% Off Sede 2+</span>
+                    <span style="background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-border); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase;">${discPctMarketplace}% Off Sede 2+</span>
                 </h3>
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">Adquiere el mismo módulo para una nueva sucursal o sede con descuento de multi-sede permanente.</p>
             </div>

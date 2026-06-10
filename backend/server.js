@@ -1106,7 +1106,10 @@ app.get('/api/settings', async (req, res) => {
             logo: dbState.config?.logo || null,
             companyName: dbState.config?.companyName || 'AS Sierra Systems',
             supportEmail: dbState.config?.supportEmail || 'soporte@assierrasystems.com',
-            supportPhone: dbState.config?.supportPhone || '573001234567'
+            supportPhone: dbState.config?.supportPhone || '573001234567',
+            recommendedModuleId: dbState.config?.recommendedModuleId || null,
+            multiSedeDiscount: dbState.config?.multiSedeDiscount !== undefined ? dbState.config.multiSedeDiscount : 30,
+            recommendedLabel: dbState.config?.recommendedLabel || 'RECOMENDADO'
         };
         const publicModules = (dbState.modules || []).map(m => ({
             id: m.id,
@@ -1125,7 +1128,7 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
-    const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass } = req.body;
+    const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass, recommendedModuleId, multiSedeDiscount, recommendedLabel } = req.body;
     try {
         let dbState = await readDb();
         if (!dbState.config) dbState.config = {};
@@ -1147,6 +1150,10 @@ app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
         if (supportPhone) dbState.config.supportPhone = supportPhone;
         if (adminUser) dbState.config.adminUser = adminUser;
         if (adminPass) dbState.config.adminPass = db.hashPassword(adminPass);
+
+        if (recommendedModuleId !== undefined) dbState.config.recommendedModuleId = recommendedModuleId;
+        if (multiSedeDiscount !== undefined) dbState.config.multiSedeDiscount = parseInt(multiSedeDiscount);
+        if (recommendedLabel !== undefined) dbState.config.recommendedLabel = recommendedLabel;
 
         await writeDb(dbState);
         broadcastUpdate();
@@ -1480,11 +1487,12 @@ app.post('/api/client/module/renew', async (req, res) => {
         // 1. Obtener precio base considerando promociones activas
         const promoPrice = getActivePromoPrice(dbState, moduleId, basePrice);
 
-        // 2. Si ya tiene una sede de este módulo, aplicamos 30% descuento sobre el precio promocional (acumulativo)
+        // 2. Si ya tiene una sede de este módulo, aplicamos descuento sobre el precio promocional (acumulativo)
         let priceApplied = promoPrice;
         let isDiscountApplied = false;
         if (hasExisting) {
-            priceApplied = Math.round(promoPrice * 0.70); // 30% descuento
+            const discPct = dbState.config?.multiSedeDiscount !== undefined ? parseFloat(dbState.config.multiSedeDiscount) : 30;
+            priceApplied = Math.round(promoPrice * (1 - discPct / 100));
             isDiscountApplied = true;
         }
 

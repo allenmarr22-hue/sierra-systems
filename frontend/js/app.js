@@ -1165,6 +1165,12 @@ function setupEventListeners() {
             deleteUser(Number(deleteUserBtn.getAttribute('data-id')));
         }
 
+        // Configuración Marketplace Módulos
+        const configModBtn = e.target.closest('#btn-config-modules');
+        if (configModBtn) {
+            openMarketplaceSettingsModal();
+        }
+
         // Dropdowns Global Handler
         const toggleBtnDrop = e.target.closest('.dropdown-toggle');
         if (toggleBtnDrop) {
@@ -2254,10 +2260,14 @@ function renderQuickModules() {
 
 function renderModulesGrid() {
     const grid = document.getElementById('modules-grid');
+    if (!grid) return;
     grid.innerHTML = appState.modules.map(mod => {
         const priceNum = parseInt(String(mod.price).replace(/\D/g, ''));
         const priceDisplay = (mod.price && !isNaN(priceNum) && priceNum > 0) ? `<span style="white-space: nowrap;">$ ${priceNum.toLocaleString('es-CO')} <span style="font-size: 0.8em;">COP</span></span>` : 'Cotizar';
         
+        const isRec = String(mod.id) === String(appState.config?.recommendedModuleId);
+        const recBadgeHtml = isRec ? `<div style="margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 4px; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.25); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; width: fit-content;">✨ RECOMENDADO</div>` : '';
+
         return `
         <div class="biz-card" data-module-id="${mod.id}">
             <div class="module-card-header">
@@ -2266,7 +2276,10 @@ function renderModulesGrid() {
                     ${mod.status === 'active' ? 'Activo' : (mod.status === 'maintenance' ? 'En Mantenimiento' : (mod.status === 'hidden' ? 'Oculto' : 'Próximamente'))}
                 </div>
             </div>
-            <h3 class="module-title">${mod.name}</h3>
+            <h3 class="module-title" style="display:flex; flex-direction:column; gap:4px;">
+                <span>${mod.name}</span>
+                ${recBadgeHtml}
+            </h3>
             <p class="module-desc">${mod.desc}</p>
             <div class="module-price" style="font-weight: 800; color: var(--primary); margin-top: 0.75rem; font-size: 1.1rem;">
                 ${priceDisplay}
@@ -5836,3 +5849,98 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+async function openMarketplaceSettingsModal() {
+    requestSecurityCheck(async () => {
+        const currentPass = document.getElementById('security-pass-input').value;
+        const config = appState.config || {};
+        
+        // Generar las opciones del selector de módulos activos
+        const activeModules = appState.modules.filter(m => m.status === 'active');
+        const moduleOptions = [
+            `<option value="">-- Ninguno --</option>`,
+            ...activeModules.map(m => `<option value="${m.id}" ${String(m.id) === String(config.recommendedModuleId) ? 'selected' : ''}>${m.name}</option>`)
+        ].join('');
+
+        const result = await Swal.fire({
+            title: 'Ajustes de Marketplace',
+            html: `
+                <div style="text-align: left; display: flex; flex-direction: column; gap: 1.25rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">⭐ Módulo Recomendado</label>
+                        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Módulo destacado con badge especial en la tienda del cliente.</p>
+                        <select id="swal-rec-module" class="swal2-input" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem;">
+                            ${moduleOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏷️ Etiqueta de Recomendación</label>
+                        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Texto del badge destacado (ej. RECOMENDADO, MÁS COMPRADO, OFERTA).</p>
+                        <input type="text" id="swal-rec-label" class="swal2-input" placeholder="RECOMENDADO" value="${config.recommendedLabel || 'RECOMENDADO'}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏢 Descuento Segundas Sedes (%)</label>
+                        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Porcentaje de descuento permanente al adquirir el mismo módulo para una sucursal adicional.</p>
+                        <input type="number" id="swal-multi-discount" class="swal2-input" min="0" max="100" placeholder="30" value="${config.multiSedeDiscount !== undefined ? config.multiSedeDiscount : 30}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                    </div>
+                </div>
+            `,
+            background: 'var(--bg-surface)',
+            color: 'var(--text-main)',
+            confirmButtonColor: '#8b5cf6',
+            confirmButtonText: 'Guardar Ajustes',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            didOpen: (popup) => {
+                const inputs = popup.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            Swal.clickConfirm();
+                        }
+                    });
+                });
+            },
+            preConfirm: () => {
+                const recommendedModuleId = document.getElementById('swal-rec-module').value;
+                const recommendedLabel = document.getElementById('swal-rec-label').value.trim();
+                const multiSedeDiscountRaw = document.getElementById('swal-multi-discount').value;
+                const multiSedeDiscount = parseInt(multiSedeDiscountRaw, 10);
+
+                if (isNaN(multiSedeDiscount) || multiSedeDiscount < 0 || multiSedeDiscount > 100) {
+                    Swal.showValidationMessage('El descuento debe ser un número entre 0 y 100');
+                    return false;
+                }
+
+                return {
+                    recommendedModuleId: recommendedModuleId || '',
+                    recommendedLabel: recommendedLabel || 'RECOMENDADO',
+                    multiSedeDiscount,
+                    currentPass
+                };
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const res = await adminFetch('/api/settings/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(result.value)
+                });
+                
+                if (res.ok) {
+                    showToast('Ajustes de Marketplace actualizados.');
+                    loadData();
+                } else {
+                    const errData = await res.json();
+                    showToast(errData.error || 'Error al guardar los ajustes.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error de red al guardar ajustes.', 'error');
+            }
+        }
+    });
+}
