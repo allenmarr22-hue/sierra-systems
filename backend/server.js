@@ -289,12 +289,18 @@ app.get('/api/client/active-sessions', async (req, res) => {
             else if (/Linux/.test(ua)) os = 'Linux';
             else if (/CrOS/.test(ua)) os = 'Chrome OS';
 
+            // Normalizar IP: mostrar "Local" para conexiones de loopback
+            let displayIp = c.ip || '—';
+            if (displayIp === '::1' || displayIp === '127.0.0.1' || displayIp.startsWith('::ffff:127.')) {
+                displayIp = 'Local';
+            }
+
             return {
                 sessionId: c.id,
                 browser,
                 os,
                 deviceType,
-                ip: c.ip || '—',
+                ip: displayIp,
                 connectedAt: c.connectedAt
             };
         });
