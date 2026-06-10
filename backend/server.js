@@ -231,7 +231,11 @@ app.get('/api/stream', (req, res) => {
     const clientId = Date.now();
     // Asociar el clientId de negocio si se pasa como query param
     const bizClientId = req.query.clientId ? Number(req.query.clientId) : null;
-    const newClient = { id: clientId, clientId: bizClientId, res };
+    // Capturar info del dispositivo para mostrar sesiones activas
+    const ua = req.headers['user-agent'] || '';
+    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    const connectedAt = new Date().toISOString();
+    const newClient = { id: clientId, clientId: bizClientId, res, ua, ip, connectedAt };
     sseClients.push(newClient);
 
     res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
@@ -239,6 +243,59 @@ app.get('/api/stream', (req, res) => {
     req.on('close', () => {
         sseClients = sseClients.filter(client => client.id !== clientId);
     });
+});
+
+// ============================================================
+// CLIENTE: Listar sesiones activas (conexiones SSE actuales)
+// ============================================================
+app.get('/api/client/active-sessions', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ success: false, error: 'No autorizado' });
+
+    const targetId = Number(session.clientId);
+    const activeSessions = sseClients
+        .filter(c => Number(c.clientId) === targetId)
+        .map(c => {
+            // Parsear User-Agent de forma básica para identificar dispositivo y navegador
+            const ua = c.ua || '';
+            let browser = 'Navegador';
+            let os = 'Desconocido';
+            let deviceType = 'desktop';
+
+            // Detectar tipo de dispositivo
+            if (/Mobile|Android|iPhone|iPad/.test(ua)) {
+                deviceType = /iPad/.test(ua) ? 'tablet' : 'mobile';
+            }
+
+            // Detectar navegador
+            if (/Edg\//.test(ua)) browser = 'Microsoft Edge';
+            else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Google Chrome';
+            else if (/Firefox\//.test(ua)) browser = 'Firefox';
+            else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+            else if (/Opera|OPR\//.test(ua)) browser = 'Opera';
+            else if (/MSIE|Trident/.test(ua)) browser = 'Internet Explorer';
+
+            // Detectar sistema operativo
+            if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+            else if (/Windows NT 6/.test(ua)) os = 'Windows 8';
+            else if (/Mac OS X/.test(ua)) os = 'macOS';
+            else if (/Android/.test(ua)) os = 'Android';
+            else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+            else if (/Linux/.test(ua)) os = 'Linux';
+            else if (/CrOS/.test(ua)) os = 'Chrome OS';
+
+            return {
+                sessionId: c.id,
+                browser,
+                os,
+                deviceType,
+                ip: c.ip || '—',
+                connectedAt: c.connectedAt
+            };
+        });
+
+    return res.json({ success: true, sessions: activeSessions });
 });
 
 // ============================================================

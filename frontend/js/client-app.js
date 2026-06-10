@@ -6073,35 +6073,128 @@ window.payPendingBalance = async function() {
     }
 };
 
-/** Abre el modal de seguridad de dispositivos */
-window.openDevicesSecurityModal = function() {
+/** Abre el modal de seguridad de dispositivos con sesiones activas */
+window.openDevicesSecurityModal = async function() {
+    const sessionRaw = sessionStorage.getItem('clientSession');
+    if (!sessionRaw) return;
+    const session = JSON.parse(sessionRaw);
+
+    // Mostrar modal con estado de carga
     Swal.fire({
-        title: 'Seguridad de Dispositivos',
+        title: 'Dispositivos Activos',
         html: `
-            <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1rem 0;">
-                <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
-                    <i data-lucide="shield-x" style="width: 28px; height: 28px; color: #ef4444;"></i>
+            <div id="devices-modal-content" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+                    <i data-lucide="loader-circle" style="width:28px;height:28px;display:block;margin:0 auto 0.75rem;animation:spin 1s linear infinite;"></i>
+                    Cargando sesiones activas...
                 </div>
-                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem;">Cerrar sesión en todos los dispositivos</h3>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1.5rem; line-height: 1.5; max-width: 380px;">
-                    Cierra todas las sesiones activas en otros navegadores y dispositivos. Tu sesión actual también se cerrará.
-                </p>
-                <button onclick="triggerGlobalLogout()" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.65rem 1.4rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                    <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
-                    Cerrar todas las sesiones
-                </button>
             </div>
         `,
         background: 'var(--bg-surface)',
         color: 'var(--text)',
-        width: '450px',
+        width: '520px',
         showConfirmButton: false,
         showCloseButton: true,
-        didOpen: () => {
+        didOpen: async () => {
             lucide.createIcons();
+
+            // Agregar CSS de animación de spin si no existe
+            if (!document.getElementById('devices-spin-style')) {
+                const s = document.createElement('style');
+                s.id = 'devices-spin-style';
+                s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+                document.head.appendChild(s);
+            }
+
+            let sessions = [];
+            try {
+                const res = await fetch('/api/client/active-sessions', {
+                    headers: { 'Authorization': `Bearer ${session.token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    sessions = data.sessions || [];
+                }
+            } catch (e) { /* silenciar error de red */ }
+
+            // Función para ícono según tipo de dispositivo
+            const deviceIcon = (type) => {
+                if (type === 'mobile') return 'smartphone';
+                if (type === 'tablet') return 'tablet';
+                return 'monitor';
+            };
+
+            // Función para formatear tiempo relativo
+            const relTime = (isoStr) => {
+                if (!isoStr) return 'Ahora';
+                const diff = Date.now() - new Date(isoStr).getTime();
+                const mins = Math.floor(diff / 60000);
+                const hrs = Math.floor(mins / 60);
+                if (mins < 1) return 'Hace unos segundos';
+                if (mins < 60) return `Hace ${mins} min`;
+                if (hrs < 24) return `Hace ${hrs}h`;
+                return new Date(isoStr).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+            };
+
+            const sessionCount = sessions.length;
+            const sessionListHtml = sessionCount === 0
+                ? `<p style="color:var(--text-muted);text-align:center;padding:1.5rem 0;font-size:0.875rem;">
+                       <i data-lucide="wifi-off" style="width:24px;height:24px;display:block;margin:0 auto 0.5rem;opacity:0.4;"></i>
+                       Sin sesiones activas detectadas
+                   </p>`
+                : sessions.map((s, idx) => `
+                    <div style="display:flex;align-items:center;gap:0.9rem;padding:0.85rem 0;${idx < sessionCount - 1 ? 'border-bottom:1px solid rgba(var(--border-color-rgb,148,163,184),0.15);' : ''}">
+                        <div style="flex-shrink:0;width:42px;height:42px;border-radius:10px;background:rgba(99,102,241,0.08);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="${deviceIcon(s.deviceType)}" style="width:20px;height:20px;color:#6366f1;"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;text-align:left;">
+                            <div style="font-size:0.875rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.browser}</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${s.os} &nbsp;·&nbsp; IP: <code style="font-size:0.78rem;background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:4px;">${s.ip}</code></div>
+                        </div>
+                        <div style="flex-shrink:0;text-align:right;">
+                            <span style="font-size:0.75rem;color:var(--text-muted);display:block;">${relTime(s.connectedAt)}</span>
+                            <span style="display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;font-weight:600;color:#10b981;margin-top:3px;">
+                                <span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span> Activa
+                            </span>
+                        </div>
+                    </div>`).join('');
+
+            const container = document.getElementById('devices-modal-content');
+            if (container) {
+                container.innerHTML = `
+                    <div style="width:100%;padding:0 0.25rem;">
+                        <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:1rem;">
+                            <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="shield-check" style="width:20px;height:20px;color:#6366f1;"></i>
+                            </div>
+                            <div style="text-align:left;">
+                                <div style="font-size:0.95rem;font-weight:700;color:var(--text-main);">Sesiones Activas</div>
+                                <div style="font-size:0.78rem;color:var(--text-muted);">${sessionCount === 1 ? '1 conexión detectada' : `${sessionCount} conexiones detectadas`}</div>
+                            </div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.12);border-radius:10px;padding:0 0.9rem;margin-bottom:1.25rem;max-height:240px;overflow-y:auto;">
+                            ${sessionListHtml}
+                        </div>
+                        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;text-align:left;">
+                            <div style="font-size:0.82rem;font-weight:700;color:#ef4444;margin-bottom:0.3rem;display:flex;align-items:center;gap:6px;">
+                                <i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> Cierre global de sesiones
+                            </div>
+                            <p style="font-size:0.8rem;color:var(--text-muted);margin:0;line-height:1.5;">
+                                Cierra todas las sesiones activas en otros navegadores y dispositivos. Tu sesión actual también se cerrará.
+                            </p>
+                        </div>
+                        <button onclick="triggerGlobalLogout()" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0.7rem 1.4rem;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.35);border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                            <i data-lucide="log-out" style="width:16px;height:16px;"></i>
+                            Cerrar todas las sesiones
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
         }
     });
 };
+
 
 /** Lanza el flujo de confirmación y cierre de sesión global */
 window.triggerGlobalLogout = async function() {
