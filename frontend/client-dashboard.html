@@ -401,6 +401,12 @@
                                 <i data-lucide="shield-check" style="width:18px; color:var(--primary);"></i>
                                 Seguridad y Cuenta
                             </button>
+                            <button id="btn-open-devices"
+                                style="display:flex; align-items:center; gap:0.75rem; width:100%; padding:0.7rem 1rem; border-radius:8px; border:none; background:none; color:var(--text); font-size:0.875rem; font-weight:500; cursor:pointer; transition:background 0.2s; text-align:left;"
+                                onmouseover="this.style.background='rgba(99,102,241,0.1)'" onmouseout="this.style.background='none'">
+                                <i data-lucide="smartphone" style="width:18px; color:#a855f7;"></i>
+                                Dispositivos
+                            </button>
                             <button id="btn-open-profile"
                                 style="display:flex; align-items:center; gap:0.75rem; width:100%; padding:0.7rem 1rem; border-radius:8px; border:none; background:none; color:var(--text); font-size:0.875rem; font-weight:500; cursor:pointer; transition:background 0.2s; text-align:left;"
                                 onmouseover="this.style.background='rgba(99,102,241,0.1)'" onmouseout="this.style.background='none'">
@@ -820,22 +826,6 @@
                     </form>
                 </div>
 
-                <!-- Tarjeta: Cerrar sesión en todos los dispositivos -->
-                <div class="biz-card" style="max-width: 600px; margin: 0 auto; margin-bottom: 4rem; padding: 2rem 2.5rem; background: var(--bg-surface); border: 1px solid rgba(239, 68, 68, 0.25); box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 12px;">
-                    <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i data-lucide="shield-x" style="width: 20px; height: 20px; color: #ef4444;"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-main); margin: 0 0 0.3rem;">Cerrar sesión en todos los dispositivos</h3>
-                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1.25rem; line-height: 1.5;">Cierra todas las sesiones activas en otros navegadores y dispositivos. Tu sesión actual también se cerrará.</p>
-                            <button id="logout-all-btn" type="button" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.65rem 1.4rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
-                                Cerrar todas las sesiones
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </section>
 
 

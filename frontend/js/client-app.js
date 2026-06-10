@@ -397,6 +397,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Devices modal (Cerrar sesión en todos los dispositivos)
+    document.getElementById('btn-open-devices')?.addEventListener('click', () => {
+        document.getElementById('profile-dropdown-menu')?.classList.add('hidden');
+        window.openDevicesSecurityModal();
+    });
+
     // Profile modal (Name + Avatar + Owner + Phone + NIT + City + Address + Email)
     document.getElementById('btn-open-profile')?.addEventListener('click', () => {
         document.getElementById('profile-dropdown-menu')?.classList.add('hidden');
@@ -6064,6 +6070,123 @@ window.payPendingBalance = async function() {
             color: 'var(--text)',
             confirmButtonColor: '#ef4444'
         });
+    }
+};
+
+/** Abre el modal de seguridad de dispositivos */
+window.openDevicesSecurityModal = function() {
+    Swal.fire({
+        title: 'Seguridad de Dispositivos',
+        html: `
+            <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1rem 0;">
+                <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
+                    <i data-lucide="shield-x" style="width: 28px; height: 28px; color: #ef4444;"></i>
+                </div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem;">Cerrar sesión en todos los dispositivos</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1.5rem; line-height: 1.5; max-width: 380px;">
+                    Cierra todas las sesiones activas en otros navegadores y dispositivos. Tu sesión actual también se cerrará.
+                </p>
+                <button onclick="triggerGlobalLogout()" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.65rem 1.4rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                    Cerrar todas las sesiones
+                </button>
+            </div>
+        `,
+        background: 'var(--bg-surface)',
+        color: 'var(--text)',
+        width: '450px',
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: () => {
+            lucide.createIcons();
+        }
+    });
+};
+
+/** Lanza el flujo de confirmación y cierre de sesión global */
+window.triggerGlobalLogout = async function() {
+    Swal.close(); // Cerrar el modal de dispositivos primero
+    
+    const { value: pass, isConfirmed } = await Swal.fire({
+        title: '¿Cerrar todas las sesiones?',
+        html: `
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                Esto cerrará tu sesión en <strong style="color:var(--text);">todos los dispositivos</strong>, incluyendo este.<br>
+                Ingresa tu contraseña para confirmar.
+            </p>
+            <input type="password" id="swal-logout-pass" class="swal2-input"
+                placeholder="Tu contraseña actual"
+                style="background: var(--bg-surface-light); border: 1px solid rgba(239,68,68,0.3); color: var(--text-main);">
+        `,
+        icon: 'warning',
+        background: 'var(--bg-surface)',
+        color: 'var(--text)',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: 'var(--border-color)',
+        confirmButtonText: 'Sí, cerrar todas',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const val = document.getElementById('swal-logout-pass').value;
+            if (!val) {
+                Swal.showValidationMessage('Debes ingresar tu contraseña.');
+                return false;
+            }
+            return val;
+        }
+    });
+
+    if (!isConfirmed || !pass) return;
+
+    const sessionRaw = sessionStorage.getItem('clientSession');
+    if (!sessionRaw) return;
+    const session = JSON.parse(sessionRaw);
+
+    Swal.fire({
+        title: 'Cerrando sesiones...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); },
+        background: 'var(--bg-surface)',
+        color: 'var(--text)'
+    });
+
+    try {
+        const res = await fetch('/api/client/logout-all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.token}`
+            },
+            body: JSON.stringify({ pass })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Sesiones cerradas!',
+                text: 'Todas las sesiones activas han sido cerradas. Serás redirigido al inicio de sesión.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)',
+                confirmButtonColor: '#ef4444',
+                timer: 2500,
+                timerProgressBar: true
+            });
+            sessionStorage.removeItem('clientSession');
+            window.location.href = 'client-login.html';
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'No se pudieron cerrar las sesiones.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Error de conexión', background: 'var(--bg-surface)', color: 'var(--text)', confirmButtonColor: '#ef4444' });
     }
 };
 
