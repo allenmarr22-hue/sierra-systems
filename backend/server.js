@@ -210,9 +210,9 @@ function broadcastUpdate(payload) {
 
 // Envía un evento SSE solo a las conexiones de un cliente específico
 function broadcastToClient(targetClientId, payload) {
-    const targetId = Number(targetClientId);
+    const targetId = String(targetClientId);
     sseClients
-        .filter(c => Number(c.clientId) === targetId)
+        .filter(c => String(c.clientId) === targetId)
         .forEach(client => {
             try {
                 client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -229,8 +229,8 @@ app.get('/api/stream', (req, res) => {
     res.flushHeaders();
 
     const clientId = Date.now();
-    // Asociar el clientId de negocio si se pasa como query param
-    const bizClientId = req.query.clientId ? Number(req.query.clientId) : null;
+    // Asociar el clientId de negocio si se pasa como query param (guardar como string para evitar problemas con BIGINT)
+    const bizClientId = req.query.clientId ? String(req.query.clientId) : null;
     // Capturar info del dispositivo para mostrar sesiones activas
     const ua = req.headers['user-agent'] || '';
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
@@ -238,12 +238,16 @@ app.get('/api/stream', (req, res) => {
     const newClient = { id: clientId, clientId: bizClientId, res, ua, ip, connectedAt };
     sseClients.push(newClient);
 
+    console.log(`[SSE] Nueva conexión: clientId=${bizClientId}, ip=${ip}, total=${sseClients.length}`);
+
     res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
 
     req.on('close', () => {
         sseClients = sseClients.filter(client => client.id !== clientId);
+        console.log(`[SSE] Conexión cerrada: clientId=${bizClientId}, restantes=${sseClients.length}`);
     });
 });
+
 
 // ============================================================
 // CLIENTE: Listar sesiones activas (conexiones SSE actuales)
@@ -253,9 +257,9 @@ app.get('/api/client/active-sessions', async (req, res) => {
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ success: false, error: 'No autorizado' });
 
-    const targetId = Number(session.clientId);
+    const targetId = String(session.clientId);
     const activeSessions = sseClients
-        .filter(c => Number(c.clientId) === targetId)
+        .filter(c => String(c.clientId) === targetId)
         .map(c => {
             // Parsear User-Agent de forma básica para identificar dispositivo y navegador
             const ua = c.ua || '';
