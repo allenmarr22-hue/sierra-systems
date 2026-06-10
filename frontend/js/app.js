@@ -357,7 +357,7 @@ async function adminFetch(url, options = {}) {
             `,
             confirmButtonText: 'Renovar sesión',
             showCancelButton: true,
-            cancelButtonText: 'Cancelar',
+            cancelButtonText: 'Salir',
             background: 'var(--bg-surface)',
             color: 'var(--text-main)',
             confirmButtonColor: '#6366f1',
@@ -378,7 +378,19 @@ async function adminFetch(url, options = {}) {
             }
         });
 
-        if (!result.isConfirmed) return resp; // Usuario canceló
+        if (!result.isConfirmed) {
+            // Usuario canceló (Salir) -> Cerrar sesión
+            localStorage.removeItem('as_auth');
+            localStorage.removeItem('as_user');
+            localStorage.removeItem('as_admin_token');
+            appState.user = null;
+            initTheme();
+            showView('login-view');
+            document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
+            lucide.createIcons();
+            showToast('Sesión cerrada.', 'info');
+            return resp;
+        }
 
         try {
             const refreshResp = await fetch('/api/admin/refresh-token', {
