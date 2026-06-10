@@ -5539,8 +5539,26 @@ window.renderPromotionsList = function() {
             badgeLabel = 'Activa';
         }
         
-        const toggleIcon = p.status === 'active' ? 'pause' : 'play';
-        const toggleTitle = p.status === 'active' ? 'Pausar Campaña' : 'Reactivar Campaña';
+        const isExpired = now > end;
+        let toggleIcon = 'play';
+        let toggleTitle = 'Reactivar Campaña';
+        let toggleColor = '#10b981';
+        let toggleDisabled = '';
+
+        if (isExpired) {
+            toggleIcon = 'play';
+            toggleTitle = 'Campaña Expirada (edita las fechas para reactivar)';
+            toggleColor = 'var(--text-muted)';
+            toggleDisabled = 'disabled style="opacity: 0.5; cursor: not-allowed;"';
+        } else if (p.status === 'active') {
+            toggleIcon = 'pause';
+            toggleTitle = 'Pausar Campaña';
+            toggleColor = '#f59e0b';
+        } else {
+            toggleIcon = 'play';
+            toggleTitle = 'Reactivar Campaña';
+            toggleColor = '#10b981';
+        }
         
         return `
             <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
@@ -5563,7 +5581,7 @@ window.renderPromotionsList = function() {
                         <button class="btn-ghost" onclick="openPromoFormModal('${p.id}')" style="padding:6px;min-width:32px;height:32px;" title="Editar Campaña">
                             <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                         </button>
-                        <button class="btn-ghost" onclick="togglePromoStatus('${p.id}', '${p.status}')" style="padding:6px;min-width:32px;height:32px;color:${p.status === 'active' ? '#f59e0b' : '#10b981'};" title="${toggleTitle}">
+                        <button class="btn-ghost" ${toggleDisabled} onclick="togglePromoStatus('${p.id}', '${p.status}')" style="padding:6px;min-width:32px;height:32px;color:${toggleColor};" title="${toggleTitle}">
                             <i data-lucide="${toggleIcon}" style="width:14px;height:14px;"></i>
                         </button>
                         <button class="btn-ghost" onclick="deletePromo('${p.id}')" style="padding:6px;min-width:32px;height:32px;color:#ef4444;" title="Eliminar Campaña">
