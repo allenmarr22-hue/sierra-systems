@@ -1189,7 +1189,7 @@
 
                     <div class="product-actions" style="margin-top: 1.5rem;">
                         <a href="/modules/order-system/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important;">Ver Demo</a>
-                        <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StreetFeed" id="action-streetfeed" class="btn-primary-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important;">Contratar Ahora</a>
+                        <a href="/client-login.html?buy=streetfeed" id="action-streetfeed" class="btn-primary-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important;">Comprar Ahora</a>
                     </div>
                 </div>
 
@@ -1216,7 +1216,7 @@
 
                     <div class="product-actions" style="margin-top: 1.5rem;">
                         <a href="/modules/agenda/index.html" target="_blank" class="btn-outline-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important;">Ver Demo</a>
-                        <a href="https://wa.me/1234567890?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20StyleSync%20Pro" id="action-agenda" class="btn-primary-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important; background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important;">Contratar Ahora</a>
+                        <a href="/client-login.html?buy=agenda" id="action-agenda" class="btn-primary-landing" style="text-decoration:none; display: flex !important; align-items: center !important; justify-content: center !important; height: 54px !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important; background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important;">Comprar Ahora</a>
                     </div>
                 </div>
             </div>
@@ -1608,17 +1608,50 @@
                             
                             const actionEl = document.getElementById(`action-${mod.id}`);
                             if (actionEl && mod.name) {
-                                actionEl.href = `https://wa.me/${waNum}?text=Hola,%20estoy%20interesado%20en%20el%20módulo%20${encodeURIComponent(mod.name)}`;
+                                const isLoggedIn = sessionStorage.getItem('clientSession') !== null;
+                                actionEl.href = isLoggedIn 
+                                    ? `/client-dashboard.html?buy=${mod.id}` 
+                                    : `/client-login.html?buy=${mod.id}`;
                             }
 
                             // Controlar visibilidad y estados de disponibilidad del módulo en la landing page
                             const cardEl = titleEl ? titleEl.closest('.product-card') : null;
                             if (cardEl) {
+                                const oldRec = cardEl.querySelector('.product-rec-badge');
+                                if (oldRec) oldRec.remove();
+
                                 if (mod.status === 'hidden') {
                                     cardEl.style.display = 'none';
                                 } else {
                                     cardEl.style.display = '';
                                     
+                                    const isRecommended = String(mod.id) === String(data.config?.recommendedModuleId);
+                                    if (isRecommended && mod.status === 'active') {
+                                        const recLabel = data.config?.recommendedLabel || 'RECOMENDADO';
+                                        const recBadge = document.createElement('div');
+                                        recBadge.className = 'product-rec-badge';
+                                        recBadge.style.cssText = `
+                                            position: absolute;
+                                            top: 20px;
+                                            right: 20px;
+                                            background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+                                            color: #ffffff;
+                                            box-shadow: 0 0 15px rgba(236,72,153,0.4);
+                                            border: none;
+                                            font-size: 0.72rem;
+                                            font-weight: 800;
+                                            padding: 0.35rem 0.85rem;
+                                            border-radius: 30px;
+                                            letter-spacing: 0.04em;
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 4px;
+                                            z-index: 10;
+                                        `;
+                                        recBadge.innerHTML = `✨ ${recLabel}`;
+                                        cardEl.appendChild(recBadge);
+                                    }
+
                                     const badgeEl = cardEl.querySelector('.product-badge');
                                     
                                     if (mod.status === 'maintenance') {
@@ -1690,7 +1723,7 @@
                                             actionEl.style.border = '';
                                             actionEl.style.boxShadow = '';
                                             actionEl.style.cursor = '';
-                                            actionEl.textContent = 'Contratar Ahora';
+                                            actionEl.textContent = 'Comprar Ahora';
                                             actionEl.onclick = null;
                                         }
                                     }

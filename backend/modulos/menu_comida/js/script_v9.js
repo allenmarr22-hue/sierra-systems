@@ -5,7 +5,7 @@
     const instanceId = urlParams.get('instanceId');
     if (instanceId) {
         const suffix = `_${instanceId}`;
-        const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+        const prefixes = ['streetfeed_', 'agenda_'];
         const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
         const originalGetItem = Storage.prototype.getItem;
         const originalSetItem = Storage.prototype.setItem;
@@ -2711,3 +2711,30 @@ document.addEventListener('click', function(e) {
         wrapper.classList.remove('open');
     }
 });
+
+// ====== LISTENER DE CIERRE DE SESIÓN EN TIEMPO REAL DESDE EL PORTAL ======
+window.addEventListener('storage', (e) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const instanceId = urlParams.get('instanceId');
+    const sessionKey = instanceId ? `streetfeed_isLoggedIn_${instanceId}` : 'streetfeed_isLoggedIn';
+    if (e.key === sessionKey && e.newValue !== 'true') {
+        console.warn(`[Storage Event] Sesión de menu_comida finalizada por cambio en ${sessionKey}. Cerrando sesión...`);
+        // Forzar cierre de sesión
+        localStorage.setItem('streetfeed_isLoggedIn', 'false');
+        if (typeof state !== 'undefined') {
+            state.isLoggedIn = false;
+        }
+        
+        const userInp = document.getElementById('login-user');
+        const passInp = document.getElementById('login-pass');
+        if (userInp) userInp.value = '';
+        if (passInp) passInp.value = '';
+        
+        if (typeof switchView === 'function') {
+            switchView('login');
+        } else {
+            window.location.reload();
+        }
+    }
+});
+

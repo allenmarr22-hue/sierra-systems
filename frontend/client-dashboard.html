@@ -819,7 +819,25 @@
                         </div>
                     </form>
                 </div>
+
+                <!-- Tarjeta: Cerrar sesión en todos los dispositivos -->
+                <div class="biz-card" style="max-width: 600px; margin: 0 auto; margin-bottom: 4rem; padding: 2rem 2.5rem; background: var(--bg-surface); border: 1px solid rgba(239, 68, 68, 0.25); box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 12px;">
+                    <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="shield-x" style="width: 20px; height: 20px; color: #ef4444;"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-main); margin: 0 0 0.3rem;">Cerrar sesión en todos los dispositivos</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1.25rem; line-height: 1.5;">Cierra todas las sesiones activas en otros navegadores y dispositivos. Tu sesión actual también se cerrará.</p>
+                            <button id="logout-all-btn" type="button" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.65rem 1.4rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                                Cerrar todas las sesiones
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </section>
+
 
         </div>
     </main>
@@ -874,7 +892,7 @@
     document.addEventListener('DOMContentLoaded', loadDynamicConfig);
 </script>
 <script src="js/chart.min.js"></script>
-<script src="js/client-app.js?v=20260608.5"></script>
+<script src="js/client-app.js?v=20260610.4"></script>
 <script src="js/consent.js?v=20260608.5"></script>
 </body>
 </html>

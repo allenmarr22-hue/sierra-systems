@@ -19,7 +19,7 @@
             const instanceId = urlParams.get('instanceId');
             if (instanceId) {
                 const suffix = `_${instanceId}`;
-                const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+                const prefixes = ['streetfeed_', 'agenda_'];
                 const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
                 const originalGetItem = Storage.prototype.getItem;
                 const originalSetItem = Storage.prototype.setItem;
@@ -41,10 +41,10 @@
         (function() {
             try {
                 // 1. Título de Pestaña y Favicon
-                const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+                const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
                 document.title = "Panel Administrativo | " + name;
 
-                const logoUrl = localStorage.getItem('margarita_logo_url');
+                const logoUrl = localStorage.getItem('agenda_logo_url');
                 const DEFAULT_S_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2220%22%20fill%3D%22%23111111%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2275%22%20font-size%3D%2265%22%20fill%3D%22%23B87381%22%20font-family%3D%22Georgia%2Cserif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22bold%22%3ES%3C%2Ftext%3E%3Ctext%20x%3D%2280%22%20y%3D%2235%22%20font-size%3D%2230%22%20text-anchor%3D%22middle%22%3E%E2%9C%A8%3C%2Ftext%3E%3C%2Fsvg%3E";
                 const link = document.createElement('link');
                 link.id = 'dynamic-favicon';
@@ -59,7 +59,7 @@
                 document.getElementsByTagName('head')[0].appendChild(link);
 
                 // 2. Aplicar colores del tema actual al vuelo para evitar destello rosa
-                const savedTheme = localStorage.getItem('margarita_admin_theme') || 'rose';
+                const savedTheme = localStorage.getItem('agenda_admin_theme') || 'rose';
                 const themes = {
                     rose: { accent: '#A05D6B', bg: '#FCF8F5', rgb: '160, 93, 107' },
                     blue: { accent: '#2D4F6C', bg: '#F4F7F9', rgb: '45, 79, 108' },
@@ -140,7 +140,7 @@
         <h1 class="logo dynamic-brand-name" id="auth-brand-logo"><a href="admin.html" style="text-decoration: none; color: inherit;">StyleSync Pro<span>.</span> Admin</a></h1>
         <script>
             (function() {
-                const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+                const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
                 document.getElementById('auth-brand-logo').firstChild.innerHTML = name + '<span>.</span> Admin';
             })();
         </script>
@@ -168,7 +168,7 @@
                     <i class="fas fa-crown" id="admin-sidebar-logo-icon"></i>
                     <script>
                         (function() {
-                            const customLogo = localStorage.getItem('margarita_logo_url');
+                            const customLogo = localStorage.getItem('agenda_logo_url');
                             if (customLogo) {
                                 document.getElementById('admin-sidebar-logo-container').innerHTML = `<img src="${customLogo}" style="width: 42px; height: 42px; object-fit: contain; border-radius: 8px; image-rendering: -webkit-optimize-contrast; transform: translateZ(0); backface-visibility: hidden;">`;
                             }
@@ -198,7 +198,7 @@
                     <h1 class="logo dynamic-brand-name" id="main-brand-logo"><a href="admin.html" style="text-decoration: none; color: inherit;">StyleSync Pro<span>.</span> Admin</a></h1>
                     <script>
                         (function() {
-                            const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+                            const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
                             document.getElementById('main-brand-logo').firstChild.innerHTML = name + '<span>.</span> Admin';
                         })();
                     </script>

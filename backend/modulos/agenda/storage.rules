@@ -6,7 +6,7 @@ service firebase.storage {
       allow read: if true;
       
       // Escritura segura mediante validaciones
-      allow write: if request.resource.metadata.secret == 'Margarita_X7k9Pm2Lv89QrZw1'
+      allow write: if request.resource.metadata.secret == 'Agenda_X7k9Pm2Lv89QrZw1'
                    && request.resource.size < 2 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }

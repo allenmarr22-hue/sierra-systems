@@ -5,7 +5,7 @@
     const instanceId = urlParams.get('instanceId');
     if (instanceId) {
         const suffix = `_${instanceId}`;
-        const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+        const prefixes = ['streetfeed_', 'agenda_', 'agenda_'];
         const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
         const originalGetItem = Storage.prototype.getItem;
         const originalSetItem = Storage.prototype.setItem;
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const cachedTheme = localStorage.getItem('margarita_client_theme') || 'rose';
+    const cachedTheme = localStorage.getItem('agenda_client_theme') || 'rose';
     window.applyClientTheme(cachedTheme);
 
     // SOPORTE DE HORA 12H (AM/PM)
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             statusBanner.style.display = isSalonOpen ? 'none' : 'flex';
             
             if (!isSalonOpen) {
-                const closureData = localStorage.getItem('margarita_closure_dates');
+                const closureData = localStorage.getItem('agenda_closure_dates');
                 let customMsg = "";
                 if (closureData) {
                     try {
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DYNAMIC BRANDING & SOCIAL SYNC ---
     window.applyPublicDynamicBranding = function() {
-        const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+        const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
         document.querySelectorAll('.dynamic-brand-text').forEach(el => { el.innerText = name; });
         const yearSpan = document.getElementById('current-year-footer');
         if(yearSpan) yearSpan.innerText = new Date().getFullYear();
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.title = `${name} | Agenda de Citas`;
 
         // 2. Aplicar Logo de la Marca en Navbar y Footer y como favicon
-        const logoUrl = localStorage.getItem('margarita_logo_url');
+        const logoUrl = localStorage.getItem('agenda_logo_url');
         
         if (logoUrl) {
             let link = document.getElementById('dynamic-favicon');
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 2. Aplicar Foto de Portada / Hero Background
-        const heroUrl = localStorage.getItem('margarita_hero_url');
+        const heroUrl = localStorage.getItem('agenda_hero_url');
         const heroElement = document.querySelector('.hero');
         if (heroElement) {
             if (heroUrl) {
@@ -323,14 +323,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 3. Actualizar enlace del botón de ubicación pública
-        const address = localStorage.getItem('margarita_site_address') || "Calle 14 # 11-74, Sevilla";
+        const address = localStorage.getItem('agenda_site_address') || "Calle 14 # 11-74, Sevilla";
         const locBtn = document.getElementById('public-location-btn');
         if (locBtn) {
             locBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
         }
     };
     window.applyPublicWhatsappLinks = function() {
-        const savedWa = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
+        const savedWa = localStorage.getItem('agenda_whatsapp_number') || "3057726115";
         let cleanNum = savedWa.replace(/\D/g, '');
         // Si tiene 10 dígitos, añadir el código de país de Colombia (57) por defecto
         const fullWa = cleanNum.length === 10 ? "57" + cleanNum : cleanNum;
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.applyPublicSocialLinks = function() {
-        const social = JSON.parse(localStorage.getItem('margarita_social_links') || '{}');
+        const social = JSON.parse(localStorage.getItem('agenda_social_links') || '{}');
         const insta = document.getElementById('footer-social-insta');
         const face = document.getElementById('footer-social-face');
         const tiktok = document.getElementById('footer-social-tiktok');
@@ -363,17 +363,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── AUTO-CIERRE EXPIRADO: Si ya pasó la fecha de fin, limpiar el cierre automáticamente ──
     (function checkClosureExpiry() {
         try {
-            const closureRaw = localStorage.getItem('margarita_closure_dates');
-            const isClosed = localStorage.getItem('margarita_salon_open') === 'false';
+            const closureRaw = localStorage.getItem('agenda_closure_dates');
+            const isClosed = localStorage.getItem('agenda_salon_open') === 'false';
             if (isClosed && closureRaw) {
                 const cls = JSON.parse(closureRaw);
                 if (cls.end) {
                     const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD formato local
                     if (today > cls.end) {
                         // El cierre ya venció → restaurar automáticamente
-                        localStorage.removeItem('margarita_closure_dates');
-                        localStorage.setItem('margarita_salon_open', 'true');
-                        localStorage.setItem('margarita_salon_trigger', Date.now());
+                        localStorage.removeItem('agenda_closure_dates');
+                        localStorage.setItem('agenda_salon_open', 'true');
+                        localStorage.setItem('agenda_salon_trigger', Date.now());
                         // Notificar a la nube para que todos los dispositivos se actualicen
                         if (window.saveDataToCloud) {
                             window.saveDataToCloud('config_v2', 'salon_status', { open: true, closure_dates: null });
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // Initial check
-    const currentStatus = localStorage.getItem('margarita_salon_open') !== 'false';
+    const currentStatus = localStorage.getItem('agenda_salon_open') !== 'false';
     updateSalonStatusUI(currentStatus);
     applyPublicDynamicBranding();
     applyPublicSocialLinks();
@@ -403,38 +403,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 1. Sincronizar Catálogo y Categorías
                 const cloudSvcs = await window.loadListFromCloud('servicios_v2');
                 if (cloudSvcs && cloudSvcs.length > 0) {
-                    localStorage.setItem('margarita_services', JSON.stringify(cloudSvcs));
+                    localStorage.setItem('agenda_services', JSON.stringify(cloudSvcs));
                 }
                 
                 const cloudCats = await window.loadListFromCloud('categorias_v2');
                 if (cloudCats && cloudCats.length > 0) {
-                    localStorage.setItem('margarita_categories', JSON.stringify(cloudCats));
+                    localStorage.setItem('agenda_categories', JSON.stringify(cloudCats));
                 }
 
                 // 2. Sincronizar Agenda
                 const cloudApts = await window.loadListFromCloud('citas_v2');
                 if (cloudApts) {
-                    localStorage.setItem('margarita_appointments', JSON.stringify(cloudApts));
+                    localStorage.setItem('agenda_appointments', JSON.stringify(cloudApts));
                 }
 
                 // 3. Sincronizar Galería Pública
                 const cloudGal = await window.loadListFromCloud('galeria_v2');
                 if (cloudGal && cloudGal.length > 0) {
-                    localStorage.setItem('margarita_gallery', JSON.stringify(cloudGal));
+                    localStorage.setItem('agenda_gallery', JSON.stringify(cloudGal));
                     if (window.renderPublicGallery) window.renderPublicGallery();
                 }
 
                 // 3.5 Sincronizar Especialistas (VITAL para armar la agenda en nuevos dispositivos)
                 const cloudSpecs = await window.loadListFromCloud('especialistas_v2');
                 if (cloudSpecs && cloudSpecs.length > 0) {
-                    localStorage.setItem('margarita_specialists', JSON.stringify(cloudSpecs));
+                    localStorage.setItem('agenda_specialists', JSON.stringify(cloudSpecs));
                 }
 
                 // 4. Sincronizar Galerías de Modelos (específicas por servicio)
                 try {
                     const cloudModelGal = await window.loadDataFromCloud('config_v2', 'service_galleries');
                     if (cloudModelGal) {
-                        localStorage.setItem('margarita_service_galleries', JSON.stringify(cloudModelGal));
+                        localStorage.setItem('agenda_service_galleries', JSON.stringify(cloudModelGal));
                     }
                 } catch(e) { console.warn("No se pudo cargar galerías de modelos:", e); }
 
@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const cloudPromos = await window.loadDataFromCloud('config_v2', 'promos');
                     if (cloudPromos) {
-                        localStorage.setItem('margarita_promos', JSON.stringify(cloudPromos));
+                        localStorage.setItem('agenda_promos', JSON.stringify(cloudPromos));
                     }
                 } catch(e) { console.warn("No se pudo cargar promos:", e); }
 
@@ -450,12 +450,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const cloudSimult = await window.loadDataFromCloud('config_v2', 'simult_groups');
                     if (cloudSimult) {
-                        localStorage.setItem('margarita_simult_groups', JSON.stringify(cloudSimult));
+                        localStorage.setItem('agenda_simult_groups', JSON.stringify(cloudSimult));
                     }
                 } catch(e) { console.warn("No se pudo cargar simultaneidad:", e); }
 
                 // --- Smart Sync: Solo re-renderizar si algo CAMBIÁ“ realmente ---
-                const localModelGalBefore = localStorage.getItem('margarita_service_galleries');
+                const localModelGalBefore = localStorage.getItem('agenda_service_galleries');
                 const dataChanged = (JSON.stringify(cloudSvcs) !== localSvcsBefore) || 
                                     (JSON.stringify(cloudCats) !== localCatsBefore) ||
                                     (JSON.stringify(cloudGal)  !== localGalBefore) ||
@@ -481,47 +481,47 @@ document.addEventListener('DOMContentLoaded', () => {
                         window._sync_listeners_attached = true;
                         
                         window.listenToCollection('especialistas_v2', (data) => {
-                            const localStr = localStorage.getItem('margarita_specialists') || '[]';
+                            const localStr = localStorage.getItem('agenda_specialists') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
                                 console.log("👥 [Sync Live] Especialistas actualizados...");
-                                localStorage.setItem('margarita_specialists', JSON.stringify(data));
+                                localStorage.setItem('agenda_specialists', JSON.stringify(data));
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
                         });
 
                         window.listenToCollection('servicios_v2', (data) => {
-                            const localStr = localStorage.getItem('margarita_services') || '[]';
+                            const localStr = localStorage.getItem('agenda_services') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
                                 console.log("💇 [Sync Live] Servicios actualizados...");
-                                localStorage.setItem('margarita_services', JSON.stringify(data));
+                                localStorage.setItem('agenda_services', JSON.stringify(data));
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
                         });
 
                         window.listenToCollection('categorias_v2', (data) => {
-                            const localStr = localStorage.getItem('margarita_categories') || '[]';
+                            const localStr = localStorage.getItem('agenda_categories') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
                                 console.log("📂 [Sync Live] Categorías actualizadas...");
-                                localStorage.setItem('margarita_categories', JSON.stringify(data));
+                                localStorage.setItem('agenda_categories', JSON.stringify(data));
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
                         });
 
                         window.listenToCollection('galeria_v2', (data) => {
-                            const localStr = localStorage.getItem('margarita_gallery') || '[]';
+                            const localStr = localStorage.getItem('agenda_gallery') || '[]';
                             if (data && JSON.stringify(data) !== localStr) {
                                 console.log("📸 [Sync Live] Galería actualizada...");
-                                localStorage.setItem('margarita_gallery', JSON.stringify(data));
+                                localStorage.setItem('agenda_gallery', JSON.stringify(data));
                                 if (window.renderPublicGallery) window.renderPublicGallery();
                             }
                         });
 
                         if (window.listenToDoc) {
                             window.listenToDoc('config_v2', 'promos', (data) => {
-                                const localStr = localStorage.getItem('margarita_promos') || '{}';
+                                const localStr = localStorage.getItem('agenda_promos') || '{}';
                                 if (data && JSON.stringify(data) !== localStr) {
                                     console.log("ðŸŽ [Sync Live] Promociones actualizadas...");
-                                    localStorage.setItem('margarita_promos', JSON.stringify(data));
+                                    localStorage.setItem('agenda_promos', JSON.stringify(data));
                                     // Solo re-chequear si no se ha mostrado ya o si algo cambió drásticamente
                                     // Respetamos la decisión del usuario de cerrarla.
                                     if (typeof checkPromotions === 'function' && !window._promoAlreadyAutoShown) checkPromotions(true);
@@ -538,12 +538,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Listener para Estado del Salón y Branding
                     window.listenToDoc('config_v2', 'salon_status', (data) => {
                         if (data) {
-                            localStorage.setItem('margarita_salon_open', data.open === false ? 'false' : 'true');
+                            localStorage.setItem('agenda_salon_open', data.open === false ? 'false' : 'true');
                             // Si closure_dates es null/undefined, limpiar cierre programado local
                             if (data.closure_dates) {
-                                localStorage.setItem('margarita_closure_dates', JSON.stringify(data.closure_dates));
+                                localStorage.setItem('agenda_closure_dates', JSON.stringify(data.closure_dates));
                             } else {
-                                localStorage.removeItem('margarita_closure_dates');
+                                localStorage.removeItem('agenda_closure_dates');
                             }
                             updateSalonStatusUI(data.open !== false);
                         }
@@ -551,21 +551,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     window.listenToDoc('config_v2', 'general', (data) => {
                         if (data) {
-                            if (data.site_name) localStorage.setItem('margarita_site_name', data.site_name);
-                            if (data.whatsapp) localStorage.setItem('margarita_whatsapp_number', data.whatsapp);
-                            if (data.site_address) localStorage.setItem('margarita_site_address', data.site_address);
-                            if (data.social) localStorage.setItem('margarita_social_links', JSON.stringify(data.social));
+                            if (data.site_name) localStorage.setItem('agenda_site_name', data.site_name);
+                            if (data.whatsapp) localStorage.setItem('agenda_whatsapp_number', data.whatsapp);
+                            if (data.site_address) localStorage.setItem('agenda_site_address', data.site_address);
+                            if (data.social) localStorage.setItem('agenda_social_links', JSON.stringify(data.social));
                             if (data.theme) {
-                                localStorage.setItem('margarita_client_theme', data.theme);
+                                localStorage.setItem('agenda_client_theme', data.theme);
                                 window.applyClientTheme(data.theme);
                             }
                             if (data.logo_url !== undefined) {
-                                if (data.logo_url) localStorage.setItem('margarita_logo_url', data.logo_url);
-                                else localStorage.removeItem('margarita_logo_url');
+                                if (data.logo_url) localStorage.setItem('agenda_logo_url', data.logo_url);
+                                else localStorage.removeItem('agenda_logo_url');
                             }
                             if (data.hero_url !== undefined) {
-                                if (data.hero_url) localStorage.setItem('margarita_hero_url', data.hero_url);
-                                else localStorage.removeItem('margarita_hero_url');
+                                if (data.hero_url) localStorage.setItem('agenda_hero_url', data.hero_url);
+                                else localStorage.removeItem('agenda_hero_url');
                             }
                             
                             applyPublicDynamicBranding();
@@ -577,9 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Listener para Grupos de Simultaneidad
                     window.listenToDoc('config_v2', 'simult_groups', (data) => {
                         if (data) {
-                            const current = localStorage.getItem('margarita_simult_groups');
+                            const current = localStorage.getItem('agenda_simult_groups');
                             if (JSON.stringify(data) !== current) {
-                                localStorage.setItem('margarita_simult_groups', JSON.stringify(data));
+                                localStorage.setItem('agenda_simult_groups', JSON.stringify(data));
                                 console.log("🔄 Simultaneity Groups actualizados en vivo");
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
@@ -589,9 +589,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Listener para Galerías de Modelos Específicas
                     window.listenToDoc('config_v2', 'service_galleries', (data) => {
                         if (data) {
-                            const current = localStorage.getItem('margarita_service_galleries');
+                            const current = localStorage.getItem('agenda_service_galleries');
                             if (JSON.stringify(data) !== current) {
-                                localStorage.setItem('margarita_service_galleries', JSON.stringify(data));
+                                localStorage.setItem('agenda_service_galleries', JSON.stringify(data));
                                 console.log("🔄 Service Galleries actualizadas en vivo");
                                 if (window.renderDynamicContent) window.renderDynamicContent();
                             }
@@ -602,9 +602,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.listenToDoc('config_v2', 'promo_bubble_cfg', (data) => {
                         if (data) {
                             try {
-                                const current = localStorage.getItem('margarita_promo_bubble_cfg');
+                                const current = localStorage.getItem('agenda_promo_bubble_cfg');
                                 if (JSON.stringify(data) !== current) {
-                                    localStorage.setItem('margarita_promo_bubble_cfg', JSON.stringify(data));
+                                    localStorage.setItem('agenda_promo_bubble_cfg', JSON.stringify(data));
                                     if (typeof updatePromoBubbleUI === 'function') updatePromoBubbleUI();
                                 }
                             } catch(e) {}
@@ -623,10 +623,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Capturar estado inicial para Smart Sync
-    const localSvcsBefore = localStorage.getItem('margarita_services');
-    const localCatsBefore = localStorage.getItem('margarita_categories');
-    const localGalBefore  = localStorage.getItem('margarita_gallery');
-    const localSpecsBefore = localStorage.getItem('margarita_specialists');
+    const localSvcsBefore = localStorage.getItem('agenda_services');
+    const localCatsBefore = localStorage.getItem('agenda_categories');
+    const localGalBefore  = localStorage.getItem('agenda_gallery');
+    const localSpecsBefore = localStorage.getItem('agenda_specialists');
     runCloudSync();
 
     // IMPORTANTE: Renderizar contenido local primero (fallback instantáneo), luego los anuncios
@@ -653,16 +653,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Real-time synchronization across tabs (from Admin updates)
     window.addEventListener('storage', (event) => {
-        if (event.key === 'margarita_salon_open') {
+        if (event.key === 'agenda_salon_open') {
             updateSalonStatusUI(event.newValue !== 'false');
-        } else if (event.key === 'margarita_closure_dates' || event.key === 'margarita_salon_trigger' || event.key === 'margarita_site_name' || event.key === 'margarita_whatsapp_number') {
+        } else if (event.key === 'agenda_closure_dates' || event.key === 'agenda_salon_trigger' || event.key === 'agenda_site_name' || event.key === 'agenda_whatsapp_number') {
             if (window.applyPublicWhatsappLinks) window.applyPublicWhatsappLinks();
             if (window.applyPublicDynamicBranding) window.applyPublicDynamicBranding();
             window.dispatchEvent(new Event('scroll'));
-        } else if (event.key === 'margarita_salon_trigger') {
+        } else if (event.key === 'agenda_salon_trigger') {
             // Sincronización en tiempo real de servicios y categorías
             if (window.renderDynamicContent) window.renderDynamicContent();
-        } else if (event.key === 'margarita_promos' || event.key === 'margarita_promo') {
+        } else if (event.key === 'agenda_promos' || event.key === 'agenda_promo') {
             // Pequeño delay para que el admin termine de escribir antes de leer
             setTimeout(() => {
                 try {
@@ -770,15 +770,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     
     // Init LocalStorage
-    if (!localStorage.getItem('margarita_categories')) {
-        localStorage.setItem('margarita_categories', JSON.stringify(defaultCategories));
+    if (!localStorage.getItem('agenda_categories')) {
+        localStorage.setItem('agenda_categories', JSON.stringify(defaultCategories));
     }
-    if (!localStorage.getItem('margarita_services')) {
-        localStorage.setItem('margarita_services', JSON.stringify(defaultServices));
+    if (!localStorage.getItem('agenda_services')) {
+        localStorage.setItem('agenda_services', JSON.stringify(defaultServices));
     }
 
-    const categories = JSON.parse(localStorage.getItem('margarita_categories'));
-    const services = JSON.parse(localStorage.getItem('margarita_services'));
+    const categories = JSON.parse(localStorage.getItem('agenda_categories'));
+    const services = JSON.parse(localStorage.getItem('agenda_services'));
 
     // Migration patch: Force rename Estilismo to Cabello if found in old localStorage
     let needsMigration = false;
@@ -789,14 +789,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     if (needsMigration) {
-        localStorage.setItem('margarita_categories', JSON.stringify(categories));
+        localStorage.setItem('agenda_categories', JSON.stringify(categories));
         // Also update default displays in services if needed
         services.forEach(s => {
             if (s.cat === 'cabello' && s.categoryDisplay === 'ESTILISMO') {
                 s.categoryDisplay = 'CABELLO';
             }
         });
-        localStorage.setItem('margarita_services', JSON.stringify(services));
+        localStorage.setItem('agenda_services', JSON.stringify(services));
     }
     // Motor global para el Slideshow de Especialidades (Rotación de Imágenes)
     window.initCategorySlideshows = () => {
@@ -835,8 +835,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; }
             catch(e) { return fallback; }
         };
-        const categoriesRaw = safeParse('margarita_categories', []);
-        const servicesRaw = safeParse('margarita_services', []);
+        const categoriesRaw = safeParse('agenda_categories', []);
+        const servicesRaw = safeParse('agenda_services', []);
 
         const categories = categoriesRaw.filter(c => c.active !== false);
         const services = servicesRaw.filter(s => s.active !== false);
@@ -970,7 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
               try {
                 let promos = null;
                 try {
-                    const saved = localStorage.getItem('margarita_promos') || localStorage.getItem('margarita_promo');
+                    const saved = localStorage.getItem('agenda_promos') || localStorage.getItem('agenda_promo');
                     if (saved) promos = JSON.parse(saved);
                 } catch(e) { }
 
@@ -1095,7 +1095,7 @@ document.addEventListener('keydown', (e) => {
         const container = document.getElementById('public-gallery-list');
         if (!container) return;
 
-        const gallery = JSON.parse(localStorage.getItem('margarita_gallery') || '[]');
+        const gallery = JSON.parse(localStorage.getItem('agenda_gallery') || '[]');
         if (gallery.length === 0) {
             container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:40px; color:#aaa; font-style:italic;">Próximamente: Resultados reales de nuestras hermosas clientes.</p>';
             return;
@@ -1229,7 +1229,7 @@ window.toggleCart = function() {
         
         // Solo mostrar la burbuja al cerrar si hay una promo activa
         if (promoBubble) {
-            const saved = localStorage.getItem('margarita_promos');
+            const saved = localStorage.getItem('agenda_promos');
             const promos = saved ? JSON.parse(saved) : {};
             const isActive = (promos.combo?.active) || (promos.discount?.active);
             if (isActive) promoBubble.style.display = 'block';
@@ -1240,8 +1240,8 @@ window.toggleCart = function() {
 // =============================================
 // CART SYSTEM
 // =============================================
-let cart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
-window.margaritaCart = cart; // Hacerlo accesible globalmente si otras funciones fuera del DOMContentLoaded lo necesitan
+let cart = JSON.parse(localStorage.getItem('agenda_cart') || '[]');
+window.agendaCart = cart; // Hacerlo accesible globalmente si otras funciones fuera del DOMContentLoaded lo necesitan
 
 window.addToCart = function(serviceName, servicePrice, serviceImg, category, baseServiceTitle, catId) {
     const finalCategory = category || 'General';
@@ -1266,7 +1266,7 @@ window.addToCart = function(serviceName, servicePrice, serviceImg, category, bas
     // BUSCAMOS DURACIÁ“N REAL ANTES DE GUARDAR (CON TRADUCTOR DE HORAS)
     let serviceDuration = 60;
     try {
-        const dbServices = JSON.parse(localStorage.getItem('margarita_services') || '[]');
+        const dbServices = JSON.parse(localStorage.getItem('agenda_services') || '[]');
         const normName = (serviceName || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
         const match = dbServices.find(s => {
             const sT = (s.title || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -1337,7 +1337,7 @@ window.clearAllServicesTime = function() {
     window.comboAssignments = null; // Limpiar también los asignamientos inteligentes si existían
     
     if (hasTime) {
-        localStorage.setItem('margarita_cart', JSON.stringify(cart));
+        localStorage.setItem('agenda_cart', JSON.stringify(cart));
         window.renderCart();
         if (typeof showToast !== 'undefined') showToast('Horarios limpios. Elige de nuevo. <i class="fas fa-check-circle" style="margin-left: 5px; color: var(--color-accent);"></i>', 'info-special');
     }
@@ -1350,7 +1350,7 @@ window.renderCart = function() {
 
     if (!container || !checkout) return;
 
-    localStorage.setItem('margarita_cart', JSON.stringify(cart));
+    localStorage.setItem('agenda_cart', JSON.stringify(cart));
 
     if (cart.length === 0) {
         container.innerHTML = '<p style="text-align:center; color:#aaa; padding:40px 0;">Tu carrito está vacío.<br>Agrega servicios con el botón RESERVAR.</p>';
@@ -1374,10 +1374,10 @@ window.renderCart = function() {
     // --- LÁ“GICA DE PROMOCIONES DUALES INDEPENDIENTES ---
     let promos = null;
     try {
-        const saved = localStorage.getItem('margarita_promos');
+        const saved = localStorage.getItem('agenda_promos');
         if (saved) promos = JSON.parse(saved);
         else {
-            const old = localStorage.getItem('margarita_promo');
+            const old = localStorage.getItem('agenda_promo');
             if (old) {
                 const p = JSON.parse(old);
                 promos = { discount: { active: false }, combo: { active: false } };
@@ -1394,10 +1394,10 @@ window.renderCart = function() {
         } catch(e) { return fallback; }
     };
 
-    const categoriesList = safeParse('margarita_categories', []);
-    const dbServices = safeParse('margarita_services', []);
-    const allSpecs = safeParse('margarita_specialists', []);
-    const agendaData = safeParse('margarita_appointments', []);
+    const categoriesList = safeParse('agenda_categories', []);
+    const dbServices = safeParse('agenda_services', []);
+    const allSpecs = safeParse('agenda_specialists', []);
+    const agendaData = safeParse('agenda_appointments', []);
     const timeToMins = (t) => { if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
 
     let comboDiscount = 0;
@@ -1589,7 +1589,7 @@ window.renderCart = function() {
                                 // Buscador de duración VIP (Prioriza exacto)
                                 let d = 60;
                                 try {
-                                    const dbS = JSON.parse(localStorage.getItem('margarita_services') || '[]');
+                                    const dbS = JSON.parse(localStorage.getItem('agenda_services') || '[]');
                                     const norm = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
                                     const target = norm(item.service);
                                     
@@ -1669,14 +1669,14 @@ window.clearCart = function() {
     cart = [];
     updateCartBadge();
     renderCart();
-    localStorage.removeItem('margarita_cart');
+    localStorage.removeItem('agenda_cart');
 }
 
 window.setGlobalSchedule = function(field, value) {
     if (field === 'date') {
-        const isSalonOpen = localStorage.getItem('margarita_salon_open') !== 'false';
+        const isSalonOpen = localStorage.getItem('agenda_salon_open') !== 'false';
         if (!isSalonOpen) {
-            const closureData = localStorage.getItem('margarita_closure_dates');
+            const closureData = localStorage.getItem('agenda_closure_dates');
             if (closureData) {
                 try {
                     const parsed = JSON.parse(closureData);
@@ -1738,9 +1738,9 @@ window.sendCartToWhatsApp = async function() {
     }
 
     // ♥ GUARDIA FINAL DE CIERRE: verificar todas las fechas del carrito contra el cierre activo
-    const _isSalonOpen = localStorage.getItem('margarita_salon_open') !== 'false';
+    const _isSalonOpen = localStorage.getItem('agenda_salon_open') !== 'false';
     if (!_isSalonOpen) {
-        const _closureRaw = localStorage.getItem('margarita_closure_dates');
+        const _closureRaw = localStorage.getItem('agenda_closure_dates');
         const _isMob = window.innerWidth < 768;
         let _blocked = false;
         let _closureMsg = _isMob ? '🔒 Salón cerrado' : 'El salón está cerrado. No se pueden agendar citas en este momento.';
@@ -1766,8 +1766,8 @@ window.sendCartToWhatsApp = async function() {
     }
 
     // Asignar los especialistas definitivos y calcular duraciones reales
-    const dbServices = JSON.parse(localStorage.getItem('margarita_services') || '[]');
-    const businessName = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+    const dbServices = JSON.parse(localStorage.getItem('agenda_services') || '[]');
+    const businessName = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
     cart.forEach(item => {
         item._finalSpecialist = item.specialist === "Sin preferencia" ? businessName : item.specialist;
         
@@ -1855,7 +1855,7 @@ window.sendCartToWhatsApp = async function() {
     if (window.loadListFromCloud) {
         cloudApts = await window.loadListFromCloud('citas_v2') || [];
     } else {
-        cloudApts = JSON.parse(localStorage.getItem('margarita_appointments') || '[]');
+        cloudApts = JSON.parse(localStorage.getItem('agenda_appointments') || '[]');
     }
 
     let overlap = false;
@@ -1919,14 +1919,14 @@ window.sendCartToWhatsApp = async function() {
             sendBtn.style.opacity = '1';
         }
         // Actualizar datos locales con los nuevos de la nube para que vea el espacio ocupado
-        localStorage.setItem('margarita_appointments', JSON.stringify(cloudApts));
+        localStorage.setItem('agenda_appointments', JSON.stringify(cloudApts));
         if (waWindow) waWindow.close();
         return; // ABORTA EL PAGO
     }
 
     // --- PRECALCULAR PRECIOS CON DESCUENTO Y COMBOS ---
-    const promos = JSON.parse(localStorage.getItem('margarita_promos') ||'{}');
-    const categoriesList = JSON.parse(localStorage.getItem('margarita_categories') ||'[]');
+    const promos = JSON.parse(localStorage.getItem('agenda_promos') ||'{}');
+    const categoriesList = JSON.parse(localStorage.getItem('agenda_categories') ||'[]');
     
     let comboActive = false;
     let comboPriceNum = 0;
@@ -2073,7 +2073,7 @@ window.sendCartToWhatsApp = async function() {
             createdAt: new Date().toISOString()
         });
     });
-    localStorage.setItem('margarita_appointments', JSON.stringify(agenda));
+    localStorage.setItem('agenda_appointments', JSON.stringify(agenda));
     
     // Cloud Sync: Guardar cita en la nube antes de que móvil pause el navegador
     if (window.saveListToCloud) {
@@ -2091,8 +2091,8 @@ window.sendCartToWhatsApp = async function() {
     };
 
     // Build WhatsApp message
-    const savedWa = localStorage.getItem('margarita_whatsapp_number') || "3057726115";
-    const businessName = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+    const savedWa = localStorage.getItem('agenda_whatsapp_number') || "3057726115";
+    const businessName = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
     let cleanNum = savedWa.replace(/\D/g, '');
     const waNumber = cleanNum.length === 10 ? "57" + cleanNum : cleanNum;
     let waText = encodeURIComponent(`Hola ${businessName}!\n\n*Mi Nombre:* ${name}\n*Celular:* ${phone}\n\nQuiero agendar los siguientes servicios:\n`);
@@ -2273,7 +2273,7 @@ function updatePromoBubbleUI() {
     if (!bubble) return;
 
     let cfg = {};
-    try { cfg = JSON.parse(localStorage.getItem('margarita_promo_bubble_cfg') || '{}'); } catch(e) {}
+    try { cfg = JSON.parse(localStorage.getItem('agenda_promo_bubble_cfg') || '{}'); } catch(e) {}
 
     const animId   = cfg.anim    || 'anim-3d-spinner'; // default: 3D Spinner
     const svgMarkup = cfg.iconSvg || '';
@@ -2304,11 +2304,11 @@ function checkPromotions(force = false, isUserClick = false) {
     console.log("Checking promotions... (force=" + force + ", user=" + isUserClick + ")");
     let promos = null;
     try {
-        const saved = localStorage.getItem('margarita_promos');
+        const saved = localStorage.getItem('agenda_promos');
         if (saved) promos = JSON.parse(saved);
         else {
             // Fallback
-            const old = localStorage.getItem('margarita_promo');
+            const old = localStorage.getItem('agenda_promo');
             if (old) {
                 const p = JSON.parse(old);
                 promos = { discount: { active: false }, combo: { active: false } };
@@ -2342,7 +2342,7 @@ function checkPromotions(force = false, isUserClick = false) {
     }
 
     // Smart Check: Si ya agendó el combo (está en el carrito), no molestamos más en esta visita
-    const currentCartRaw = localStorage.getItem('margarita_cart');
+    const currentCartRaw = localStorage.getItem('agenda_cart');
     if (currentCartRaw && currentCartRaw.includes('"Precio en Combo"')) { // Marca de agua del combo
         const reminder = document.getElementById('promo-reminder-btn');
         if (reminder) reminder.style.display = 'none';
@@ -2402,7 +2402,7 @@ function checkPromotions(force = false, isUserClick = false) {
         }
 
         // Items List (Categories or Specific Services)
-        const catsList = JSON.parse(localStorage.getItem('margarita_categories') || '[]');
+        const catsList = JSON.parse(localStorage.getItem('agenda_categories') || '[]');
         let itemsToDisplay = [];
         
         const isServiceMode = promos.combo.mode === 'service';
@@ -2439,7 +2439,7 @@ function checkPromotions(force = false, isUserClick = false) {
             const svcs = [...promos.discount.services].sort((a, b) => a.length - b.length);
             categoryDisplay.innerHTML = svcs.map(n => `<span style="background:rgba(229,169,180,0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');
         } else {
-             const catsList = JSON.parse(localStorage.getItem('margarita_categories') || '[]');
+             const catsList = JSON.parse(localStorage.getItem('agenda_categories') || '[]');
              const names = (promos.discount.category || []).map(id => {
                 const m = catsList.find(c => c.id === id);
                 return m ? m.name : id;
@@ -2463,7 +2463,7 @@ window.addComboToCart = function() {
 
     let promos = null;
     try {
-        const saved = localStorage.getItem('margarita_promos');
+        const saved = localStorage.getItem('agenda_promos');
         if (saved) promos = JSON.parse(saved);
     } catch(e){ console.error("Error reading promos", e); }
 
@@ -2486,8 +2486,8 @@ window.addComboToCart = function() {
         } catch(e) { return fallback; }
     };
 
-    const services = safeParse('margarita_services', []);
-    const categoriesList = safeParse('margarita_categories', []);
+    const services = safeParse('agenda_services', []);
+    const categoriesList = safeParse('agenda_categories', []);
     let countAdded = 0;
 
     if (Array.isArray(promos.combo.category)) {
@@ -2595,7 +2595,7 @@ function startPromoCountdown(expiryDate) {
             
             // Auto-deactivate promo in localStorage
             try {
-                const promos = JSON.parse(localStorage.getItem('margarita_promos') || '{}');
+                const promos = JSON.parse(localStorage.getItem('agenda_promos') || '{}');
                 let changed = false;
                 if (promos.discount && promos.discount.expiry && new Date(promos.discount.expiry).getTime() <= now) {
                     promos.discount.active = false;
@@ -2606,7 +2606,7 @@ function startPromoCountdown(expiryDate) {
                     changed = true;
                 }
                 if (changed) {
-                    localStorage.setItem('margarita_promos', JSON.stringify(promos));
+                    localStorage.setItem('agenda_promos', JSON.stringify(promos));
                     if (window.saveDataToCloud) {
                         window.saveDataToCloud('config_v2', 'promos', promos);
                     }
@@ -2670,7 +2670,7 @@ window.reopenPromo = function() {
         const listContainer = document.getElementById('specialist-window-list');
         if (!selectBtn || !overlay || !listContainer) return;
         
-        let specialists = JSON.parse(localStorage.getItem('margarita_specialists'));
+        let specialists = JSON.parse(localStorage.getItem('agenda_specialists'));
         if (!specialists || specialists.length === 0) {
             specialists = [{name: 'Keysi'}, {name: 'Franchez'}, {name: 'Luz'}];
         }
@@ -2788,7 +2788,7 @@ window.openServiceGallery = function(catId, serviceTitle, servicePrice) {
     // Aplicar descuento activo (igual que en las tarjetas normales)
     let finalPrice = servicePrice || '$0';
     try {
-        const saved = localStorage.getItem('margarita_promos') || localStorage.getItem('margarita_promo');
+        const saved = localStorage.getItem('agenda_promos') || localStorage.getItem('agenda_promo');
         if (saved) {
             const promos = JSON.parse(saved);
             const d = promos.discount || (promos.mode !== 'combo' ? promos : null);
@@ -2831,7 +2831,7 @@ function renderServiceGallery() {
     const body = document.getElementById('cat-gallery-body');
     if (!body) return;
     
-    const allGalleries = JSON.parse(localStorage.getItem('margarita_service_galleries')) || {};
+    const allGalleries = JSON.parse(localStorage.getItem('agenda_service_galleries')) || {};
     const svcPhotos = allGalleries[currentServiceGalleryKey] || [];
     
     if (svcPhotos.length === 0) {
@@ -2851,7 +2851,7 @@ function renderServiceGallery() {
         const parts = currentServiceGalleryKey.split(':::');
         const catId = parts[0];
         const serviceTitle = parts[1];
-        const saved = localStorage.getItem('margarita_promos') || localStorage.getItem('margarita_promo');
+        const saved = localStorage.getItem('agenda_promos') || localStorage.getItem('agenda_promo');
         if (saved) {
             const promos = JSON.parse(saved);
             const d = promos.discount || (promos.mode !== 'combo' ? promos : null);
@@ -2918,7 +2918,7 @@ window.selectGalleryModel = function(photoId) {
         const ind = selectedEl.querySelector('.selected-indicator');
         if (ind) { ind.style.opacity = '1'; ind.style.transform = 'scale(1)'; }
         
-        const allGalleries = JSON.parse(localStorage.getItem('margarita_service_galleries')) || {};
+        const allGalleries = JSON.parse(localStorage.getItem('agenda_service_galleries')) || {};
         const svcPhotos = allGalleries[currentServiceGalleryKey] || [];
         selectedModelPhoto = svcPhotos.find(p => p.id === photoId);
         
@@ -2941,7 +2941,7 @@ function reserveGalleryModel() {
     const catId = parts[0];
     const originalTitle = parts[1];
     
-    const categoriesList = JSON.parse(localStorage.getItem('margarita_categories')) || [];
+    const categoriesList = JSON.parse(localStorage.getItem('agenda_categories')) || [];
     const cat = categoriesList.find(c => c.id == catId);
     
     const virtualService = {
@@ -3076,9 +3076,9 @@ window.findAvailableSlots = function(dateInput) {
         } catch(e) { return fallback; }
     };
 
-    const specialists = safeParse('margarita_specialists', []);
-    const agendaData = safeParse('margarita_appointments', []);
-    const dbServices = safeParse('margarita_services', []);
+    const specialists = safeParse('agenda_specialists', []);
+    const agendaData = safeParse('agenda_appointments', []);
+    const dbServices = safeParse('agenda_services', []);
     
     // Calcular duración total del carrito
     let totalDuration = 0;
@@ -3118,7 +3118,7 @@ window.findAvailableSlots = function(dateInput) {
             const specList = specSpecialty.split(',').map(s => s.trim());
 
             if (!specList.some(s => normPath(s) === 'todos')) {
-                const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
+                const currentCart = JSON.parse(localStorage.getItem('agenda_cart') || '[]');
                 // Un especialista debe ser capaz de hacer TODOS los servicios en el carrito para estar libre
                 const canDoAll = currentCart.every(item => specList.some(s => cMatch(s, item.category) || cMatch(s, item.catId) || cMatch(s, item.service)));
                 if (!canDoAll) return false;
@@ -3162,17 +3162,17 @@ window.selectSlot = function(time, date) {
         } catch(e) { return fallback; }
     };
 
-    const dbServices = safeParse('margarita_services', []);
-    const specialists = safeParse('margarita_specialists', []);
-    const agendaData = safeParse('margarita_appointments', []);
+    const dbServices = safeParse('agenda_services', []);
+    const specialists = safeParse('agenda_specialists', []);
+    const agendaData = safeParse('agenda_appointments', []);
 
     const timeToMins = (t) => { if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
     const minsToTime = (m) => { const h=Math.floor(m/60); const mm=m%60; return `${h.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}`; };
 
-    const businessName = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+    const businessName = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
     let chosenSpec = businessName;
     
-    const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
+    const currentCart = JSON.parse(localStorage.getItem('agenda_cart') || '[]');
     // Buscamos un profesional que pueda hacer todo el bloque
     let totalDur = 0;
     currentCart.forEach(i => {
@@ -3250,9 +3250,9 @@ window.renderPublicAgenda = function() {
         } catch(e) { return fallback; }
     };
 
-    const specialists = safeParse('margarita_specialists', []);
-    const appointments = safeParse('margarita_appointments', []);
-    const dbServices = safeParse('margarita_services', []);
+    const specialists = safeParse('agenda_specialists', []);
+    const appointments = safeParse('agenda_appointments', []);
+    const dbServices = safeParse('agenda_services', []);
     
     // Fecha de hoy en formato local (YYYY-MM-DD)
     const today = new Date();
@@ -3350,7 +3350,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Sincronizar cuando hay cambios en el localStorage (por si el admin está en otra pestaña)
 window.addEventListener('storage', (e) => {
-    if (e.key === 'margarita_appointments' || e.key === 'margarita_specialists' || e.key === 'margarita_promos') {
+    if (e.key === 'agenda_appointments' || e.key === 'agenda_specialists' || e.key === 'agenda_promos') {
         if (window.renderPublicAgenda) window.renderPublicAgenda(); // Dibujar por primera vez con los datos ya cargados
         if (window.renderCart) window.renderCart(); // Actualizar precios en el carrito si cambian las promociones
         if (document.getElementById('visual-agenda-modal').style.display === 'flex') {
@@ -3371,7 +3371,7 @@ window.openPublicVisualAgenda = function(cartId = null) {
     
     // Alerta protectora de agenda
     if (cartId) {
-        const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
+        const currentCart = JSON.parse(localStorage.getItem('agenda_cart') || '[]');
         const targetItem = currentCart.find(i => i.id == cartId);
         if (targetItem && targetItem.isAutoScheduled && targetItem.time) {
             showToast('Trata de elegir un horario que siga el orden de tu paquete para no descontrolar la agenda <i class="fas fa-info-circle" style="margin-left: 5px; color: var(--color-accent);"></i>', 'info-special');
@@ -3390,8 +3390,8 @@ window.openPublicVisualAgenda = function(cartId = null) {
     };
 
     const dateInput = document.getElementById('public-agenda-date');
-    const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
-    const dbServices = JSON.parse(localStorage.getItem('margarita_services') || '[]');
+    const currentCart = JSON.parse(localStorage.getItem('agenda_cart') || '[]');
+    const dbServices = JSON.parse(localStorage.getItem('agenda_services') || '[]');
     
     currentBookingDuration = 60; 
 
@@ -3514,7 +3514,7 @@ window.pickTimeFromAgenda = function(time, specialist) {
     // La búsqueda bidireccional (adelante + atrás) la hace autoScheduleCart.
     // Aquí solo bloqueamos casos físicamente imposibles.
     {
-        const dbServicesPrev = JSON.parse(localStorage.getItem('margarita_services') || '[]');
+        const dbServicesPrev = JSON.parse(localStorage.getItem('agenda_services') || '[]');
         const normP = function(s){ return s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim() : ''; };
         const getMinsP = function(t){ if(!t) return 0; var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]); };
         const anchorMin = getMinsP(time);
@@ -3577,8 +3577,8 @@ window.pickTimeFromAgenda = function(time, specialist) {
                 item.isAutoScheduled = false;
             }
         });
-        localStorage.setItem('margarita_cart', JSON.stringify(cart));
-        if (typeof window.margaritaCart !== 'undefined') window.margaritaCart = cart;
+        localStorage.setItem('agenda_cart', JSON.stringify(cart));
+        if (typeof window.agendaCart !== 'undefined') window.agendaCart = cart;
     }
 
     // 1. Actualizar el servicio actual (el ancla)
@@ -3587,7 +3587,7 @@ window.pickTimeFromAgenda = function(time, specialist) {
     updateCartItem(selectingForCartId, 'specialist', specialist);
     
     // 2. Si hay mas servicios en el carrito sin fecha/hora, intentar auto-agendar
-    const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
+    const currentCart = JSON.parse(localStorage.getItem('agenda_cart') || '[]');
     const pendingItems = currentCart.filter(function(i){ return i.id != selectingForCartId && (!i.time || !i.date); });
     
     if (currentCart.length >= 2 && pendingItems.length > 0 && !window._pendingIndividualEdit_Public) {
@@ -3605,10 +3605,10 @@ function autoScheduleCart(anchorId) {
         const anchor = cart.find(i => i.id == anchorId);
         if (!anchor || !anchor.time) return false;
 
-        const dbServices = JSON.parse(localStorage.getItem('margarita_services') || '[]');
-        const simultGroups = JSON.parse(localStorage.getItem('margarita_simult_groups') || '{}');
-        const specialists = JSON.parse(localStorage.getItem('margarita_specialists') || '[]');
-        const appointments = JSON.parse(localStorage.getItem('margarita_appointments') || '[]');
+        const dbServices = JSON.parse(localStorage.getItem('agenda_services') || '[]');
+        const simultGroups = JSON.parse(localStorage.getItem('agenda_simult_groups') || '{}');
+        const specialists = JSON.parse(localStorage.getItem('agenda_specialists') || '[]');
+        const appointments = JSON.parse(localStorage.getItem('agenda_appointments') || '[]');
 
         const getMins = (t) => {
             if (!t) return 0;
@@ -3783,7 +3783,7 @@ function autoScheduleCart(anchorId) {
                     }
                 });
                 if (anchor) { anchor.time = null; anchor.date = null; anchor.isAutoScheduled = false; }
-                localStorage.setItem('margarita_cart', JSON.stringify(cart));
+                localStorage.setItem('agenda_cart', JSON.stringify(cart));
                 if (typeof renderCart === 'function') renderCart();
                 const isMob = window.innerWidth < 768;
                 const isCombo = cart.some(i => i.promoType === 'combo');
@@ -3801,7 +3801,7 @@ function autoScheduleCart(anchorId) {
             showToast(msg, 'success');
             // CRÁTICO: Persistir los cambios del auto-agendador a localStorage
             // Sin esto, agendarCitas leera una version vieja sin especialista/hora de los servicios auto-agendados
-            localStorage.setItem('margarita_cart', JSON.stringify(cart));
+            localStorage.setItem('agenda_cart', JSON.stringify(cart));
             if (typeof renderCart === 'function') renderCart();
         }
         return true; // ÉXITO: Cerrar agenda
@@ -3855,10 +3855,10 @@ window.renderPublicVisualAgendaGrid = function() {
         return aWords.some(aw => bWords.some(bw => aw === bw || aw.includes(bw) || bw.includes(aw)));
     };
 
-    const specialists = JSON.parse(localStorage.getItem('margarita_specialists') || '[]');
-    const appointments = JSON.parse(localStorage.getItem('margarita_appointments') || '[]');
-    const currentCart = JSON.parse(localStorage.getItem('margarita_cart') || '[]');
-    const dbS = JSON.parse(localStorage.getItem('margarita_services') || '[]');
+    const specialists = JSON.parse(localStorage.getItem('agenda_specialists') || '[]');
+    const appointments = JSON.parse(localStorage.getItem('agenda_appointments') || '[]');
+    const currentCart = JSON.parse(localStorage.getItem('agenda_cart') || '[]');
+    const dbS = JSON.parse(localStorage.getItem('agenda_services') || '[]');
 
     if (specialists.length === 0 || dbS.length === 0) {
         canvas.innerHTML = '<div style="text-align:center; padding:50px; color:#aaa; font-style:italic;">Inicializando datos... Por favor espera un momento.</div>';
@@ -3948,7 +3948,7 @@ window.renderPublicVisualAgendaGrid = function() {
                 item._realDuration = getCleanDuration(item);
             });
 
-            const simultGroups = JSON.parse(localStorage.getItem('margarita_simult_groups') || '{}');
+            const simultGroups = JSON.parse(localStorage.getItem('agenda_simult_groups') || '{}');
 
             const normDate = (d) => {
         if(!d) return '';
@@ -4288,13 +4288,13 @@ window.renderPublicVisualAgendaGrid = function() {
 
 // Escuchar cambios en tiempo real desde otras pestañas (mismo navegador) para re-renderizar sin refrescar
 window.addEventListener('storage', (e) => {
-    if (e.key === 'margarita_services' || e.key === 'margarita_categories' || e.key === 'margarita_promos') {
+    if (e.key === 'agenda_services' || e.key === 'agenda_categories' || e.key === 'agenda_promos') {
         console.log("♻️ [RealTime] Cambio detectado en base de datos. Actualizando...");
         if (window.renderDynamicContent) window.renderDynamicContent();
         if (window.populateManualCategories) window.populateManualCategories();
     }
     // Actualizar burbuja flotante cuando el admin cambia la configuración Pro
-    if (e.key === 'margarita_promo_bubble_cfg') {
+    if (e.key === 'agenda_promo_bubble_cfg') {
         if (typeof updatePromoBubbleUI === 'function') updatePromoBubbleUI();
     }
 });

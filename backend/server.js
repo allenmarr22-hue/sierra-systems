@@ -208,6 +208,20 @@ function broadcastUpdate(payload) {
     });
 }
 
+// Envía un evento SSE solo a las conexiones de un cliente específico
+function broadcastToClient(targetClientId, payload) {
+    const targetId = Number(targetClientId);
+    sseClients
+        .filter(c => Number(c.clientId) === targetId)
+        .forEach(client => {
+            try {
+                client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
+            } catch (e) {
+                console.error('Error enviando SSE dirigido:', e);
+            }
+        });
+}
+
 app.get('/api/stream', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -215,7 +229,9 @@ app.get('/api/stream', (req, res) => {
     res.flushHeaders();
 
     const clientId = Date.now();
-    const newClient = { id: clientId, res };
+    // Asociar el clientId de negocio si se pasa como query param
+    const bizClientId = req.query.clientId ? Number(req.query.clientId) : null;
+    const newClient = { id: clientId, clientId: bizClientId, res };
     sseClients.push(newClient);
 
     res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
@@ -370,9 +386,11 @@ app.post('/api/client/login', loginLimiter, async (req, res) => {
             return res.status(401).json({ success: false, error: 'Correo o contraseña incorrectos.' });
         }
 
+        // Incluir session_version en el token para poder invalidarlo con logout-all
         const token = generateSignedToken({
             clientId: biz.id,
             clientEmail: biz.client_email,
+            sessionVersion: biz.session_version || 1,
             expires: Date.now() + 8 * 60 * 60 * 1000 // 8 horas
         });
 
@@ -420,9 +438,170 @@ app.post('/api/client/verify', async (req, res) => {
             return res.json({ valid: false, reason: 'payment_required' });
         }
 
+        // 3. Verificar versión de sesión (para invalidar sesiones antiguas tras logout-all)
+        const bizSessionVersion = biz.session_version || 1;
+        const tokenSessionVersion = session.sessionVersion || 1;
+        if (tokenSessionVersion !== bizSessionVersion) {
+            return res.json({ valid: false, reason: 'session_invalidated' });
+        }
+
         return res.json({ valid: true, clientId: session.clientId });
     } catch (err) {
         return res.status(500).json({ valid: false });
+    }
+});
+
+app.post('/api/client/verify-password', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ success: false, error: 'No autorizado' });
+
+    const { pass } = req.body;
+    if (!pass) return res.status(400).json({ success: false, error: 'Falta la contraseña.' });
+
+    try {
+        const biz = await db.findBusinessById(session.clientId);
+        if (!biz) return res.status(404).json({ success: false, error: 'Negocio no encontrado.' });
+
+        const isValid = db.verifyPassword(pass, biz.client_pass);
+        return res.json({ success: true, valid: isValid });
+    } catch (err) {
+        console.error('Error verificando contraseña de cliente:', err);
+        return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
+    }
+});
+
+// ============================================================
+// CLIENTE: Cerrar sesión en todos los dispositivos
+// ============================================================
+app.post('/api/client/logout-all', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ success: false, error: 'No autorizado' });
+
+    const { pass } = req.body;
+    if (!pass) return res.status(400).json({ success: false, error: 'Se requiere tu contraseña para confirmar esta acción.' });
+
+    try {
+        const biz = await db.findBusinessById(session.clientId);
+        if (!biz) return res.status(404).json({ success: false, error: 'Negocio no encontrado.' });
+
+        // Verificar contraseña actual
+        if (!db.verifyPassword(pass, biz.client_pass)) {
+            return res.status(401).json({ success: false, error: 'Contraseña incorrecta.' });
+        }
+
+        // Incrementar session_version para invalidar todos los tokens existentes
+        const newVersion = (biz.session_version || 1) + 1;
+        await db.updateBusiness(session.clientId, { sessionVersion: newVersion });
+
+        await db.pushNotification({
+            title: 'Cierre de Sesión Global',
+            desc: `"${biz.name}" cerró sesión en todos los dispositivos.`,
+            icon: 'shield-x',
+            color: '#f59e0b'
+        });
+
+        // Notificar en tiempo real a todos los dispositivos conectados de este cliente
+        broadcastToClient(session.clientId, { type: 'force_logout' });
+
+        return res.json({ success: true, message: 'Todas las sesiones han sido cerradas exitosamente.' });
+    } catch (err) {
+        console.error('Error en logout-all:', err);
+        return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
+    }
+});
+
+// ============================================================
+// CLIENTE: Cerrar sesión en todos los dispositivos de un módulo específico
+// ============================================================
+app.post('/api/client/module/logout-all', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ success: false, error: 'No autorizado' });
+
+    const { modId, instanceId } = req.body;
+    if (!modId) return res.status(400).json({ success: false, error: 'Se requiere el ID del módulo.' });
+
+    try {
+        const biz = await db.findBusinessById(session.clientId);
+        if (!biz) return res.status(404).json({ success: false, error: 'Negocio no encontrado.' });
+
+        // Notificar en tiempo real a todos los dispositivos conectados de este cliente
+        broadcastToClient(session.clientId, {
+            type: 'module_force_logout',
+            modId,
+            instanceId: instanceId || null
+        });
+
+        return res.json({ success: true, message: 'Sesiones del módulo cerradas exitosamente en todos los dispositivos.' });
+    } catch (err) {
+        console.error('Error en /api/client/module/logout-all:', err);
+        return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
+    }
+});
+
+
+
+// ============================================================
+// CLIENTE: Recuperar contraseña con verificación de admin
+// ============================================================
+app.post('/api/client/forgot-password', loginLimiter, async (req, res) => {
+    const { email, adminUser, adminPass, newPass } = req.body;
+    if (!email || !adminPass || !newPass) {
+        return res.status(400).json({ success: false, error: 'Faltan campos requeridos.' });
+    }
+
+    try {
+        // 1. Verificar credenciales de admin (master o sub-admin)
+        let isAdminValid = false;
+        const masterUser = await db.findMasterUser(adminUser || '', adminPass);
+        if (masterUser) {
+            isAdminValid = true;
+        } else {
+            // Verificar cualquier sub-admin con esa contraseña
+            const [adminRows] = await db.pool.query(
+                'SELECT * FROM users WHERE status = ?', ['active']
+            );
+            for (const u of adminRows) {
+                if (db.verifyPassword(adminPass, u.pass)) {
+                    isAdminValid = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isAdminValid) {
+            return res.status(401).json({ success: false, error: 'Contraseña de administrador incorrecta.' });
+        }
+
+        // 2. Buscar el cliente por email
+        const [bizRows] = await db.pool.query(
+            'SELECT * FROM businesses WHERE LOWER(client_email) = LOWER(?)', [email]
+        );
+        const biz = bizRows[0];
+        if (!biz) {
+            return res.status(404).json({ success: false, error: 'No existe una cuenta con ese correo.' });
+        }
+
+        // 3. Actualizar la contraseña del cliente
+        const hashedNew = db.hashPassword(newPass);
+        await db.pool.query(
+            'UPDATE businesses SET client_pass = ? WHERE id = ?', [hashedNew, biz.id]
+        );
+
+        await db.pushNotification({
+            title: 'Contraseña de Cliente Restablecida',
+            desc: `La contraseña de "${biz.name}" (${email}) fue restablecida por un administrador.`,
+            icon: 'key',
+            color: '#f59e0b'
+        });
+
+        broadcastUpdate();
+        return res.json({ success: true, clientName: biz.name });
+    } catch (err) {
+        console.error('[Server] Error en forgot-password:', err);
+        return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
     }
 });
 
@@ -1128,7 +1307,7 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
-    const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass, recommendedModuleId, multiSedeDiscount, recommendedLabel } = req.body;
+    const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass, recommendedModuleId, multiSedeDiscount, recommendedLabel, syncExisting } = req.body;
     try {
         let dbState = await readDb();
         if (!dbState.config) dbState.config = {};
@@ -1155,10 +1334,47 @@ app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
         if (multiSedeDiscount !== undefined) dbState.config.multiSedeDiscount = parseInt(multiSedeDiscount);
         if (recommendedLabel !== undefined) dbState.config.recommendedLabel = recommendedLabel;
 
+        if (syncExisting && multiSedeDiscount !== undefined) {
+            const newDisc = parseInt(multiSedeDiscount);
+            (dbState.businesses || []).forEach(biz => {
+                const instancesByModule = {};
+                (biz.moduleInstances || []).forEach(inst => {
+                    if (inst.status === 'active') {
+                        if (!instancesByModule[inst.moduleId]) {
+                            instancesByModule[inst.moduleId] = [];
+                        }
+                        instancesByModule[inst.moduleId].push(inst);
+                    }
+                });
+
+                Object.keys(instancesByModule).forEach(modId => {
+                    const insts = instancesByModule[modId];
+                    if (insts.length > 1) {
+                        insts.sort((a, b) => String(a.instanceId).localeCompare(String(b.instanceId)));
+                        const secondaries = insts.slice(1);
+                        
+                        const modObj = dbState.modules.find(m => String(m.id) === String(modId));
+                        if (modObj) {
+                            const basePrice = parseInt(String(modObj.price).replace(/\D/g, '')) || 0;
+                            if (basePrice > 0) {
+                                const promoPrice = getActivePromoPrice(dbState, modId, basePrice);
+                                const newDiscounted = Math.round(promoPrice * (1 - newDisc / 100));
+
+                                secondaries.forEach(sec => {
+                                    sec.priceApplied = newDiscounted;
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
         await writeDb(dbState);
         broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
+        console.error('Error al guardar ajustes:', err);
         res.status(500).json({ error: 'Error del servidor.' });
     }
 });
@@ -1578,9 +1794,10 @@ app.post('/api/client/module/renew', async (req, res) => {
             console.error('[RenewModule] Error registrando historial de pago:', dbErr.message);
         }
 
+        const discPct = dbState.config?.multiSedeDiscount !== undefined ? parseFloat(dbState.config.multiSedeDiscount) : 30;
         pushNotification(dbState, {
             title: 'Pago Recibido',
-            desc: `"${biz.name}" adquirió/renovó "${moduleName || moduleId}" (${finalBranchName}) con tarjeta terminada en ${last4 || '****'}. Válido hasta ${finalExpiryFormatted}.${isDiscountApplied ? ' ¡Descuento de 30% aplicado!' : ''}`,
+            desc: `"${biz.name}" adquirió/renovó "${moduleName || moduleId}" (${finalBranchName}) con tarjeta terminada en ${last4 || '****'}. Válido hasta ${finalExpiryFormatted}.${isDiscountApplied ? ` ¡Descuento de ${discPct}% aplicado!` : ''}`,
             icon: 'credit-card',
             color: '#10b981'
         });

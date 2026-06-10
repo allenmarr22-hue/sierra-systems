@@ -23,7 +23,7 @@
             let suffix = "";
             if (instanceId) {
                 suffix = `_${instanceId}`;
-                const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+                const prefixes = ['streetfeed_', 'agenda_'];
                 const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
                 const originalGetItem = Storage.prototype.getItem;
                 const originalSetItem = Storage.prototype.setItem;
@@ -41,10 +41,10 @@
             }
 
             // 2. Título de Pestaña y Favicon inmediato
-            const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+            const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
             document.title = name + " | Agenda de Citas";
 
-            const logoUrl = localStorage.getItem('margarita_logo_url');
+            const logoUrl = localStorage.getItem('agenda_logo_url');
             const DEFAULT_S_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2220%22%20fill%3D%22%23111111%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2275%22%20font-size%3D%2265%22%20fill%3D%22%23B87381%22%20font-family%3D%22Georgia%2Cserif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22bold%22%3ES%3C%2Ftext%3E%3Ctext%20x%3D%2280%22%20y%3D%2235%22%20font-size%3D%2230%22%20text-anchor%3D%22middle%22%3E%E2%9C%A8%3C%2Ftext%3E%3C%2Fsvg%3E";
             const favLink = document.createElement('link');
             favLink.id = 'dynamic-favicon';
@@ -59,7 +59,7 @@
             document.getElementsByTagName('head')[0].appendChild(favLink);
 
             // 3. Aplicar colores del tema seleccionado al vuelo para evitar destello rosa
-            const cachedTheme = localStorage.getItem('margarita_client_theme') || 'rose';
+            const cachedTheme = localStorage.getItem('agenda_client_theme') || 'rose';
             const themes = {
                 rose: { accent: '#A05D6B', bg: '#FFF4F7', rgb: '160, 93, 107', hover: '#B87E8C', dark: '#804350' },
                 blue: { accent: '#2D4F6C', bg: '#F0F4F8', rgb: '45, 79, 108', hover: '#3D6487', dark: '#1B3347' },
@@ -146,9 +146,9 @@
             </a>
             <script>
                 (function() {
-                    const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+                    const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
                     document.getElementById('logo-text').innerText = name;
-                    const logoUrl = localStorage.getItem('margarita_logo_url');
+                    const logoUrl = localStorage.getItem('agenda_logo_url');
                     if (logoUrl) {
                         const img = document.createElement('img');
                         img.src = logoUrl;
@@ -199,9 +199,9 @@
     <header class="hero" id="inicio">
         <script>
             (function() {
-                const heroUrl = localStorage.getItem('margarita_hero_url');
+                const heroUrl = localStorage.getItem('agenda_hero_url');
                 if (heroUrl) {
-                    const cachedTheme = localStorage.getItem('margarita_client_theme') || 'rose';
+                    const cachedTheme = localStorage.getItem('agenda_client_theme') || 'rose';
                     const themes = {
                         rose: '160, 93, 107', blue: '45, 79, 108', green: '46, 90, 68', gold: '107, 79, 62', lavender: '142, 124, 195',
                         orange: '230, 126, 34', cyan: '52, 152, 219', purple: '125, 60, 152', maroon: '146, 43, 33', slate: '52, 73, 94',
@@ -316,9 +316,9 @@
             </h2>
             <script>
                 (function() {
-                    const name = localStorage.getItem('margarita_site_name') || "StyleSync Pro";
+                    const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
                     document.getElementById('footer-logo-text').innerText = name;
-                    const logoUrl = localStorage.getItem('margarita_logo_url');
+                    const logoUrl = localStorage.getItem('agenda_logo_url');
                     if (logoUrl) {
                         const img = document.createElement('img');
                         img.src = logoUrl;
@@ -330,7 +330,7 @@
                     document.querySelectorAll('.dynamic-brand-text').forEach(el => { el.innerText = name; });
 
                     // Actualizar enlace del botón de ubicación pública
-                    const address = localStorage.getItem('margarita_site_address') || "Calle 14 # 11-74, Sevilla";
+                    const address = localStorage.getItem('agenda_site_address') || "Calle 14 # 11-74, Sevilla";
                     const locBtn = document.getElementById('public-location-btn');
                     if (locBtn) {
                         locBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;

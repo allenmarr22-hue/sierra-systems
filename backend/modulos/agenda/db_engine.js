@@ -3,10 +3,10 @@
  * Uses IndexedDB to bypass LocalStorage limitations and ensure real-time performance.
  */
 
-const DB_NAME = 'MargaritaStudioDB';
+const DB_NAME = 'AgendaStudioDB';
 const DB_VERSION = 1;
 
-window.MargaritaDB = {
+window.AgendaDB = {
     db: null,
 
     async init() {

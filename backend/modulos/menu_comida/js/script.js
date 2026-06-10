@@ -5,7 +5,7 @@
     const instanceId = urlParams.get('instanceId');
     if (instanceId) {
         const suffix = `_${instanceId}`;
-        const prefixes = ['streetfeed_', 'margarita_', 'agenda_'];
+        const prefixes = ['streetfeed_', 'agenda_'];
         const shouldAiso = (key) => key && prefixes.some(p => key.startsWith(p));
         const originalGetItem = Storage.prototype.getItem;
         const originalSetItem = Storage.prototype.setItem;

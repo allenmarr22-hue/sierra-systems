@@ -651,6 +651,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadMyTickets();
     }
 
+    // Procesar query parameter 'buy' para compra directa de un módulo
+    const urlParams = new URLSearchParams(window.location.search);
+    const buyModuleId = urlParams.get('buy');
+    if (buyModuleId) {
+        // Limpiar query parameter de la barra de direcciones sin recargar
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // Cambiar a la pestaña Marketplace
+        if (typeof window.switchTab === 'function') {
+            window.switchTab('tab-marketplace');
+        } else if (typeof switchTab === 'function') {
+            switchTab('tab-marketplace');
+        }
+
+        // Esperar un momento a que se renderice el marketplace y buscar la tarjeta del módulo
+        setTimeout(() => {
+            const btnAdquirir = document.querySelector(`.btn-adquirir[data-mod-id="${buyModuleId}"]`);
+            if (btnAdquirir) {
+                btnAdquirir.click();
+            } else {
+                const btnAdquirirSede = document.querySelector(`.btn-adquirir-sede[data-mod-id="${buyModuleId}"]`);
+                if (btnAdquirirSede) {
+                    btnAdquirirSede.click();
+                } else {
+                    // Fallback: invocar handleRenewal directamente si no se encuentra el botón
+                    const mod = appState.modules.find(m => String(m.id) === String(buyModuleId));
+                    if (mod) {
+                        const basePriceVal = parseInt(String(mod.price || '').replace(/\D/g, ''));
+                        const priceDisplay = (!isNaN(basePriceVal) && basePriceVal > 0)
+                            ? `$ ${basePriceVal.toLocaleString('es-CO')} COP/mes` : 'Cotizar';
+                        handleRenewal(mod.id, mod.name, priceDisplay);
+                    }
+                }
+            }
+        }, 150);
+    }
+
     // ==========================================
     // SSE REAL-TIME SYNC — Backoff Exponencial
     // ==========================================
@@ -664,7 +702,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             _sseSource.close();
             _sseSource = null;
         }
-        _sseSource = new EventSource('/api/stream');
+        // Conectar identificando al cliente para poder recibir eventos dirigidos (ej: force_logout)
+        const _sessionRaw = sessionStorage.getItem('clientSession');
+        const _bizClientId = _sessionRaw ? JSON.parse(_sessionRaw).clientId : '';
+        _sseSource = new EventSource(`/api/stream${_bizClientId ? '?clientId=' + _bizClientId : ''}`);
 
         _sseSource.onopen = function() {
             _sseRetryDelay = 1000; // Reset delay on successful connection
@@ -726,6 +767,50 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (data.type === 'typing') {
                     if (window.activeChatTicketId === data.ticketId && data.role !== 'client') {
                         showChatTypingIndicator('Soporte está escribiendo...');
+                    }
+                } else if (data.type === 'force_logout') {
+                    // Cierre de sesión en tiempo real ordenado desde otro dispositivo
+                    console.warn('[SSE] force_logout recibido. Cerrando sesión...');
+                    sessionStorage.removeItem('clientSession');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Sesión cerrada',
+                            text: 'Tu sesión fue cerrada desde otro dispositivo.',
+                            background: 'var(--bg-surface)',
+                            color: 'var(--text)',
+                            confirmButtonColor: '#ef4444',
+                            allowOutsideClick: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        }).then(() => {
+                            window.location.href = 'client-login.html';
+                        });
+                    } else {
+                        window.location.href = 'client-login.html';
+                    }
+                } else if (data.type === 'module_force_logout') {
+                    console.warn(`[SSE] module_force_logout recibido para el módulo ${data.modId} (instancia: ${data.instanceId}). Cerrando sesión del módulo...`);
+                    const suffix = data.instanceId ? `_${data.instanceId}` : '';
+                    if (data.modId === 'agenda') {
+                        localStorage.removeItem(`agenda_admin_session${suffix}`);
+                        localStorage.removeItem('agenda_admin_session');
+                    } else if (data.modId === 'streetfeed') {
+                        localStorage.removeItem(`streetfeed_isLoggedIn${suffix}`);
+                        localStorage.removeItem('streetfeed_isLoggedIn');
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: `Sesión cerrada en todos los dispositivos del módulo`,
+                            showConfirmButton: false,
+                            timer: 3500,
+                            timerProgressBar: true,
+                            background: 'var(--bg-surface)',
+                            color: 'var(--text)'
+                        });
                     }
                 }
             } catch (err) {
@@ -1055,7 +1140,98 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // ── Cerrar sesión en todos los dispositivos ──────────────────────────────
+    const logoutAllBtn = document.getElementById('logout-all-btn');
+    if (logoutAllBtn) {
+        logoutAllBtn.addEventListener('click', async () => {
+            const { value: pass, isConfirmed } = await Swal.fire({
+                title: '¿Cerrar todas las sesiones?',
+                html: `
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                        Esto cerrará tu sesión en <strong style="color:var(--text);">todos los dispositivos</strong>, incluyendo este.<br>
+                        Ingresa tu contraseña para confirmar.
+                    </p>
+                    <input type="password" id="swal-logout-pass" class="swal2-input"
+                        placeholder="Tu contraseña actual"
+                        style="background: var(--bg-surface-light); border: 1px solid rgba(239,68,68,0.3); color: var(--text-main);">
+                `,
+                icon: 'warning',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'var(--border-color)',
+                confirmButtonText: 'Sí, cerrar todas',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const val = document.getElementById('swal-logout-pass').value;
+                    if (!val) {
+                        Swal.showValidationMessage('Debes ingresar tu contraseña.');
+                        return false;
+                    }
+                    return val;
+                }
+            });
+
+            if (!isConfirmed || !pass) return;
+
+            const sessionRaw = sessionStorage.getItem('clientSession');
+            if (!sessionRaw) return;
+            const session = JSON.parse(sessionRaw);
+
+            logoutAllBtn.disabled = true;
+            logoutAllBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Cerrando sesiones...';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/client/logout-all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.token}`
+                    },
+                    body: JSON.stringify({ pass })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Sesiones cerradas!',
+                        text: 'Todas las sesiones activas han sido cerradas. Serás redirigido al inicio de sesión.',
+                        background: 'var(--bg-surface)',
+                        color: 'var(--text)',
+                        confirmButtonColor: '#ef4444',
+                        timer: 2500,
+                        timerProgressBar: true
+                    });
+                    // Limpiar sesión local y redirigir
+                    sessionStorage.removeItem('clientSession');
+                    window.location.href = 'client-login.html';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.error || 'No se pudo cerrar las sesiones.',
+                        background: 'var(--bg-surface)',
+                        color: 'var(--text)',
+                        confirmButtonColor: 'var(--primary)'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Error de conexión', background: 'var(--bg-surface)', color: 'var(--text)', confirmButtonColor: 'var(--primary)' });
+            } finally {
+                logoutAllBtn.disabled = false;
+                logoutAllBtn.innerHTML = '<i data-lucide="log-out" style="width:16px;height:16px;"></i> Cerrar todas las sesiones';
+                lucide.createIcons();
+            }
+        });
+    }
 });
+
+
 
 // ====================== DATA LOADING ======================
 async function loadData() {
@@ -2172,7 +2348,7 @@ function generatePassword(length = 12) {
 }
 
 /** Launch Pad: muestra links de cliente, admin y credenciales con persistencia */
-function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null) {
+function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null, forceShowCreds = false) {
     if (instanceId === 'null' || instanceId === 'undefined') instanceId = null;
     if (branchName === 'null' || branchName === 'undefined') branchName = null;
 
@@ -2243,6 +2419,39 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
 
     const storageKey = `mod_creds_${CLIENT_ID}_${modId}${instanceId ? '_' + instanceId : ''}`;
     let savedData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+
+    // --- Auto-detect if credentials have been changed in the module ---
+    // Skipped when forceShowCreds=true (user explicitly requested to see initial credentials)
+    if (!forceShowCreds && !savedData.isConfigured && savedData.tempUser && savedData.tempPass) {
+        let changed = false;
+        if (modId === 'agenda') {
+            const actualUserKey = `agenda_admin_user${instanceId ? '_' + instanceId : ''}`;
+            const actualPassKey = `agenda_admin_pass${instanceId ? '_' + instanceId : ''}`;
+            const actualUser = localStorage.getItem(actualUserKey);
+            const actualPass = localStorage.getItem(actualPassKey);
+            if (actualUser && actualPass && (actualUser !== savedData.tempUser || actualPass !== savedData.tempPass)) {
+                changed = true;
+            }
+        } else if (modId === 'streetfeed') {
+            const actualAuthKey = `streetfeed_auth${instanceId ? '_' + instanceId : ''}`;
+            const actualAuthRaw = localStorage.getItem(actualAuthKey);
+            if (actualAuthRaw) {
+                try {
+                    const actualAuth = JSON.parse(actualAuthRaw);
+                    if (actualAuth && actualAuth.user && actualAuth.pass && (actualAuth.user !== savedData.tempUser || actualAuth.pass !== savedData.tempPass)) {
+                        changed = true;
+                    }
+                } catch (e) {
+                    console.warn("Error parsing streetfeed_auth for change detection", e);
+                }
+            }
+        }
+        
+        if (changed) {
+            savedData.isConfigured = true;
+            localStorage.setItem(storageKey, JSON.stringify(savedData));
+        }
+    }
     
     // Obtener el nombre del negocio de forma segura para la URL
     const currentBiz = appState.businesses.find(b => b.id === CLIENT_ID);
@@ -2321,10 +2530,15 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
                         <span class="cred-value">${savedData.tempPass}</span>
                         <button class="copy-btn" onclick="navigator.clipboard.writeText('${savedData.tempPass}'); const btn=this; btn.innerHTML='<i data-lucide=\\'check\\' style=\\'width:14px;\\'></i> Copiado'; lucide.createIcons(); setTimeout(() => { btn.innerHTML='<i data-lucide=\\'copy\\' style=\\'width:14px;\\'></i> Copiar'; lucide.createIcons(); }, 3000);"><i data-lucide="copy" style="width:14px;"></i> Copiar</button>
                     </div>
-                    <div class="configured-check" onclick="markAsConfigured('${storageKey}')">
-                        <i data-lucide="check-circle-2" style="width:18px;"></i>
-                        <span>Ya configuré mi propia clave</span>
-                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
+                    <button onclick="closeAllModuleSessions('${modId}', '${instanceId || ""}', '${modName}')"
+                            style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(239, 68, 68, 0.12)'"
+                            onmouseout="this.style.background='rgba(239, 68, 68, 0.08)'">
+                        <i data-lucide="log-out" style="width:16px;height:16px;"></i> Cerrar sesión en todos los dispositivos
+                    </button>
                 </div>
 
                 <div class="warn-box" id="warn-section">
@@ -2336,7 +2550,16 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
                     <small style="color:var(--text-muted); display:block; margin-top:4px;">Usa las credenciales que definiste personalmente.</small>
                     <button onclick="resetCredentialView('${storageKey}', '${modId}', '${modName}', '${clientUrl}', '${adminUrl}', '${instanceId || ""}', '${branchName || ""}')" 
                             style="margin-top:0.75rem; background:none; border:none; color:var(--primary); font-size:0.75rem; cursor:pointer; text-decoration:underline; font-weight:500;">
-                        ¿Olvidaste tu clave? Ver credenciales iniciales
+                        ¿Olvidaste tu clave? Ver credenciales
+                    </button>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.75rem;">
+                    <button onclick="closeAllModuleSessions('${modId}', '${instanceId || ""}', '${modName}')"
+                            style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(239, 68, 68, 0.12)'"
+                            onmouseout="this.style.background='rgba(239, 68, 68, 0.08)'">
+                        <i data-lucide="log-out" style="width:16px;height:16px;"></i> Cerrar sesión en todos los dispositivos
                     </button>
                 </div>
                 `}
@@ -2662,27 +2885,239 @@ window.markAsConfigured = function(storageKey) {
     }, 1000);
 };
 
-/** Restablece la vista de las credenciales originales */
-window.resetCredentialView = function(storageKey, modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null) {
-    Swal.fire({
-        title: '¿Restablecer vista?',
-        text: 'Volveremos a mostrarte el usuario y la clave iniciales. Ten en cuenta que si ya las cambiaste en el panel de administración, estas no funcionarán.',
-        icon: 'warning',
+/** Cierra la sesión del módulo en todos los dispositivos */
+window.closeAllModuleSessions = async function(modId, instanceId, modName) {
+    const sessionRaw = sessionStorage.getItem('clientSession');
+    if (!sessionRaw) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Sesión no válida.', background: 'var(--bg-surface)', color: 'var(--text)' });
+        return;
+    }
+    const session = JSON.parse(sessionRaw);
+
+    const suffix = (instanceId && instanceId !== 'null' && instanceId !== 'undefined') ? `_${instanceId}` : '';
+    const gender = localStorage.getItem('agenda_admin_gender') || 'Femenino';
+    const confirmMsg = gender === 'Femenino' ? '¿Estás completamente segura' : '¿Estás completamente seguro';
+
+    const { value: clientPassword } = await Swal.fire({
+        title: '🔐 Cerrar Sesiones del Módulo',
+        html: `
+            <p style="color:var(--text-muted); margin-bottom:1rem; font-size:0.9rem;">
+                ${confirmMsg} de cerrar la sesión del módulo <strong>${modName}</strong> en todos los dispositivos?<br>
+                Ingresa tu contraseña del portal para confirmar.
+            </p>
+        `,
+        input: 'password',
+        inputPlaceholder: 'Tu contraseña de cliente...',
+        inputAttributes: {
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
         showCancelButton: true,
-        confirmButtonText: 'Sí, mostrar iniciales',
+        confirmButtonText: '🛑 Cerrar todas las sesiones',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444',
+        background: 'var(--bg-surface)',
+        color: 'var(--text)',
+        inputValidator: (value) => {
+            if (!value) {
+                return '¡Debes ingresar tu contraseña del portal!';
+            }
+        }
+    });
+
+    if (!clientPassword) return;
+
+    Swal.fire({
+        title: 'Cerrando sesiones...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); },
+        background: 'var(--bg-surface)',
+        color: 'var(--text)'
+    });
+
+    try {
+        // 1. Verificar contraseña
+        const verifyRes = await fetch('/api/client/verify-password', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.token}`
+            },
+            body: JSON.stringify({ pass: clientPassword })
+        });
+        const verifyResult = await verifyRes.json();
+        
+        if (verifyResult.success && verifyResult.valid) {
+            // 2. Cerrar sesiones en el backend (envía evento SSE a otros dispositivos)
+            const logoutRes = await fetch('/api/client/module/logout-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.token}`
+                },
+                body: JSON.stringify({ modId, instanceId: instanceId || null })
+            });
+            const logoutResult = await logoutRes.json();
+
+            if (logoutResult.success) {
+                // 3. Limpiar localmente en este navegador
+                if (modId === 'agenda') {
+                    localStorage.removeItem(`agenda_admin_session${suffix}`);
+                    localStorage.removeItem('agenda_admin_session');
+                } else if (modId === 'streetfeed') {
+                    localStorage.removeItem(`streetfeed_isLoggedIn${suffix}`);
+                    localStorage.removeItem('streetfeed_isLoggedIn');
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Sesiones Cerradas!',
+                    text: 'Se han cerrado las sesiones en todos los dispositivos.',
+                    timer: 1800,
+                    showConfirmButton: false,
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text)'
+                });
+            } else {
+                throw new Error(logoutResult.error || 'Error al cerrar sesiones.');
+            }
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Acceso Denegado',
+                text: 'La contraseña ingresada es incorrecta.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+        }
+    } catch (err) {
+        console.error('Error al cerrar sesiones del módulo:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: err.message || 'Hubo un problema al procesar la solicitud.',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)'
+        });
+    }
+};
+
+/** Genera nuevas credenciales de acceso al módulo con verificación de seguridad */
+window.resetCredentialView = async function(storageKey, modId, modName, clientUrl, adminUrl, instanceId = null, branchName = null) {
+    const sessionRaw = sessionStorage.getItem('clientSession');
+    if (!sessionRaw) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Sesión no válida.', background: 'var(--bg-surface)', color: 'var(--text)' });
+        return;
+    }
+    const session = JSON.parse(sessionRaw);
+
+    const { value: clientPassword } = await Swal.fire({
+        title: '🔐 Restablecer Acceso al Módulo',
+        html: `
+            <p style="color:var(--text-muted); margin-bottom:1rem; font-size:0.9rem;">
+                Se generarán <strong>nuevas credenciales</strong> de acceso para el módulo <strong>${modName}</strong>.<br>
+                Ingresa tu contraseña del portal para confirmar.
+            </p>
+        `,
+        input: 'password',
+        inputPlaceholder: 'Tu contraseña de cliente...',
+        inputAttributes: {
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonText: '🔑 Generar Nuevas Credenciales',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: varColor('--primary'),
         background: 'var(--bg-surface)',
-        color: 'var(--text)'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            let data = JSON.parse(localStorage.getItem(storageKey));
-            data.isConfigured = false;
-            localStorage.setItem(storageKey, JSON.stringify(data));
-            // Re-abrir el launchpad para ver los cambios
-            showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId, branchName);
+        color: 'var(--text)',
+        inputValidator: (value) => {
+            if (!value) {
+                return '¡Debes ingresar tu contraseña del portal!';
+            }
         }
     });
+
+    if (!clientPassword) return;
+
+    Swal.fire({
+        title: 'Generando credenciales...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); },
+        background: 'var(--bg-surface)',
+        color: 'var(--text)'
+    });
+
+    try {
+        const response = await fetch('/api/client/verify-password', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.token}`
+            },
+            body: JSON.stringify({ pass: clientPassword })
+        });
+        const result = await response.json();
+        
+        if (result.success && result.valid) {
+            // Generar nuevas credenciales únicas
+            const newUser = `admin.${modId}${instanceId ? '.' + instanceId.slice(-4) : ''}`;
+            const newPass = generatePassword();
+
+            // Guardar nuevas credenciales en el storageKey del launchpad
+            const newData = { tempUser: newUser, tempPass: newPass, isConfigured: false };
+            localStorage.setItem(storageKey, JSON.stringify(newData));
+
+            // Inyectar nuevas credenciales en el módulo y cerrar su sesión activa
+            if (modId === 'streetfeed') {
+                const sfSuffix = instanceId ? '_' + instanceId : '';
+                const authKey = `streetfeed_auth${sfSuffix}`;
+                localStorage.setItem(authKey, JSON.stringify({ user: newUser, pass: newPass }));
+                // Cerrar sesión activa del módulo en todas las instancias conocidas
+                localStorage.setItem(`streetfeed_isLoggedIn${sfSuffix}`, 'false');
+                localStorage.removeItem(`streetfeed_isLoggedIn${sfSuffix}`);
+            } else if (modId === 'agenda') {
+                const agSuffix = instanceId ? '_' + instanceId : '';
+                const authKey = `agenda_auth${agSuffix}`;
+                localStorage.setItem(authKey, JSON.stringify({ user: newUser, pass: newPass }));
+                localStorage.setItem(`agenda_admin_user${agSuffix}`, newUser);
+                localStorage.setItem(`agenda_admin_pass${agSuffix}`, newPass);
+                // Cerrar sesión activa del módulo
+                localStorage.removeItem(`agenda_admin_session${agSuffix}`);
+                localStorage.removeItem('agenda_admin_session');
+            }
+            
+            Swal.fire({
+                icon: 'success',
+                title: '¡Credenciales Restablecidas!',
+                text: 'Se generaron nuevas credenciales de acceso para el módulo.',
+                timer: 1800,
+                showConfirmButton: false,
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            }).then(() => {
+                // Re-abrir el launchpad forzando mostrar las nuevas credenciales
+                showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId, branchName, true);
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Acceso Denegado',
+                text: 'La contraseña ingresada es incorrecta.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+        }
+    } catch (err) {
+        console.error('Error al verificar contraseña:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Hubo un problema al verificar la contraseña.',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)'
+        });
+    }
 };
 
 function varColor(varName) {
@@ -5419,7 +5854,7 @@ function syncModuleLicenses() {
                 let licensePrefix = '';
                 let moduleName = '';
                 if (modId === 'agenda') {
-                    licensePrefix = 'margarita_license';
+                    licensePrefix = 'agenda_license';
                     moduleName = 'StyleSync Pro';
                 } else if (modId === 'streetfeed') {
                     licensePrefix = 'streetfeed_license';
@@ -5449,7 +5884,7 @@ function syncModuleLicenses() {
                 let licensePrefix = '';
                 let moduleName = '';
                 if (modId === 'agenda') {
-                    licensePrefix = 'margarita_license';
+                    licensePrefix = 'agenda_license';
                     moduleName = 'StyleSync Pro';
                 } else if (modId === 'streetfeed') {
                     licensePrefix = 'streetfeed_license';

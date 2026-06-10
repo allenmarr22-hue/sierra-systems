@@ -453,8 +453,8 @@
 
             <div class="login-footer">
                 ¿Olvidaste tu contraseña?
-                <a href="https://wa.me/573001234567?text=Hola,%20olvidé%20mi%20contraseña%20de%20acceso%20al%20panel%20de%20cliente." id="login-whatsapp-recovery" target="_blank">
-                    Contáctanos por WhatsApp
+                <a href="#" id="btn-forgot-password" onclick="handleForgotPassword(event)">
+                    Restablecer contraseña
                 </a>
                 <br><br>
                 <a href="/">← Volver al inicio</a>
@@ -665,7 +665,13 @@
                     }));
                     btnText.textContent = '¡Acceso concedido!';
                     setTimeout(() => {
-                        window.location.href = '/client-dashboard.html';
+                        const params = new URLSearchParams(window.location.search);
+                        const buyParam = params.get('buy');
+                        if (buyParam) {
+                            window.location.href = `/client-dashboard.html?buy=${encodeURIComponent(buyParam)}`;
+                        } else {
+                            window.location.href = '/client-dashboard.html';
+                        }
                     }, 600);
                 } else {
                     throw new Error(data.error || 'Credenciales inválidas.');
@@ -680,6 +686,170 @@
                 btnText.textContent = 'Ingresar al Panel';
             }
         });
+
+        // =====================================================
+        // FLUJO: Recuperar contraseña de cliente
+        // =====================================================
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+
+            // --- Paso 1: Pedir el correo del cliente ---
+            const { value: email, isConfirmed: step1Ok } = await Swal.fire({
+                title: 'Recuperar Contraseña',
+                html: `
+                    <p style="color:var(--text-muted, #94a3b8); margin-bottom:1rem; font-size:0.95rem;">
+                        Ingresa el correo con el que accedes al portal de clientes.
+                    </p>
+                    <input id="swal-email" type="email" class="swal2-input"
+                        placeholder="correo@tuempresa.com"
+                        style="margin: 0; width: 100%;">
+                `,
+                background: '#0f172a',
+                color: '#f8fafc',
+                confirmButtonText: 'Continuar →',
+                showCancelButton: true,
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#6366f1',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const val = document.getElementById('swal-email').value.trim();
+                    if (!val || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                        Swal.showValidationMessage('Ingresa un correo válido.');
+                        return false;
+                    }
+                    return val;
+                }
+            });
+            if (!step1Ok || !email) return;
+
+            // --- Paso 2: Pedir la contraseña del admin del dashboard ---
+            const { value: adminPass, isConfirmed: step2Ok } = await Swal.fire({
+                title: '🔐 Verificación de Identidad',
+                html: `
+                    <p style="color:var(--text-muted, #94a3b8); margin-bottom:1rem; font-size:0.95rem;">
+                        Para tu seguridad, ingresa la <strong style="color:#818cf8;">contraseña del dashboard de administración</strong> para verificar tu identidad.
+                    </p>
+                    <div style="position:relative;">
+                        <input id="swal-admin-pass" type="password" class="swal2-input"
+                            placeholder="Contraseña del admin"
+                            style="margin: 0; width: 100%; padding-right: 2.5rem;">
+                        <button type="button" id="swal-toggle-admin-pass"
+                            onclick="(function(){
+                                var i=document.getElementById('swal-admin-pass');
+                                i.type = i.type==='password' ? 'text' : 'password';
+                            })()"
+                            style="position:absolute; right:10px; top:50%; transform:translateY(-50%);
+                                   background:none; border:none; cursor:pointer; color:#94a3b8; font-size:1rem;">👁</button>
+                    </div>
+                `,
+                background: '#0f172a',
+                color: '#f8fafc',
+                confirmButtonText: 'Verificar →',
+                showCancelButton: true,
+                cancelButtonText: '← Atrás',
+                confirmButtonColor: '#6366f1',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const val = document.getElementById('swal-admin-pass').value;
+                    if (!val || val.length < 1) {
+                        Swal.showValidationMessage('Ingresa la contraseña del administrador.');
+                        return false;
+                    }
+                    return val;
+                }
+            });
+            if (!step2Ok || !adminPass) return;
+
+            // --- Paso 3: Pedir la nueva contraseña ---
+            const { value: newPassData, isConfirmed: step3Ok } = await Swal.fire({
+                title: '🔑 Nueva Contraseña',
+                html: `
+                    <p style="color:var(--text-muted, #94a3b8); margin-bottom:1rem; font-size:0.95rem;">
+                        Define tu nueva contraseña de acceso al portal.
+                    </p>
+                    <input id="swal-new-pass" type="password" class="swal2-input"
+                        placeholder="Nueva contraseña (mín. 6 caracteres)"
+                        style="margin: 0 0 0.75rem 0; width: 100%;">
+                    <input id="swal-confirm-pass" type="password" class="swal2-input"
+                        placeholder="Confirmar nueva contraseña"
+                        style="margin: 0; width: 100%;">
+                `,
+                background: '#0f172a',
+                color: '#f8fafc',
+                confirmButtonText: '✅ Restablecer',
+                showCancelButton: true,
+                cancelButtonText: '← Atrás',
+                confirmButtonColor: '#10b981',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const p1 = document.getElementById('swal-new-pass').value;
+                    const p2 = document.getElementById('swal-confirm-pass').value;
+                    if (!p1 || p1.length < 6) {
+                        Swal.showValidationMessage('La contraseña debe tener al menos 6 caracteres.');
+                        return false;
+                    }
+                    if (p1 !== p2) {
+                        Swal.showValidationMessage('Las contraseñas no coinciden.');
+                        return false;
+                    }
+                    return p1;
+                }
+            });
+            if (!step3Ok || !newPassData) return;
+
+            // --- Ejecutar el reset ---
+            Swal.fire({
+                title: 'Procesando...',
+                text: 'Verificando y actualizando tu contraseña.',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                background: '#0f172a',
+                color: '#f8fafc',
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const res = await fetch('/api/client/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, adminPass, newPass: newPassData })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Contraseña Restablecida!',
+                        html: `La contraseña de <strong>${data.clientName || email}</strong> ha sido actualizada exitosamente.<br><br>Ya puedes iniciar sesión con tu nueva contraseña.`,
+                        background: '#0f172a',
+                        color: '#f8fafc',
+                        confirmButtonText: 'Iniciar Sesión',
+                        confirmButtonColor: '#6366f1'
+                    });
+                    // Prellenar el email en el formulario
+                    document.getElementById('login-email').value = email;
+                    document.getElementById('login-pass').focus();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.error || 'No se pudo restablecer la contraseña.',
+                        background: '#0f172a',
+                        color: '#f8fafc',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo conectar con el servidor. Intenta de nuevo.',
+                    background: '#0f172a',
+                    color: '#f8fafc',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        }
     </script>
 </body>
 </html>

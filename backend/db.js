@@ -241,6 +241,10 @@ async function initializeDatabase() {
             await pool.query('ALTER TABLE businesses ADD COLUMN registration_source VARCHAR(100) NULL DEFAULT "admin"');
             console.log('[DB] 🛠️ Column "registration_source" added to "businesses" table.');
         }
+        if (!existingBizColumns.includes('session_version')) {
+            await pool.query('ALTER TABLE businesses ADD COLUMN session_version INT NOT NULL DEFAULT 1');
+            console.log('[DB] 🛠️ Column "session_version" added to "businesses" table.');
+        }
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS business_modules (
@@ -1023,7 +1027,8 @@ async function updateBusiness(id, fields) {
         registrationSource: 'registration_source',
         clientEmail: 'client_email',
         clientPass: 'client_pass',
-        avatarUrl: 'avatar_url'
+        avatarUrl: 'avatar_url',
+        sessionVersion: 'session_version'
     };
 
     const sets = [];

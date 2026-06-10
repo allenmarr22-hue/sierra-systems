@@ -5883,6 +5883,10 @@ async function openMarketplaceSettingsModal() {
                         <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Porcentaje de descuento permanente al adquirir el mismo módulo para una sucursal adicional.</p>
                         <input type="number" id="swal-multi-discount" class="swal2-input" min="0" max="100" placeholder="30" value="${config.multiSedeDiscount !== undefined ? config.multiSedeDiscount : 30}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 0.25rem;">
+                        <input type="checkbox" id="swal-sync-existing" style="width: 18px; height: 18px; cursor: pointer; accent-color: #8b5cf6;">
+                        <label for="swal-sync-existing" style="font-size: 0.85rem; color: var(--text-main); cursor: pointer; font-weight: 500;">Actualizar precios de sedes secundarias existentes</label>
+                    </div>
                 </div>
             `,
             background: 'var(--bg-surface)',
@@ -5907,6 +5911,7 @@ async function openMarketplaceSettingsModal() {
                 const recommendedLabel = document.getElementById('swal-rec-label').value.trim();
                 const multiSedeDiscountRaw = document.getElementById('swal-multi-discount').value;
                 const multiSedeDiscount = parseInt(multiSedeDiscountRaw, 10);
+                const syncExisting = document.getElementById('swal-sync-existing').checked;
 
                 if (isNaN(multiSedeDiscount) || multiSedeDiscount < 0 || multiSedeDiscount > 100) {
                     Swal.showValidationMessage('El descuento debe ser un número entre 0 y 100');
@@ -5917,6 +5922,7 @@ async function openMarketplaceSettingsModal() {
                     recommendedModuleId: recommendedModuleId || '',
                     recommendedLabel: recommendedLabel || 'RECOMENDADO',
                     multiSedeDiscount,
+                    syncExisting,
                     currentPass
                 };
             }
