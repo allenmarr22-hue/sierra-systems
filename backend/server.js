@@ -242,9 +242,16 @@ app.get('/api/stream', (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
 
+    if (bizClientId) {
+        broadcastToClient(bizClientId, { type: 'sessions_update' });
+    }
+
     req.on('close', () => {
         sseClients = sseClients.filter(client => client.id !== clientId);
         console.log(`[SSE] Conexión cerrada: clientId=${bizClientId}, restantes=${sseClients.length}`);
+        if (bizClientId) {
+            broadcastToClient(bizClientId, { type: 'sessions_update' });
+        }
     });
 });
 
