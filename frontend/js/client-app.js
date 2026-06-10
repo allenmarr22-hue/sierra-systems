@@ -670,6 +670,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (window.activeChatTicketId) {
                         fetchAndRenderChatMessages(window.activeChatTicketId, 'client');
                     }
+                } else if (data.type === 'new_message') {
+                    console.log('New message received via SSE:', data);
+                    if (window.activeChatTicketId === data.ticketId) {
+                        fetchAndRenderChatMessages(data.ticketId, 'client');
+                    } else {
+                        if (data.sender === 'admin') {
+                            if (typeof loadMyTickets === 'function') {
+                                loadMyTickets();
+                            }
+                            if (typeof Swal !== 'undefined') {
+                                const Toast = Swal.mixin({
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 4500,
+                                    timerProgressBar: true,
+                                    background: 'var(--bg-surface)',
+                                    color: 'var(--text-main)',
+                                    didOpen: (toast) => {
+                                        toast.addEventListener('mouseenter', Swal.stopTimer);
+                                        toast.addEventListener('mouseleave', Swal.resumeTimer);
+                                        toast.style.cursor = 'pointer';
+                                        toast.addEventListener('click', () => {
+                                            if (typeof viewClientTicketDetails === 'function') {
+                                                viewClientTicketDetails(data.ticketId);
+                                            }
+                                        });
+                                    }
+                                });
+                                Toast.fire({
+                                    icon: 'info',
+                                    title: 'Soporte Sierra Systems',
+                                    text: data.message.length > 55 ? data.message.substring(0, 55) + '...' : data.message
+                                });
+                            }
+                        }
+                    }
                 } else if (data.type === 'typing') {
                     if (window.activeChatTicketId === data.ticketId && data.role !== 'client') {
                         showChatTypingIndicator('Soporte está escribiendo...');
@@ -1214,6 +1251,9 @@ function renderDashboard() {
                 activeFilterValue = 'all';
             }
         }
+
+        // Actualizar el dropdown personalizado
+        updateCustomDropdown(uniqueModules, activeFilterValue);
     }
 
     // Filtrar instancias a renderizar basándose en el selector
@@ -1297,11 +1337,27 @@ function renderDashboard() {
                         : `<div class="status-badge active" style="position:absolute; top:1.5rem; right:1.5rem;">Activo</div>`;
                 }
 
-                // Badge de sede (siempre mostrar cuando hay branchName y es diferente de Principal, o cuando hay más de 1 instancia del mismo módulo)
-                const showSedeBadge = inst.branchName && (inst.isMultiSede || inst.branchName !== 'Sede Principal');
-                const sedeBadgeHtml = showSedeBadge
-                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
-                    : '';
+                // Badge de sede (siempre mostrar con opción de editar nombre)
+                const isPrimaryBranch = /^Sede Principal/i.test(inst.branchName.trim());
+                let branchLabelHtml = '';
+                if (isPrimaryBranch) {
+                    const customName = inst.branchName.substring(14).replace(/^[\s-·:|]+/, '').trim();
+                    branchLabelHtml = `<span style="font-weight:900; color:var(--primary);">SEDE PRINCIPAL</span>${customName ? ` <span style="font-weight:500; opacity:0.8;">· ${customName}</span>` : ''}`;
+                } else {
+                    branchLabelHtml = `<span>${inst.branchName}</span>`;
+                }
+
+                const sedeBadgeHtml = `<div class="branch-badge" style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;">
+                    <i data-lucide="map-pin" style="width:10px;height:10px;"></i>
+                    <span class="branch-name-text">${branchLabelHtml}</span>
+                    <button onclick="window.renameBranchPrompt('${inst.instanceId}', '${inst.branchName.replace(/'/g, "\\'")}', '${inst.name.replace(/'/g, "\\'")}')" 
+                            style="background:none; border:none; padding:0; margin-left:4px; color:var(--text-muted); cursor:pointer; display:inline-flex; align-items:center; transition:color 0.2s; outline:none;"
+                            title="Renombrar sede"
+                            onmouseover="this.style.color='var(--primary)'"
+                            onmouseout="this.style.color='var(--text-muted)'">
+                        <i data-lucide="pencil" style="width:11px; height:11px;"></i>
+                    </button>
+                </div>`;
 
                 const dateBoxColor = isExpired ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)';
                 const dateBorderColor = isExpired ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
@@ -1358,7 +1414,7 @@ function renderDashboard() {
                 }
 
                 htmlActive += `
-                <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid ${borderColor};">
+                <div class="biz-card animate-in" data-instance-id="${inst.instanceId}" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid ${borderColor};">
                     <div class="module-card-header">
                         <div class="module-icon-large" style="background:rgba(99,102,241,0.1); color:var(--primary);">
                             <i data-lucide="${inst.icon || 'package'}"></i>
@@ -1420,11 +1476,27 @@ function renderDashboard() {
                     ? `$ ${instPrice.toLocaleString('es-CO')} COP/mes`
                     : 'Consultar';
 
-                // Badge de sede (siempre mostrar cuando hay branchName y es diferente de Principal, o cuando hay más de 1 instancia del mismo módulo)
-                const showSedeBadge = inst.branchName && (inst.isMultiSede || inst.branchName !== 'Sede Principal');
-                const sedeBadgeHtml = showSedeBadge
-                    ? `<div style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${inst.branchName}</div>`
-                    : '';
+                // Badge de sede (siempre mostrar con opción de editar nombre)
+                const isPrimaryBranch = /^Sede Principal/i.test(inst.branchName.trim());
+                let branchLabelHtml = '';
+                if (isPrimaryBranch) {
+                    const customName = inst.branchName.substring(14).replace(/^[\s-·:|]+/, '').trim();
+                    branchLabelHtml = `<span style="font-weight:900; color:var(--primary);">SEDE PRINCIPAL</span>${customName ? ` <span style="font-weight:500; opacity:0.8;">· ${customName}</span>` : ''}`;
+                } else {
+                    branchLabelHtml = `<span>${inst.branchName}</span>`;
+                }
+
+                const sedeBadgeHtml = `<div class="branch-badge" style="display:inline-flex; align-items:center; gap:0.3rem; background:var(--primary-bg); border:1px solid var(--primary-border); color:var(--primary); font-size:0.7rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:20px; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em;">
+                    <i data-lucide="map-pin" style="width:10px;height:10px;"></i>
+                    <span class="branch-name-text">${branchLabelHtml}</span>
+                    <button onclick="window.renameBranchPrompt('${inst.instanceId}', '${inst.branchName.replace(/'/g, "\\'")}', '${inst.name.replace(/'/g, "\\'")}')" 
+                            style="background:none; border:none; padding:0; margin-left:4px; color:var(--text-muted); cursor:pointer; display:inline-flex; align-items:center; transition:color 0.2s; outline:none;"
+                            title="Renombrar sede"
+                            onmouseover="this.style.color='var(--primary)'"
+                            onmouseout="this.style.color='var(--text-muted)'">
+                        <i data-lucide="pencil" style="width:11px; height:11px;"></i>
+                    </button>
+                </div>`;
 
                 // Determinar estado de disponibilidad global del módulo
                 let badgeHtml = '';
@@ -1494,7 +1566,7 @@ function renderDashboard() {
                 }
 
                 htmlCancelled += `
-                <div class="biz-card animate-in" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid ${borderColor}; opacity:0.9;">
+                <div class="biz-card animate-in" data-instance-id="${inst.instanceId}" style="position:relative; animation-delay:${index * 0.08}s; border:1px solid ${borderColor}; opacity:0.9;">
                     <div class="module-card-header">
                         <div class="module-icon-large" style="background:var(--warning-bg); color:var(--warning);">
                             <i data-lucide="${inst.icon || 'package'}"></i>
@@ -2264,6 +2336,283 @@ function showLaunchPad(modId, modName, clientUrl, adminUrl, instanceId = null, b
     });
 }
 
+/** Sincroniza y maneja la lógica del dropdown de filtro personalizado */
+function updateCustomDropdown(uniqueModules, activeValue) {
+    const btn = document.getElementById('custom-dropdown-btn');
+    const menu = document.getElementById('custom-dropdown-menu');
+    const label = document.getElementById('custom-dropdown-label');
+    const select = document.getElementById('module-filter-select');
+    
+    if (!btn || !menu || !label || !select) return;
+
+    // Abrir/Cerrar al hacer clic en el botón
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = menu.style.display === 'block';
+        menu.style.display = isOpen ? 'none' : 'block';
+        const chevron = btn.querySelector('[data-lucide="chevron-down"]');
+        if (chevron) {
+            chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    };
+
+    // Cerrar al hacer clic fuera del dropdown
+    if (!window.customDropdownInitialized) {
+        window.customDropdownInitialized = true;
+        document.addEventListener('click', () => {
+            const openMenu = document.getElementById('custom-dropdown-menu');
+            const openBtn = document.getElementById('custom-dropdown-btn');
+            if (openMenu) openMenu.style.display = 'none';
+            if (openBtn) {
+                const chevron = openBtn.querySelector('[data-lucide="chevron-down"]');
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+
+    // Generar las opciones del menú
+    const isAllActive = activeValue === 'all';
+    let menuHtml = `
+        <div class="custom-dropdown-item ${isAllActive ? 'active' : ''}" data-value="all" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+            <span>Todos los Módulos</span>
+            ${isAllActive ? '<i data-lucide="check" style="width: 14px; height: 14px; flex-shrink:0;"></i>' : ''}
+        </div>
+    `;
+
+    uniqueModules.forEach(m => {
+        const isActive = String(m.id) === String(activeValue);
+        menuHtml += `
+            <div class="custom-dropdown-item ${isActive ? 'active' : ''}" data-value="${m.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                <span>${m.name}</span>
+                ${isActive ? '<i data-lucide="check" style="width: 14px; height: 14px; flex-shrink:0;"></i>' : ''}
+            </div>
+        `;
+    });
+
+    menu.innerHTML = menuHtml;
+
+    // Actualizar texto del botón principal
+    if (isAllActive) {
+        label.textContent = 'Todos los Módulos';
+    } else {
+        const activeMod = uniqueModules.find(m => String(m.id) === String(activeValue));
+        if (activeMod) label.textContent = activeMod.name;
+    }
+
+    // Registrar manejadores de clics de los ítems
+    const items = menu.querySelectorAll('.custom-dropdown-item');
+    items.forEach(item => {
+        item.onclick = (e) => {
+            e.stopPropagation();
+            const val = item.getAttribute('data-value');
+            select.value = val;
+            
+            // Disparar filtrado
+            window.filterClientModules();
+            
+            // Cerrar menú
+            menu.style.display = 'none';
+            const chevron = btn.querySelector('[data-lucide="chevron-down"]');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        };
+    });
+
+    // Recrear iconos de lucide en el menú para el tick check
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+/** Animación de carga y configuración premium de 3 segundos */
+async function showPremiumActivationLoader(modName) {
+    let progress = 0;
+    const progressInterval = 30; // ms
+    const duration = 3000; // 3 seconds
+    const step = (progressInterval / duration) * 100;
+
+    return new Promise((resolve) => {
+        Swal.fire({
+            title: 'Configurando Módulo',
+            html: `
+                <div style="text-align:center; padding:1.5rem 0;">
+                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; margin-bottom: 1rem; position: relative; border: 1px solid var(--primary-border);">
+                        <div id="activation-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%); transition: width 0.1s linear; border-radius: 4px;"></div>
+                    </div>
+                    <p id="activation-status-text" style="margin:0; font-size:1.05rem; font-weight: 600; color:var(--text);">Iniciando configuración...</p>
+                    <p style="margin:0.5rem 0 0; font-size:0.8rem; color:var(--text-muted);">Estableciendo base de datos y licencias para <strong>${modName}</strong></p>
+                </div>
+            `,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--bg-surface)',
+            color: 'var(--text)',
+            didOpen: () => {
+                Swal.showLoading();
+                const bar = document.getElementById('activation-progress-bar');
+                const txt = document.getElementById('activation-status-text');
+                
+                const interval = setInterval(() => {
+                    progress += step;
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            Swal.close();
+                            resolve();
+                        }, 500);
+                    }
+                    if (bar) bar.style.width = `${progress}%`;
+                    
+                    if (txt) {
+                        if (progress < 30) {
+                            txt.textContent = 'Creando instancia y base de datos...';
+                        } else if (progress < 65) {
+                            txt.textContent = 'Estableciendo canal de comunicación...';
+                        } else if (progress < 90) {
+                            txt.textContent = 'Verificando licencias de acceso...';
+                        } else {
+                            txt.textContent = '¡Todo listo!';
+                        }
+                    }
+                }, progressInterval);
+            }
+        });
+    });
+}
+
+/** Permite renombrar una sede de forma manual al hacer clic en el lápiz */
+window.renameBranchPrompt = async function(instanceId, currentName, modName) {
+    let session;
+    try { session = JSON.parse(sessionStorage.getItem('clientSession') || '{}'); } catch { session = {}; }
+    if (!session.token) { Swal.fire({ icon: 'error', title: 'Sesión expirada' }); return; }
+
+    const isPrimary = /^Sede Principal/i.test(currentName.trim());
+    let customName = '';
+    if (isPrimary) {
+        customName = currentName.substring(14).replace(/^[\s-·:|]+/, '').trim();
+    } else {
+        customName = currentName;
+    }
+
+    const { value: newName } = await Swal.fire({
+        title: isPrimary ? 'Editar Nombre de Sede Principal' : 'Editar Nombre de Sede',
+        text: isPrimary 
+            ? 'Define un nombre o alias para tu Sede Principal (el texto "SEDE PRINCIPAL" se mantendrá al inicio):'
+            : `Asigna un nuevo nombre para identificar tu sede del módulo "${modName}":`,
+        input: 'text',
+        inputValue: customName,
+        background: 'var(--bg-surface)',
+        color: 'var(--text)',
+        confirmButtonText: 'Guardar',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#10b981',
+        inputValidator: (val) => {
+            if (!isPrimary && (!val || !val.trim())) {
+                return '¡El nombre no puede estar vacío!';
+            }
+        }
+    });
+
+    if (newName !== undefined) {
+        let finalNewName = newName.trim();
+        if (isPrimary) {
+            finalNewName = finalNewName ? `Sede Principal - ${finalNewName}` : 'Sede Principal';
+        }
+
+        if (finalNewName !== currentName) {
+            try {
+                Swal.showLoading();
+                const renameRes = await fetch('/api/client/module/instance/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+                    body: JSON.stringify({ instanceId: instanceId, branchName: finalNewName })
+                });
+                if (!renameRes.ok) {
+                    let errMsg = 'Error al renombrar la sede.';
+                    try {
+                        const errData = await renameRes.json();
+                        errMsg = errData.error || errMsg;
+                    } catch (e) {}
+                    throw new Error(errMsg);
+                }
+                const renameData = await renameRes.json();
+
+                const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+                if (clientBiz) {
+                    clientBiz.moduleInstances = renameData.moduleInstances;
+                }
+
+                // Update DOM in-place to avoid flashing
+                const targetCard = document.querySelector(`.biz-card[data-instance-id="${instanceId}"]`);
+                if (targetCard) {
+                    const isPrimaryBranch = /^Sede Principal/i.test(finalNewName.trim());
+                    let branchLabelHtml = '';
+                    
+                    if (isPrimaryBranch) {
+                        const customNameStr = finalNewName.substring(14).replace(/^[\s-·:|]+/, '').trim();
+                        branchLabelHtml = `<span style="font-weight:900; color:var(--primary);">SEDE PRINCIPAL</span>${customNameStr ? ` <span style="font-weight:500; opacity:0.8;">· ${customNameStr}</span>` : ''}`;
+                    } else {
+                        branchLabelHtml = `<span>${finalNewName}</span>`;
+                    }
+
+                    // Update text
+                    const nameTextSpan = targetCard.querySelector('.branch-name-text');
+                    if (nameTextSpan) {
+                        nameTextSpan.innerHTML = branchLabelHtml;
+                    }
+
+                    // Update edit button onclick
+                    const editBtn = targetCard.querySelector('.branch-badge button');
+                    if (editBtn) {
+                        editBtn.setAttribute('onclick', `window.renameBranchPrompt('${instanceId}', '${finalNewName.replace(/'/g, "\\'")}', '${modName.replace(/'/g, "\\'")}')`);
+                    }
+
+                    // Update launch button onclick if exists
+                    const launchBtn = targetCard.querySelector('button[onclick^="showLaunchPad"]');
+                    if (launchBtn) {
+                        const onclickAttr = launchBtn.getAttribute('onclick');
+                        if (onclickAttr) {
+                            const newOnclick = onclickAttr.replace(/,\s*'[^']*'\s*\)$/, `, '${finalNewName.replace(/'/g, "\\'")}')`);
+                            launchBtn.setAttribute('onclick', newOnclick);
+                        }
+                    }
+
+                    // Update renewal button onclick if exists
+                    const renewalBtn = targetCard.querySelector('button[onclick^="handleRenewal"]');
+                    if (renewalBtn) {
+                        const onclickAttr = renewalBtn.getAttribute('onclick');
+                        if (onclickAttr) {
+                            const parts = onclickAttr.match(/handleRenewal\(([^,]+),([^,]+),([^,]+),\s*'[^']*'\s*,(.+)\)/);
+                            if (parts) {
+                                const newOnclick = `handleRenewal(${parts[1]},${parts[2]},${parts[3]},'${finalNewName.replace(/'/g, "\\'")}',${parts[4]})`;
+                                renewalBtn.setAttribute('onclick', newOnclick);
+                            }
+                        }
+                    }
+                    
+                    if (window.lucide) {
+                        window.lucide.createIcons();
+                    }
+                } else {
+                    renderDashboard();
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Nombre Actualizado!',
+                    text: `La sede ha sido renombrada con éxito.`,
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text)',
+                    confirmButtonColor: '#10b981'
+                });
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Error', text: err.message, background: 'var(--bg-surface)', color: 'var(--text)' });
+            }
+        }
+    }
+};
+
 /** Marca las credenciales como configuradas y limpia la UI */
 window.markAsConfigured = function(storageKey) {
     let data = JSON.parse(localStorage.getItem(storageKey));
@@ -2620,13 +2969,49 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         if (!session.token) { Swal.fire({ icon: 'error', title: 'Sesión expirada' }); return; }
 
         try {
+            // Mostrar animación de carga de Wompi por 3 segundos
+            Swal.fire({
+                title: 'Verificando con Wompi...',
+                html: `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; padding:1.5rem 0;">
+                        <div style="width: 50px; height: 50px; border: 4px solid rgba(99,102,241,0.2); border-left-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="margin:0; font-size:1.05rem; font-weight: 500; color:var(--text);">Validando transacción con pasarela segura...</p>
+                        <span style="font-size:0.75rem; color:#10b981; display:flex; align-items:center; gap:4px;">
+                            <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%; animation: ping 1.5s infinite;"></span>
+                            Seguridad 3D Secure activa
+                        </span>
+                    </div>
+                    <style>
+                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                        @keyframes ping { 0% { transform: scale(1); opacity: 1; } 75%, 100% { transform: scale(2.5); opacity: 0; } }
+                    </style>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                background: 'var(--bg-surface)',
+                color: 'var(--text)',
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Simular retraso de pasarela de 3 segundos
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
             const res = await fetch('/api/client/module/renew', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
                 body: JSON.stringify({ moduleId: modId, moduleName: modName, last4, branchName, instanceId })
             });
+            if (!res.ok) {
+                let errMsg = 'Error al renovar.';
+                try {
+                    const errData = await res.json();
+                    errMsg = errData.error || errMsg;
+                } catch (e) {}
+                throw new Error(errMsg);
+            }
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Error al renovar.');
 
             // Actualizar estado local
             const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
@@ -2638,14 +3023,104 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
             }
             renderDashboard();
 
-            Swal.fire({
+            // Identificar la sede/instancia para ofrecer personalización de nombre
+            let updatedInstance = null;
+            if (instanceId) {
+                updatedInstance = data.moduleInstances.find(m => m.instanceId === instanceId);
+            } else {
+                const currentActive = data.moduleInstances.filter(m => String(m.moduleId) === String(modId) && m.status === 'active');
+                if (currentActive.length > 0) {
+                    const originalIds = (clientBiz?.moduleInstances || []).map(m => m.instanceId);
+                    updatedInstance = currentActive.find(m => !originalIds.includes(m.instanceId)) || currentActive[currentActive.length - 1];
+                }
+            }
+
+            const currentSedeName = updatedInstance ? (updatedInstance.branchName || 'Sede Principal') : (branchName || 'Sede Principal');
+
+            const isRenewal = !!instanceId;
+            const successTitle = isRenewal ? '¡Renovación Exitosa!' : '¡Compra Exitosa!';
+            const successText = isRenewal 
+                ? `El módulo <strong>${modName}</strong> ha sido renovado por 30 días más.`
+                : `El módulo <strong>${modName}</strong> ha sido adquirido con éxito.`;
+
+            const resSuccess = await Swal.fire({
                 icon: 'success',
-                title: '¡Renovación Exitosa!',
-                text: `El módulo ${modName}${branchName ? ' (' + branchName + ')' : ''} ha sido renovado por 30 días más.`,
+                title: successTitle,
+                html: `
+                    <div style="text-align:center;">
+                        <p style="margin:0 0 1.25rem 0; font-size:1.05rem;">${successText}</p>
+                        <div style="background:rgba(99,102,241,0.05); padding:0.75rem; border-radius:8px; border:1px solid rgba(99,102,241,0.15); display:inline-block; font-size:0.9rem;">
+                            Identificación de Sede: <strong style="color:var(--primary);">${currentSedeName}</strong>
+                        </div>
+                    </div>
+                `,
                 background: 'var(--bg-surface)',
                 color: 'var(--text)',
-                confirmButtonColor: '#10b981'
+                confirmButtonText: 'Siguiente: Renombrar sede',
+                showCancelButton: true,
+                cancelButtonText: 'Terminar',
+                confirmButtonColor: '#8b5cf6',
+                cancelButtonColor: 'rgba(255,255,255,0.05)'
             });
+
+            if (resSuccess.isConfirmed && updatedInstance) {
+                const isPrimary = /^Sede Principal/i.test(currentSedeName.trim());
+                let customSedeName = '';
+                if (isPrimary) {
+                    customSedeName = currentSedeName.substring(14).replace(/^[\s-·:|]+/, '').trim();
+                } else {
+                    customSedeName = currentSedeName;
+                }
+
+                const { value: newName } = await Swal.fire({
+                    title: isPrimary ? 'Editar Nombre de Sede Principal' : 'Nombre de la Sede',
+                    text: isPrimary
+                        ? 'Define un nombre o alias para tu Sede Principal (el texto "SEDE PRINCIPAL" se mantendrá al inicio):'
+                        : `Asigna un nombre para identificar esta sede (ej: "Sede Centro", "Principal - Bogotá"):`,
+                    input: 'text',
+                    inputValue: customSedeName,
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text)',
+                    confirmButtonText: 'Guardar Nombre',
+                    showCancelButton: true,
+                    cancelButtonText: 'Omitir',
+                    confirmButtonColor: '#10b981',
+                    inputValidator: (val) => {
+                        if (!isPrimary && (!val || !val.trim())) {
+                            return '¡El nombre no puede estar vacío!';
+                        }
+                    }
+                });
+
+                if (newName !== undefined) {
+                    let finalNewName = newName.trim();
+                    if (isPrimary) {
+                        finalNewName = finalNewName ? `Sede Principal - ${finalNewName}` : 'Sede Principal';
+                    }
+
+                    if (finalNewName && finalNewName !== currentSedeName) {
+                        try {
+                            const renameRes = await fetch('/api/client/module/instance/rename', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+                                body: JSON.stringify({ instanceId: updatedInstance.instanceId, branchName: finalNewName })
+                            });
+                            if (renameRes.ok) {
+                                const renameData = await renameRes.json();
+                                if (clientBiz) {
+                                    clientBiz.moduleInstances = renameData.moduleInstances;
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Error in purchase flow rename:', err);
+                        }
+                    }
+                }
+            }
+
+            // Mostrar animación premium
+            await showPremiumActivationLoader(modName);
+            renderDashboard();
         } catch (err) {
             Swal.fire({ icon: 'error', title: 'Error', text: err.message, background: 'var(--bg-surface)', color: 'var(--text)' });
         }
@@ -3661,7 +4136,92 @@ window.openAddCardModal = function() {
                 background: rgba(16, 185, 129, 0.05) !important;
                 border: 1px solid rgba(16, 185, 129, 0.18) !important;
             }
+
+            /* Estilos de la tarjeta interactiva 3D */
+            .flip-card {
+                perspective: 1000px;
+                width: 320px;
+                height: 180px;
+                margin: 0.5rem auto 1.5rem;
+            }
+            .flip-card-inner {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                text-align: center;
+                transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+                transform-style: preserve-3d;
+                border-radius: 15px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            }
+            .flip-card-front, .flip-card-back {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                backface-visibility: hidden;
+                border-radius: 15px;
+                padding: 1.25rem;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                box-sizing: border-box;
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            .flip-card-front {
+                background: linear-gradient(135deg,#1e293b 0%,#334155 100%);
+                color: #e2e8f0;
+            }
+            .flip-card-back {
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                color: white;
+                transform: rotateY(180deg);
+                padding: 1rem 0;
+            }
         </style>
+        
+        <!-- Tarjeta física interactiva -->
+        <div class="flip-card">
+            <div id="interactive-credit-card" class="flip-card-inner">
+                <!-- Frente -->
+                <div class="flip-card-front">
+                    <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05) 0%,transparent 60%);border-radius:15px;pointer-events:none;"></div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                        <div style="width:40px;height:28px;background:linear-gradient(135deg,#f0c060,#c9952a);border-radius:6px;box-shadow:inset 0 1px 2px rgba(0,0,0,.2);">
+                            <div style="width:22px;height:16px;border:1.5px solid rgba(0,0,0,.2);border-radius:2px;background:linear-gradient(90deg,rgba(0,0,0,.05) 50%,transparent 50%);margin:4.5px auto 0;"></div>
+                        </div>
+                        <span id="cc-card-brand-logo" style="font-size: 2rem; font-weight: 300; color: #94a3b8;">?</span>
+                    </div>
+                    <div id="cc-card-number-display" style="font-size:1.15rem;letter-spacing:3px;font-family:monospace;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.4);text-align:center;margin-top:0.5rem;color:#f8fafc;">
+                        •••• •••• •••• ••••
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;color:#cbd5e1;">
+                        <div style="text-align:left;">
+                            <div style="font-size:0.55rem;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Titular</div>
+                            <div id="cc-card-holder-display" style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">TITULAR</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:0.62rem;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Vence</div>
+                            <div id="cc-card-expiry-display" style="font-size:0.85rem;font-weight:700;">MM/AA</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Reverso -->
+                <div class="flip-card-back">
+                    <div style="width:100%;height:35px;background:#000;margin-top:2px;"></div>
+                    <div style="padding:0 1.25rem;text-align:right;margin-top:10px;">
+                        <div style="font-size:0.55rem;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;color:#cbd5e1;">CVV</div>
+                        <div style="display:flex;align-items:center;justify-content:flex-end;">
+                            <div style="width:140px;height:24px;background:#e2e8f0;border-radius:3px;margin-right:8px;background:repeating-linear-gradient(45deg, #cbd5e1, #cbd5e1 5px, #e2e8f0 5px, #e2e8f0 10px);"></div>
+                            <div id="cc-card-cvv-display" style="font-size:0.9rem;font-family:monospace;font-weight:700;color:#000;background:#fff;padding:2px 8px;border-radius:3px;border:1px solid #94a3b8;min-width:32px;text-align:center;font-style:italic;">•••</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.5rem;opacity:0.5;padding:0 1.25rem;text-align:center;line-height:1.2;color:#94a3b8;margin-top:15px;">
+                        Esta tarjeta es de uso personal y confidencial.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div style="text-align:left;display:flex;flex-direction:column;gap:.9rem;margin-top:.75rem;">
             <div>
                 <label class="cc-label">
@@ -3699,7 +4259,61 @@ window.openAddCardModal = function() {
         confirmButtonText: '💳 Agregar Tarjeta',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: varColor('--primary'),
-        didRender: () => lucide.createIcons(),
+        didOpen: () => {
+            if (window.lucide) lucide.createIcons();
+
+            const ccNumInput = document.getElementById('cc-num');
+            const ccHolderInput = document.getElementById('cc-holder');
+            const ccExpInput = document.getElementById('cc-exp');
+            const ccCvcInput = document.getElementById('cc-cvc');
+
+            const cardInner = document.getElementById('interactive-credit-card');
+            const cardFront = cardInner.children[0];
+            const cardBrandLogo = document.getElementById('cc-card-brand-logo');
+            const cardNumberDisplay = document.getElementById('cc-card-number-display');
+            const cardHolderDisplay = document.getElementById('cc-card-holder-display');
+            const cardExpiryDisplay = document.getElementById('cc-card-expiry-display');
+            const cardCvvDisplay = document.getElementById('cc-card-cvv-display');
+
+            // Listen to inputs
+            ccNumInput.addEventListener('input', () => {
+                const val = ccNumInput.value;
+                const rawVal = val.replace(/\D/g, '');
+                const brand = detectCardBrand(rawVal);
+
+                // Update brand styles on the front of the card
+                const bs = BRAND_STYLE[brand] || BRAND_STYLE.UNKNOWN;
+                cardFront.style.background = bs.grad;
+                cardFront.style.color = bs.text;
+                cardBrandLogo.textContent = bs.logo;
+                cardBrandLogo.style.cssText = bs.logoStyle + `color:${bs.text};`;
+
+                // Update card number text
+                cardNumberDisplay.textContent = val || '•••• •••• •••• ••••';
+            });
+
+            ccHolderInput.addEventListener('input', () => {
+                cardHolderDisplay.textContent = ccHolderInput.value.trim().toUpperCase() || 'TITULAR';
+            });
+
+            ccExpInput.addEventListener('input', () => {
+                cardExpiryDisplay.textContent = ccExpInput.value.trim() || 'MM/AA';
+            });
+
+            ccCvcInput.addEventListener('input', () => {
+                const cvcVal = ccCvcInput.value.trim();
+                cardCvvDisplay.textContent = '•'.repeat(cvcVal.length) || '•••';
+            });
+
+            // Flip triggers
+            ccCvcInput.addEventListener('focus', () => {
+                cardInner.style.transform = 'rotateY(180deg)';
+            });
+
+            ccCvcInput.addEventListener('blur', () => {
+                cardInner.style.transform = '';
+            });
+        },
         preConfirm: () => {
             const rawNum = document.getElementById('cc-num').value.replace(/\D/g,'');
             const holder = document.getElementById('cc-holder').value.trim().toUpperCase();
@@ -4429,6 +5043,12 @@ window.loadPaymentHistory = async function() {
             const badgeBorder = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)';
             const badgeLabel = ph.status === 'APPROVED' ? 'Aprobado' : 'Fallido';
 
+            const downloadBtn = ph.status === 'APPROVED' ? `
+                <button onclick="downloadSinglePaymentReceiptPDF('${ph.id}')" title="Descargar Recibo PDF" style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); border-radius:8px; padding:0.4rem 0.6rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.25rem; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='var(--primary)';this.style.color='#fff';" onmouseout="this.style.background='var(--primary-bg)';this.style.color='var(--primary)';">
+                    <i data-lucide="download" style="width:13px; height:13px;"></i> PDF
+                </button>
+            ` : '—';
+
             return `
                 <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
                     <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.85rem;">${dateStr}</td>
@@ -4438,6 +5058,7 @@ window.loadPaymentHistory = async function() {
                         <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
                     </td>
                     <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${ph.transaction_id || '—'}</td>
+                    <td style="padding:1rem 1.5rem; text-align:center;">${downloadBtn}</td>
                 </tr>
             `;
         }).join('');
@@ -4445,7 +5066,160 @@ window.loadPaymentHistory = async function() {
 
     } catch (err) {
         console.error('Error cargando historial de pagos del cliente:', err);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--danger);">Error al cargar las transacciones. (${err.message})</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--danger);">Error al cargar las transacciones. (${err.message})</td></tr>`;
+    }
+};
+
+window.downloadSinglePaymentReceiptPDF = function(paymentId) {
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Librería PDF no disponible. Recarga la página.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+            return;
+        }
+
+        const ph = appState.clientPayments.find(p => p.id === paymentId);
+        if (!ph) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Transacción no encontrada.',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)'
+            });
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // 1. Cabecera Corporativa
+        doc.setFillColor(30, 41, 59); // Fondo Azul Oscuro/Gris Pizarra
+        doc.rect(0, 0, 210, 40, 'F');
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(248, 250, 252);
+        doc.text('AS SIERRA SYSTEMS', 14, 25);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Soporte de Pago y Facturación Recurrente', 14, 32);
+        
+        doc.setFontSize(14);
+        doc.setFont('Helvetica', 'bold');
+        doc.setTextColor(248, 250, 252);
+        doc.text('RECIBO DE PAGO', 145, 25);
+        
+        const d = new Date(ph.created_at);
+        const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        doc.setFontSize(9);
+        doc.setFont('Helvetica', 'normal');
+        doc.text(`Fecha: ${dateStr}`, 145, 32);
+
+        // 2. Información del Negocio y Proveedor
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(11);
+        doc.setFont('Helvetica', 'bold');
+        doc.text('EMISOR DE LA FACTURA:', 14, 55);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text('AS Sierra Systems S.A.S.', 14, 61);
+        doc.text('NIT: 901.432.765-8', 14, 67);
+        doc.text('Email: ' + (appState.config?.supportEmail || 'soporte@assierrasystems.com'), 14, 73);
+        doc.text('Tel: ' + (appState.config?.supportPhone || '+57 300 123 4567'), 14, 79);
+
+        // Información del Cliente
+        const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID) || {};
+        doc.setFont('Helvetica', 'bold');
+        doc.text('CLIENTE / FACTURADO A:', 110, 55);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.text(clientBiz.name || 'Mi Negocio', 110, 61);
+        doc.text(`NIT / RUT: ${clientBiz.nit || '—'}`, 110, 67);
+        doc.text(`Representante: ${clientBiz.ownerName || '—'}`, 110, 73);
+        doc.text(`Email: ${clientBiz.clientEmail || '—'}`, 110, 79);
+
+        doc.line(14, 87, 196, 87);
+
+        // 3. Detalles de la Transacción
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('DETALLE DEL PAGO:', 14, 97);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text(`ID de Transacción: ${ph.id}`, 14, 105);
+        doc.text(`Referencia de Pasarela (Wompi): ${ph.transaction_id || 'Simulado / Local'}`, 14, 111);
+        doc.text(`Método de Pago: Tarjeta de Crédito (enmascarada)`, 14, 117);
+        doc.text(`Estado del Pago: APROBADO (Transacción Exitosa)`, 14, 123);
+
+        // 4. Tabla de Conceptos
+        const headers = [['Concepto / Descripción del Servicio', 'Estado', 'Monto Cobrado (COP)']];
+        
+        let descClean = ph.desc || 'Mensualidad Módulo contratado';
+        appState.modules.forEach(m => {
+            descClean = descClean.replace(new RegExp(m.id, 'gi'), m.name);
+        });
+
+        const amountVal = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
+        const body = [[
+            descClean,
+            'APROBADO',
+            amountVal
+        ]];
+
+        const finalY = drawCustomTable(doc, headers, body, 133, {
+            colWidths: [110, 32, 40]
+        });
+
+        // 5. Total
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('TOTAL PAGADO:', 110, finalY + 15);
+        doc.setFontSize(13);
+        doc.setTextColor(16, 185, 129); // Verde de éxito
+        doc.text(amountVal, 150, finalY + 15);
+
+        // 6. Pie de Página / Nota de Seguridad
+        doc.setDrawColor(226, 232, 240);
+        doc.line(14, finalY + 30, 196, finalY + 30);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Este documento es un comprobante digital de la transacción. El cobro fue procesado de forma', 14, finalY + 36);
+        doc.text('segura a través de nuestra pasarela de pagos. Para cualquier reclamación o soporte, por favor', 14, finalY + 41);
+        doc.text(`facilita la Referencia de Transacción al email ${(appState.config?.supportEmail || 'soporte@assierrasystems.com')}.`, 14, finalY + 46);
+
+        // Guardar
+        const fileDate = dateStr.replace(/\//g, '-');
+        doc.save(`Recibo_Pago_${ph.id}_${fileDate}.pdf`);
+        
+        Swal.fire({
+            icon: 'success',
+            title: '¡Recibo Descargado!',
+            text: `Se ha descargado el recibo PDF de tu pago.`,
+            background: 'var(--bg-surface)',
+            color: 'var(--text)',
+            confirmButtonColor: '#10b981'
+        });
+    } catch (err) {
+        console.error('Error generando recibo PDF:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el recibo en PDF.',
+            background: 'var(--bg-surface)',
+            color: 'var(--text)'
+        });
     }
 };
 

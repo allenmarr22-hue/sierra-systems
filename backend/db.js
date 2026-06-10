@@ -673,13 +673,24 @@ async function saveCompleteState(db) {
                     for (const mod of moduleInstances) {
                         if (mod.status === 'active') {
                             await connection.query(`
-                                INSERT IGNORE INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
+                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
                                 VALUES (?, ?, ?, ?, 'active', ?, ?)
+                                ON DUPLICATE KEY UPDATE
+                                    branch_name = VALUES(branch_name),
+                                    status = VALUES(status),
+                                    price_applied = VALUES(price_applied),
+                                    renewal_date = VALUES(renewal_date)
                             `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.renewalDate]);
                         } else if (mod.status === 'cancelled') {
                             await connection.query(`
-                                INSERT IGNORE INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
+                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
                                 VALUES (?, ?, ?, ?, 'cancelled', ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE
+                                    branch_name = VALUES(branch_name),
+                                    status = VALUES(status),
+                                    price_applied = VALUES(price_applied),
+                                    cancelled_at = VALUES(cancelled_at),
+                                    access_until = VALUES(access_until)
                             `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.cancelledAt || null, mod.accessUntil || null]);
                         }
                     }
@@ -690,8 +701,11 @@ async function saveCompleteState(db) {
                         const instanceId = `${biz.id}-${modId}-${i}`;
                         const renewalDate = biz.moduleDates && biz.moduleDates[modId] ? biz.moduleDates[modId] : null;
                         await connection.query(`
-                            INSERT IGNORE INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
+                            INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
                             VALUES (?, ?, ?, 'Sede Principal', 'active', 0, ?)
+                            ON DUPLICATE KEY UPDATE
+                                branch_name = VALUES(branch_name),
+                                renewal_date = VALUES(renewal_date)
                         `, [instanceId, biz.id, modId, renewalDate]);
                     }
                     
@@ -700,8 +714,12 @@ async function saveCompleteState(db) {
                         const cm = cancelledModules[i];
                         const instanceId = `${biz.id}-${cm.id || cm.moduleId}-cancelled-${i}`;
                         await connection.query(`
-                            INSERT IGNORE INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
+                            INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
                             VALUES (?, ?, ?, 'Sede Principal', 'cancelled', 0, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                                branch_name = VALUES(branch_name),
+                                cancelled_at = VALUES(cancelled_at),
+                                access_until = VALUES(access_until)
                         `, [instanceId, biz.id, cm.id || cm.moduleId, cm.cancelledAt || null, cm.accessUntil || null]);
                     }
                 }

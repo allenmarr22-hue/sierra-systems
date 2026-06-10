@@ -6,6 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const crypto = require('crypto');
 const PaymentService = require('./services/PaymentService');
+const EmailService = require('./services/EmailService');
 const { startBillingCron, runBillingCycle } = require('./jobs/billingCron');
 const { startTicketCleanupCron } = require('./jobs/ticketCleanupCron');
 
@@ -446,6 +447,11 @@ app.post('/api/businesses/:id/credentials', requireWriteAccess, async (req, res)
             fieldsToUpdate.clientPass = clientPass; // db.updateBusiness se encarga del hash
         }
         await db.updateBusiness(id, fieldsToUpdate);
+
+        const sentPass = (clientPass && clientPass !== '__NO_CHANGE__') ? clientPass : null;
+        EmailService.sendWelcomeEmail(clientEmail, biz.name, clientEmail, sentPass).catch(err => {
+            console.error('[Welcome Email Error]', err);
+        });
 
         await db.pushNotification({
             title: 'Credenciales Actualizadas',
@@ -1575,7 +1581,47 @@ app.post('/api/client/module/renew', async (req, res) => {
         broadcastUpdate();
         res.json({ success: true, modules: biz.modules, moduleInstances: biz.moduleInstances, cancelledModules: biz.cancelledModules, moduleDates: biz.moduleDates });
     } catch (err) {
-        console.error('[RenewModule] Error general:', err);
+    }
+});
+
+// CLIENT: Personalizar/Renombrar una sede o sucursal (incluida la Sede Principal)
+app.post('/api/client/module/instance/rename', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = verifySignedToken(token);
+    if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
+
+    const { instanceId, branchName } = req.body;
+    if (!instanceId || !branchName || !branchName.trim()) {
+        return res.status(400).json({ error: 'instanceId y branchName son requeridos.' });
+    }
+
+    const cleanInstanceId = String(instanceId).trim();
+
+    try {
+        let dbState = await readDb();
+        const bizIndex = dbState.businesses.findIndex(b => b.id == session.clientId);
+        if (bizIndex === -1) {
+            console.error('[RenameInstance] Negocio no encontrado. clientId:', session.clientId);
+            return res.status(404).json({ error: 'Negocio no encontrado.' });
+        }
+
+        const biz = dbState.businesses[bizIndex];
+        if (!biz.moduleInstances) biz.moduleInstances = [];
+
+        console.log('[RenameInstance] Buscando instanceId:', cleanInstanceId, '| Instancias disponibles:', biz.moduleInstances.map(m => m.instanceId));
+        const targetInstance = biz.moduleInstances.find(m => String(m.instanceId).trim() === cleanInstanceId);
+        if (!targetInstance) {
+            return res.status(404).json({ error: 'Instancia de módulo no encontrada.' });
+        }
+
+        const oldName = targetInstance.branchName || 'Sede Principal';
+        targetInstance.branchName = branchName.trim();
+
+        await writeDb(dbState);
+        broadcastUpdate();
+        res.json({ success: true, branchName: targetInstance.branchName, moduleInstances: biz.moduleInstances });
+    } catch (err) {
+        console.error('[RenameInstance] Error:', err);
         res.status(500).json({ error: 'Error del servidor.' });
     }
 });
@@ -2181,8 +2227,21 @@ app.post('/api/tickets', async (req, res) => {
             icon: 'ticket',
             color: priority === 'urgente' ? '#ef4444' : '#f59e0b'
         });
-        broadcastUpdate();
 
+        if (biz.client_email) {
+            EmailService.sendTicketCreatedEmail(
+                biz.client_email,
+                biz.name,
+                ticketId,
+                ticketModule,
+                priority || 'normal',
+                description
+            ).catch(err => {
+                console.error('[Ticket Created Email Error]', err);
+            });
+        }
+
+        broadcastUpdate();
         res.json({ success: true, ticketId });
     } catch (err) {
         console.error('Error creando ticket:', err);
@@ -2389,6 +2448,19 @@ app.post('/api/tickets/:id/messages', requireAdminOrMatchingClient, async (req, 
             const adminName = req.adminUser.name || req.adminUser.user || 'Soporte';
             const adminRole = req.adminUser.role || 'Soporte';
             senderName = `${adminName} · ${adminRole}`;
+
+            // Enviar correo de notificación al cliente
+            db.findBusinessById(ticket.business_id).then(biz => {
+                if (biz && biz.client_email) {
+                    EmailService.sendTicketRepliedEmail(
+                        biz.client_email,
+                        biz.name,
+                        id,
+                        senderName,
+                        message
+                    ).catch(err => console.error('[Ticket Replied Email Error]', err));
+                }
+            }).catch(err => console.error('[Ticket Replied Query Error]', err));
         }
 
         await db.pool.query(
@@ -2397,7 +2469,7 @@ app.post('/api/tickets/:id/messages', requireAdminOrMatchingClient, async (req, 
             [id, req.userRole, senderName, message]
         );
 
-        broadcastUpdate();
+        broadcastUpdate({ type: 'new_message', ticketId: id, sender: req.userRole, senderName, message });
         res.json({ success: true });
     } catch (err) {
         console.error('Error enviando mensaje de ticket:', err);
@@ -2446,6 +2518,19 @@ app.post('/api/tickets/:id/messages/image', requireAdminOrMatchingClient, (req, 
             const adminName = req.adminUser.name || req.adminUser.user || 'Soporte';
             const adminRole = req.adminUser.role || 'Soporte';
             senderName = `${adminName} · ${adminRole}`;
+
+            // Enviar correo de notificación al cliente
+            db.findBusinessById(ticket.business_id).then(biz => {
+                if (biz && biz.client_email) {
+                    EmailService.sendTicketRepliedEmail(
+                        biz.client_email,
+                        biz.name,
+                        id,
+                        senderName,
+                        '📷 Imagen adjunta'
+                    ).catch(err => console.error('[Ticket Image Replied Email Error]', err));
+                }
+            }).catch(err => console.error('[Ticket Image Replied Query Error]', err));
         }
 
         const imageUrl = `/uploads/ticket-images/${req.file.filename}`;
@@ -2456,7 +2541,7 @@ app.post('/api/tickets/:id/messages/image', requireAdminOrMatchingClient, (req, 
             [id, req.userRole, senderName, imageUrl]
         );
 
-        broadcastUpdate();
+        broadcastUpdate({ type: 'new_message', ticketId: id, sender: req.userRole, senderName, message: '📷 Imagen adjunta' });
         res.json({ success: true, imageUrl });
     } catch (err) {
         console.error('Error subiendo imagen de ticket:', err);

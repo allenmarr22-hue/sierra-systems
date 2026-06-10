@@ -581,6 +581,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (window.activeChatTicketId) {
                             fetchAndRenderChatMessages(window.activeChatTicketId, 'admin');
                         }
+                    } else if (data.type === 'new_message') {
+                        console.log('New message received via SSE:', data);
+                        if (window.activeChatTicketId === data.ticketId) {
+                            fetchAndRenderChatMessages(data.ticketId, 'admin');
+                        } else {
+                            if (data.sender === 'client') {
+                                if (typeof loadAdminTickets === 'function') {
+                                    loadAdminTickets();
+                                }
+                                if (typeof Swal !== 'undefined') {
+                                    const Toast = Swal.mixin({
+                                        toast: true,
+                                        position: 'top-end',
+                                        showConfirmButton: false,
+                                        timer: 4500,
+                                        timerProgressBar: true,
+                                        background: 'var(--bg-surface)',
+                                        color: 'var(--text-main)',
+                                        didOpen: (toast) => {
+                                            toast.addEventListener('mouseenter', Swal.stopTimer);
+                                            toast.addEventListener('mouseleave', Swal.resumeTimer);
+                                            toast.style.cursor = 'pointer';
+                                            toast.addEventListener('click', () => {
+                                                if (typeof viewTicketDetails === 'function') {
+                                                    viewTicketDetails(data.ticketId);
+                                                }
+                                            });
+                                        }
+                                    });
+                                    Toast.fire({
+                                        icon: 'info',
+                                        title: `Mensaje de ${data.senderName || 'Cliente'}`,
+                                        text: data.message.length > 55 ? data.message.substring(0, 55) + '...' : data.message
+                                    });
+                                }
+                            }
+                        }
                     } else if (data.type === 'typing') {
                         if (window.activeChatTicketId === data.ticketId && data.role !== 'admin') {
                             showChatTypingIndicator('El cliente está escribiendo...');

@@ -15,6 +15,7 @@
 const dbHelper = require('../db');
 const cron = require('node-cron');
 const PaymentService = require('../services/PaymentService');
+const EmailService = require('../services/EmailService');
 
 // ─── Utilidades ────────────────────────────────────────────────────────────────
 
@@ -127,18 +128,28 @@ async function runBillingCycle(dryRun = false) {
             bizInDb.status = 'inactive';
             bizInDb.billing.last_failed_attempt = new Date().toISOString();
 
+            const payId = `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             // Registrar en historial de pagos como fallido SQL directo por falta de tarjeta
             await dbHelper.pool.query(`
                 INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [
-                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                payId,
                 biz.id,
                 amountDue,
                 `Intento Renovación Fallida — Sin método de pago para cobrar ${instancesToRenew.length} sucursales — ${biz.name}`,
                 'DECLINED',
                 null
             ]);
+
+            if (biz.clientEmail) {
+                EmailService.sendSubscriptionSuspendedEmail(
+                    biz.clientEmail,
+                    biz.name,
+                    amountDue,
+                    'Sin método de pago registrado en el sistema.'
+                ).catch(err => console.error('[Billing Suspended Email Error]', err));
+            }
 
             if (!db.notifications) db.notifications = [];
             db.notifications.unshift({
@@ -186,18 +197,29 @@ async function runBillingCycle(dryRun = false) {
                 }
             }
 
+            const payId = `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             // Registrar en historial de pagos SQL directo (Cron Automático)
             await dbHelper.pool.query(`
                 INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [
-                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                payId,
                 biz.id,
                 amountDue,
                 `Renovación de sucursales (${instancesToRenew.length}) — ${biz.name}`,
                 'APPROVED',
                 result.transactionId
             ]);
+
+            if (biz.clientEmail) {
+                EmailService.sendPaymentSuccessEmail(
+                    biz.clientEmail,
+                    biz.name,
+                    amountDue,
+                    payId,
+                    instancesToRenew.length
+                ).catch(err => console.error('[Billing Success Email Error]', err));
+            }
 
             console.log(`[BillingCron] ✅ ${biz.name}: Cobro exitoso. TXN: ${result.transactionId}.`);
 
@@ -216,18 +238,28 @@ async function runBillingCycle(dryRun = false) {
             bizInDb.status = 'inactive'; 
             bizInDb.billing.last_failed_attempt = new Date().toISOString();
 
+            const payId = `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             // Registrar en historial de pagos como fallido SQL directo
             await dbHelper.pool.query(`
                 INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [
-                `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                payId,
                 biz.id,
                 amountDue,
                 `Intento Renovación Fallida — Renovación de sucursales (${instancesToRenew.length}) — ${biz.name}`,
                 'DECLINED',
                 null
             ]);
+
+            if (biz.clientEmail) {
+                EmailService.sendPaymentDeclinedEmail(
+                    biz.clientEmail,
+                    biz.name,
+                    amountDue,
+                    result.message
+                ).catch(err => console.error('[Billing Declined Email Error]', err));
+            }
 
             console.log(`[BillingCron] ❌ ${biz.name}: Cobro fallido — ${result.message}`);
 

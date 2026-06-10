@@ -1669,16 +1669,17 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
 .launch-link-btn {
     display: flex; align-items: center; gap: 1rem;
     width: 100%; padding: 1rem 1.25rem; border-radius: 12px;
-    border: 1px solid var(--border-color); background: var(--bg-surface-light);
+    border: 1px solid rgba(255, 255, 255, 0.08); 
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%);
     color: var(--text-main); font-size: 0.95rem; font-weight: 600;
     cursor: pointer; text-decoration: none; transition: all 0.25s ease;
     box-sizing: border-box;
 }
 .launch-link-btn:hover {
-    background: var(--primary-alpha);
-    border-color: var(--primary-border);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.02) 100%);
+    border-color: rgba(99, 102, 241, 0.35);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.08);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.12);
 }
 .launch-link-btn .btn-icon {
     width: 42px; height: 42px; border-radius: 10px;
@@ -1694,17 +1695,19 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
 
 /* Dynamic colors for link buttons icons */
 .launch-link-btn .btn-icon.public-portal {
-    background: rgba(99, 102, 241, 0.12);
-    color: var(--primary);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: #a5b4fc;
 }
 .launch-link-btn .btn-icon.admin-portal {
-    background: rgba(16, 185, 129, 0.12);
-    color: var(--success);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
 }
 
 .cred-box {
-    background: var(--bg-surface-light);
-    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.005) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     padding: 1.25rem;
 }
@@ -1719,14 +1722,14 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
     letter-spacing: 0.05em; width: 30%;
 }
 .cred-value {
-    font-family: monospace; font-size: 0.95rem;
+    font-family: 'Fira Code', monospace; font-size: 0.95rem;
     font-weight: 700; color: var(--text-main);
     letter-spacing: 0.05em; flex: 1;
 }
 .copy-btn {
-    background: var(--primary-alpha);
-    border: 1px solid var(--primary-border);
-    color: var(--primary); padding: 4px 10px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: #a5b4fc; padding: 4px 10px;
     border-radius: 6px; font-size: 0.75rem;
     font-weight: 600; cursor: pointer;
     transition: all 0.2s; display: flex;
@@ -1736,26 +1739,32 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
     background: var(--primary);
     color: #ffffff;
     border-color: var(--primary);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
 }
 .warn-box {
     display: flex; align-items: flex-start; gap: 0.75rem;
-    background: rgba(245, 158, 11, 0.05);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.01) 100%);
     border: 1px solid rgba(245, 158, 11, 0.2);
     border-radius: 10px; padding: 1rem; margin-top: 0.5rem;
 }
 .warn-box p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+.warn-box i { color: #fbbf24; flex-shrink: 0; }
+.warn-box strong { color: #fbbf24; }
 
 .configured-check {
     display: flex; justify-content: center; align-items: center;
     gap: 8px; margin-top: 1.25rem; font-size: 0.9rem;
-    color: var(--primary); background: var(--primary-alpha);
-    border: 1px dashed var(--primary-border); padding: 0.75rem;
+    color: #34d399; 
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25); padding: 0.75rem;
     border-radius: 8px; cursor: pointer; font-weight: 600;
     transition: 0.2s;
 }
 .configured-check:hover {
-    background: var(--primary-border);
-    color: var(--text-main);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #6ee7b7;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.20);
 }
 
 /* Light mode overrides for launchpad items */
