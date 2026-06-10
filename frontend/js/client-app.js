@@ -498,6 +498,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     };
                     reader.readAsDataURL(file);
                 });
+
+                // Bind Enter key to submit profile
+                const inputs = [
+                    'profile-name-input', 'profile-owner-input', 'profile-phone-input',
+                    'profile-nit-input', 'profile-city-input', 'profile-address-input',
+                    'profile-email-input'
+                ].map(id => document.getElementById(id));
+                inputs.forEach(input => {
+                    if (input) {
+                        input.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                Swal.clickConfirm();
+                            }
+                        });
+                    }
+                });
             },
             preConfirm: async () => {
                 const newName = document.getElementById('profile-name-input').value;
@@ -2870,7 +2886,19 @@ function showPurchaseNewCardForm(modName, modPrice) {
         confirmButtonText: 'Procesar Pago y Activar',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#10b981',
-        didRender: () => lucide.createIcons(),
+        didRender: () => {
+            lucide.createIcons();
+            const inputs = ['pur-card-number', 'pur-card-expiry', 'pur-card-cvc', 'pur-card-name'].map(id => document.getElementById(id));
+            inputs.forEach(input => {
+                if (input) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            Swal.clickConfirm();
+                        }
+                    });
+                }
+            });
+        },
         preConfirm: () => {
             const numRaw = document.getElementById('pur-card-number').value;
             const num = numRaw.replace(/\D/g, '');
@@ -3250,6 +3278,19 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         confirmButtonText: 'Procesar Pago y Renovar',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#10b981',
+        didRender: () => {
+            lucide.createIcons();
+            const inputs = ['pur-card-number', 'pur-card-expiry', 'pur-card-cvc', 'pur-card-name'].map(id => document.getElementById(id));
+            inputs.forEach(input => {
+                if (input) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            Swal.clickConfirm();
+                        }
+                    });
+                }
+            });
+        },
         preConfirm: () => {
             const numRaw = document.getElementById('pur-card-number').value;
             const num = numRaw.replace(/\D/g, '');
@@ -3395,7 +3436,19 @@ function showPaymentForm() {
         confirmButtonText: 'Guardar Método de Pago',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: 'var(--primary)',
-        didRender: () => lucide.createIcons(),
+        didRender: () => {
+            lucide.createIcons();
+            const inputs = ['card-number', 'card-expiry', 'card-cvc', 'card-name'].map(id => document.getElementById(id));
+            inputs.forEach(input => {
+                if (input) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            Swal.clickConfirm();
+                        }
+                    });
+                }
+            });
+        },
         preConfirm: () => {
             const num = document.getElementById('card-number').value.replace(/\D/g, '');
             const expiry = document.getElementById('card-expiry').value;
@@ -4312,6 +4365,17 @@ window.openAddCardModal = function() {
 
             ccCvcInput.addEventListener('blur', () => {
                 cardInner.style.transform = '';
+            });
+
+            // Enter key triggers
+            [ccNumInput, ccHolderInput, ccExpInput, ccCvcInput].forEach(input => {
+                if (input) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            Swal.clickConfirm();
+                        }
+                    });
+                }
             });
         },
         preConfirm: () => {

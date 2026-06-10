@@ -352,7 +352,7 @@ async function adminFetch(url, options = {}) {
         const result = await Swal.fire({
             title: 'Sesión expirada',
             html: `
-                <p style="color:var(--text-muted);margin-bottom:1rem;">El servidor fue reiniciado. Ingresa tu contraseña para continuar.</p>
+                <p style="color:var(--text-muted);margin-bottom:1rem;">El servidor fue reiniciado. Ingrese tu contraseña para continuar.</p>
                 <input type="password" id="swal-reauth-pass" class="swal2-input" placeholder="Tu contraseña" autofocus style="background:var(--bg-surface-light); color:var(--text-main); border:1px solid var(--border-color);">
             `,
             confirmButtonText: 'Renovar sesión',
@@ -361,6 +361,16 @@ async function adminFetch(url, options = {}) {
             background: 'var(--bg-surface)',
             color: 'var(--text-main)',
             confirmButtonColor: '#6366f1',
+            didOpen: (popup) => {
+                const input = popup.querySelector('#swal-reauth-pass');
+                if (input) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            Swal.clickConfirm();
+                        }
+                    });
+                }
+            },
             preConfirm: () => {
                 const pass = document.getElementById('swal-reauth-pass').value;
                 if (!pass) { Swal.showValidationMessage('La contraseña es requerida'); return false; }
@@ -1222,6 +1232,18 @@ function setupEventListeners() {
                 confirmButtonText: 'Guardar Credenciales',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: 'var(--primary)',
+                didOpen: (popup) => {
+                    const inputs = [popup.querySelector('#cred-email'), popup.querySelector('#cred-pass')];
+                    inputs.forEach(input => {
+                        if (input) {
+                            input.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    Swal.clickConfirm();
+                                }
+                            });
+                        }
+                    });
+                },
                 preConfirm: () => {
                     const email = document.getElementById('cred-email').value;
                     const pass = document.getElementById('cred-pass').value;
@@ -3346,6 +3368,15 @@ window.billingGiftDays = async function(bizId) {
             const moduleSelect = popup.querySelector('#gift-module-select');
             const branchSelect = popup.querySelector('#gift-branch-select');
             const expiryDisplay = popup.querySelector('#current-expiry-display');
+            const daysInput = popup.querySelector('#gift-days-input');
+
+            if (daysInput) {
+                daysInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        Swal.clickConfirm();
+                    }
+                });
+            }
 
             const updateBranches = () => {
                 const selectedModule = moduleSelect.value;
@@ -5668,6 +5699,16 @@ window.openPromoFormModal = function(id = '') {
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#6366f1',
         cancelButtonColor: '#64748b',
+        didOpen: (popup) => {
+            const valInput = popup.querySelector('#swal-promo-value');
+            if (valInput) {
+                valInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        Swal.clickConfirm();
+                    }
+                });
+            }
+        },
         preConfirm: () => {
             const moduleId = document.getElementById('swal-promo-module').value;
             const discountType = document.getElementById('swal-promo-type').value;
