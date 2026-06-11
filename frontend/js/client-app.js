@@ -775,6 +775,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         showChatTypingIndicator('Soporte está escribiendo...');
                     }
                 } else if (data.type === 'force_logout') {
+                    if (window._isPerformingGlobalLogout) {
+                        delete window._isPerformingGlobalLogout;
+                        return;
+                    }
                     // Cierre de sesión en tiempo real ordenado desde otro dispositivo
                     console.warn('[SSE] force_logout recibido. Cerrando sesión...');
                     sessionStorage.removeItem('clientSession');
@@ -2966,7 +2970,7 @@ window.closeAllModuleSessions = async function(modId, instanceId, modName) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.token}`
                 },
-                body: JSON.stringify({ modId, instanceId: instanceId || null })
+                body: JSON.stringify({ modId, instanceId: instanceId || null, pass: clientPassword })
             });
             const logoutResult = await logoutRes.json();
 
@@ -6155,7 +6159,7 @@ window.openDevicesSecurityModal = async function() {
                             <div style="font-size:0.78rem;color:var(--text-muted);">${sessionCount === 1 ? '1 conexión detectada' : `${sessionCount} conexiones detectadas`}</div>
                         </div>
                     </div>
-                    <div style="background:rgba(0,0,0,0.12);border-radius:10px;padding:0 0.9rem;margin-bottom:1.25rem;max-height:240px;overflow-y:auto;">
+                    <div class="custom-scrollbar" style="background:rgba(0,0,0,0.12);border-radius:10px;padding:0 0.9rem;margin-bottom:1.25rem;max-height:240px;overflow-y:auto;border:1px solid var(--border-color);">
                         ${sessionListHtml}
                     </div>
                     <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;text-align:left;">
@@ -6268,6 +6272,7 @@ window.triggerGlobalLogout = async function() {
         color: 'var(--text)'
     });
 
+    window._isPerformingGlobalLogout = true;
     try {
         const res = await fetch('/api/client/logout-all', {
             method: 'POST',

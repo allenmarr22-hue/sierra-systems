@@ -1091,6 +1091,10 @@
                 <button class="config-nav-btn" data-config-tab="config-backup" style="flex: 1; border-radius: 12px; padding: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; cursor: pointer; white-space: nowrap;">
                     <i data-lucide="database" style="width: 20px;"></i> Copia de Seguridad
                 </button>
+                <button class="config-nav-btn" data-config-tab="config-devices" style="flex: 1; border-radius: 12px; padding: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; cursor: pointer; white-space: nowrap; position: relative;">
+                    <i data-lucide="monitor-smartphone" style="width: 20px;"></i> Dispositivos
+                    <span id="admin-devices-badge" style="display:none;position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#10b981;"></span>
+                </button>
             </div>
 
             <div style="max-width: 550px; margin: 0 auto;">
@@ -1210,6 +1214,33 @@
                             <i data-lucide="shield-alert" style="width: 13px; height: 13px; flex-shrink: 0; margin-top: 1px; color: #ef4444;"></i>
                             <span>Restaurar reemplazará <strong>todo</strong> el contenido actual de la base de datos. Esta acción no se puede deshacer.</span>
                         </p>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: DISPOSITIVOS ACTIVOS -->
+                <div id="config-devices" class="config-sub-tab hidden">
+                    <div class="biz-card" style="padding: 1.5rem;">
+                        <div id="admin-devices-container-inline">
+                            <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 2rem 0;">
+                                <i data-lucide="loader-circle" style="width:28px;height:28px;display:block;margin:0 auto 0.75rem;animation:admin-dev-spin 1s linear infinite;"></i>
+                                Cargando sesiones activas...
+                            </div>
+                        </div>
+                        
+                        <div id="admin-devices-global-logout-area" style="display:none;margin-top:1.5rem;">
+                            <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;text-align:left;">
+                                <div style="font-size:0.82rem;font-weight:700;color:#ef4444;margin-bottom:0.3rem;display:flex;align-items:center;gap:6px;">
+                                    <i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> Cierre global de sesiones
+                                </div>
+                                <p style="font-size:0.8rem;color:var(--text-muted);margin:0;line-height:1.5;">
+                                    Cierra todas las sesiones activas en otros navegadores y dispositivos. Tu sesión actual también se cerrará.
+                                </p>
+                            </div>
+                            <button id="btn-admin-devices-logout-all" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0.75rem 1.4rem;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.35);border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                                <i data-lucide="log-out" style="width:16px;height:16px;"></i>
+                                Cerrar todas las sesiones
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1547,7 +1578,7 @@
     </div>
 </div>
 
-<script src="js/app.js?v=20260608.5"></script>
+<script src="js/app.js?v=20260610.2"></script>
 <script src="js/consent.js?v=20260608.5"></script>
 
 </body>

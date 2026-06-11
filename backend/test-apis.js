@@ -148,6 +148,50 @@ async function runTests() {
         body: JSON.stringify({ email: 'fogon@cliente.com', pass: 'wrongpass' })
     });
 
+    // Google Login válido
+    const googleLoginRes = await testRequest('POST /api/client/google-login (Válido)', '/api/client/google-login', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'fogon@cliente.com' })
+    });
+    if (googleLoginRes.success && googleLoginRes.body.token) {
+        console.log(`   └─ Token de Google-Login obtenido: ${googleLoginRes.body.token.substring(0, 12)}...`);
+    }
+
+    // Google Login inválido (correo no registrado)
+    await testRequest('POST /api/client/google-login (Correo no registrado)', '/api/client/google-login', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'noexiste@cliente.com' })
+    });
+
+    // Google Login con token de acceso inválido (Debe retornar 401)
+    await testRequest('POST /api/client/google-login (Token inválido)', '/api/client/google-login', {
+        method: 'POST',
+        body: JSON.stringify({ accessToken: 'token_falso_vencido' })
+    });
+
+    // Google Register (Crear un nuevo negocio de prueba)
+    const googleRegRes = await testRequest('POST /api/client/google-register (Crear nuevo negocio)', '/api/client/google-register', {
+        method: 'POST',
+        body: JSON.stringify({
+            email: 'nuevogoogle@cliente.com',
+            name: 'Negocio Nuevo Google',
+            type: 'salon_belleza',
+            city: 'Barranquilla',
+            ownerName: 'Propietario Google'
+        })
+    });
+
+    // Intentar registrar el mismo negocio de nuevo (Debe retornar 409 Conflict)
+    await testRequest('POST /api/client/google-register (Registro duplicado)', '/api/client/google-register', {
+        method: 'POST',
+        body: JSON.stringify({
+            email: 'nuevogoogle@cliente.com',
+            name: 'Negocio Nuevo Google Duplicado',
+            type: 'salon_belleza',
+            city: 'Barranquilla'
+        })
+    });
+
     // Verificar token del cliente
     await testRequest('POST /api/client/verify', '/api/client/verify', {
         method: 'POST',
@@ -421,7 +465,7 @@ async function runTests() {
 
         // Intentar responder en un ticket cerrado (Debe fallar con 400)
         console.log('\n⚠️ Probando restricción de chat en ticket cerrado:');
-        const closedFailRes = await fetch(`http://localhost:3000/api/tickets/${createdTicketId}/messages`, {
+        const closedFailRes = await fetch(`${BASE_URL}/api/tickets/${createdTicketId}/messages`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

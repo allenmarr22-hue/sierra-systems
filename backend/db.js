@@ -213,6 +213,10 @@ async function initializeDatabase() {
             await pool.query('ALTER TABLE system_config ADD COLUMN recommended_label VARCHAR(150) NULL DEFAULT "RECOMENDADO"');
             console.log('[DB] 🛠️ Column "recommended_label" added to "system_config" table.');
         }
+        if (!existingConfigColumns.includes('admin_session_version')) {
+            await pool.query('ALTER TABLE system_config ADD COLUMN admin_session_version INT NOT NULL DEFAULT 1');
+            console.log('[DB] 🛠️ Column "admin_session_version" added to "system_config" table.');
+        }
 
         const [bizColumns] = await pool.query(`
             SELECT COLUMN_NAME 
@@ -244,6 +248,17 @@ async function initializeDatabase() {
         if (!existingBizColumns.includes('session_version')) {
             await pool.query('ALTER TABLE businesses ADD COLUMN session_version INT NOT NULL DEFAULT 1');
             console.log('[DB] 🛠️ Column "session_version" added to "businesses" table.');
+        }
+
+        const [userColumns] = await pool.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
+        `);
+        const existingUserColumns = userColumns.map(c => (c.COLUMN_NAME || c.column_name || '').toLowerCase());
+        if (!existingUserColumns.includes('session_version')) {
+            await pool.query('ALTER TABLE users ADD COLUMN session_version INT NOT NULL DEFAULT 1');
+            console.log('[DB] 🛠️ Column "session_version" added to "users" table.');
         }
 
         await pool.query(`
@@ -965,6 +980,13 @@ async function findBusinessByClientCredentials(email, password) {
     }
     return null;
 }
+async function findBusinessByEmail(email) {
+    const [rows] = await pool.query(
+        'SELECT * FROM businesses WHERE LOWER(client_email) = LOWER(?)',
+        [email]
+    );
+    return rows[0] || null;
+}
 
 async function findBusinessById(id) {
     const [rows] = await pool.query('SELECT * FROM businesses WHERE id = ?', [id]);
@@ -1303,6 +1325,22 @@ async function importBackupData(backup) {
     }
 }
 
+// ============================================================
+// ADMIN SESSIONS VERSIONS MANAGEMENT
+// ============================================================
+async function findUserByUsername(username) {
+    const [rows] = await pool.query('SELECT * FROM users WHERE user = ?', [username]);
+    return rows[0] || null;
+}
+
+async function incrementAdminSessionVersion() {
+    await pool.query('UPDATE system_config SET admin_session_version = admin_session_version + 1 WHERE id = 1');
+}
+
+async function incrementUserSessionVersion(username) {
+    await pool.query('UPDATE users SET session_version = session_version + 1 WHERE user = ?', [username]);
+}
+
 // --- EXPORTAR ---
 module.exports = {
     pool,
@@ -1336,6 +1374,7 @@ module.exports = {
     // Negocios
     getBusinesses,
     findBusinessByClientCredentials,
+    findBusinessByEmail,
     findBusinessById,
     emailInUseByOtherBusiness,
     toggleBusinessStatus,
@@ -1346,6 +1385,11 @@ module.exports = {
     // Gestión Módulos Negocio
     cancelBusinessModule,
     reactivateBusinessModule,
-    renewBusinessModule
+    renewBusinessModule,
+    
+    // Sesiones Admin
+    findUserByUsername,
+    incrementAdminSessionVersion,
+    incrementUserSessionVersion
 };
 

@@ -347,6 +347,9 @@ async function adminFetch(url, options = {}) {
     let resp = await fetch(url, options);
 
     if (resp.status === 401) {
+        if (localStorage.getItem('as_auth') !== 'true') {
+            return resp;
+        }
         // Token vencido o servidor reiniciado — pedir credenciales
         const stored = appState.user;
         const result = await Swal.fire({
@@ -556,6 +559,152 @@ function applyRolePermissions() {
 }
 
 
+// ==========================================
+// SSE REAL-TIME SYNC — Backoff Exponencial
+// ==========================================
+let _sseRetryDelay = 1000;
+let _sseSource = null;
+let _sseReconnectTimer = null;
+let _sseReconnectToastShown = false;
+
+function initRealTimeSync() {
+    if (_sseSource) {
+        _sseSource.close();
+        _sseSource = null;
+    }
+    _sseSource = new EventSource('/api/stream');
+
+    _sseSource.onopen = function() {
+        _sseRetryDelay = 1000; // Reset delay on successful connection
+        if (_sseReconnectToastShown) {
+            showToast('✅ Conexión en tiempo real restaurada', 'success');
+            _sseReconnectToastShown = false;
+        }
+    };
+
+    _sseSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'update') {
+                loadData();
+                if (typeof loadAdminTickets === 'function') {
+                    loadAdminTickets();
+                }
+                if (window.activeChatTicketId) {
+                    fetchAndRenderChatMessages(window.activeChatTicketId, 'admin');
+                }
+            } else if (data.type === 'new_message') {
+                console.log('New message received via SSE:', data);
+                if (window.activeChatTicketId === data.ticketId) {
+                    fetchAndRenderChatMessages(data.ticketId, 'admin');
+                } else {
+                    if (data.sender === 'client') {
+                        if (typeof loadAdminTickets === 'function') {
+                            loadAdminTickets();
+                        }
+                        if (typeof Swal !== 'undefined') {
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 4500,
+                                timerProgressBar: true,
+                                background: 'var(--bg-surface)',
+                                color: 'var(--text-main)',
+                                didOpen: (toast) => {
+                                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                                    toast.style.cursor = 'pointer';
+                                    toast.addEventListener('click', () => {
+                                        if (typeof viewTicketDetails === 'function') {
+                                            viewTicketDetails(data.ticketId);
+                                        }
+                                    });
+                                }
+                            });
+                            Toast.fire({
+                                icon: 'info',
+                                title: `Mensaje de ${data.senderName || 'Cliente'}`,
+                                text: data.message.length > 55 ? data.message.substring(0, 55) + '...' : data.message
+                            });
+                        }
+                    }
+                }
+            } else if (data.type === 'typing') {
+                if (window.activeChatTicketId === data.ticketId && data.role !== 'admin') {
+                    showChatTypingIndicator('El cliente está escribiendo...');
+                }
+            } else if (data.type === 'sessions_update') {
+                console.log('[SSE-Admin] sessions_update recibido. Actualizando dispositivos...');
+                const devicesTabBtn = document.querySelector('.config-nav-btn[data-config-tab="config-devices"]');
+                const isDevicesTabActive = devicesTabBtn && devicesTabBtn.classList.contains('active');
+                
+                if (!isDevicesTabActive) {
+                    const badge = document.getElementById('admin-devices-badge');
+                    if (badge) badge.style.display = 'block';
+                }
+                
+                if (typeof window.refreshAdminDevicesInline === 'function') {
+                    window.refreshAdminDevicesInline();
+                }
+            } else if (data.type === 'force_logout') {
+                if (window._isPerformingGlobalLogout) {
+                    delete window._isPerformingGlobalLogout;
+                    return;
+                }
+                console.log('[SSE-Admin] Cierre de sesión forzado recibido.');
+                closeRealTimeSync();
+                localStorage.removeItem('as_auth');
+                localStorage.removeItem('as_user');
+                localStorage.removeItem('as_admin_token');
+                appState.user = null;
+                initTheme();
+                showView('login-view');
+                document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
+                lucide.createIcons();
+                Swal.close();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión Cerrada',
+                    text: 'Se ha cerrado la sesión globalmente en este dispositivo.',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text)',
+                    confirmButtonColor: '#6366f1'
+                });
+            }
+        } catch (err) {
+            console.error('SSE parse error:', err);
+        }
+    };
+
+    _sseSource.onerror = function() {
+        if (!_sseSource) return;
+        _sseSource.close();
+        _sseSource = null;
+        if (!_sseReconnectToastShown) {
+            showToast(`⚡ Reconectando en ${Math.round(_sseRetryDelay / 1000)}s...`, 'info');
+            _sseReconnectToastShown = true;
+        }
+        console.warn(`[SSE] Reconectando en ${_sseRetryDelay}ms...`);
+        clearTimeout(_sseReconnectTimer);
+        _sseReconnectTimer = setTimeout(() => {
+            _sseRetryDelay = Math.min(_sseRetryDelay * 2, 30000); // Max 30s
+            initRealTimeSync();
+        }, _sseRetryDelay);
+    };
+}
+
+function closeRealTimeSync() {
+    clearTimeout(_sseReconnectTimer);
+    _sseReconnectTimer = null;
+    if (_sseSource) {
+        _sseSource.close();
+        _sseSource = null;
+    }
+    _sseReconnectToastShown = false;
+}
+
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
@@ -568,105 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Esto evita que el menú muestre opciones incorrectas al cargar la página.
         applyRolePermissions();
         loadData();
-
-        // ==========================================
-        // SSE REAL-TIME SYNC — Backoff Exponencial
-        // ==========================================
-        let _sseRetryDelay = 1000;
-        let _sseSource = null;
-        let _sseReconnectTimer = null;
-        let _sseReconnectToastShown = false;
-
-        function _connectSSE() {
-            if (_sseSource) {
-                _sseSource.close();
-                _sseSource = null;
-            }
-            _sseSource = new EventSource('/api/stream');
-
-            _sseSource.onopen = function() {
-                _sseRetryDelay = 1000; // Reset delay on successful connection
-                if (_sseReconnectToastShown) {
-                    showToast('✅ Conexión en tiempo real restaurada', 'success');
-                    _sseReconnectToastShown = false;
-                }
-            };
-
-            _sseSource.onmessage = function(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'update') {
-                        loadData();
-                        if (typeof loadAdminTickets === 'function') {
-                            loadAdminTickets();
-                        }
-                        if (window.activeChatTicketId) {
-                            fetchAndRenderChatMessages(window.activeChatTicketId, 'admin');
-                        }
-                    } else if (data.type === 'new_message') {
-                        console.log('New message received via SSE:', data);
-                        if (window.activeChatTicketId === data.ticketId) {
-                            fetchAndRenderChatMessages(data.ticketId, 'admin');
-                        } else {
-                            if (data.sender === 'client') {
-                                if (typeof loadAdminTickets === 'function') {
-                                    loadAdminTickets();
-                                }
-                                if (typeof Swal !== 'undefined') {
-                                    const Toast = Swal.mixin({
-                                        toast: true,
-                                        position: 'top-end',
-                                        showConfirmButton: false,
-                                        timer: 4500,
-                                        timerProgressBar: true,
-                                        background: 'var(--bg-surface)',
-                                        color: 'var(--text-main)',
-                                        didOpen: (toast) => {
-                                            toast.addEventListener('mouseenter', Swal.stopTimer);
-                                            toast.addEventListener('mouseleave', Swal.resumeTimer);
-                                            toast.style.cursor = 'pointer';
-                                            toast.addEventListener('click', () => {
-                                                if (typeof viewTicketDetails === 'function') {
-                                                    viewTicketDetails(data.ticketId);
-                                                }
-                                            });
-                                        }
-                                    });
-                                    Toast.fire({
-                                        icon: 'info',
-                                        title: `Mensaje de ${data.senderName || 'Cliente'}`,
-                                        text: data.message.length > 55 ? data.message.substring(0, 55) + '...' : data.message
-                                    });
-                                }
-                            }
-                        }
-                    } else if (data.type === 'typing') {
-                        if (window.activeChatTicketId === data.ticketId && data.role !== 'admin') {
-                            showChatTypingIndicator('El cliente está escribiendo...');
-                        }
-                    }
-                } catch (err) {
-                    console.error('SSE parse error:', err);
-                }
-            };
-
-            _sseSource.onerror = function() {
-                _sseSource.close();
-                _sseSource = null;
-                if (!_sseReconnectToastShown) {
-                    showToast(`⚡ Reconectando en ${Math.round(_sseRetryDelay / 1000)}s...`, 'info');
-                    _sseReconnectToastShown = true;
-                }
-                console.warn(`[SSE] Reconectando en ${_sseRetryDelay}ms...`);
-                clearTimeout(_sseReconnectTimer);
-                _sseReconnectTimer = setTimeout(() => {
-                    _sseRetryDelay = Math.min(_sseRetryDelay * 2, 30000); // Max 30s
-                    _connectSSE();
-                }, _sseRetryDelay);
-            };
-        }
-
-        _connectSSE();
+        initRealTimeSync();
     } else {
         localStorage.removeItem('as_auth');
         localStorage.removeItem('as_user');
@@ -922,6 +973,37 @@ function showView(viewId) {
     } else if (viewId === 'login-view') {
         document.documentElement.classList.remove('is-logged-in');
         document.documentElement.classList.add('is-logged-out');
+        
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) loginForm.reset();
+
+        const loginUser = document.getElementById('login-user');
+        const loginPass = document.getElementById('login-pass');
+        if (loginUser) loginUser.value = '';
+        if (loginPass) loginPass.value = '';
+        
+        // Limpieza periódica para combatir el auto-completado automático de diversos navegadores
+        let autofillClears = 0;
+        const autofillInterval = setInterval(() => {
+            autofillClears++;
+            const activeEl = document.activeElement;
+            if (activeEl === loginUser || activeEl === loginPass) {
+                clearInterval(autofillInterval);
+                return;
+            }
+            if (loginUser && loginUser.value !== '') {
+                loginUser.value = '';
+            }
+            if (loginPass && loginPass.value !== '') {
+                loginPass.value = '';
+            }
+            if (autofillClears >= 30) { // Detener después de 3 segundos (30 * 100ms)
+                clearInterval(autofillInterval);
+            }
+        }, 100);
+
+        const errorMsg = document.getElementById('login-error');
+        if (errorMsg) errorMsg.classList.add('hidden');
     }
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('dashboard-view').classList.add('hidden');
@@ -957,6 +1039,7 @@ function setupEventListeners() {
                     showView('dashboard-view');
                     document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
                     loadData();
+                    initRealTimeSync();
                 } else {
                     document.getElementById('login-error').classList.remove('hidden');
                 }
@@ -964,6 +1047,31 @@ function setupEventListeners() {
                 showToast('Error de conexión con el servidor', 'error');
             }
         });
+    }
+
+    // Limpieza instantánea ante cualquier intento de autocompletar sin foco activo (evita credenciales residuales en otras pestañas)
+    const clearAutofillIfUnfocused = (e) => {
+        const loginUser = document.getElementById('login-user');
+        const loginPass = document.getElementById('login-pass');
+        const activeEl = document.activeElement;
+
+        // Si el usuario está posicionado en cualquiera de los dos campos, permitimos el autocompletado (ya sea por tipeo o por selección de llavero)
+        if (activeEl === loginUser || activeEl === loginPass) {
+            return;
+        }
+
+        const input = e.target;
+        if (input.value !== '') {
+            input.value = '';
+        }
+    };
+    const loginUser = document.getElementById('login-user');
+    const loginPass = document.getElementById('login-pass');
+    if (loginUser) {
+        loginUser.addEventListener('input', clearAutofillIfUnfocused);
+    }
+    if (loginPass) {
+        loginPass.addEventListener('input', clearAutofillIfUnfocused);
     }
 
     // Toggle Password
@@ -996,8 +1104,10 @@ function setupEventListeners() {
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
+                closeRealTimeSync();
                 localStorage.removeItem('as_auth');
                 localStorage.removeItem('as_user');
+                localStorage.removeItem('as_admin_token');
                 appState.user = null;
                 initTheme(); // Revert to global/anonymous theme/accent
                 showView('login-view');
@@ -1477,13 +1587,22 @@ function setupEventListeners() {
             document.querySelectorAll('.config-nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            // Ocultar botón global de guardar en la sección de Copia de Seguridad
+            // Ocultar botón global de guardar en la sección de Copia de Seguridad y Dispositivos
             const saveSettingsContainer = document.getElementById('save-settings-container');
             if (saveSettingsContainer) {
-                if (target === 'config-backup') {
+                if (target === 'config-backup' || target === 'config-devices') {
                     saveSettingsContainer.classList.add('hidden');
                 } else {
                     saveSettingsContainer.classList.remove('hidden');
+                }
+            }
+
+            // Si es la pestaña de dispositivos, refrescar y ocultar badge
+            if (target === 'config-devices') {
+                const badge = document.getElementById('admin-devices-badge');
+                if (badge) badge.style.display = 'none';
+                if (typeof window.refreshAdminDevicesInline === 'function') {
+                    window.refreshAdminDevicesInline();
                 }
             }
         });
@@ -1750,6 +1869,37 @@ function setupEventListeners() {
     document.getElementById('user-active')?.addEventListener('change', (e) => {
         const text = document.getElementById('user-status-text');
         if (text) text.textContent = e.target.checked ? 'Usuario Activo' : 'Usuario Inactivo';
+    });
+
+    // Limpieza de credenciales al recuperar foco de ventana (evitar autofill no deseado en pestaña inactiva)
+    window.addEventListener('focus', () => {
+        const loginView = document.getElementById('login-view');
+        if (loginView && !loginView.classList.contains('hidden')) {
+            const loginUser = document.getElementById('login-user');
+            const loginPass = document.getElementById('login-pass');
+            if (loginUser && document.activeElement !== loginUser && loginUser.value !== '') {
+                loginUser.value = '';
+            }
+            if (loginPass && document.activeElement !== loginPass && loginPass.value !== '') {
+                loginPass.value = '';
+            }
+
+            // Iniciar limpieza periódica corta por si el navegador autofillea justo después de enfocar la ventana
+            let clears = 0;
+            const interval = setInterval(() => {
+                clears++;
+                const activeEl = document.activeElement;
+                if (loginUser && activeEl !== loginUser && loginUser.value !== '') {
+                    loginUser.value = '';
+                }
+                if (loginPass && activeEl !== loginPass && loginPass.value !== '') {
+                    loginPass.value = '';
+                }
+                if (clears >= 20) { // 2 segundos (20 * 100ms)
+                    clearInterval(interval);
+                }
+            }, 100);
+        }
     });
 }
 
@@ -5950,3 +6100,262 @@ async function openMarketplaceSettingsModal() {
         }
     });
 }
+
+// ============================================================
+// DISPOSITIVOS ACTIVOS INLINE — PANEL ADMIN CONFIGURACIÓN
+// ============================================================
+window.refreshAdminDevicesInline = async function() {
+    let sessions = [];
+    try {
+        const res = await adminFetch('/api/admin/active-sessions');
+        if (res.ok) {
+            const data = await res.json();
+            sessions = data.sessions || [];
+        }
+    } catch (e) { /* silenciar error de red */ }
+
+    const deviceIcon = (type) => {
+        if (type === 'mobile') return 'smartphone';
+        if (type === 'tablet') return 'tablet';
+        return 'monitor';
+    };
+
+    const relTime = (isoStr) => {
+        if (!isoStr) return 'Ahora';
+        const diff = Date.now() - new Date(isoStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        const hrs = Math.floor(mins / 60);
+        if (mins < 1) return 'Hace unos segundos';
+        if (mins < 60) return `Hace ${mins} min`;
+        if (hrs < 24) return `Hace ${hrs}h`;
+        return new Date(isoStr).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    };
+
+    const sessionCount = sessions.length;
+    const sessionListHtml = sessionCount === 0
+        ? `<p style="color:var(--text-muted);text-align:center;padding:2rem 0;font-size:0.875rem;">
+               <i data-lucide="wifi-off" style="width:24px;height:24px;display:block;margin:0 auto 0.5rem;opacity:0.4;"></i>
+               Sin sesiones de panel activas
+           </p>`
+        : sessions.map((s, idx) => `
+            <div style="display:flex;align-items:center;gap:0.9rem;padding:0.85rem 0;${idx < sessionCount - 1 ? 'border-bottom:1px solid rgba(var(--border-color-rgb,148,163,184),0.15);' : ''}">
+                <div style="flex-shrink:0;width:42px;height:42px;border-radius:10px;background:rgba(99,102,241,0.08);display:flex;align-items:center;justify-content:center;">
+                    <i data-lucide="${deviceIcon(s.deviceType)}" style="width:20px;height:20px;color:#6366f1;"></i>
+                </div>
+                <div style="flex:1;min-width:0;text-align:left;">
+                    <div style="font-size:0.875rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.browser}</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${s.os} &nbsp;·&nbsp; IP: <code style="font-size:0.78rem;background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:4px;">${s.ip}</code></div>
+                </div>
+                <div style="flex-shrink:0;text-align:right;">
+                    <span style="font-size:0.75rem;color:var(--text-muted);display:block;">${relTime(s.connectedAt)}</span>
+                    <span style="display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;font-weight:600;color:#10b981;margin-top:3px;">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span> Activa
+                    </span>
+                </div>
+            </div>`).join('');
+
+    const container = document.getElementById('admin-devices-container-inline');
+    if (container) {
+        container.innerHTML = `
+            <div style="width:100%;padding:0 0.25rem;">
+                <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:1.25rem;">
+                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="shield-check" style="width:20px;height:20px;color:#6366f1;"></i>
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="font-size:0.95rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;">
+                            Sesiones del Panel Admin
+                            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;animation:admin-devices-pulse 2s infinite;" title="Actualizado en tiempo real"></span>
+                        </div>
+                        <div style="font-size:0.78rem;color:var(--text-muted);">${sessionCount === 1 ? '1 conexión detectada' : `${sessionCount} conexiones detectadas`}</div>
+                    </div>
+                </div>
+                <div class="custom-scrollbar" style="background:rgba(0,0,0,0.12);border-radius:10px;padding:0 0.9rem;max-height:215px;overflow-y:auto;border:1px solid var(--border-color);">
+                    ${sessionListHtml}
+                </div>
+                <p style="font-size:0.78rem;color:var(--text-muted);margin-top:1.25rem;text-align:center;line-height:1.5;margin-bottom:0;">
+                    <i data-lucide="info" style="width:13px;height:13px;vertical-align:middle;opacity:0.6;"></i>
+                    Muestra las conexiones SSE activas al panel administrativo. La lista se actualiza en tiempo real.
+                </p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    const logoutArea = document.getElementById('admin-devices-global-logout-area');
+    if (logoutArea) {
+        logoutArea.style.display = sessionCount > 0 ? 'block' : 'none';
+    }
+};
+
+window.triggerAdminGlobalLogout = async function() {
+    const { value: password } = await Swal.fire({
+        title: '🔒 Cierre global de sesiones',
+        html: `
+            <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.25rem;line-height:1.5;text-align:left;">
+                Ingresa tu contraseña para confirmar el cierre de sesión en todos los dispositivos y navegadores activos (incluyendo esta pestaña).
+            </p>
+            <input type="password" id="swal-logout-pass" class="swal2-input" placeholder="Contraseña actual" autofocus style="background:var(--bg-surface-light); color:var(--text-main); border:1px solid var(--border-color); width: 100%; box-sizing: border-box; margin: 0;">
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar y Cerrar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444',
+        background: 'var(--bg-card)',
+        color: 'var(--text-main)',
+        reverseButtons: true,
+        preConfirm: () => {
+            const pass = document.getElementById('swal-logout-pass').value;
+            if (!pass) {
+                Swal.showValidationMessage('Debes ingresar tu contraseña');
+                return false;
+            }
+            return pass;
+        },
+        didOpen: (popup) => {
+            const input = popup.querySelector('#swal-logout-pass');
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        Swal.clickConfirm();
+                    }
+                });
+            }
+        }
+    });
+
+    if (password) {
+        window._isPerformingGlobalLogout = true;
+        try {
+            Swal.fire({
+                title: 'Cerrando sesiones...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)'
+            });
+
+            const res = await adminFetch('/api/admin/logout-all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+
+            if (res.ok) {
+                localStorage.removeItem('as_auth');
+                localStorage.removeItem('as_user');
+                localStorage.removeItem('as_admin_token');
+                appState.user = null;
+                initTheme();
+                showView('login-view');
+                document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
+                lucide.createIcons();
+                Swal.close();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Sesiones Cerradas',
+                    text: 'Todas las sesiones del panel administrativo han sido cerradas.',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text)',
+                    confirmButtonColor: '#6366f1'
+                });
+            } else {
+                const errData = await res.json();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errData.error || 'No se pudieron cerrar las sesiones.',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    confirmButtonColor: '#6366f1'
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Red',
+                text: 'Hubo un error de conexión con el servidor.',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                confirmButtonColor: '#6366f1'
+            });
+        }
+    }
+};
+
+// Asegurar animación e inicialización
+(function() {
+    if (!document.getElementById('admin-devices-spin-style')) {
+        const s = document.createElement('style');
+        s.id = 'admin-devices-spin-style';
+        s.textContent = `
+            @keyframes admin-dev-spin { to { transform: rotate(360deg); } }
+            @keyframes admin-devices-pulse {
+                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+                70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            }
+        `;
+        document.head.appendChild(s);
+    }
+
+    const btnLogoutAll = document.getElementById('btn-admin-devices-logout-all');
+    if (btnLogoutAll) {
+        btnLogoutAll.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof window.triggerAdminGlobalLogout === 'function') {
+                window.triggerAdminGlobalLogout();
+            }
+        });
+    }
+
+    // Actualizar la lista en tiempo real cada 15 segundos si el usuario está en la pestaña de dispositivos
+    setInterval(() => {
+        if (localStorage.getItem('as_auth') !== 'true') return;
+        const devicesTabBtn = document.querySelector('.config-nav-btn[data-config-tab="config-devices"]');
+        const isDevicesTabActive = devicesTabBtn && devicesTabBtn.classList.contains('active');
+        if (isDevicesTabActive && typeof window.refreshAdminDevicesInline === 'function') {
+            window.refreshAdminDevicesInline();
+        }
+    }, 15000);
+
+    // Sincronizar inicio/cierre de sesión entre pestañas en tiempo real (evita límites HTTP/1.1)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'as_auth') {
+            if (e.newValue === 'true') {
+                console.log('[Storage-Sync] Inicio de sesión detectado en otra pestaña.');
+                const storedUser = localStorage.getItem('as_user');
+                if (storedUser) {
+                    appState.user = JSON.parse(storedUser);
+                    initTheme();
+                    applyRolePermissions();
+                    showView('dashboard-view');
+                    document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
+                    loadData();
+                    initRealTimeSync();
+                }
+            } else {
+                console.log('[Storage-Sync] Cierre de sesión detectado en otra pestaña.');
+                closeRealTimeSync();
+                appState.user = null;
+                initTheme();
+                showView('login-view');
+                document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
+                lucide.createIcons();
+                Swal.close();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión Cerrada',
+                    text: 'Se ha cerrado la sesión en otro dispositivo o pestaña.',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text)',
+                    confirmButtonColor: '#6366f1'
+                });
+            }
+        }
+    });
+})();

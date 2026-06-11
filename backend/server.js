@@ -85,6 +85,17 @@ function createRateLimiter(limitCount, windowMs) {
     };
 }
 
+// Limpieza periódica de rateLimits para evitar fugas de memoria (cada 10 minutos)
+setInterval(() => {
+    const now = Date.now();
+    for (const key of Object.keys(rateLimits)) {
+        rateLimits[key] = rateLimits[key].filter(timestamp => now - timestamp < 10 * 60 * 1000);
+        if (rateLimits[key].length === 0) {
+            delete rateLimits[key];
+        }
+    }
+}, 10 * 60 * 1000);
+
 const loginLimiter = createRateLimiter(15, 5 * 60 * 1000); // 15 intentos en 5 minutos
 const paymentLimiter = createRateLimiter(10, 10 * 60 * 1000); // 10 intentos en 10 minutos
 
@@ -243,7 +254,13 @@ app.get('/api/stream', (req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
 
     if (bizClientId) {
+        // Notificar al cliente de negocio que sus sesiones cambiaron
         broadcastToClient(bizClientId, { type: 'sessions_update' });
+    } else {
+        // Notificar a todos los admins (SSE sin clientId) que las sesiones admin cambiaron
+        sseClients.filter(c => !c.clientId && c.id !== clientId).forEach(admin => {
+            try { admin.res.write(`data: ${JSON.stringify({ type: 'sessions_update' })}\n\n`); } catch(e) {}
+        });
     }
 
     req.on('close', () => {
@@ -251,9 +268,25 @@ app.get('/api/stream', (req, res) => {
         console.log(`[SSE] Conexión cerrada: clientId=${bizClientId}, restantes=${sseClients.length}`);
         if (bizClientId) {
             broadcastToClient(bizClientId, { type: 'sessions_update' });
+        } else {
+            // Notificar a los demás admins que alguien se desconectó
+            sseClients.filter(c => !c.clientId).forEach(admin => {
+                try { admin.res.write(`data: ${JSON.stringify({ type: 'sessions_update' })}\n\n`); } catch(e) {}
+            });
         }
     });
 });
+
+// Heartbeat (ping) para mantener activas las conexiones SSE y evitar timeouts
+setInterval(() => {
+    sseClients.forEach(client => {
+        try {
+            client.res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
+        } catch (e) {
+            // El error de escritura se maneja por el evento 'close' del request, pero lo silenciamos aquí
+        }
+    });
+}, 20000); // Cada 20 segundos
 
 
 // ============================================================
@@ -316,10 +349,111 @@ app.get('/api/client/active-sessions', async (req, res) => {
 });
 
 // ============================================================
+// ADMIN: Listar sesiones activas del panel de administración
+// ============================================================
+app.get('/api/admin/active-sessions', requireAdmin, (req, res) => {
+    // Mostrar solo las conexiones SSE de admins (sin clientId — son sesiones del panel admin)
+    const adminSessions = sseClients
+        .filter(c => !c.clientId)
+        .map(c => {
+            const ua = c.ua || '';
+            let browser = 'Navegador';
+            let os = 'Desconocido';
+            let deviceType = 'desktop';
+
+            if (/Mobile|Android|iPhone|iPad/.test(ua)) {
+                deviceType = /iPad/.test(ua) ? 'tablet' : 'mobile';
+            }
+
+            if (/Edg\//.test(ua)) browser = 'Microsoft Edge';
+            else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Google Chrome';
+            else if (/Firefox\//.test(ua)) browser = 'Firefox';
+            else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+            else if (/Opera|OPR\//.test(ua)) browser = 'Opera';
+            else if (/MSIE|Trident/.test(ua)) browser = 'Internet Explorer';
+
+            if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+            else if (/Windows NT 6/.test(ua)) os = 'Windows 8';
+            else if (/Mac OS X/.test(ua)) os = 'macOS';
+            else if (/Android/.test(ua)) os = 'Android';
+            else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+            else if (/Linux/.test(ua)) os = 'Linux';
+            else if (/CrOS/.test(ua)) os = 'Chrome OS';
+
+            let displayIp = c.ip || '—';
+            if (displayIp === '::1' || displayIp === '127.0.0.1' || displayIp.startsWith('::ffff:127.')) {
+                displayIp = 'Local';
+            }
+
+            return {
+                sessionId: c.id,
+                browser,
+                os,
+                deviceType,
+                ip: displayIp,
+                connectedAt: c.connectedAt
+            };
+        });
+
+    return res.json({ success: true, sessions: adminSessions });
+});
+
+// ============================================================
+// ADMIN: Cerrar todas las sesiones administrativas
+// ============================================================
+app.post('/api/admin/logout-all', requireAdmin, async (req, res) => {
+    const { password } = req.body;
+    if (!password) {
+        return res.status(400).json({ success: false, error: 'Se requiere la contraseña para confirmar la operación.' });
+    }
+
+    try {
+        const adminUser = req.adminUser;
+
+        // Verificar la contraseña según sea el Super Admin u otro administrador
+        let isValid = false;
+        if (adminUser.user === 'admin') {
+            const masterUser = await db.findMasterUser(adminUser.user, password);
+            if (masterUser) isValid = true;
+        } else {
+            const foundUser = await db.findUser(adminUser.user, password);
+            if (foundUser) isValid = true;
+        }
+
+        if (!isValid) {
+            return res.status(401).json({ success: false, error: 'Contraseña incorrecta.' });
+        }
+
+        if (adminUser.user === 'admin') {
+            await db.incrementAdminSessionVersion();
+        } else {
+            await db.incrementUserSessionVersion(adminUser.user);
+        }
+
+        await db.pushNotification({
+            title: 'Cierre de Sesión Admin Global',
+            desc: `Se cerraron todas las sesiones del panel para el usuario "${adminUser.name}".`,
+            icon: 'shield-x',
+            color: '#ef4444'
+        });
+
+        // Difundir force_logout a todas las conexiones SSE de admin
+        sseClients.filter(c => !c.clientId).forEach(admin => {
+            try { admin.res.write(`data: ${JSON.stringify({ type: 'force_logout' })}\n\n`); } catch(e) {}
+        });
+
+        return res.json({ success: true, message: 'Todas las sesiones del panel administrativo han sido cerradas.' });
+    } catch (err) {
+        console.error('Error en admin logout-all:', err);
+        return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
+    }
+});
+
+// ============================================================
 // AUTH MIDDLEWARE (SESIONES TOTALMENTE PERSISTENTES Y STATELESS)
 // ============================================================
 
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
     const auth = req.headers.authorization;
     if (!auth || !auth.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Acceso no autorizado. Se requiere sesión de administrador.' });
@@ -329,12 +463,30 @@ function requireAdmin(req, res, next) {
     if (!session || (session.role !== 'Super Admin' && session.role !== 'Admin' && session.role !== 'Administrador' && session.role !== 'Soporte')) {
         return res.status(401).json({ error: 'Sesión expirada o no autorizada. Por favor inicia sesión nuevamente.' });
     }
+
+    try {
+        if (session.user === 'admin') {
+            const config = await db.getSystemConfig();
+            if (config && session.sessionVersion !== undefined && session.sessionVersion < (config.admin_session_version || 1)) {
+                return res.status(401).json({ error: 'Sesión invalidada por cierre de sesión global.' });
+            }
+        } else {
+            const u = await db.findUserByUsername(session.user);
+            if (u && session.sessionVersion !== undefined && session.sessionVersion < (u.session_version || 1)) {
+                return res.status(401).json({ error: 'Sesión invalidada por cierre de sesión global.' });
+            }
+        }
+    } catch (err) {
+        console.error('[requireAdmin] Error en la base de datos verificando versión de sesión:', err);
+        return res.status(503).json({ error: 'Servicio temporalmente no disponible.' });
+    }
+
     req.adminUser = session;
     next();
 }
 
-function requireWriteAccess(req, res, next) {
-    requireAdmin(req, res, () => {
+async function requireWriteAccess(req, res, next) {
+    await requireAdmin(req, res, () => {
         const role = req.adminUser.role;
         if (role !== 'Super Admin' && role !== 'Admin' && role !== 'Administrador') {
             return res.status(403).json({ error: 'Acceso denegado. Permisos de escritura requeridos.' });
@@ -343,8 +495,8 @@ function requireWriteAccess(req, res, next) {
     });
 }
 
-function requireSuperAdmin(req, res, next) {
-    requireAdmin(req, res, () => {
+async function requireSuperAdmin(req, res, next) {
+    await requireAdmin(req, res, () => {
         const role = req.adminUser.role;
         if (role !== 'Super Admin') {
             return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de Super Administrador.' });
@@ -382,16 +534,19 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     const { user, pass } = req.body;
     try {
         let loggedUser = null;
+        let sessionVersion = 1;
         
         // 1. Intentar validar como super-admin
         const masterUser = await db.findMasterUser(user, pass);
         if (masterUser) {
             loggedUser = { name: masterUser.admin_name || 'Allenmar', role: 'Super Admin', user: masterUser.admin_user };
+            sessionVersion = masterUser.admin_session_version || 1;
         } else {
             // 2. Intentar validar como usuario administrador
             const foundUser = await db.findUser(user, pass);
             if (foundUser) {
                 loggedUser = { name: foundUser.name, role: foundUser.role, user: foundUser.user };
+                sessionVersion = foundUser.session_version || 1;
             }
         }
 
@@ -404,6 +559,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             name: loggedUser.name,
             role: loggedUser.role,
             user: loggedUser.user,
+            sessionVersion,
             expires: Date.now() + 8 * 60 * 60 * 1000 // 8 horas
         });
 
@@ -423,13 +579,16 @@ app.post('/api/admin/refresh-token', async (req, res) => {
     if (!user || !pass) return res.status(400).json({ ok: false, error: 'Credenciales requeridas.' });
     try {
         let loggedUser = null;
+        let sessionVersion = 1;
         const masterUser = await db.findMasterUser(user, pass);
         if (masterUser) {
             loggedUser = { name: masterUser.admin_name || 'Allenmar', role: 'Super Admin', user: masterUser.admin_user };
+            sessionVersion = masterUser.admin_session_version || 1;
         } else {
             const foundUser = await db.findUser(user, pass);
             if (foundUser) {
                 loggedUser = { name: foundUser.name, role: foundUser.role, user: foundUser.user };
+                sessionVersion = foundUser.session_version || 1;
             }
         }
 
@@ -439,6 +598,7 @@ app.post('/api/admin/refresh-token', async (req, res) => {
             name: loggedUser.name,
             role: loggedUser.role,
             user: loggedUser.user,
+            sessionVersion,
             expires: Date.now() + 8 * 60 * 60 * 1000
         });
         return res.json({ ok: true, token });
@@ -460,6 +620,10 @@ app.post('/api/client/login', loginLimiter, async (req, res) => {
             return res.status(401).json({ success: false, error: 'Correo o contraseña incorrectos.' });
         }
 
+        if (biz.status !== 'active') {
+            return res.status(403).json({ success: false, error: 'Tu cuenta está desactivada. Por favor, comunícate con soporte.' });
+        }
+
         // Incluir session_version en el token para poder invalidarlo con logout-all
         const token = generateSignedToken({
             clientId: biz.id,
@@ -469,14 +633,12 @@ app.post('/api/client/login', loginLimiter, async (req, res) => {
         });
 
         // Registrar notificación atómica
-        const dbState = await readDb();
-        pushNotification(dbState, {
+        await db.pushNotification({
             title: 'Acceso de Cliente',
             desc: `"${biz.name}" inició sesión en el portal.`,
             icon: 'log-in',
             color: '#10b981'
         });
-        await writeDb(dbState);
 
         return res.json({
             success: true,
@@ -488,6 +650,193 @@ app.post('/api/client/login', loginLimiter, async (req, res) => {
     } catch (err) {
         console.error('Error en client login:', err);
         return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
+    }
+});
+
+app.post('/api/client/google-login', loginLimiter, async (req, res) => {
+    const { email, accessToken } = req.body;
+    let targetEmail = email;
+    let ownerName = '';
+    let avatarUrl = '';
+
+    if (accessToken) {
+        try {
+            const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            if (!googleRes.ok) {
+                return res.status(401).json({ success: false, error: 'Token de Google inválido o vencido.' });
+            }
+            const googleUser = await googleRes.json();
+            targetEmail = googleUser.email;
+            ownerName = googleUser.name || '';
+            avatarUrl = googleUser.picture || '';
+        } catch (err) {
+            console.error('Error al verificar el token de Google:', err);
+            return res.status(500).json({ success: false, error: 'No se pudo validar el inicio de sesión con Google.' });
+        }
+    }
+
+    if (!targetEmail) {
+        return res.status(400).json({ success: false, error: 'Falta el correo de acceso de Google.' });
+    }
+
+    try {
+        const biz = await db.findBusinessByEmail(targetEmail);
+        if (!biz) {
+            return res.status(404).json({ 
+                success: false, 
+                notRegistered: true,
+                email: targetEmail,
+                ownerName,
+                avatarUrl,
+                accessToken,
+                error: `La cuenta de Google (${targetEmail}) no está registrada como cliente.` 
+            });
+        }
+
+        if (biz.status !== 'active') {
+            return res.status(403).json({ success: false, error: 'Tu cuenta está desactivada. Por favor, comunícate con soporte.' });
+        }
+
+        // Generar token
+        const token = generateSignedToken({
+            clientId: biz.id,
+            clientEmail: biz.client_email,
+            sessionVersion: biz.session_version || 1,
+            expires: Date.now() + 8 * 60 * 60 * 1000 // 8 horas
+        });
+
+        // Registrar notificación
+        await db.pushNotification({
+            title: 'Acceso Google',
+            desc: `"${biz.name}" inició sesión con Google.`,
+            icon: 'chrome',
+            color: '#3b82f6'
+        });
+
+        return res.json({
+            success: true,
+            token,
+            clientId: biz.id,
+            clientName: biz.name,
+            clientEmail: biz.client_email
+        });
+    } catch (err) {
+        console.error('Error en client google-login:', err);
+        return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
+    }
+});
+
+app.post('/api/client/google-register', loginLimiter, async (req, res) => {
+    const { email, accessToken, name, type, city, ownerName, avatarUrl } = req.body;
+    let targetEmail = email;
+    let targetOwnerName = ownerName;
+    let targetAvatarUrl = avatarUrl;
+
+    if (accessToken) {
+        try {
+            const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            if (!googleRes.ok) {
+                return res.status(401).json({ success: false, error: 'Token de Google inválido o vencido.' });
+            }
+            const googleUser = await googleRes.json();
+            targetEmail = googleUser.email;
+            targetOwnerName = googleUser.name || targetOwnerName;
+            targetAvatarUrl = googleUser.picture || targetAvatarUrl;
+        } catch (err) {
+            console.error('Error al verificar el token de Google para registro:', err);
+            return res.status(500).json({ success: false, error: 'No se pudo validar el token de Google.' });
+        }
+    }
+
+    if (!targetEmail) {
+        return res.status(400).json({ success: false, error: 'Falta el correo de registro de Google.' });
+    }
+    if (!name || !type || !city) {
+        return res.status(400).json({ success: false, error: 'Faltan datos obligatorios para el registro del negocio.' });
+    }
+
+    try {
+        const existingBiz = await db.findBusinessByEmail(targetEmail);
+        if (existingBiz) {
+            return res.status(409).json({ success: false, error: 'Esta cuenta ya está registrada en el sistema.' });
+        }
+
+        // Crear negocio en la base de datos relacional MySQL utilizando dbState para consistencia y SSE
+        let dbState = await readDb();
+        const bizId = Date.now() + Math.floor(Math.random() * 1000);
+        const randomPass = Math.random().toString(36).substring(2, 10);
+        const hashedPass = db.hashPassword(randomPass);
+
+        const newBiz = {
+            id: bizId,
+            name,
+            type,
+            status: 'active',
+            city,
+            phone: null,
+            nit: null,
+            address: null,
+            clientEmail: targetEmail,
+            clientPass: hashedPass,
+            ownerName: targetOwnerName || name,
+            registrationSource: 'google',
+            avatarUrl: targetAvatarUrl || null,
+            modules: [],
+            moduleDates: {},
+            billing: {
+                subscription_status: 'pending',
+                gateway_token: null,
+                last_four: null,
+                card_brand: null,
+                last_payment_date: null,
+                last_payment_amount: 0.00,
+                last_failed_attempt: null,
+                last_transaction_id: null
+            }
+        };
+
+        dbState.businesses.unshift(newBiz);
+
+        // Notificar superadmin
+        pushNotification(dbState, {
+            title: 'Nuevo Cliente (Google)',
+            desc: `"${name}" se registró usando Google Sign-In.`,
+            icon: 'chrome',
+            color: '#10b981'
+        });
+
+        await writeDb(dbState);
+
+        // Enviar correo de bienvenida simulado
+        EmailService.sendWelcomeEmail(targetEmail, name, targetEmail, `[Acceso por Google - Contraseña temporal: ${randomPass}]`).catch(err => {
+            console.error('[Welcome Email Error]', err);
+        });
+
+        // Difundir cambios SSE
+        broadcastUpdate();
+
+        // Generar token JWT de sesión para el nuevo cliente
+        const token = generateSignedToken({
+            clientId: bizId,
+            clientEmail: targetEmail,
+            sessionVersion: 1,
+            expires: Date.now() + 8 * 60 * 60 * 1000 // 8 horas
+        });
+
+        return res.json({
+            success: true,
+            token,
+            clientId: bizId,
+            clientName: name,
+            clientEmail: targetEmail
+        });
+    } catch (err) {
+        console.error('Error en client google-register:', err);
+        return res.status(500).json({ success: false, error: 'Error interno del servidor al registrar negocio.' });
     }
 });
 
@@ -515,7 +864,7 @@ app.post('/api/client/verify', async (req, res) => {
         // 3. Verificar versión de sesión (para invalidar sesiones antiguas tras logout-all)
         const bizSessionVersion = biz.session_version || 1;
         const tokenSessionVersion = session.sessionVersion || 1;
-        if (tokenSessionVersion !== bizSessionVersion) {
+        if (tokenSessionVersion < bizSessionVersion) {
             return res.json({ valid: false, reason: 'session_invalidated' });
         }
 
@@ -594,12 +943,17 @@ app.post('/api/client/module/logout-all', async (req, res) => {
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ success: false, error: 'No autorizado' });
 
-    const { modId, instanceId } = req.body;
+    const { modId, instanceId, pass } = req.body;
     if (!modId) return res.status(400).json({ success: false, error: 'Se requiere el ID del módulo.' });
+    if (!pass) return res.status(400).json({ success: false, error: 'Se requiere la contraseña.' });
 
     try {
         const biz = await db.findBusinessById(session.clientId);
         if (!biz) return res.status(404).json({ success: false, error: 'Negocio no encontrado.' });
+
+        if (!db.verifyPassword(pass, biz.client_pass)) {
+            return res.status(401).json({ success: false, error: 'Contraseña incorrecta.' });
+        }
 
         // Notificar en tiempo real a todos los dispositivos conectados de este cliente
         broadcastToClient(session.clientId, {
@@ -2882,13 +3236,6 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, async () => {
-    console.log(`====================================================`);
-    console.log(`[AS Sierra Systems] Servidor unificado en línea`);
-    console.log(`====================================================`);
-    console.log(`➡️  Portafolio Público: http://localhost:${PORT}`);
-    console.log(`➡️  Panel de Super Admin: http://localhost:${PORT}/admin`);
-    console.log(`====================================================`);
-
     // Inicializar todas las tablas de base de datos (auto-migración segura)
     await db.initializeDatabase();
 
@@ -2956,4 +3303,11 @@ app.listen(PORT, async () => {
     } catch (err) {
         console.error('[AS Sierra] ⚠️ Error creando tablas de soporte:', err.message);
     }
+
+    console.log(`====================================================`);
+    console.log(`[AS Sierra Systems] Servidor unificado en línea`);
+    console.log(`====================================================`);
+    console.log(`➡️  Portafolio Público: http://localhost:${PORT}`);
+    console.log(`➡️  Panel de Super Admin: http://localhost:${PORT}/admin`);
+    console.log(`====================================================`);
 });

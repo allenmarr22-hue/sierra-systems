@@ -153,6 +153,12 @@ async function runMigration() {
                 admin_pass VARCHAR(255) NOT NULL DEFAULT '123456',
                 admin_name VARCHAR(150) NOT NULL DEFAULT 'Allenmar',
                 logo LONGTEXT NULL,
+                support_email VARCHAR(150) NULL DEFAULT 'soporte@assierrasystems.com',
+                support_phone VARCHAR(100) NULL DEFAULT '573001234567',
+                recommended_module_id VARCHAR(100) NULL,
+                multi_sede_discount INT NULL DEFAULT 30,
+                recommended_label VARCHAR(150) NULL DEFAULT 'RECOMENDADO',
+                admin_session_version INT NOT NULL DEFAULT 1,
                 CONSTRAINT chk_single_row CHECK (id = 1)
             )
         `);
@@ -167,6 +173,7 @@ async function runMigration() {
                 name VARCHAR(150) NOT NULL,
                 role VARCHAR(100) NOT NULL DEFAULT 'Admin',
                 status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+                session_version INT NOT NULL DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -218,6 +225,7 @@ async function runMigration() {
                 owner_name VARCHAR(150) NULL,
                 registration_source VARCHAR(100) NULL DEFAULT 'admin',
                 avatar_url VARCHAR(255) NULL,
+                session_version INT NOT NULL DEFAULT 1,
                 
                 -- Facturación
                 gateway_token VARCHAR(255) NULL,
