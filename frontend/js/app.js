@@ -344,6 +344,9 @@ function getAdminHeaders(extra = {}) {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAdminToken()}`, ...extra };
 }
 
+window._isReauthenticating = false;
+window._reauthQueue = [];
+
 /**
  * adminFetch: igual que fetch() pero maneja 401 automáticamente.
  * Si el token expirado (servidor reiniciado), pide la contraseña
@@ -375,6 +378,16 @@ async function adminFetch(url, options = {}) {
             lucide.createIcons();
             return resp;
         }
+
+        // Si ya hay un modal de reautenticación abierto, encolamos la petición
+        if (window._isReauthenticating) {
+            return new Promise((resolve) => {
+                window._reauthQueue.push({ url, options, resolve });
+            });
+        }
+
+        window._isReauthenticating = true;
+
         // Token vencido o servidor reiniciado — pedir credenciales
         const stored = appState.user;
         const result = await Swal.fire({
@@ -399,10 +412,29 @@ async function adminFetch(url, options = {}) {
                     });
                 }
             },
-            preConfirm: () => {
+            preConfirm: async () => {
                 const pass = document.getElementById('swal-reauth-pass').value;
-                if (!pass) { Swal.showValidationMessage('La contraseña es requerida'); return false; }
-                return pass;
+                if (!pass) {
+                    Swal.showValidationMessage('La contraseña es requerida');
+                    return false;
+                }
+                try {
+                    const refreshResp = await fetch('/api/admin/refresh-token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user: stored?.user, pass })
+                    });
+                    const refreshData = await refreshResp.json();
+                    if (refreshData.ok && refreshData.token) {
+                        return refreshData.token;
+                    } else {
+                        Swal.showValidationMessage('❌ Credenciales incorrectas. Vuelve a intentarlo.');
+                        return false;
+                    }
+                } catch {
+                    Swal.showValidationMessage('❌ Error de red al renovar sesión.');
+                    return false;
+                }
             }
         });
 
@@ -418,28 +450,34 @@ async function adminFetch(url, options = {}) {
             document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
             lucide.createIcons();
             showToast('Sesión cerrada.', 'info');
+
+            // Resolver todas las peticiones encoladas con la respuesta original de 401
+            const queue = window._reauthQueue;
+            window._reauthQueue = [];
+            window._isReauthenticating = false;
+            queue.forEach(item => item.resolve(resp));
+
             return resp;
         }
 
-        try {
-            const refreshResp = await fetch('/api/admin/refresh-token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: stored?.user, pass: result.value })
-            });
-            const refreshData = await refreshResp.json();
-            if (refreshData.ok && refreshData.token) {
-                localStorage.setItem('as_admin_token', refreshData.token);
-                showToast('✅ Sesión renovada. Reintentando...', 'success');
-                // Reintentar la petición original con el token nuevo
-                options.headers['Authorization'] = `Bearer ${refreshData.token}`;
-                return await fetch(url, options);
-            } else {
-                showToast('❌ Credenciales incorrectas. Vuelve a intentarlo.', 'error');
+        const newToken = result.value;
+        localStorage.setItem('as_admin_token', newToken);
+        showToast('✅ Sesión renovada. Reintentando...', 'success');
+
+        // Reintentar todas las peticiones encoladas con el nuevo token
+        const queue = window._reauthQueue;
+        window._reauthQueue = [];
+        window._isReauthenticating = false;
+        queue.forEach(item => {
+            if (item.options && item.options.headers) {
+                item.options.headers['Authorization'] = `Bearer ${newToken}`;
             }
-        } catch {
-            showToast('❌ Error de red al renovar sesión.', 'error');
-        }
+            item.resolve(fetch(item.url, item.options));
+        });
+
+        // Reintentar la petición original con el token nuevo
+        options.headers['Authorization'] = `Bearer ${newToken}`;
+        return await fetch(url, options);
     }
     return resp;
 }
@@ -3355,8 +3393,10 @@ function renderBillingTab() {
         }
     });
 
-    // Ahora filtramos para renderizar la tabla
-    let filteredBusinesses = [...businesses];
+    // Ahora filtramos para renderizar la tabla (solo incluimos negocios con al menos un módulo asignado)
+    let filteredBusinesses = businesses.filter(biz => {
+        return (biz.modules && biz.modules.length > 0) || (biz.moduleInstances && biz.moduleInstances.length > 0);
+    });
 
     // Filtro por buscador (billing-search)
     const searchInput = document.getElementById('billing-search');
@@ -3414,12 +3454,16 @@ function renderBillingTab() {
         const subsLabel = activeSubsCount === 1 ? '1 Suscripción' : `${activeSubsCount} Suscripciones`;
 
         // Badge de estado
-        const statusBadge = {
+        let statusBadge = {
             active: '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">✓ Activo</span>',
             suspended: '<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⛔ Suspendido</span>',
             pending: '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⏳ Pendiente</span>',
             cancelled: '<span style="background:rgba(100,116,139,0.15);color:#64748b;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">🚫 Cancelado</span>',
         }[status] || '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">⏳ Pendiente</span>';
+
+        if (activeSubsCount === 0) {
+            statusBadge = '<span style="color:#64748b;font-weight:600;">—</span>';
+        }
 
         // Info de tarjeta
         const cardInfo = billing.gateway_token
@@ -3535,8 +3579,13 @@ window.billingShowDetail = async function(bizId) {
         });
     }
 
+    const activeSubsCount = biz.moduleInstances && biz.moduleInstances.length > 0
+        ? biz.moduleInstances.filter(inst => inst.status === 'active').length
+        : (biz.modules || []).length;
+
     const statusLabels = { active: '✓ Activo', suspended: '⛔ Suspendido', pending: '⏳ Pendiente', cancelled: '🚫 Cancelado' };
     const status = billing.subscription_status || 'pending';
+    const displayStatus = activeSubsCount === 0 ? '—' : (statusLabels[status] || status);
     const nextCut = formatBillingDate(getClosestBillingDate(biz), { day: '2-digit', month: 'long', year: 'numeric' });
     const lastPayment = billing.last_payment_date
         ? new Date(billing.last_payment_date).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -3561,7 +3610,7 @@ window.billingShowDetail = async function(bizId) {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
                     <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);padding:0.75rem;border-radius:10px;">
                         <div style="font-size:0.7rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Estado</div>
-                        <div style="font-weight:700;color:var(--text-main);">${statusLabels[status] || status}</div>
+                        <div style="font-weight:700;color:var(--text-main);">${displayStatus}</div>
                     </div>
                     <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);padding:0.75rem;border-radius:10px;">
                         <div style="font-size:0.7rem;color:#10b981;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Monto/Mes</div>
@@ -5565,7 +5614,9 @@ window.downloadGlobalBillingPDF = async function() {
         const today = new Date();
         const dateStr = today.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 
-        let filteredBiz = businesses;
+        let filteredBiz = businesses.filter(biz => {
+            return (biz.modules && biz.modules.length > 0) || (biz.moduleInstances && biz.moduleInstances.length > 0);
+        });
         if (yearVal !== 'all' || monthVal !== 'all') {
             filteredBiz = filteredBiz.filter(biz => {
                 const billing = biz.billing || {};
@@ -5628,10 +5679,14 @@ window.downloadGlobalBillingPDF = async function() {
                 return m ? m.name : mid;
             }).join(', ') || 'Ninguno';
 
+            const activeSubsCount = biz.moduleInstances && biz.moduleInstances.length > 0
+                ? biz.moduleInstances.filter(inst => inst.status === 'active').length
+                : (biz.modules || []).length;
+
             return [
                 biz.name || '—',
                 biz.city || '—',
-                statusLabels[status] || status.toUpperCase(),
+                activeSubsCount === 0 ? '—' : (statusLabels[status] || status.toUpperCase()),
                 nextCut,
                 monthlyAmount > 0 ? '$ ' + monthlyAmount.toLocaleString('es-CO') + ' COP' : '$0',
                 modNames
@@ -5811,7 +5866,12 @@ window.downloadIndividualBusinessPDF = async function(bizId) {
         }
 
         const billing = biz.billing || {};
-        const statusLabel = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' }[billing.subscription_status || 'pending'] || '—';
+        const activeSubsCount = biz.moduleInstances && biz.moduleInstances.length > 0
+            ? biz.moduleInstances.filter(inst => inst.status === 'active').length
+            : (biz.modules || []).length;
+        const statusLabel = activeSubsCount === 0
+            ? '—'
+            : ({ active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' }[billing.subscription_status || 'pending'] || '—');
         const nextCut = formatDateSlash(getClosestBillingDate(biz));
 
         const pageCount = 1;
