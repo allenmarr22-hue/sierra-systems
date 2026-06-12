@@ -39,7 +39,124 @@
                 };
                 Storage.prototype.getItem.__isPatched = true;
             }
+        })();
 
+        // ====== RESTABLECIMIENTO AUTOMÁTICO EN MODO DEMO (AUTO-RESET AFTER 4 HOURS IN DEMO MODE) ======
+        (function() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const instanceId = urlParams.get('instanceId');
+                if (!instanceId) {
+                    const resetThresholdMs = 4 * 60 * 60 * 1000; // 4 horas
+                    const lastActivity = localStorage.getItem('streetfeed_demo_last_activity') || localStorage.getItem('agenda_demo_last_activity');
+                    const now = Date.now();
+                    
+                    if (lastActivity && (now - Number(lastActivity)) > resetThresholdMs) {
+                        console.warn("[Demo Reset] Excedido el límite de inactividad de 4 horas en demo. Restableciendo datos locales...");
+                        const demoKeys = [
+                            'streetfeed_dishes', 'streetfeed_config', 'streetfeed_categories', 'streetfeed_auth',
+                            'streetfeed_cart', 'streetfeed_combos', 'streetfeed_orders', 'streetfeed_state',
+                            'streetfeed_isLoggedIn', 'streetfeed_order_counter', 'streetfeed_demo_last_activity',
+                            'streetfeed_admin_theme', 'streetfeed_expenses',
+                            'agenda_admin_user', 'agenda_admin_pass', 'agenda_auth', 'agenda_admin_session',
+                            'agenda_categories', 'agenda_services', 'agenda_specialists', 'agenda_promos',
+                            'agenda_gallery', 'agenda_service_galleries', 'agenda_simult_groups', 'agenda_site_name',
+                            'agenda_admin_gender', 'agenda_whatsapp_number', 'agenda_site_address', 'agenda_logo_url',
+                            'agenda_hero_url', 'agenda_admin_bg', 'agenda_social_links', 'agenda_admin_theme',
+                            'agenda_appointments', 'agenda_salon_open', 'agenda_closure_dates', 'agenda_demo_last_activity',
+                            'agenda_client_theme', 'agenda_site_whatsapp', 'agenda_salon_trigger', 'agenda_admin_email',
+                            'agenda_admin_expense_pass'
+                        ];
+                        demoKeys.forEach(key => localStorage.removeItem(key));
+                    }
+                    localStorage.setItem('streetfeed_demo_last_activity', now.toString());
+                    localStorage.setItem('agenda_demo_last_activity', now.toString());
+
+                    // --- INYECCIÓN DE BANNER DE MODO DEMO ---
+                    const injectDemoBanner = () => {
+                        const bannerHtml = `
+                            <div id="demo-badge-banner" style="
+                                position: fixed;
+                                top: 12px;
+                                left: 50%;
+                                transform: translateX(-50%) translateY(-100px);
+                                z-index: 999999;
+                                background: rgba(18, 22, 43, 0.82);
+                                backdrop-filter: blur(16px) saturate(180%);
+                                -webkit-backdrop-filter: blur(16px) saturate(180%);
+                                border: 1px solid rgba(255, 255, 255, 0.08);
+                                border-radius: 40px;
+                                padding: 8px 16px 8px 12px;
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+                                color: #fff;
+                                font-family: system-ui, -apple-system, sans-serif;
+                                font-size: 0.85rem;
+                                font-weight: 500;
+                                pointer-events: auto;
+                                transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+                                opacity: 0;
+                            ">
+                                <div style="
+                                    background: var(--theme-accent, var(--color-accent, #ff8c00));
+                                    width: 8px;
+                                    height: 8px;
+                                    border-radius: 50%;
+                                    box-shadow: 0 0 10px var(--theme-accent, var(--color-accent, #ff8c00));
+                                    animation: demo-pulse 2s infinite;
+                                "></div>
+                                <span style="white-space: nowrap;">
+                                    <strong style="color: var(--theme-accent, var(--color-accent, #ff8c00)); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Modo Demo</strong> 
+                                    · Cambios temporales (se limpian tras 4h de inactividad)
+                                </span>
+                                <button onclick="document.getElementById('demo-badge-banner').style.opacity='0'; setTimeout(()=>document.getElementById('demo-badge-banner').remove(), 400);" style="
+                                    background: transparent;
+                                    border: none;
+                                    color: rgba(255,255,255,0.4);
+                                    cursor: pointer;
+                                    padding: 0;
+                                    display: flex;
+                                    align-items: center;
+                                    font-size: 1.1rem;
+                                    margin-left: 6px;
+                                    transition: color 0.2s;
+                                " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">&times;</button>
+                            </div>
+                            <style>
+                            @keyframes demo-pulse {
+                                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0.5); }
+                                70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 140, 0, 0); }
+                                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0); }
+                            }
+                            </style>
+                        `;
+                        const div = document.createElement('div');
+                        div.innerHTML = bannerHtml.trim();
+                        const bannerEl = div.firstChild;
+                        const styleEl = div.lastChild;
+                        document.body.appendChild(bannerEl);
+                        document.body.appendChild(styleEl);
+
+                        setTimeout(() => {
+                            bannerEl.style.transform = 'translateX(-50%) translateY(0)';
+                            bannerEl.style.opacity = '1';
+                        }, 1000);
+                    };
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', injectDemoBanner);
+                    } else {
+                        injectDemoBanner();
+                    }
+                }
+            } catch(e) {
+                console.error("Error en auto-reset demo:", e);
+            }
+        })();
+
+        (function() {
             // 2. Título de Pestaña y Favicon inmediato
             const name = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
             document.title = name + " | Agenda de Citas";
@@ -512,6 +629,6 @@
 
     <!-- Scripts -->
     <script type="module" src="firebase_app.js?v=20260527.local"></script>
-    <script src="script.js?v=20260608.1" defer></script>
+    <script src="script.js?v=20260612.3" defer></script>
 </body>
 </html>

@@ -33,7 +33,7 @@ Este proyecto es una plataforma web completa para la administración de un estud
 ## 📦 Instalación y Uso
 1. Clona este repositorio.
 2. Abre `index.html` para ver la web del cliente.
-3. Abre `admin.html` para acceder al panel de control (Usuario: `admin`, Clave: `12345`).
+3. Abre `admin.html` para acceder al panel de control (Usuario: `admin`, Clave: `123456`).
 
 ---
 Desarrollado con ❤️ para **StyleSync Pro**.

@@ -2234,13 +2234,87 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
 }
 
 /* Automatic inline light background correction for Dark Theme */
-.dark-theme [style*="background:#f9f9f9"],
-.dark-theme [style*="background: #f9f9f9"],
-.dark-theme [style*="background:#fff"],
 .dark-theme [style*="background: #fff"],
 .dark-theme [style*="background:white"],
 .dark-theme [style*="background: white"] {
     background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ======================================================
+   ROTATE PHONE OVERLAY (StyleSync Pro Theme Adaptations)
+   ====================================================== */
+.rotate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000000;
+    background: rgba(25, 20, 22, 0.97); /* adapt to StyleSync dark theme palette */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-text, #3D3B3A);
+}
+
+.rotate-overlay-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    max-width: 320px;
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+.rotate-phone-icon {
+    font-size: 4.5rem;
+    line-height: 1;
+    animation: rotatePulse 2s ease-in-out infinite;
+    display: block;
+}
+
+@keyframes rotatePulse {
+    0%   { transform: rotate(0deg)   scale(1);    }
+    30%  { transform: rotate(-90deg) scale(1.1);  }
+    60%  { transform: rotate(-90deg) scale(1.05); }
+    100% { transform: rotate(0deg)   scale(1);    }
+}
+
+.rotate-arrow {
+    font-size: 3rem;
+    color: var(--color-accent, #A05D6B);
+    animation: arrowBounce 1.6s ease-in-out infinite;
+    line-height: 1;
+}
+
+@keyframes arrowBounce {
+    0%, 100% { opacity: 0.5; transform: scale(0.9); }
+    50%       { opacity: 1;   transform: scale(1.15); }
+}
+
+.rotate-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #ffffff;
+    margin-top: 0.4rem;
+}
+
+.rotate-desc {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+}
+
+.rotate-desc strong {
+    color: var(--color-accent, #A05D6B);
 }
 
 

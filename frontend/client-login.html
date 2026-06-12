@@ -1075,13 +1075,18 @@
                         token: data.token
                     }));
 
+                    const welcomeTitle = data.wasAutoRegistered ? '¡Registro Exitoso!' : '¡Acceso concedido!';
+                    const welcomeHtml = data.wasAutoRegistered 
+                        ? `<p style="color:#64748b;">Creando tu cuenta para <strong style="color:#f1f5f9;">${data.clientName}</strong>. Redirigiendo al panel...</p>`
+                        : `<p style="color:#64748b;">Bienvenido de nuevo, <strong style="color:#f1f5f9;">${data.clientName}</strong></p>`;
+
                     await Swal.fire({
                         icon: 'success',
-                        title: '¡Acceso concedido!',
-                        html: `<p style="color:#64748b;">Bienvenido de nuevo, <strong style="color:#f1f5f9;">${data.clientName}</strong></p>`,
+                        title: welcomeTitle,
+                        html: welcomeHtml,
                         background: '#0d1526',
                         color: '#f8fafc',
-                        timer: 1400,
+                        timer: 1600,
                         timerProgressBar: true,
                         showConfirmButton: false
                     });
@@ -1093,148 +1098,15 @@
                     } else {
                         window.location.href = '/client-dashboard.html';
                     }
-                } else if (data.notRegistered) {
-                    if (googleBtn) googleBtn.disabled = false;
-
-                    const { isConfirmed } = await Swal.fire({
-                        title: 'Registro con Google',
-                        html: `<p style="color:#94a3b8; font-size:0.88rem; line-height:1.4;">El correo <strong style="color:#f1f5f9;">${data.email}</strong> no está registrado como cliente.<br><br>¿Deseas registrar un nuevo negocio ahora usando esta cuenta?</p>`,
-                        icon: 'question',
-                        background: '#0d1526',
-                        color: '#f8fafc',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, registrar negocio',
-                        cancelButtonText: 'Cancelar',
-                        confirmButtonColor: '#6366f1',
-                        cancelButtonColor: '#334155'
-                    });
-
-                    if (isConfirmed) {
-                        const { value: bizFormResult } = await Swal.fire({
-                            title: 'Detalles de tu Negocio',
-                            html: `
-                                <div style="text-align: left; display: flex; flex-direction: column; gap: 0.8rem; padding: 0.5rem 0;">
-                                    <div>
-                                        <label style="color:#94a3b8; font-size:0.75rem; font-weight:600; text-transform:uppercase;">Nombre del Negocio *</label>
-                                        <input id="reg-biz-name" class="swal2-input" style="margin: 0.3rem 0 0 0; width: 100%; box-sizing: border-box; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; font-size: 0.9rem;" placeholder="Ej: Peluquería Central">
-                                    </div>
-                                    <div>
-                                        <label style="color:#94a3b8; font-size:0.75rem; font-weight:600; text-transform:uppercase;">Tipo de Negocio *</label>
-                                        <select id="reg-biz-type" class="swal2-input" style="margin: 0.3rem 0 0 0; width: 100%; box-sizing: border-box; height: 44px; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 0 10px; font-size: 0.9rem;">
-                                            <option value="salon_belleza">Salón de Belleza / Peluquería</option>
-                                            <option value="restaurante">Restaurante / Comida</option>
-                                            <option value="comercio">Comercio / Tienda</option>
-                                            <option value="otros">Otros</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style="color:#94a3b8; font-size:0.75rem; font-weight:600; text-transform:uppercase;">Ciudad *</label>
-                                        <input id="reg-biz-city" class="swal2-input" style="margin: 0.3rem 0 0 0; width: 100%; box-sizing: border-box; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; font-size: 0.9rem;" placeholder="Ej: Medellín">
-                                    </div>
-                                </div>
-                            `,
-                            background: '#0d1526',
-                            color: '#f8fafc',
-                            showCancelButton: true,
-                            confirmButtonText: 'Completar Registro →',
-                            cancelButtonText: 'Cancelar',
-                            confirmButtonColor: '#10b981',
-                            cancelButtonColor: '#334155',
-                            focusConfirm: false,
-                            preConfirm: () => {
-                                const name = document.getElementById('reg-biz-name').value.trim();
-                                const type = document.getElementById('reg-biz-type').value;
-                                const city = document.getElementById('reg-biz-city').value.trim();
-                                
-                                if (!name || !city) {
-                                    Swal.showValidationMessage('Por favor, completa todos los campos obligatorios (*).');
-                                    return false;
-                                }
-                                return { name, type, city };
-                            }
-                        });
-
-                        if (bizFormResult) {
-                            Swal.fire({
-                                title: 'Creando tu negocio...',
-                                html: `<p style="color:#64748b; font-size:0.88rem;">Registrando en el sistema de AS Sierra Systems...</p>`,
-                                background: '#0d1526',
-                                color: '#f8fafc',
-                                allowOutsideClick: false,
-                                showConfirmButton: false,
-                                didOpen: () => Swal.showLoading()
-                            });
-
-                            try {
-                                const regRes = await fetch(getApiUrl('/api/client/google-register'), {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        email: data.email,
-                                        accessToken: data.accessToken,
-                                        name: bizFormResult.name,
-                                        type: bizFormResult.type,
-                                        city: bizFormResult.city,
-                                        ownerName: data.ownerName,
-                                        avatarUrl: data.avatarUrl
-                                    })
-                                });
-                                const regContentType = regRes.headers.get('content-type');
-                                if (regContentType && !regContentType.includes('application/json')) {
-                                    throw new Error('Respuesta del servidor inesperada (no es JSON).');
-                                }
-                                const regData = await regRes.json();
-                                if (!regRes.ok) {
-                                    throw new Error(regData.error || 'Error al completar el registro.');
-                                }
-
-                                sessionStorage.setItem('clientSession', JSON.stringify({
-                                    clientId: regData.clientId,
-                                    clientName: regData.clientName,
-                                    clientEmail: regData.clientEmail,
-                                    token: regData.token
-                                }));
-
-                                await Swal.fire({
-                                    icon: 'success',
-                                    title: '¡Registro Exitoso!',
-                                    html: `<p style="color:#64748b;">Negocio <strong style="color:#f1f5f9;">${regData.clientName}</strong> creado con éxito.<br>Acceso concedido.</p>`,
-                                    background: '#0d1526',
-                                    color: '#f8fafc',
-                                    timer: 1800,
-                                    timerProgressBar: true,
-                                    showConfirmButton: false
-                                });
-
-                                const params = new URLSearchParams(window.location.search);
-                                const buyParam = params.get('buy');
-                                if (buyParam) {
-                                    window.location.href = `/client-dashboard.html?buy=${encodeURIComponent(buyParam)}`;
-                                } else {
-                                    window.location.href = '/client-dashboard.html';
-                                }
-                            } catch (regErr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error de Registro',
-                                    text: regErr.message || 'No se pudo crear el negocio.',
-                                    background: '#0d1526',
-                                    color: '#f8fafc',
-                                    confirmButtonText: 'Entendido',
-                                    confirmButtonColor: '#6366f1'
-                                });
-                            }
-                        }
-                    }
                 } else {
-                    throw new Error(data.error || 'Esta cuenta no está asociada a ningún cliente.');
+                    throw new Error(data.error || 'Esta cuenta no está autorizada como cliente.');
                 }
             } catch (err) {
                 if (googleBtn) googleBtn.disabled = false;
                 Swal.fire({
                     icon: 'error',
                     title: 'Acceso Denegado',
-                    text: err.message || 'Esta cuenta no está asociada a ningún cliente.',
+                    text: err.message || 'No se pudo verificar la sesión con Google.',
                     background: '#0d1526',
                     color: '#f8fafc',
                     confirmButtonText: 'Entendido',

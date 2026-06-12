@@ -1,5 +1,15 @@
 // ==========================================================================
 
+const bizTypeTranslations = {
+    'restaurant': 'Restaurante',
+    'retail': 'Tienda',
+    'services': 'Servicios',
+    'salon': 'Belleza',
+    'health': 'Salud',
+    'education': 'Educación',
+    'other': 'Otros'
+};
+
 // Premium Super Admin styles are loaded statically from style.css
 function injectSuperAdminStyles() {}
 
@@ -322,7 +332,8 @@ const appState = {
     modules: [],
     users: [],
     config: {},
-    notifications: []
+    notifications: [],
+    isInitialized: false
 };
 
 // Helpers de autenticación admin
@@ -348,6 +359,20 @@ async function adminFetch(url, options = {}) {
 
     if (resp.status === 401) {
         if (localStorage.getItem('as_auth') !== 'true') {
+            return resp;
+        }
+        if (!appState.isInitialized) {
+            // Si la aplicación aún no se ha inicializado completamente (es la primera carga/recarga)
+            // y el token ya no es válido, cerramos la sesión silenciosamente y redirigimos al login.
+            localStorage.removeItem('as_auth');
+            localStorage.removeItem('as_user');
+            localStorage.removeItem('as_admin_token');
+            appState.user = null;
+            appState.isInitialized = false;
+            initTheme();
+            showView('login-view');
+            document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
+            lucide.createIcons();
             return resp;
         }
         // Token vencido o servidor reiniciado — pedir credenciales
@@ -387,6 +412,7 @@ async function adminFetch(url, options = {}) {
             localStorage.removeItem('as_user');
             localStorage.removeItem('as_admin_token');
             appState.user = null;
+            appState.isInitialized = false;
             initTheme();
             showView('login-view');
             document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
@@ -658,6 +684,7 @@ function initRealTimeSync() {
                 localStorage.removeItem('as_user');
                 localStorage.removeItem('as_admin_token');
                 appState.user = null;
+                appState.isInitialized = false;
                 initTheme();
                 showView('login-view');
                 document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
@@ -842,6 +869,7 @@ async function loadData() {
         if (!document.getElementById('tab-billing').classList.contains('hidden') && (businessesChanged || modulesChanged)) {
             renderBillingTab();
         }
+        appState.isInitialized = true;
     } catch (err) {
         console.error(err);
         showToast('Error de conexión con el servidor', 'error');
@@ -1109,6 +1137,7 @@ function setupEventListeners() {
                 localStorage.removeItem('as_user');
                 localStorage.removeItem('as_admin_token');
                 appState.user = null;
+                appState.isInitialized = false;
                 initTheme(); // Revert to global/anonymous theme/accent
                 showView('login-view');
                 document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
@@ -1245,6 +1274,24 @@ function setupEventListeners() {
     document.getElementById('business-modal-close')?.addEventListener('click', closeBusinessModal);
     document.getElementById('business-modal-cancel')?.addEventListener('click', closeBusinessModal);
     
+    // Custom Multiselect for Modules
+    const msTrigger = document.getElementById('biz-modules-select-trigger');
+    const msDropdown = document.getElementById('biz-modules-dropdown');
+    const msContainer = document.getElementById('biz-modules-multiselect');
+    if (msTrigger && msDropdown && msContainer) {
+        msTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            msContainer.classList.toggle('open');
+            msDropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!msContainer.contains(e.target)) {
+                msContainer.classList.remove('open');
+                msDropdown.classList.add('hidden');
+            }
+        });
+    }
+    
     document.getElementById('btn-new-promo')?.addEventListener('click', () => {
         openPromoFormModal();
     });
@@ -1339,69 +1386,72 @@ function setupEventListeners() {
             const id = credBtn.dataset.id;
             const biz = appState.businesses.find(b => b.id == id);
             
-            Swal.fire({
-                title: 'Credenciales de Cliente',
-                html: `
-                    <div style="text-align: left; margin-top: 1rem;">
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Configura los datos de acceso para que este cliente (<b>${biz.name}</b>) ingrese a su panel.</p>
-                        <div style="margin-bottom: 1rem;">
-                            <label style="font-size: 0.8rem; font-weight: bold; color: var(--text-main); display:block; margin-bottom: 0.3rem;">Correo Electrónico</label>
-                            <input id="cred-email" type="email" class="swal2-input" style="margin:0; width:100%; box-sizing:border-box; font-size:0.9rem;" value="${biz.clientEmail || ''}" placeholder="cliente@empresa.com">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8rem; font-weight: bold; color: var(--text-main); display:block; margin-bottom: 0.3rem;">Contraseña</label>
-                            <input id="cred-pass" type="text" class="swal2-input" style="margin:0; width:100%; box-sizing:border-box; font-size:0.9rem;" value="${biz.clientPass || ''}" placeholder="••••••••">
-                        </div>
-                    </div>
-                `,
-                background: 'var(--bg-surface)',
-                color: 'var(--text-main)',
-                showCancelButton: true,
-                confirmButtonText: 'Guardar Credenciales',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: 'var(--primary)',
-                didOpen: (popup) => {
-                    const inputs = [popup.querySelector('#cred-email'), popup.querySelector('#cred-pass')];
-                    inputs.forEach(input => {
-                        if (input) {
-                            input.addEventListener('keydown', (e) => {
-                                if (e.key === 'Enter') {
-                                    Swal.clickConfirm();
-                                }
-                            });
-                        }
-                    });
-                },
-                preConfirm: () => {
-                    const email = document.getElementById('cred-email').value;
-                    const pass = document.getElementById('cred-pass').value;
-                    if (!email || !pass) {
-                        Swal.showValidationMessage('El correo y la contraseña son obligatorios.');
-                    }
-                    return { email, pass };
-                }
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const res = await adminFetch(`/api/businesses/${id}/credentials`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ clientEmail: result.value.email, clientPass: result.value.pass })
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            showToast('Credenciales guardadas exitosamente', 'success');
-                            loadData(); // Recargar para actualizar el estado
-                        } else {
-                            showToast(data.error || 'Error al guardar credenciales', 'error');
-                        }
-                    } catch (err) {
-                        showToast('Error de conexión', 'error');
-                    }
-                }
-            });
             const dropdown = credBtn.closest('.dropdown');
             if (dropdown) dropdown.classList.remove('active');
+            
+            requestSecurityCheck(() => {
+                Swal.fire({
+                    title: 'Credenciales de Cliente',
+                    html: `
+                        <div style="text-align: left; margin-top: 1rem;">
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Configura los datos de acceso para que este cliente (<b>${biz.name}</b>) ingrese a su panel.</p>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: bold; color: var(--text-main); display:block; margin-bottom: 0.3rem;">Correo Electrónico</label>
+                                <input id="cred-email" type="email" class="swal2-input" style="margin:0; width:100%; box-sizing:border-box; font-size:0.9rem;" value="${biz.clientEmail || ''}" placeholder="cliente@empresa.com">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem; font-weight: bold; color: var(--text-main); display:block; margin-bottom: 0.3rem;">Contraseña</label>
+                                <input id="cred-pass" type="text" class="swal2-input" style="margin:0; width:100%; box-sizing:border-box; font-size:0.9rem;" value="${biz.clientPass || ''}" placeholder="••••••••">
+                            </div>
+                        </div>
+                    `,
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-main)',
+                    showCancelButton: true,
+                    confirmButtonText: 'Guardar Credenciales',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: 'var(--primary)',
+                    didOpen: (popup) => {
+                        const inputs = [popup.querySelector('#cred-email'), popup.querySelector('#cred-pass')];
+                        inputs.forEach(input => {
+                            if (input) {
+                                input.addEventListener('keydown', (e) => {
+                                    if (e.key === 'Enter') {
+                                        Swal.clickConfirm();
+                                    }
+                                });
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const email = document.getElementById('cred-email').value;
+                        const pass = document.getElementById('cred-pass').value;
+                        if (!email || !pass) {
+                            Swal.showValidationMessage('El correo y la contraseña son obligatorios.');
+                        }
+                        return { email, pass };
+                    }
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await adminFetch(`/api/businesses/${id}/credentials`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ clientEmail: result.value.email, clientPass: result.value.pass })
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                                showToast('Credenciales guardadas exitosamente', 'success');
+                                loadData(); // Recargar para actualizar el estado
+                            } else {
+                                showToast(data.error || 'Error al guardar credenciales', 'error');
+                            }
+                        } catch (err) {
+                            showToast('Error de conexión', 'error');
+                        }
+                    }
+                });
+            });
         }
 
         // Delete Modal Actions
@@ -1802,11 +1852,20 @@ function setupEventListeners() {
             const address = document.getElementById('biz-address')?.value || '';
             const isActive = document.getElementById('biz-active').checked;
             
-            const selectedTypeEl = document.querySelector('.biz-type-option.selected');
-            const type = selectedTypeEl ? selectedTypeEl.getAttribute('data-type') : 'retail';
+            const email = document.getElementById('biz-email')?.value.trim() || '';
+            const pass = document.getElementById('biz-pass')?.value || '';
             
-            const selectedModules = [];
-            document.querySelectorAll('#module-checkboxes input:checked').forEach(cb => selectedModules.push(cb.value));
+            const selectedTypeEl = document.querySelector('.biz-type-option.selected');
+            let type = selectedTypeEl ? selectedTypeEl.getAttribute('data-type') : 'retail';
+            if (type === 'other') {
+                const customVal = document.getElementById('biz-type-custom')?.value.trim();
+                if (!customVal) {
+                    return showToast('Por favor especifica el tipo de negocio en el campo de texto', 'error');
+                }
+                type = customVal;
+            }
+            
+            const selectedModules = window.selectedBizModules || [];
 
             const id = document.getElementById('biz-id').value;
             
@@ -1823,14 +1882,21 @@ function setupEventListeners() {
             });
 
             if (!name) return showToast('El nombre es obligatorio', 'error');
+            if (!email) return showToast('El correo electrónico de acceso es obligatorio', 'error');
+            if (!id && !pass) return showToast('La contraseña es obligatoria para nuevos negocios', 'error');
 
             const bizData = {
                 id: id ? Number(id) : Date.now(),
                 name, type, city, phone, ownerName, nit, address,
                 status: isActive ? 'active' : 'inactive',
                 modules: selectedModules,
-                moduleDates: moduleDates
+                moduleDates: moduleDates,
+                clientEmail: email
             };
+
+            if (pass) {
+                bizData.clientPass = pass;
+            }
 
             const method = id ? 'PUT' : 'POST';
             const endpoint = id ? `/api/businesses/${id}` : '/api/businesses/new';
@@ -1923,7 +1989,12 @@ function initDashboard() {
     document.getElementById('badge-businesses').textContent = appState.businesses.length;
     
     // KPI: Negocios
-    const activeBizCount = appState.businesses.filter(b => b.status === 'active').length;
+    // KPI: Negocios activos (Negocios con estado activo que tienen al menos un módulo activo contratado)
+    const activeBizCount = appState.businesses.filter(b => b.status === 'active' && (
+        b.moduleInstances && b.moduleInstances.length > 0 ?
+            b.moduleInstances.some(inst => inst.status === 'active') :
+            (b.modules && b.modules.length > 0)
+    )).length;
     const kpiBiz = document.getElementById('kpi-businesses');
     if (kpiBiz) kpiBiz.textContent = activeBizCount;
 
@@ -1932,10 +2003,10 @@ function initDashboard() {
     const kpiMods = document.getElementById('kpi-modules');
     if (kpiMods) kpiMods.textContent = activeMods;
 
-    // KPI: Usuarios totales (Solo parte administrativa, sumando 1 por el administrador principal)
-    const totalUsers = appState.users.length + 1;
+    // KPI: Negocios registrados (Total de cuentas registradas en el sistema)
+    const totalRegisteredBiz = appState.businesses.length;
     const kpiUsers = document.getElementById('kpi-users');
-    if (kpiUsers) kpiUsers.textContent = totalUsers;
+    if (kpiUsers) kpiUsers.textContent = totalRegisteredBiz;
 
     // KPI: Ingresos del mes (suma real basada en módulos con precio y sedes activas)
     let totalIncome = 0;
@@ -2308,7 +2379,7 @@ function filterBusinesses(filterType, searchQuery = '') {
         <div class="biz-list-item">
             <div class="biz-info-main">
                 <div class="biz-name">${biz.name}</div>
-                <span class="biz-type" style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-top:0.2rem;">${biz.type}</span>
+                <span class="biz-type" style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-top:0.2rem;">${bizTypeTranslations[biz.type] || biz.type || 'Otros'}</span>
             </div>
             <div class="biz-info-client" style="flex:2; min-width:160px;">
                 <div class="client-name" style="font-weight:600; font-size:0.95rem; color:var(--text-main); word-break:break-all;">${biz.ownerName || '-'}</div>
@@ -2615,6 +2686,75 @@ async function updateModuleState(id, updates) {
     }
 }
 
+function renderModulesMultiselect() {
+    const optionsContainer = document.getElementById('biz-modules-options');
+    const tagsContainer = document.getElementById('biz-modules-tags');
+    const placeholder = document.getElementById('biz-modules-placeholder');
+    
+    if (!optionsContainer) return;
+    
+    const activeModules = appState.modules.filter(m => m.status === 'active');
+    
+    // Render dropdown options
+    optionsContainer.innerHTML = activeModules.map(m => {
+        const isSelected = window.selectedBizModules.includes(m.id);
+        return `
+            <div class="multiselect-option ${isSelected ? 'selected' : ''}" data-id="${m.id}">
+                <div class="multiselect-option-checkbox">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+                </div>
+                <span>${m.name}</span>
+            </div>
+        `;
+    }).join('');
+    
+    // Render selected tags
+    if (window.selectedBizModules.length > 0) {
+        if (placeholder) placeholder.style.display = 'none';
+        tagsContainer.innerHTML = window.selectedBizModules.map(mid => {
+            const m = appState.modules.find(mod => mod.id === mid);
+            const name = m ? m.name : mid;
+            return `
+                <div class="multiselect-tag" data-id="${mid}">
+                    <span>${name}</span>
+                    <span class="multiselect-tag-remove">&times;</span>
+                </div>
+            `;
+        }).join('');
+    } else {
+        if (placeholder) placeholder.style.display = 'block';
+        tagsContainer.innerHTML = '';
+    }
+    
+    // Add event listeners to options
+    optionsContainer.querySelectorAll('.multiselect-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = option.getAttribute('data-id');
+            const index = window.selectedBizModules.indexOf(id);
+            if (index > -1) {
+                window.selectedBizModules.splice(index, 1);
+            } else {
+                window.selectedBizModules.push(id);
+            }
+            renderModulesMultiselect();
+        });
+    });
+    
+    // Add event listeners to remove buttons on tags
+    tagsContainer.querySelectorAll('.multiselect-tag-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.parentElement.getAttribute('data-id');
+            const index = window.selectedBizModules.indexOf(id);
+            if (index > -1) {
+                window.selectedBizModules.splice(index, 1);
+                renderModulesMultiselect();
+            }
+        });
+    });
+}
+
 function openBusinessModal(id = null) {
 
     document.getElementById('business-modal').classList.remove('hidden');
@@ -2628,26 +2768,69 @@ function openBusinessModal(id = null) {
     const types = [
         { id: 'restaurant', icon: 'utensils', label: 'Restaurante' },
         { id: 'retail', icon: 'shopping-bag', label: 'Tienda' },
-        { id: 'services', icon: 'briefcase', label: 'Servicios' }
+        { id: 'services', icon: 'briefcase', label: 'Servicios' },
+        { id: 'salon', icon: 'sparkles', label: 'Belleza' },
+        { id: 'health', icon: 'heart', label: 'Salud' },
+        { id: 'education', icon: 'graduation-cap', label: 'Educación' },
+        { id: 'other', icon: 'help-circle', label: 'Otros' }
     ];
     
-    const targetType = biz ? biz.type : 'restaurant';
+    const standardTypeIds = types.map(t => t.id);
+    const isCustomType = biz && biz.type && !standardTypeIds.includes(biz.type);
+    const targetType = isCustomType ? 'other' : (biz ? biz.type : 'restaurant');
     
     typeGrid.innerHTML = types.map((t) => `
-        <div class="biz-type-option ${t.id === targetType ? 'selected' : ''}" data-type="${t.id}" onclick="document.querySelectorAll('.biz-type-option').forEach(el=>el.classList.remove('selected')); this.classList.add('selected');">
+        <div class="biz-type-option ${t.id === targetType ? 'selected' : ''}" data-type="${t.id}">
             <span><i data-lucide="${t.icon}"></i></span>
             <div>${t.label}</div>
         </div>
     `).join('');
 
-    const modsContainer = document.getElementById('module-checkboxes');
-    const bizMods = biz ? (biz.modules || []) : [];
-    
-    modsContainer.innerHTML = appState.modules.filter(m => m.status === 'active').map(m => `
-        <label class="custom-checkbox-label">
-            <input type="checkbox" value="${m.id}" ${bizMods.includes(m.id) ? 'checked' : ''}> ${m.name}
-        </label>
-    `).join('');
+    const customGroup = document.getElementById('biz-type-custom-group');
+    const customInput = document.getElementById('biz-type-custom');
+    if (customGroup && customInput) {
+        if (isCustomType) {
+            customGroup.classList.remove('hidden');
+            customInput.value = biz.type;
+        } else {
+            customGroup.classList.add('hidden');
+            customInput.value = '';
+        }
+    }
+
+    typeGrid.querySelectorAll('.biz-type-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+            typeGrid.querySelectorAll('.biz-type-option').forEach(el => el.classList.remove('selected'));
+            opt.classList.add('selected');
+            
+            const typeId = opt.getAttribute('data-type');
+            if (typeId === 'other') {
+                if (customGroup) {
+                    customGroup.classList.remove('hidden');
+                }
+                if (customInput) {
+                    customInput.focus();
+                }
+            } else {
+                if (customGroup) {
+                    customGroup.classList.add('hidden');
+                }
+                if (customInput) {
+                    customInput.value = '';
+                }
+            }
+        });
+    });
+
+    // Cerrar dropdown si estaba abierto
+    const msContainer = document.getElementById('biz-modules-multiselect');
+    const msDropdown = document.getElementById('biz-modules-dropdown');
+    if (msContainer) msContainer.classList.remove('open');
+    if (msDropdown) msDropdown.classList.add('hidden');
+
+    // Inicializar módulos seleccionados
+    window.selectedBizModules = biz ? [...(biz.modules || [])] : [];
+    renderModulesMultiselect();
 
     if (biz) {
         document.getElementById('biz-id').value = biz.id;
@@ -2658,11 +2841,35 @@ function openBusinessModal(id = null) {
         document.getElementById('biz-address').value = biz.address || '';
         document.getElementById('biz-owner-name').value = biz.ownerName || '';
         document.getElementById('biz-active').checked = biz.status === 'active';
+
+        // Credenciales
+        const emailEl = document.getElementById('biz-email');
+        const passEl = document.getElementById('biz-pass');
+        const passLabel = document.getElementById('biz-pass-label');
+        if (emailEl) emailEl.value = biz.clientEmail || '';
+        if (passEl) {
+            passEl.value = '';
+            passEl.placeholder = '••••••••';
+            passEl.required = false;
+        }
+        if (passLabel) passLabel.textContent = 'Contraseña (Dejar vacío para no cambiar)';
     } else {
         document.getElementById('biz-nit').value = '';
         document.getElementById('biz-phone').value = '';
         document.getElementById('biz-address').value = '';
         document.getElementById('biz-owner-name').value = '';
+
+        // Credenciales
+        const emailEl = document.getElementById('biz-email');
+        const passEl = document.getElementById('biz-pass');
+        const passLabel = document.getElementById('biz-pass-label');
+        if (emailEl) emailEl.value = '';
+        if (passEl) {
+            passEl.value = '';
+            passEl.placeholder = 'Ej: temporal123';
+            passEl.required = true;
+        }
+        if (passLabel) passLabel.textContent = 'Contraseña *';
     }
 
     lucide.createIcons();
@@ -4704,6 +4911,9 @@ window.exportExecutiveReportPDF = async function() {
         if (!period) return; // Cancelado
         const { year, month } = period;
         
+        const logoSrc = appState.customLogo || (appState.config && appState.config.logo);
+        const logoPng = await getLogoAsPng(logoSrc);
+        
         const yearVal = String(year);
         const monthVal = String(month);
         
@@ -4848,14 +5058,15 @@ window.exportExecutiveReportPDF = async function() {
             return [
                 biz.name || '—',
                 biz.city || '—',
-                biz.type || '—',
+                bizTypeTranslations[biz.type] || biz.type || '—',
                 biz.status === 'active' ? 'ACTIVO' : 'INACTIVO',
                 modulesNames || 'Ninguno'
             ];
         });
         
         drawCustomTable(doc, headers, body, startY + 48, {
-            colWidths: [45, 25, 30, 25, 57]
+            colWidths: [45, 25, 30, 25, 57],
+            cellPadding: 2.5
         });
         
         // Aplicar cabecera, monograma "AS" y pie de página dinámico a todas las páginas
@@ -4867,13 +5078,17 @@ window.exportExecutiveReportPDF = async function() {
             doc.setFillColor(30, 41, 59); // DARK
             doc.rect(0, 0, 210, 32, 'F');
             
-            // Monograma AS en contenedor Violeta
-            doc.setFillColor(99, 102, 241); // VIOLET
-            doc.rect(14, 6, 20, 20, 'F');
-            doc.setFont('Helvetica', 'bold');
-            doc.setFontSize(14);
-            doc.setTextColor(255, 255, 255);
-            doc.text('AS', 24, 19, { align: 'center' });
+            // Logo o Monograma Fallback
+            if (logoPng) {
+                try {
+                    doc.addImage(logoPng, 'PNG', 14, 6, 20, 20);
+                } catch (e) {
+                    console.error("Error al insertar la imagen del logo en el PDF:", e);
+                    drawFallbackMonogram(doc);
+                }
+            } else {
+                drawFallbackMonogram(doc);
+            }
             
             // Títulos del Header
             doc.setTextColor(255, 255, 255);
@@ -5032,6 +5247,7 @@ window.renderGlobalPaymentsHistory = function() {
         list = list.filter(p => {
             let desc = p.desc || '';
             appState.modules.forEach(m => {
+                if (desc.includes(m.name)) return;
                 desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
             });
             return (p.business_name || '').toLowerCase().includes(search) ||
@@ -5061,8 +5277,54 @@ window.renderGlobalPaymentsHistory = function() {
         // Sincronizar descripciones de módulos con nombres actualizados
         let desc = ph.desc || '—';
         appState.modules.forEach(m => {
+            if (desc.includes(m.name)) return;
             desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
         });
+
+        // Determinar si es Adquisición (primera vez) o Renovación
+        let conceptType = 'Adquisición / Renovación';
+        if (ph.desc && ph.desc.includes('Adquisición / Renovación de Módulo — ')) {
+            const mod = appState.modules.find(m => 
+                ph.desc.toLowerCase().includes(m.id.toLowerCase()) || 
+                ph.desc.toLowerCase().includes(m.name.toLowerCase())
+            );
+            
+            if (mod) {
+                const allPayments = appState.globalPayments || [];
+                const businessPaymentsForMod = allPayments
+                    .filter(p => 
+                        String(p.business_id) === String(ph.business_id) && 
+                        p.desc && 
+                        (p.desc.toLowerCase().includes(mod.id.toLowerCase()) || p.desc.toLowerCase().includes(mod.name.toLowerCase())) &&
+                        p.status === 'APPROVED'
+                    )
+                    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                
+                if (businessPaymentsForMod.length > 0 && String(businessPaymentsForMod[0].id) === String(ph.id)) {
+                    conceptType = 'Adquisición';
+                } else {
+                    conceptType = 'Renovación';
+                }
+            }
+        }
+
+        // Formatear descripción larga para que no sea tan extensa en la UI
+        let displayDesc = desc;
+        if (desc.includes('Adquisición / Renovación de Módulo — ')) {
+            const clean = desc.replace('Adquisición / Renovación de Módulo — ', '');
+            const match = clean.match(/(.*)\s*\((.*)\)/);
+            if (match) {
+                const moduleName = match[1].trim();
+                const branchName = match[2].trim();
+                if (branchName.toLowerCase() === 'sede principal') {
+                    displayDesc = `${conceptType}<br><span style="font-size:0.76rem;color:var(--text-muted);font-weight:600;">${moduleName}</span>`;
+                } else {
+                    displayDesc = `${conceptType}<br><span style="font-size:0.76rem;color:var(--text-muted);font-weight:600;">${moduleName}</span> <span style="font-size:0.72rem;color:var(--text-muted);opacity:0.8;">(${branchName})</span>`;
+                }
+            } else {
+                displayDesc = `${conceptType}<br><span style="font-size:0.76rem;color:var(--text-muted);font-weight:600;">${clean}</span>`;
+            }
+        }
 
         // Badge de estado premium
         const badgeBg = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
@@ -5078,7 +5340,7 @@ window.renderGlobalPaymentsHistory = function() {
             <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
                 <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.82rem;">${dateStr}</td>
                 <td style="padding:1rem 1.5rem; font-weight:700; color:var(--text-main);">${ph.business_name || '—'}</td>
-                <td style="padding:1rem 1.5rem; font-weight:500;">${desc}</td>
+                <td style="padding:1rem 1.5rem; font-weight:500; line-height:1.3;">${displayDesc}</td>
                 <td style="padding:1rem 1.5rem; font-weight:800; color:var(--text-main); text-align:center;">${amountStr}</td>
                 <td style="padding:1rem 1.5rem; text-align:center;">
                     <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
@@ -5151,24 +5413,40 @@ window.downloadGlobalPaymentsPDF = async function() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        doc.setFillColor(30, 41, 59); // Fondo oscuro
-        doc.rect(0, 0, 210, 35, 'F');
-        
+        // Header bar
+        doc.setFillColor(30, 41, 59);
+        doc.rect(0, 0, 210, 32, 'F');
+
+        // Logo o Monograma Fallback
+        const logoSrc = appState.customLogo || (appState.config && appState.config.logo);
+        const logoPng = await getLogoAsPng(logoSrc);
+        if (logoPng) {
+            try {
+                doc.addImage(logoPng, 'PNG', 14, 6, 20, 20);
+            } catch (e) {
+                console.error("Error al insertar la imagen del logo en el PDF:", e);
+                drawFallbackMonogram(doc);
+            }
+        } else {
+            drawFallbackMonogram(doc);
+        }
+
+        // Títulos
         doc.setFont('Helvetica', 'bold');
-        doc.setFontSize(22);
-        doc.setTextColor(248, 250, 252);
-        doc.text('AS SIERRA SYSTEMS', 14, 23);
+        doc.setFontSize(15);
+        doc.setTextColor(255, 255, 255);
+        doc.text('AS SIERRA SYSTEMS', 42, 15);
         
         doc.setFont('Helvetica', 'normal');
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setTextColor(148, 163, 184);
-        doc.text('HISTORIAL DE TRANSACCIONES - LEDGER GLOBAL', 14, 29);
+        doc.text('HISTORIAL DE TRANSACCIONES - LEDGER GLOBAL', 42, 22);
         
         const today = new Date();
         const dateStr = today.toLocaleDateString('es-CO') + ' ' + today.toLocaleTimeString('es-CO');
-        doc.setFontSize(9);
-        doc.setTextColor(248, 250, 252);
-        doc.text('Fecha: ' + dateStr, 140, 23);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Fecha: ' + dateStr, 140, 19);
         
         doc.setTextColor(30, 41, 59);
         doc.setFontSize(14);
@@ -5191,8 +5469,53 @@ window.downloadGlobalPaymentsPDF = async function() {
             // Sincronizar nombre de módulos en descripciones relacionales si aplica
             let desc = ph.desc || '—';
             appState.modules.forEach(m => {
+                if (desc.includes(m.name)) return;
                 desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
             });
+
+            // Determinar si es Adquisición (primera vez) o Renovación
+            let conceptType = 'Adquisición / Renovación';
+            if (ph.desc && ph.desc.includes('Adquisición / Renovación de Módulo — ')) {
+                const mod = appState.modules.find(m => 
+                    ph.desc.toLowerCase().includes(m.id.toLowerCase()) || 
+                    ph.desc.toLowerCase().includes(m.name.toLowerCase())
+                );
+                
+                if (mod) {
+                    const allPayments = appState.globalPayments || [];
+                    const businessPaymentsForMod = allPayments
+                        .filter(p => 
+                            String(p.business_id) === String(ph.business_id) && 
+                            p.desc && 
+                            (p.desc.toLowerCase().includes(mod.id.toLowerCase()) || p.desc.toLowerCase().includes(mod.name.toLowerCase())) &&
+                            p.status === 'APPROVED'
+                        )
+                        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    
+                    if (businessPaymentsForMod.length > 0 && String(businessPaymentsForMod[0].id) === String(ph.id)) {
+                        conceptType = 'Adquisición';
+                    } else {
+                        conceptType = 'Renovación';
+                    }
+                }
+            }
+
+            // Formatear descripción en el PDF para evitar textos excesivamente largos
+            if (desc.includes('Adquisición / Renovación de Módulo — ')) {
+                const clean = desc.replace('Adquisición / Renovación de Módulo — ', '');
+                const match = clean.match(/(.*)\s*\((.*)\)/);
+                if (match) {
+                    const moduleName = match[1].trim();
+                    const branchName = match[2].trim();
+                    if (branchName.toLowerCase() === 'sede principal') {
+                        desc = `${conceptType}\n${moduleName}`;
+                    } else {
+                        desc = `${conceptType}\n${moduleName} (${branchName})`;
+                    }
+                } else {
+                    desc = `${conceptType}\n${clean}`;
+                }
+            }
 
             return [
                 dateVal,
@@ -5205,7 +5528,8 @@ window.downloadGlobalPaymentsPDF = async function() {
         });
         
         const finalY = drawCustomTable(doc, headers, body, 60, {
-            colWidths: [20, 30, 50, 25, 22, 35]
+            colWidths: [20, 32, 29, 30, 24, 47],
+            cellPadding: 2.5
         });
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
@@ -5229,6 +5553,9 @@ window.downloadGlobalBillingPDF = async function() {
         const period = await promptYearMonth('Exportar Reporte de Facturación');
         if (!period) return; // Cancelado
         const { year, month } = period;
+        
+        const logoSrc = appState.customLogo || (appState.config && appState.config.logo);
+        const logoPng = await getLogoAsPng(logoSrc);
         
         const yearVal = String(year);
         const monthVal = String(month);
@@ -5294,7 +5621,7 @@ window.downloadGlobalBillingPDF = async function() {
                 });
             }
 
-            const nextCut = formatBillingDate(getClosestBillingDate(biz), { day: '2-digit', month: 'short', year: 'numeric' });
+            const nextCut = formatDateSlash(getClosestBillingDate(biz));
 
             const modNames = (biz.modules || []).map(mid => {
                 const m = modules.find(x => String(x.id) === String(mid));
@@ -5322,7 +5649,8 @@ window.downloadGlobalBillingPDF = async function() {
         });
 
         drawCustomTable(doc, headers, body, 55, {
-            colWidths: [35, 22, 22, 26, 27, 50]
+            colWidths: [38, 35, 20, 23, 32, 34],
+            cellPadding: 2.5
         });
 
         // Apply headers and footers to all pages after drawing the table
@@ -5334,13 +5662,17 @@ window.downloadGlobalBillingPDF = async function() {
             doc.setFillColor(30, 41, 59);
             doc.rect(0, 0, 210, 32, 'F');
 
-            // Monograma AS
-            doc.setFillColor(99, 102, 241);
-            doc.rect(14, 6, 20, 20, 'F');
-            doc.setFont('Helvetica', 'bold');
-            doc.setFontSize(14);
-            doc.setTextColor(255, 255, 255);
-            doc.text('AS', 24, 19, { align: 'center' });
+            // Logo o Monograma Fallback
+            if (logoPng) {
+                try {
+                    doc.addImage(logoPng, 'PNG', 14, 6, 20, 20);
+                } catch (e) {
+                    console.error("Error al insertar la imagen del logo en el PDF:", e);
+                    drawFallbackMonogram(doc);
+                }
+            } else {
+                drawFallbackMonogram(doc);
+            }
 
             // Títulos
             doc.setFontSize(15);
@@ -5375,10 +5707,61 @@ window.downloadGlobalBillingPDF = async function() {
     }
 };
 
+// Helper to convert base64 SVG or custom logo to PNG base64 for jsPDF
+async function getLogoAsPng(logoSrc) {
+    if (!logoSrc) return null;
+    if (logoSrc.startsWith('data:image/png') || logoSrc.startsWith('data:image/jpeg')) {
+        return logoSrc;
+    }
+    if (logoSrc.startsWith('data:image/svg+xml')) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 300;
+                    canvas.height = 300;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, 300, 300);
+                    ctx.drawImage(img, 0, 0, 300, 300);
+                    resolve(canvas.toDataURL('image/png'));
+                } catch (e) {
+                    console.error("Error convirtiendo logo SVG a PNG para PDF:", e);
+                    resolve(null);
+                }
+            };
+            img.onerror = () => {
+                console.error("Error al cargar la imagen SVG del logo para PDF");
+                resolve(null);
+            };
+            img.src = logoSrc;
+        });
+    }
+    return logoSrc;
+}
+
+// Helper to draw the default AS monogram in PDF
+function drawFallbackMonogram(doc) {
+    doc.setFillColor(99, 102, 241);
+    doc.rect(14, 6, 20, 20, 'F');
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('AS', 24, 19, { align: 'center' });
+}
+
+// Helper to format date with slashes (DD/MM/YYYY)
+function formatDateSlash(dateStr) {
+    const parsed = parseBillingDate(dateStr);
+    return parsed 
+        ? `${String(parsed.getDate()).padStart(2, '0')}/${String(parsed.getMonth() + 1).padStart(2, '0')}/${parsed.getFullYear()}`
+        : '—';
+}
+
 // ============================================================
 // PDF: FICHA INDIVIDUAL DE NEGOCIO
 // ============================================================
-window.downloadIndividualBusinessPDF = function(bizId) {
+window.downloadIndividualBusinessPDF = async function(bizId) {
     const biz = (appState.businesses || []).find(b => String(b.id) === String(bizId));
     if (!biz) { showToast('No se encontró el negocio.', 'error'); return; }
 
@@ -5399,7 +5782,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
                     const price = parseFloat(inst.priceApplied) || 0;
                     mrr += price;
                     const mod = modules.find(m => String(m.id) === String(inst.moduleId));
-                    const renewal = formatBillingDate(inst.renewalDate || biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+                    const renewal = formatDateSlash(inst.renewalDate || biz.billing?.next_billing_date);
                     activeInstances.push({
                         name: mod ? mod.name : inst.moduleId,
                         branch: inst.branchName || inst.sedeName || 'Sede Principal',
@@ -5417,7 +5800,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
                     if (isNaN(price)) price = 0;
                 }
                 mrr += price;
-                const renewal = formatBillingDate(biz.billing?.next_billing_date, { day: '2-digit', month: 'short', year: 'numeric' });
+                const renewal = formatDateSlash(biz.billing?.next_billing_date);
                 activeInstances.push({
                     name: m ? m.name : mid,
                     branch: 'Sede Principal',
@@ -5429,7 +5812,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
 
         const billing = biz.billing || {};
         const statusLabel = { active: 'ACTIVO', suspended: 'SUSPENDIDO', pending: 'PENDIENTE', cancelled: 'CANCELADO' }[billing.subscription_status || 'pending'] || '—';
-        const nextCut = formatBillingDate(getClosestBillingDate(biz), { day: '2-digit', month: 'short', year: 'numeric' });
+        const nextCut = formatDateSlash(getClosestBillingDate(biz));
 
         const pageCount = 1;
 
@@ -5437,13 +5820,19 @@ window.downloadIndividualBusinessPDF = function(bizId) {
         doc.setFillColor(30, 41, 59);
         doc.rect(0, 0, 210, 32, 'F');
 
-        // Monograma AS
-        doc.setFillColor(99, 102, 241);
-        doc.rect(14, 6, 20, 20, 'F');
-        doc.setFont('Helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.setTextColor(255, 255, 255);
-        doc.text('AS', 24, 19, { align: 'center' });
+        // Logo o Monograma Fallback
+        const logoSrc = appState.customLogo || (appState.config && appState.config.logo);
+        const logoPng = await getLogoAsPng(logoSrc);
+        if (logoPng) {
+            try {
+                doc.addImage(logoPng, 'PNG', 14, 6, 20, 20);
+            } catch (e) {
+                console.error("Error al insertar la imagen del logo en el PDF:", e);
+                drawFallbackMonogram(doc);
+            }
+        } else {
+            drawFallbackMonogram(doc);
+        }
 
         // Títulos
         doc.setFontSize(15);
@@ -5475,7 +5864,7 @@ window.downloadIndividualBusinessPDF = function(bizId) {
         const infoRows = [
             ['Email cliente', biz.clientEmail || '—'],
             ['Teléfono', biz.phone || '—'],
-            ['Tipo', biz.type || '—'],
+            ['Tipo', bizTypeTranslations[biz.type] || biz.type || '—'],
             ['Estado negocio', biz.status === 'active' ? 'Activo' : 'Inactivo'],
             ['Estado suscripción', statusLabel],
             ['Próximo corte', nextCut],
@@ -5483,17 +5872,30 @@ window.downloadIndividualBusinessPDF = function(bizId) {
             ['Tarjeta registrada', billing.card_brand ? billing.card_brand + ' ···' + (billing.last_four || '****') : 'Sin tarjeta'],
         ];
 
-        let yPos = 65;
+        let yStart = 65;
         doc.setFontSize(9);
-        infoRows.forEach(([label, value]) => {
+        for (let i = 0; i < 4; i++) {
+            const rowY = yStart + (i * 8);
+            
+            // Columna Izquierda (0 a 3)
+            const [labelL, valueL] = infoRows[i];
             doc.setFont('Helvetica', 'bold');
             doc.setTextColor(100, 116, 139);
-            doc.text(label + ':', 14, yPos);
+            doc.text(labelL + ':', 14, rowY);
             doc.setFont('Helvetica', 'normal');
             doc.setTextColor(30, 41, 59);
-            doc.text(String(value), 70, yPos);
-            yPos += 8;
-        });
+            doc.text(String(valueL), 46, rowY);
+            
+            // Columna Derecha (4 a 7)
+            const [labelR, valueR] = infoRows[i + 4];
+            doc.setFont('Helvetica', 'bold');
+            doc.setTextColor(100, 116, 139);
+            doc.text(labelR + ':', 110, rowY);
+            doc.setFont('Helvetica', 'normal');
+            doc.setTextColor(30, 41, 59);
+            doc.text(String(valueR), 144, rowY);
+        }
+        let yPos = yStart + (4 * 8);
 
         // Módulos activos
         doc.setFont('Helvetica', 'bold');
@@ -5515,7 +5917,8 @@ window.downloadIndividualBusinessPDF = function(bizId) {
                 `$ ${inst.price.toLocaleString('es-CO')} COP`
             ]);
             const finalY = drawCustomTable(doc, [['Módulo', 'Sede', 'Fecha de Corte', 'Precio Mensual']], bodyData, yPos + 14, {
-                colWidths: [60, 42, 40, 40]
+                colWidths: [60, 42, 40, 40],
+                cellPadding: 2.5
             });
             // Draw custom footer row for summary
             doc.setFillColor(30, 41, 59); // Dark grey background
@@ -6342,6 +6745,7 @@ window.triggerAdminGlobalLogout = async function() {
                 console.log('[Storage-Sync] Cierre de sesión detectado en otra pestaña.');
                 closeRealTimeSync();
                 appState.user = null;
+                appState.isInitialized = false;
                 initTheme();
                 showView('login-view');
                 document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();

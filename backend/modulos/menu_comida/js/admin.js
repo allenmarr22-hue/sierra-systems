@@ -309,7 +309,26 @@ function prefillConfigForm() {
         'conf-expenses-pass': state.auth.expensePass || '',
         'conf-closed-from': state.config.storeClosedFrom,
         'conf-closed-until': state.config.storeClosedUntil,
-        'conf-closed-msg': state.config.storeClosedMsg
+        'conf-closed-msg': state.config.storeClosedMsg,
+        'conf-wa-template': state.config.waTemplateOrder || `*NUEVO PEDIDO - {negocio}*
+--------------------------
+👤 *CLIENTE:* {cliente}
+📞 *TELÉFONO:* {telefono}
+🚚 *ENTREGA:* {entrega}
+📍 {detalles_entrega}
+💵 *PAGO:* {pago}
+📝 *NOTA:* {nota}
+--------------------------
+
+🛒 *RESUMEN DEL PEDIDO:*
+{resumen_pedido}
+
+--------------------------
+{precios}
+💵 *TOTAL A PAGAR: {total}*
+--------------------------
+
+🚀 _Enviado desde el Menú Digital_`
     };
 
     for (const [id, value] of Object.entries(fields)) {
@@ -785,6 +804,9 @@ document.addEventListener('DOMContentLoaded', () => {
             state.config.heroRating = document.getElementById('conf-hero-rating').value;
             state.config.whatsappNumber = document.getElementById('conf-whatsapp').value;
             state.config.footerText = document.getElementById('conf-footer').value;
+            
+            const waTemplateEl = document.getElementById('conf-wa-template');
+            if (waTemplateEl) state.config.waTemplateOrder = waTemplateEl.value;
             state.config.instagram = document.getElementById('conf-instagram').value;
             state.config.facebook = document.getElementById('conf-facebook').value;
             
@@ -4268,5 +4290,42 @@ window.exportExpensesToExcel = function() {
     link.click();
     document.body.removeChild(link);
     showToast('Reporte Excel descargado con éxito.', 'success');
+};
+
+window.insertTag = function(textareaId, tag) {
+    const el = document.getElementById(textareaId);
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = el.value;
+    el.value = text.substring(0, start) + tag + text.substring(end);
+    el.focus();
+    el.selectionStart = el.selectionEnd = start + tag.length;
+};
+
+window.resetStreetFeedWATemplate = function() {
+    const el = document.getElementById('conf-wa-template');
+    if (el) {
+        el.value = `*NUEVO PEDIDO - {negocio}*
+--------------------------
+👤 *CLIENTE:* {cliente}
+📞 *TELÉFONO:* {telefono}
+🚚 *ENTREGA:* {entrega}
+📍 {detalles_entrega}
+💵 *PAGO:* {pago}
+📝 *NOTA:* {nota}
+--------------------------
+
+🛒 *RESUMEN DEL PEDIDO:*
+{resumen_pedido}
+
+--------------------------
+{precios}
+💵 *TOTAL A PAGAR: {total}*
+--------------------------
+
+🚀 _Enviado desde el Menú Digital_`;
+        showToast("Plantilla restablecida por defecto.");
+    }
 };
 

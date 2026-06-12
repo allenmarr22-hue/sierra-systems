@@ -118,6 +118,170 @@
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
         }
+        /* Compact Business Type Selector */
+        .biz-type-grid {
+            display: flex !important;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .biz-type-option {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.9rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            border-radius: 20px !important;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left !important;
+        }
+        .biz-type-option:hover {
+            border-color: var(--primary) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+        .biz-type-option.selected {
+            border-color: #6366f1 !important;
+            background: rgba(99, 102, 241, 0.15) !important;
+            color: #818cf8 !important;
+        }
+        .biz-type-option span {
+            font-size: 1rem !important;
+            display: inline-flex !important;
+            align-items: center;
+            margin-bottom: 0 !important;
+        }
+        .biz-type-option span svg {
+            width: 15px !important;
+            height: 15px !important;
+        }
+        .biz-type-option div {
+            font-size: 0.8rem !important;
+            font-weight: 500 !important;
+        }
+
+        /* Custom Multi-select Dropdown for Modules */
+        .custom-multiselect {
+            position: relative;
+            width: 100%;
+        }
+        .multiselect-select {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 48px;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .multiselect-select:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .multiselect-placeholder {
+            color: #8e9ba5;
+            font-size: 0.9rem;
+        }
+        .multiselect-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            flex: 1;
+        }
+        .multiselect-tag {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .multiselect-tag-remove {
+            cursor: pointer;
+            color: #c7d2fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .multiselect-tag-remove:hover {
+            color: #ef4444;
+        }
+        .multiselect-arrow {
+            color: #8e9ba5;
+            width: 18px;
+            height: 18px;
+            transition: transform 0.2s ease;
+            margin-left: 0.5rem;
+        }
+        .custom-multiselect.open .multiselect-arrow {
+            transform: rotate(180deg);
+        }
+        .multiselect-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            width: 100%;
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            z-index: 50;
+            max-height: 250px;
+            overflow-y: auto;
+            backdrop-filter: blur(8px);
+        }
+        .multiselect-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: #e5e7eb;
+            font-size: 0.9rem;
+            user-select: none;
+        }
+        .multiselect-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .multiselect-option.selected {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+        }
+        .multiselect-option-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+        .multiselect-option.selected .multiselect-option-checkbox {
+            background: #6366f1;
+            border-color: #6366f1;
+        }
+        .multiselect-option-checkbox svg {
+            width: 12px;
+            height: 12px;
+            color: #ffffff;
+            stroke-width: 3;
+            display: none;
+        }
+        .multiselect-option.selected .multiselect-option-checkbox svg {
+            display: block;
+        }
     </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -497,7 +661,7 @@
                     <div class="kpi-icon kpi-green"><i data-lucide="users"></i></div>
                     <div class="kpi-info">
                         <div class="kpi-value" id="kpi-users"><span class="sa-skeleton"></span></div>
-                        <div class="kpi-label">Usuarios Totales</div>
+                        <div class="kpi-label">Negocios Registrados</div>
                     </div>
                     <div class="kpi-trend up">Activo</div>
                 </div>
@@ -1295,13 +1459,38 @@
                         <input type="text" id="biz-address" placeholder="Ej: Calle 15 #8-22">
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label id="biz-email-label">Correo Electrónico de Acceso *</label>
+                        <input type="email" id="biz-email" placeholder="Ej: cliente@correo.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label id="biz-pass-label">Contraseña *</label>
+                        <input type="password" id="biz-pass" placeholder="Ej: temporal123" required>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>Tipo de Negocio</label>
                     <div class="biz-type-grid" id="biz-type-grid"></div>
+                    <div class="form-group hidden" id="biz-type-custom-group" style="margin-top: 0.75rem;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 0.35rem;">Especificar Tipo de Negocio *</label>
+                        <input type="text" id="biz-type-custom" placeholder="Ej: Ferretería, Hotel, Gimnasio" style="margin: 0; width: 100%;">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Módulos Asignados</label>
-                    <div class="module-checkboxes" id="module-checkboxes"></div>
+                    <div class="custom-multiselect" id="biz-modules-multiselect">
+                        <div class="multiselect-select" id="biz-modules-select-trigger">
+                            <div class="multiselect-tags" id="biz-modules-tags"></div>
+                            <span class="multiselect-placeholder" id="biz-modules-placeholder">Seleccionar módulos...</span>
+                            <i data-lucide="chevron-down" class="multiselect-arrow"></i>
+                        </div>
+                        <div class="multiselect-dropdown hidden" id="biz-modules-dropdown">
+                            <div class="multiselect-options" id="biz-modules-options">
+                                <!-- Dinámico por JS -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">

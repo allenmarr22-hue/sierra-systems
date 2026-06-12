@@ -682,17 +682,68 @@ app.post('/api/client/google-login', loginLimiter, async (req, res) => {
     }
 
     try {
-        const biz = await db.findBusinessByEmail(targetEmail);
+        let biz = await db.findBusinessByEmail(targetEmail);
+        let wasAutoRegistered = false;
+
         if (!biz) {
-            return res.status(404).json({ 
-                success: false, 
-                notRegistered: true,
-                email: targetEmail,
-                ownerName,
-                avatarUrl,
-                accessToken,
-                error: `La cuenta de Google (${targetEmail}) no está registrada como cliente.` 
+            // Auto-registro directo con datos básicos de Google
+            let dbState = await readDb();
+            const bizId = Date.now() + Math.floor(Math.random() * 1000);
+            const randomPass = Math.random().toString(36).substring(2, 10);
+            const hashedPass = db.hashPassword(randomPass);
+            const placeholderBizName = ownerName || 'Mi Negocio';
+
+            const newBiz = {
+                id: bizId,
+                name: placeholderBizName,
+                type: 'otros',
+                status: 'active',
+                city: null,
+                phone: null,
+                nit: null,
+                address: null,
+                clientEmail: targetEmail,
+                clientPass: hashedPass,
+                ownerName: ownerName || placeholderBizName,
+                registrationSource: 'google',
+                avatarUrl: avatarUrl || null,
+                modules: [],
+                moduleDates: {},
+                billing: {
+                    subscription_status: 'pending',
+                    gateway_token: null,
+                    last_four: null,
+                    card_brand: null,
+                    last_payment_date: null,
+                    last_payment_amount: 0.00,
+                    last_failed_attempt: null,
+                    last_transaction_id: null
+                }
+            };
+
+            dbState.businesses.unshift(newBiz);
+
+            // Notificar al superadmin del auto-registro
+            pushNotification(dbState, {
+                title: 'Nuevo Cliente (Google Auto)',
+                desc: `"${placeholderBizName}" se registró automáticamente usando Google Sign-In.`,
+                icon: 'user-plus',
+                color: '#10b981'
             });
+
+            await writeDb(dbState);
+
+            // Enviar correo de bienvenida simulado
+            EmailService.sendWelcomeEmail(targetEmail, placeholderBizName, targetEmail, `[Acceso por Google - Contraseña temporal: ${randomPass}]`).catch(err => {
+                console.error('[Welcome Email Error]', err);
+            });
+
+            // Difundir cambios vía SSE
+            broadcastUpdate();
+
+            // Volver a consultar desde la base de datos para obtener el registro en el formato correcto
+            biz = await db.findBusinessByEmail(targetEmail);
+            wasAutoRegistered = true;
         }
 
         if (biz.status !== 'active') {
@@ -707,11 +758,11 @@ app.post('/api/client/google-login', loginLimiter, async (req, res) => {
             expires: Date.now() + 8 * 60 * 60 * 1000 // 8 horas
         });
 
-        // Registrar notificación
+        // Registrar notificación de acceso
         await db.pushNotification({
             title: 'Acceso Google',
             desc: `"${biz.name}" inició sesión con Google.`,
-            icon: 'chrome',
+            icon: 'log-in',
             color: '#3b82f6'
         });
 
@@ -720,7 +771,8 @@ app.post('/api/client/google-login', loginLimiter, async (req, res) => {
             token,
             clientId: biz.id,
             clientName: biz.name,
-            clientEmail: biz.client_email
+            clientEmail: biz.client_email,
+            wasAutoRegistered
         });
     } catch (err) {
         console.error('Error en client google-login:', err);
@@ -805,7 +857,7 @@ app.post('/api/client/google-register', loginLimiter, async (req, res) => {
         pushNotification(dbState, {
             title: 'Nuevo Cliente (Google)',
             desc: `"${name}" se registró usando Google Sign-In.`,
-            icon: 'chrome',
+            icon: 'user-plus',
             color: '#10b981'
         });
 
@@ -1343,6 +1395,9 @@ app.post('/api/businesses/new', requireWriteAccess, async (req, res) => {
     const newBiz = req.body;
     try {
         let dbState = await readDb();
+        if (newBiz.clientPass) {
+            newBiz.clientPass = db.hashPassword(newBiz.clientPass);
+        }
         dbState.businesses.unshift(newBiz);
 
         pushNotification(dbState, {
@@ -1368,12 +1423,41 @@ app.put('/api/businesses/:id', requireWriteAccess, async (req, res) => {
         let dbState = await readDb();
         const bizIndex = dbState.businesses.findIndex(b => b.id == bizId);
         if (bizIndex !== -1) {
-            dbState.businesses[bizIndex] = { ...dbState.businesses[bizIndex], ...updatedFields };
+            if (updatedFields.clientPass) {
+                updatedFields.clientPass = db.hashPassword(updatedFields.clientPass);
+            }
+            
             const biz = dbState.businesses[bizIndex];
+            
+            // Sincronizar moduleInstances si se actualizan los módulos contratados
+            if (updatedFields.modules !== undefined) {
+                let currentInstances = (biz.moduleInstances || []).filter(inst => 
+                    updatedFields.modules.includes(inst.moduleId)
+                );
+                
+                const existingActiveModuleIds = currentInstances.map(inst => inst.moduleId);
+                updatedFields.modules.forEach(modId => {
+                    if (!existingActiveModuleIds.includes(modId)) {
+                        currentInstances.push({
+                            instanceId: `${bizId}-${modId}-${Date.now()}`,
+                            moduleId: modId,
+                            branchName: 'Sede Principal',
+                            status: 'active',
+                            priceApplied: 0,
+                            renewalDate: (updatedFields.moduleDates && updatedFields.moduleDates[modId]) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                        });
+                    }
+                });
+                
+                updatedFields.moduleInstances = currentInstances;
+            }
+            
+            dbState.businesses[bizIndex] = { ...dbState.businesses[bizIndex], ...updatedFields };
+            const bizUpdated = dbState.businesses[bizIndex];
 
             pushNotification(dbState, {
                 title: 'Negocio Actualizado',
-                desc: `Los datos de "${biz.name}" fueron modificados.`,
+                desc: `Los datos de "${bizUpdated.name}" fueron modificados.`,
                 icon: 'pencil',
                 color: '#3b82f6'
             });
@@ -2072,7 +2156,7 @@ app.post('/api/client/module/renew', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
-    const { moduleId, moduleName, last4, branchName, instanceId } = req.body;
+    const { moduleId, moduleName, last4, cardBrand, cardExpiry, cardHolder, branchName, instanceId } = req.body;
     if (!moduleId) return res.status(400).json({ error: 'moduleId es requerido.' });
 
     try {
@@ -2205,6 +2289,32 @@ app.post('/api/client/module/renew', async (req, res) => {
         const finalExpiryStr = targetInstance ? targetInstance.renewalDate : newExpiryStr;
         const finalExpiryFormatted = new Date(finalExpiryStr).toLocaleDateString('es-CO');
 
+        // Actualizar información de tarjeta y activar estado de suscripción
+        if (!biz.billing) biz.billing = {};
+        biz.billing.subscription_status = 'active';
+        biz.status = 'active'; // Asegurar que el negocio esté activo
+        
+        biz.billing.next_billing_date = finalExpiryStr.slice(0, 10);
+        biz.billing.last_payment_date = new Date().toISOString();
+        biz.billing.last_payment_amount = priceApplied;
+        biz.billing.last_transaction_id = `sim_txn_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+
+        if (last4) {
+            biz.billing.last_four = last4;
+            biz.billing.gateway_token = biz.billing.gateway_token || `sim_tok_${Date.now()}_${last4}`;
+        }
+        if (cardBrand) {
+            biz.billing.card_brand = cardBrand;
+        } else if (last4 && !biz.billing.card_brand) {
+            biz.billing.card_brand = 'VISA'; // fallback
+        }
+        if (cardExpiry) {
+            biz.billing.card_expiry = cardExpiry;
+        }
+        if (cardHolder) {
+            biz.billing.card_holder = cardHolder;
+        }
+
         // Registrar en historial de pagos SQL directo (Compra/Renovación Módulo)
         try {
             await db.pool.query(`
@@ -2216,7 +2326,7 @@ app.post('/api/client/module/renew', async (req, res) => {
                 priceApplied,
                 `Adquisición / Renovación de Módulo — ${moduleName || moduleId} (${finalBranchName})`,
                 'APPROVED',
-                `sim_txn_${Date.now()}_${Math.floor(Math.random()*1000)}`
+                biz.billing.last_transaction_id
             ]);
         } catch (dbErr) {
             console.error('[RenewModule] Error registrando historial de pago:', dbErr.message);

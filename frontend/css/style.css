@@ -76,18 +76,18 @@
 }
 
 [data-theme="light"] {
-    --bg-base: #f0f4fa;         /* Cool indigo-tinted light */
-    --bg-surface: #ffffff;
-    --bg-surface-light: #eef2f9;
+    --bg-base: #f1f5f9;         /* Slate-100 para un fondo mate muy suave */
+    --bg-surface: #ffffff;      /* Blanco puro para las tarjetas y sidebar */
+    --bg-surface-light: #f8fafc;/* Slate-50 para fondos de inputs, dropdowns y badges */
     --bg-body: rgba(241, 245, 249, 0.8);
 
-    --text: #0f172a;
-    --text-main: #0f172a;
+    --text: #1e293b;            /* Gris pizarra oscuro y suave para evitar contraste agresivo */
+    --text-main: #1e293b;
     --text-muted: #64748b;
 
-    --border-color: rgba(99, 102, 241, 0.12);
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-border: rgba(99, 102, 241, 0.08);
+    --border-color: rgba(148, 163, 184, 0.15); /* Borde pizarra más suave y elegante */
+    --glass-bg: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(148, 163, 184, 0.1);
 
     /* Semantic: Primary */
     --primary-bg:     rgba(99, 102, 241, 0.08);

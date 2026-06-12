@@ -653,6 +653,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     await loadData();
+
+    // Comprobar si el perfil de negocio está incompleto (especialmente para registros por Google)
+    try {
+        const clientBiz = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
+        if (isProfileIncomplete(clientBiz) && !sessionStorage.getItem('onboardingPrompted')) {
+            sessionStorage.setItem('onboardingPrompted', 'true');
+            Swal.fire({
+                title: '👋 ¡Te damos la bienvenida!',
+                html: `
+                    <p style="color:var(--text-muted); margin-bottom:1.2rem; font-size:0.92rem; line-height:1.55;">
+                        Para comenzar a usar tu panel de control, por favor <strong style="color:var(--primary);">completa el perfil de tu negocio</strong>.<br>Esto nos ayudará a configurar tus facturas y servicios de manera profesional.
+                    </p>
+                `,
+                icon: 'info',
+                background: 'var(--bg-surface)',
+                color: 'var(--text)',
+                confirmButtonText: 'Configurar Perfil →',
+                confirmButtonColor: 'var(--primary)',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('btn-open-profile')?.click();
+                }
+            });
+        }
+    } catch (e) {
+        console.error('[Onboarding] Error al validar completitud de perfil:', e);
+    }
+
     if (typeof loadMyTickets === 'function') {
         await loadMyTickets();
     }
@@ -2142,19 +2172,25 @@ function renderDashboard() {
     // --- Próximo Corte ---
     const elNextPayment = document.getElementById('client-next-payment');
     if (elNextPayment) {
-        const nextCutDate = getClosestBillingDate(clientBiz);
-        const parsed = parseBillingDate(nextCutDate);
-
-        if (parsed) {
-            elNextPayment.textContent = parsed.toLocaleDateString('es-CO', {
-                day: '2-digit', month: '2-digit', year: 'numeric'
-            });
-            elNextPayment.style.color = 'var(--text)';
-            elNextPayment.style.fontSize = ''; // Reset font size if was changed before
-        } else {
-            elNextPayment.textContent = 'Contactar Admin';
+        if (activeInstances.length === 0) {
+            elNextPayment.textContent = '—';
             elNextPayment.style.color = 'var(--text-muted)';
-            elNextPayment.style.fontSize = '0.85rem';
+            elNextPayment.style.fontSize = '';
+        } else {
+            const nextCutDate = getClosestBillingDate(clientBiz);
+            const parsed = parseBillingDate(nextCutDate);
+
+            if (parsed) {
+                elNextPayment.textContent = parsed.toLocaleDateString('es-CO', {
+                    day: '2-digit', month: '2-digit', year: 'numeric'
+                });
+                elNextPayment.style.color = 'var(--text)';
+                elNextPayment.style.fontSize = ''; // Reset font size if was changed before
+            } else {
+                elNextPayment.textContent = 'Contactar Admin';
+                elNextPayment.style.color = 'var(--text-muted)';
+                elNextPayment.style.fontSize = '0.85rem';
+            }
         }
     }
 
@@ -3447,7 +3483,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
     }
 
     // Función auxiliar para procesar el pago en el servidor
-    const processRenewalOnServer = async (last4) => {
+    const processRenewalOnServer = async (last4, cardBrand = null, cardExpiry = null, cardHolder = null) => {
         let session;
         try { session = JSON.parse(sessionStorage.getItem('clientSession') || '{}'); } catch { session = {}; }
         if (!session.token) { Swal.fire({ icon: 'error', title: 'Sesión expirada' }); return; }
@@ -3485,7 +3521,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
             const res = await fetch('/api/client/module/renew', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
-                body: JSON.stringify({ moduleId: modId, moduleName: modName, last4, branchName, instanceId })
+                body: JSON.stringify({ moduleId: modId, moduleName: modName, last4, cardBrand, cardExpiry, cardHolder, branchName, instanceId })
             });
             if (!res.ok) {
                 let errMsg = 'Error al renovar.';
@@ -3681,7 +3717,12 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         });
 
         if (swalResult.isConfirmed) {
-            await processRenewalOnServer(swalResult.value.last4);
+            await processRenewalOnServer(
+                swalResult.value.last4,
+                swalResult.value.brand,
+                swalResult.value.expiry,
+                swalResult.value.holder
+            );
             return;
         } else if (swalResult.dismiss === Swal.DismissReason.cancel) {
             // Usuario quiere usar otra tarjeta — caer al formulario nuevo
@@ -3771,7 +3812,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         cards.push(newCard);
         walletSave(cards);
         if (document.getElementById('card-wallet')) renderCardWallet();
-        await processRenewalOnServer(newCard.last4);
+        await processRenewalOnServer(newCard.last4, newCard.brand, newCard.expiry, newCard.holder);
     }
 }
 

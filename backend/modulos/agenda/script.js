@@ -2095,7 +2095,12 @@ window.sendCartToWhatsApp = async function() {
     const businessName = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
     let cleanNum = savedWa.replace(/\D/g, '');
     const waNumber = cleanNum.length === 10 ? "57" + cleanNum : cleanNum;
-    let waText = encodeURIComponent(`Hola ${businessName}!\n\n*Mi Nombre:* ${name}\n*Celular:* ${phone}\n\nQuiero agendar los siguientes servicios:\n`);
+    
+    const defaultBookingHeader = `Hola {negocio}!\n\n*Mi Nombre:* {cliente}\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total a pagar: {total}*`;
+    const defaultBookingItem = `{numero}. *{servicio}*\n   - Precio: {precio}\n   - Fecha: {fecha}\n   - Horario: {horario}\n   - Profesional: {profesional}\n`;
+
+    const templateHeader = localStorage.getItem('agenda_wa_template_booking_header') || defaultBookingHeader;
+    const templateItem = localStorage.getItem('agenda_wa_template_booking_item') || defaultBookingItem;
     
     // --- NUEVO REDONDEO DE PRECIO (REUSANDO VALORES CALCULADOS) ---
     // (promos, categoriesList, normalize ya declarados arriba)
@@ -2116,6 +2121,7 @@ window.sendCartToWhatsApp = async function() {
     // Lógica Descuento Individual (Reusando discCats etc)
     let totalIndividualDiscounts = 0;
 
+    let citasStr = "";
     let counter = 1;
     cart.forEach((item, index) => {
         const pNum = parseInt((item.price || "0").toString().replace(/\D/g, '')) || 0;
@@ -2137,13 +2143,36 @@ window.sendCartToWhatsApp = async function() {
             finalItemPriceStr = window.formatCurrency(pNum - disc);
         }
 
-        waText += encodeURIComponent(`\n${counter}. *${item.service}*\n   - Precio: ${finalItemPriceStr}\n   - Fecha: ${item.date}\n   - Horario: ${startT} a ${endT}\n   - Profesional: ${item._finalSpecialist}\n`);
+        let formattedDate = item.date;
+        if (formattedDate && formattedDate.indexOf('-') !== -1) {
+            const parts = formattedDate.split('-');
+            if (parts.length === 3 && parts[0].length === 4) {
+                formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+        }
+
+        let itemText = templateItem
+            .replace(/{numero}/g, counter)
+            .replace(/{servicio}/g, item.service)
+            .replace(/{precio}/g, finalItemPriceStr)
+            .replace(/{fecha}/g, formattedDate)
+            .replace(/{horario}/g, `${startT} a ${endT}`)
+            .replace(/{profesional}/g, item._finalSpecialist);
+
+        citasStr += itemText;
         counter++;
     });
 
     const finalTotal = totalOriginal - totalComboDiscount - totalIndividualDiscounts;
-    waText += encodeURIComponent(`\n*Total a pagar: ${window.formatCurrency(finalTotal)}*`);
     
+    let message = templateHeader
+        .replace(/{negocio}/g, businessName)
+        .replace(/{cliente}/g, name)
+        .replace(/{telefono}/g, phone)
+        .replace(/{citas}/g, citasStr)
+        .replace(/{total}/g, window.formatCurrency(finalTotal));
+
+    const waText = encodeURIComponent(message);
     const waUrl = `https://wa.me/${waNumber}?text=${waText}`;
 
     // Asignar la URL a la ventana que abrimos de forma síncrona (universal en todos los browsers)
