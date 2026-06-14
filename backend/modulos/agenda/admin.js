@@ -7650,7 +7650,7 @@ function renderSpecialists() {
                 const specProfileImg = spec.image && !spec.image.includes('placeholder.com') ? `<img src="${spec.image}" style="width:55px; height:55px; border-radius:12px; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : `<div style="background:rgba(var(--accent-rgb), 0.12); width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--color-accent); font-size:1.5rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
 
                 return `
-                <div class="glass-module" style="padding:20px; border-radius:20px; position:relative; display:flex; flex-direction:column; gap:15px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); opacity:${isActive ? '1' : '0.6'}; transition:0.3s; border: 1px solid ${isActive ? 'rgba(184, 115, 129, 0.2)' : 'var(--border-color)'};">
+                <div class="glass-module specialist-grid-card" data-active="${isActive}" style="padding:20px; border-radius:20px; position:relative; display:flex; flex-direction:column; gap:15px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); opacity:${isActive ? '1' : '0.6'}; transition:0.3s;">
                     
                     <!-- HEADER COMPACTO -->
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:15px;">
@@ -7705,7 +7705,7 @@ function renderSpecialists() {
                     <!-- CONTADORES RÁPIDOS -->
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <!-- Cuadro Interactivo para Citas de Hoy -->
-                        <div onclick="viewSpecialistServices('${spec.name}')" style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center; cursor:pointer;" class="hover-scale">
+                        <div onclick="viewSpecialistServices('${spec.name}')" class="hover-scale specialist-stat-card interactive" style="padding:12px; text-align:center; cursor:pointer;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Citas Hoy</span>
                                 <i class="fas fa-history" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
@@ -7717,7 +7717,7 @@ function renderSpecialists() {
                         </div>
                         
                         <!-- Info Estática para Total Mes -->
-                        <div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.15); border-radius:15px; padding:12px; text-align:center;">
+                        <div class="specialist-stat-card" style="padding:12px; text-align:center;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <span style="font-size:0.6rem; color:var(--color-text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Servicios Mes</span>
                                 <i class="fas fa-chart-line" style="font-size:0.7rem; color:var(--color-dark-pink); opacity:0.9;"></i>
@@ -7728,7 +7728,7 @@ function renderSpecialists() {
                     </div>
 
                     <!-- RESUMEN FINANCIERO HOY (MUY COMPACTO) -->
-                    <div style="background: var(--earnings-bg); padding:12px; border-radius:15px; border:1px solid var(--earnings-border);">
+                    <div class="specialist-earnings-card" style="padding:12px; border-radius:15px;">
                         <div style="font-size:0.65rem; color:var(--color-dark-pink); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; text-align:center; border-bottom:1px dashed rgba(var(--accent-rgb), 0.3); padding-bottom:5px;">
                             💰 Ganancias Hoy
                         </div>

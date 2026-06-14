@@ -3625,3 +3625,38 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     color: #f8fafc !important;
 }
 
+/* Specialist Grid Card & Subcards (Light mode borders standing out more, dark theme subtle) */
+.specialist-grid-card {
+    border: 1.5px solid rgba(184, 115, 129, 0.45) !important;
+}
+.specialist-grid-card[data-active="false"] {
+    border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+.specialist-stat-card {
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1.5px solid rgba(184, 115, 129, 0.35) !important;
+    border-radius: 15px;
+}
+
+.specialist-earnings-card {
+    background: var(--earnings-bg);
+    border: 1.5px solid rgba(184, 115, 129, 0.35) !important;
+}
+
+/* Dark theme overrides */
+.dark-theme .specialist-grid-card {
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme .specialist-grid-card[data-active="false"] {
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.dark-theme .specialist-stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme .specialist-earnings-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
