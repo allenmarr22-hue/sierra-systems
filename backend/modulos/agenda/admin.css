@@ -280,6 +280,15 @@
     filter: brightness(1.4) saturate(1.2) !important;
     box-shadow: 2px 0 10px rgba(56, 189, 248, 0.5) !important;
 }
+
+/* Realizadas / Accepted border color */
+.appointment-group-card[data-status="accepted"]::before {
+    background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%) !important;
+}
+.dark-theme .appointment-group-card[data-status="accepted"]::before {
+    background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%) !important;
+    box-shadow: 2px 0 10px rgba(46, 204, 113, 0.5) !important;
+}
 .dark-theme .appointment-group-card[data-paid="full"] {
     background: rgba(34, 197, 94, 0.12) !important;
 }
