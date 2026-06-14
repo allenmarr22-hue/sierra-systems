@@ -5376,8 +5376,8 @@ function _doRenderAgenda() {
                                                     <span style="font-weight:900; color:#1a1a1a;">${fmt(comboTotal)}</span>
                                                 </div>
                                                 <div style="display:flex; gap:12px; font-size:0.7rem; align-items:center;">
-                                                    <span style="color:#2ecc71; font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-user-tie"></i> Ella (${profPct}%):</span>
-                                                    <span style="font-weight:800; color:#27ae60; font-size:0.75rem;">${fmt(nominalPrice * (profPct / 100))}</span>
+                                                    <span class="appointment-specialist-label" style="font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-user-tie"></i> Ella (${profPct}%):</span>
+                                                    <span class="appointment-specialist-value" style="font-weight:800; font-size:0.75rem;">${fmt(nominalPrice * (profPct / 100))}</span>
                                                 </div>
                                                 <div style="display:flex; gap:12px; font-size:0.7rem; align-items:center;">
                                                     <span class="appointment-studio-label" style="font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-store-alt"></i> Estudio (${100 - profPct}%):</span>
@@ -5421,8 +5421,8 @@ function _doRenderAgenda() {
                                                         <span style="font-weight:900; color:#1a1a1a;">${fmt(comboTotal)}</span>
                                                     </div>
                                                     <div style="display:flex; gap:12px; font-size:0.7rem; align-items:center;">
-                                                        <span style="color:#2ecc71; font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-user-tie"></i> Ella (${profPct}%):</span>
-                                                        <span style="font-weight:800; color:#27ae60; font-size:0.75rem;">${fmt(nominalPrice * (profPct / 100))}</span>
+                                                        <span class="appointment-specialist-label" style="font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-user-tie"></i> Ella (${profPct}%):</span>
+                                                        <span class="appointment-specialist-value" style="font-weight:800; font-size:0.75rem;">${fmt(nominalPrice * (profPct / 100))}</span>
                                                     </div>
                                                     <div style="display:flex; gap:12px; font-size:0.7rem; align-items:center;">
                                                         <span class="appointment-studio-label" style="font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-store-alt"></i> Estudio (${100 - profPct}%):</span>
@@ -7742,8 +7742,8 @@ function renderSpecialists() {
                                  <span style="font-weight:800; color:var(--color-dark-pink);">${fmt(studioEarned)}</span>
                             </div>
                             <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                                 <span style="color:#2ecc71; font-weight:600;">Ella (${profitPercent}%):</span>
-                                 <span style="font-weight:800; color:#27ae60;">${fmt(halfEarned)}</span>
+                                 <span class="specialist-profit-label" style="font-weight:600;">Ella (${profitPercent}%):</span>
+                                 <span class="specialist-profit-value" style="font-weight:800;">${fmt(halfEarned)}</span>
                             </div>
                         </div>
                     </div>
@@ -9048,10 +9048,10 @@ window.getThemesMap = function() {
         gold: { accent: '#6B4F3E', bg: '#F9F7F5', rgb: '107, 79, 62' },
         lavender: { accent: '#8E7CC3', bg: '#F9F8FC', rgb: '142, 124, 195' },
         orange: { accent: '#E67E22', bg: '#FEF9F5', rgb: '230, 126, 34' },
-        cyan: { accent: '#3498DB', bg: '#F4F9FC', rgb: '52, 152, 219' },
+        cyan: { accent: '#3F7F96', bg: '#F2F8FA', rgb: '63, 127, 150' },
         purple: { accent: '#7D3C98', bg: '#F8F4F9', rgb: '125, 60, 152' },
         maroon: { accent: '#922B21', bg: '#FCF5F4', rgb: '146, 43, 33' },
-        slate: { accent: '#38bdf8', bg: '#F1F5F9', rgb: '56, 189, 248' },
+        slate: { accent: '#566B82', bg: '#F3F5F8', rgb: '86, 107, 130' },
         
         emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133' },
         mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96' },
