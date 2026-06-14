@@ -146,7 +146,9 @@ async function initializeDatabase() {
                 url VARCHAR(255) NULL,
                 admin_url VARCHAR(255) NULL,
                 video_url VARCHAR(255) NULL,
-                image VARCHAR(255) NULL
+                image VARCHAR(255) NULL,
+                demo_reset_value INT NULL DEFAULT 4,
+                demo_reset_unit VARCHAR(50) NULL DEFAULT 'hours'
             )
         `);
 
@@ -259,6 +261,21 @@ async function initializeDatabase() {
         if (!existingUserColumns.includes('session_version')) {
             await pool.query('ALTER TABLE users ADD COLUMN session_version INT NOT NULL DEFAULT 1');
             console.log('[DB] 🛠️ Column "session_version" added to "users" table.');
+        }
+
+        const [modColumns] = await pool.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'modules'
+        `);
+        const existingModColumns = modColumns.map(c => (c.COLUMN_NAME || c.column_name || '').toLowerCase());
+        if (!existingModColumns.includes('demo_reset_value')) {
+            await pool.query('ALTER TABLE modules ADD COLUMN demo_reset_value INT NULL DEFAULT 4');
+            console.log('[DB] 🛠️ Column "demo_reset_value" added to "modules" table.');
+        }
+        if (!existingModColumns.includes('demo_reset_unit')) {
+            await pool.query('ALTER TABLE modules ADD COLUMN demo_reset_unit VARCHAR(50) NULL DEFAULT "hours"');
+            console.log('[DB] 🛠️ Column "demo_reset_unit" added to "modules" table.');
         }
 
         await pool.query(`
@@ -388,7 +405,9 @@ async function getCompleteState() {
             url: m.url,
             adminUrl: m.admin_url,
             videoUrl: m.video_url,
-            image: m.image
+            image: m.image,
+            demoResetValue: m.demo_reset_value !== undefined && m.demo_reset_value !== null ? m.demo_reset_value : 4,
+            demoResetUnit: m.demo_reset_unit || 'hours'
         }));
 
         // 3.3. Consultar Usuarios
@@ -587,8 +606,8 @@ async function saveCompleteState(db) {
             }
             for (const mod of db.modules) {
                 await connection.query(`
-                    INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url, image)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url, image, demo_reset_value, demo_reset_unit)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE 
                         name = VALUES(name),
                         \`desc\` = VALUES(\`desc\`),
@@ -598,10 +617,14 @@ async function saveCompleteState(db) {
                         url = VALUES(url),
                         admin_url = VALUES(admin_url),
                         video_url = VALUES(video_url),
-                        image = VALUES(image)
+                        image = VALUES(image),
+                        demo_reset_value = VALUES(demo_reset_value),
+                        demo_reset_unit = VALUES(demo_reset_unit)
                 `, [
                     mod.id, mod.name, mod.desc || null, mod.icon || null, mod.status || 'active',
-                    mod.price || '$ 0', mod.url || null, mod.adminUrl || null, mod.videoUrl || null, mod.image || null
+                    mod.price || '$ 0', mod.url || null, mod.adminUrl || null, mod.videoUrl || null, mod.image || null,
+                    mod.demoResetValue !== undefined && mod.demoResetValue !== null ? parseInt(mod.demoResetValue) : 4,
+                    mod.demoResetUnit || 'hours'
                 ]);
             }
         }
@@ -943,7 +966,9 @@ async function updateModule(id, fields) {
             url: 'url',
             adminUrl: 'admin_url',
             videoUrl: 'video_url',
-            image: 'image'
+            image: 'image',
+            demoResetValue: 'demo_reset_value',
+            demoResetUnit: 'demo_reset_unit'
         };
         const sets = [];
         const values = [];
@@ -958,8 +983,13 @@ async function updateModule(id, fields) {
         }
     } else {
         await pool.query(
-            'INSERT INTO modules (id, name, `desc`, icon, status, price, url, admin_url, video_url, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, fields.name, fields.desc || null, fields.icon || null, fields.status || 'active', fields.price || '$ 0', fields.url || null, fields.adminUrl || null, fields.videoUrl || null, fields.image || null]
+            'INSERT INTO modules (id, name, `desc`, icon, status, price, url, admin_url, video_url, image, demo_reset_value, demo_reset_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                id, fields.name, fields.desc || null, fields.icon || null, fields.status || 'active', fields.price || '$ 0',
+                fields.url || null, fields.adminUrl || null, fields.videoUrl || null, fields.image || null,
+                fields.demoResetValue !== undefined && fields.demoResetValue !== null ? parseInt(fields.demoResetValue) : 4,
+                fields.demoResetUnit || 'hours'
+            ]
         );
     }
 }
@@ -1229,8 +1259,12 @@ async function importBackupData(backup) {
         // Restaurar modules
         for (const m of (backup.modules || [])) {
             await conn.query(
-                'INSERT IGNORE INTO modules (id, name, `desc`, icon, status, price, url, admin_url, video_url, image) VALUES (?,?,?,?,?,?,?,?,?,?)',
-                [m.id, m.name, m.desc, m.icon, m.status, m.price, m.url, m.admin_url, m.video_url, m.image]
+                'INSERT IGNORE INTO modules (id, name, `desc`, icon, status, price, url, admin_url, video_url, image, demo_reset_value, demo_reset_unit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+                [
+                    m.id, m.name, m.desc, m.icon, m.status, m.price, m.url, m.admin_url, m.video_url, m.image,
+                    m.demo_reset_value !== undefined ? m.demo_reset_value : (m.demoResetValue !== undefined ? m.demoResetValue : 4),
+                    m.demo_reset_unit || m.demoResetUnit || 'hours'
+                ]
             );
         }
 

@@ -3818,16 +3818,11 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
 
 /** Demo: redirige o informa */
 function handleDemo(modId, modName) {
-    const demoUrls = {
-        'pdftools': '/modules/pdftools/index.html',
-        'pos': null,
-        'agenda': '/modules/agenda/index.html',
-        'streetfeed': '/modules/order-system/index.html'
-    };
-    const url = demoUrls[String(modId).toLowerCase()];
-    if (url) {
-        window.open(url, '_blank');
-    } else {
+    const idLower = String(modId).toLowerCase();
+    const isAgenda = idLower === 'agenda';
+    const isStreetfeed = idLower === 'streetfeed';
+    
+    if (!isAgenda && !isStreetfeed) {
         Swal.fire({
             icon: 'info',
             title: 'Demo en preparación',
@@ -3836,7 +3831,148 @@ function handleDemo(modId, modName) {
             color: 'var(--text)',
             confirmButtonColor: 'var(--primary)'
         });
+        return;
     }
+
+    const clientUrl = isAgenda ? '/modules/agenda/index.html' : '/modules/order-system/index.html';
+    const adminUrl = isAgenda ? '/modules/agenda/admin.html' : '/modules/order-system/admin.html';
+    
+    const html = `
+        <div style="font-family: 'Outfit', sans-serif; text-align: left; padding: 0.5rem;">
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; text-align: center;">
+                Explora el funcionamiento de la plataforma desde ambas perspectivas simultáneamente.
+            </p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                <!-- Card 1: Cliente -->
+                <div style="
+                    background: var(--bg-surface-light);
+                    border: 1.5px solid var(--border-color);
+                    border-radius: 16px;
+                    padding: 1.25rem;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                " onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px var(--primary-alpha)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none';">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+                            <span style="background: var(--primary-alpha); color: var(--primary); padding: 6px; border-radius: 8px; display: inline-flex; align-items: center;">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-2.906A3.001 3.001 0 008.25 9.35m0 0a3.002 3.002 0 003.75-2.906A3.002 3.002 0 0015.75 9.35m0 0a3.001 3.001 0 003.75-2.906A3.001 3.001 0 0021.75 9.35M12.25 2.25h1.5a.75.75 0 01.75.75v2.25m-3 0h3"></path></svg>
+                            </span>
+                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text);">Vista del Cliente</h4>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin: 0 0 1rem 0;">
+                            Simula la navegación de tus clientes: ver productos/servicios, agregar al carrito o agendar una cita.
+                        </p>
+                    </div>
+                    <a href="${clientUrl}" target="_blank" style="
+                        background: var(--bg-surface);
+                        border: 1.5px solid var(--border-color);
+                        color: var(--text);
+                        text-decoration: none;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        padding: 10px;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        font-size: 0.88rem;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='var(--border-color)';" onmouseout="this.style.background='var(--bg-surface)';">
+                        Ver Sitio Web ↗
+                    </a>
+                </div>
+
+                <!-- Card 2: Administrador -->
+                <div style="
+                    background: var(--bg-surface-light);
+                    border: 1.5px solid var(--border-color);
+                    border-radius: 16px;
+                    padding: 1.25rem;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                " onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px var(--primary-alpha)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none';">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+                            <span style="background: var(--primary-alpha); color: var(--primary); padding: 6px; border-radius: 8px; display: inline-flex; align-items: center;">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"></path></svg>
+                            </span>
+                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text);">Panel de Gestión</h4>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin: 0 0 1rem 0;">
+                            Controla pedidos en tiempo real, edita la configuración, gestiona productos, servicios y visualiza analíticas.
+                        </p>
+                    </div>
+                    <a href="${adminUrl}" target="_blank" style="
+                        background: var(--primary-gradient);
+                        color: #ffffff;
+                        text-decoration: none;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        padding: 10px;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        font-size: 0.88rem;
+                        transition: opacity 0.2s;
+                        border: none;
+                    " onmouseover="this.style.opacity='0.95';" onmouseout="this.style.opacity='1';">
+                        Abrir Administrador ↗
+                    </a>
+                </div>
+            </div>
+
+            <!-- Credentials Section -->
+            <div style="
+                background: var(--bg-surface);
+                border-radius: 12px;
+                padding: 1rem;
+                border: 1px dashed var(--border-color);
+                margin-top: 1rem;
+            ">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.75rem; color: var(--text);">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"></path></svg>
+                    <span style="font-weight: 700; font-size: 0.9rem; letter-spacing: 0.2px;">Credenciales de Acceso Administrador:</span>
+                </div>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-surface-light); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 140px;">
+                        <span style="color: var(--text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase;">Usuario:</span>
+                        <strong style="color: var(--text); font-size: 0.88rem; font-family: monospace;">admin</strong>
+                        <button onclick="navigator.clipboard.writeText('admin'); Swal.showValidationMessage('¡Usuario copiado!'); setTimeout(() => Swal.resetValidationMessage(), 1500);" style="background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;" title="Copiar usuario">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0015 2.25h-1.5a2.251 2.251 0 00-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 00-9-9z"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-surface-light); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 140px;">
+                        <span style="color: var(--text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase;">Clave:</span>
+                        <strong style="color: var(--text); font-size: 0.88rem; font-family: monospace;">123456</strong>
+                        <button onclick="navigator.clipboard.writeText('123456'); Swal.showValidationMessage('¡Clave copiada!'); setTimeout(() => Swal.resetValidationMessage(), 1500);" style="background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;" title="Copiar clave">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0015 2.25h-1.5a2.251 2.251 0 00-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 00-9-9z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    Swal.fire({
+        title: `Demostración de ${modName} 🚀`,
+        html: html,
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: '580px',
+        background: 'var(--bg-surface)',
+        color: 'var(--text)',
+        customClass: {
+            popup: 'demo-options-modal'
+        }
+    });
 }
 
 /** Soporte rápido por módulo */

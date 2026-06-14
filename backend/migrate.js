@@ -311,8 +311,8 @@ async function runMigration() {
         console.log('[Migration] 📤 Migrando módulos...');
         for (const mod of (rawData.modules || [])) {
             await pool.query(`
-                INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url, image)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO modules (id, name, \`desc\`, icon, status, price, url, admin_url, video_url, image, demo_reset_value, demo_reset_unit)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                     name = VALUES(name),
                     \`desc\` = VALUES(\`desc\`),
@@ -322,7 +322,9 @@ async function runMigration() {
                     url = VALUES(url),
                     admin_url = VALUES(admin_url),
                     video_url = VALUES(video_url),
-                    image = VALUES(image)
+                    image = VALUES(image),
+                    demo_reset_value = VALUES(demo_reset_value),
+                    demo_reset_unit = VALUES(demo_reset_unit)
             `, [
                 mod.id,
                 mod.name,
@@ -333,7 +335,9 @@ async function runMigration() {
                 mod.url || null,
                 mod.adminUrl || null,
                 mod.videoUrl || null,
-                mod.image || null
+                mod.image || null,
+                mod.demoResetValue !== undefined ? mod.demoResetValue : 4,
+                mod.demoResetUnit || 'hours'
             ]);
         }
 
