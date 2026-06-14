@@ -5271,7 +5271,7 @@ function _doRenderAgenda() {
                                 ${isRealCombo ? `
                                     <!-- LAYOUT PARA COMBOS (SÓLO INFO) -->
                                     <div style="margin-bottom:15px;">
-                                        <p style="margin:4px 0 8px 0; color:var(--color-dark-pink); font-weight:700; font-size:1.15rem;">${apt.service || 'Servicio n/a'} <span style="font-weight:normal; color:#666; font-size:0.95rem;">(${apt.price || 'Gratis'})</span>${(() => { if (apt.promoType === 'discount' && apt.splitPrice && parsePriceVal(apt.price) > apt.splitPrice) { const dp = Math.round((1-(apt.splitPrice/parsePriceVal(apt.price)))*100); return `<span style="font-size:0.6rem; background:var(--color-dark-pink); color:white; padding:2px 7px; border-radius:20px; font-weight:800; margin-left:6px; vertical-align:middle;">-${dp}% DESC</span>`; } return ''; })()}</p>
+                                        <p class="appointment-service-title" style="margin:4px 0 8px 0; font-weight:700; font-size:1.15rem;">${apt.service || 'Servicio n/a'} <span style="font-weight:normal; color:#666; font-size:0.95rem;">(${apt.price || 'Gratis'})</span>${(() => { if (apt.promoType === 'discount' && apt.splitPrice && parsePriceVal(apt.price) > apt.splitPrice) { const dp = Math.round((1-(apt.splitPrice/parsePriceVal(apt.price)))*100); return `<span class="appointment-discount-badge" style="font-size:0.6rem; color:white; padding:2px 7px; border-radius:20px; font-weight:800; margin-left:6px; vertical-align:middle;">-${dp}% DESC</span>`; } return ''; })()}</p>
                                         <p style="margin:0; font-size:0.85rem; color:#444; display:flex; align-items:center; gap:6px;">
                                             <i class="fas fa-user" style="opacity:0.8; color:#888;"></i> Datos Cliente: 
                                             <strong style="color:#1a1a1a;">${apt.name || 'Sin Nombre'}</strong> 
@@ -5282,14 +5282,14 @@ function _doRenderAgenda() {
                                     </div>
                                 ` : `
                                     <!-- LAYOUT NORMAL PARA INDIVIDUALES -->
-                                    <p style="margin:4px 0 8px 0; color:var(--color-dark-pink); font-weight:700; font-size:1.15rem;">${apt.service || 'Servicio n/a'} <span style="font-weight:normal; color:#666; font-size:0.95rem;">(${apt.price || 'Gratis'})</span>${(() => { 
+                                    <p class="appointment-service-title" style="margin:4px 0 8px 0; font-weight:700; font-size:1.15rem;">${apt.service || 'Servicio n/a'} <span style="font-weight:normal; color:#666; font-size:0.95rem;">(${apt.price || 'Gratis'})</span>${(() => { 
                                         const pBase = parsePriceVal(apt.price);
                                         const pFinal = parsePriceVal(apt.splitPrice || apt.price);
                                         const hasDiscount = (apt.promoType === 'discount') || (apt.splitPrice && pFinal < pBase);
                                         if (hasDiscount && pBase > 0) { 
                                             // Priorizar el porcentaje guardado en la cita para evitar errores de redondeo
                                             const dp = apt.promoPercent || Math.round((1-(pFinal/pBase))*100); 
-                                            return `<span style="font-size:0.6rem; background:var(--color-dark-pink); color:white; padding:2px 7px; border-radius:20px; font-weight:800; margin-left:6px; vertical-align:middle;">-${dp}% DESC</span>`; 
+                                            return `<span class="appointment-discount-badge" style="font-size:0.6rem; color:white; padding:2px 7px; border-radius:20px; font-weight:800; margin-left:6px; vertical-align:middle;">-${dp}% DESC</span>`; 
                                         } 
                                         return ''; 
                                     })()}</p>
@@ -5380,8 +5380,8 @@ function _doRenderAgenda() {
                                                     <span style="font-weight:800; color:#27ae60; font-size:0.75rem;">${fmt(nominalPrice * (profPct / 100))}</span>
                                                 </div>
                                                 <div style="display:flex; gap:12px; font-size:0.7rem; align-items:center;">
-                                                    <span style="color:var(--color-dark-pink); font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-store-alt"></i> Estudio (${100 - profPct}%):</span>
-                                                    <span style="font-weight:800; color:var(--color-dark-pink); font-size:0.75rem;">${fmt(nominalPrice * ((100 - profPct) / 100))}</span>
+                                                    <span class="appointment-studio-label" style="font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-store-alt"></i> Estudio (${100 - profPct}%):</span>
+                                                    <span class="appointment-studio-value" style="font-weight:800; font-size:0.75rem;">${fmt(nominalPrice * ((100 - profPct) / 100))}</span>
                                                 </div>
                                             </div>`;
                                         })()}
@@ -5425,8 +5425,8 @@ function _doRenderAgenda() {
                                                         <span style="font-weight:800; color:#27ae60; font-size:0.75rem;">${fmt(nominalPrice * (profPct / 100))}</span>
                                                     </div>
                                                     <div style="display:flex; gap:12px; font-size:0.7rem; align-items:center;">
-                                                        <span style="color:var(--color-dark-pink); font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-store-alt"></i> Estudio (${100 - profPct}%):</span>
-                                                        <span style="font-weight:800; color:var(--color-dark-pink); font-size:0.75rem;">${fmt(nominalPrice * ((100 - profPct) / 100))}</span>
+                                                        <span class="appointment-studio-label" style="font-weight:700; min-width:115px; font-size:0.65rem;"><i class="fas fa-store-alt"></i> Estudio (${100 - profPct}%):</span>
+                                                        <span class="appointment-studio-value" style="font-weight:800; font-size:0.75rem;">${fmt(nominalPrice * ((100 - profPct) / 100))}</span>
                                                     </div>
                                                 </div>`;
                                             })()}
