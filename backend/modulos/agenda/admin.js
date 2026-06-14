@@ -10499,6 +10499,15 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
     if (window.dashboardCharts && window.dashboardCharts.salesTrend) {
         window.dashboardCharts.salesTrend.destroy();
     }
+    
+    const accentHex = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#A05D6B';
+    const accentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim() || '160, 93, 107';
+
+    // Crear un degradado suave bajo la línea del gráfico de tendencia diaria
+    const gradientFill = ctxTrend.createLinearGradient(0, 0, 0, 220);
+    gradientFill.addColorStop(0, `rgba(${accentRgb}, 0.28)`);
+    gradientFill.addColorStop(1, `rgba(${accentRgb}, 0.0)`);
+
     window.dashboardCharts.salesTrend = new Chart(ctxTrend, {
         type: 'line',
         data: {
@@ -10506,12 +10515,18 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
             datasets: [{
                 label: 'Ingresos',
                 data: trendValues,
-                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#38bdf8',
-                backgroundColor: 'rgba(var(--accent-rgb), 0.1)',
+                borderColor: accentHex,
+                backgroundColor: gradientFill,
                 fill: true,
                 tension: 0.4,
-                pointRadius: 4,
-                pointHoverRadius: 6
+                pointRadius: 3,
+                pointBackgroundColor: accentHex,
+                pointBorderColor: isDark ? '#1e293b' : '#ffffff',
+                pointBorderWidth: 1.5,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: accentHex,
+                pointHoverBorderColor: isDark ? '#1e293b' : '#ffffff',
+                pointHoverBorderWidth: 2
             }]
         },
         options: {
@@ -10521,7 +10536,11 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
                 y: { 
                     beginAtZero: true, 
                     grace: '10%',
-                    grid: { color: chartGrid }, 
+                    grid: { 
+                        color: chartGrid,
+                        drawBorder: false,
+                        borderDash: [5, 5]
+                    }, 
                     ticks: { 
                         color: chartText,
                         callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v
@@ -10562,13 +10581,22 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
         });
     }
 
+    const baseColors = [
+        accentHex,
+        '#6366f1', // Indigo elegante
+        '#14b8a6', // Teal suave
+        '#f59e0b', // Amber cálido
+        '#ec4899', // Pink moderno
+        '#3b82f6', // Blue premium
+        '#8b5cf6', // Purple elegante
+        '#f97316', // Orange suave
+        '#10b981', // Emerald pastel
+        '#ef4444'  // Red coral
+    ];
+
     const catColors = catData.length === 1 && catLabels[0] === "Sin datos"
         ? [isDark ? '#334155' : '#e2e8f0']
-        : [
-            getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#38bdf8',
-            '#38bdf8', '#2ecc71', '#f1c40f', '#9b59b6',
-            '#e67e22', '#1abc9c', '#e74c3c', '#34495e', '#7f8c8d'
-          ];
+        : baseColors.slice(0, catData.length);
 
     const ctxCat = document.getElementById('chart-categories').getContext('2d');
     if (window.dashboardCharts && window.dashboardCharts.categories) {
@@ -10581,8 +10609,10 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
             datasets: [{
                 data: catData,
                 backgroundColor: catColors,
-                borderWidth: 0,
-                hoverOffset: 12
+                borderWidth: isDark ? 3 : 2,
+                borderColor: isDark ? '#1e293b' : '#ffffff',
+                hoverBorderColor: isDark ? '#1e293b' : '#ffffff',
+                hoverOffset: 6
             }]
         },
         options: {
@@ -10632,6 +10662,16 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
     if (window.dashboardCharts && window.dashboardCharts.monthlyRevenue) {
         window.dashboardCharts.monthlyRevenue.destroy();
     }
+
+    // Crear un degradado vertical elegante para las barras de ingresos mensuales
+    const gradientBar = ctxMonth.createLinearGradient(0, 0, 0, 250);
+    gradientBar.addColorStop(0, `rgba(${accentRgb}, 0.85)`);
+    gradientBar.addColorStop(1, `rgba(${accentRgb}, 0.25)`);
+
+    const gradientBarHover = ctxMonth.createLinearGradient(0, 0, 0, 250);
+    gradientBarHover.addColorStop(0, `rgba(${accentRgb}, 1.0)`);
+    gradientBarHover.addColorStop(1, `rgba(${accentRgb}, 0.45)`);
+
     window.dashboardCharts.monthlyRevenue = new Chart(ctxMonth, {
         type: 'bar',
         data: {
@@ -10639,9 +10679,10 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
             datasets: [{
                 label: 'Ingresos',
                 data: monthlyData,
-                backgroundColor: 'rgba(56, 189, 248, 0.6)',
-                hoverBackgroundColor: 'rgba(56, 189, 248, 0.8)',
-                borderRadius: 5
+                backgroundColor: gradientBar,
+                hoverBackgroundColor: gradientBarHover,
+                borderRadius: 6,
+                borderWidth: 0
             }]
         },
         options: {
@@ -10651,7 +10692,11 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
                 y: { 
                     beginAtZero: true, 
                     grace: '15%',
-                    grid: { color: chartGrid }, 
+                    grid: { 
+                        color: chartGrid,
+                        drawBorder: false,
+                        borderDash: [5, 5]
+                    }, 
                     ticks: { 
                         color: chartDim, 
                         callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v 
@@ -10693,6 +10738,17 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
     if (window.dashboardCharts && window.dashboardCharts.topServices) {
         window.dashboardCharts.topServices.destroy();
     }
+
+    // Crear degradados horizontales elegantes para las barras del Top 5
+    const gradientTop1 = ctxTop.createLinearGradient(0, 0, 250, 0);
+    gradientTop1.addColorStop(0, `rgba(${accentRgb}, 0.85)`);
+    gradientTop1.addColorStop(1, `rgba(${accentRgb}, 0.3)`);
+
+    const secondaryRgb = isDark ? '148, 163, 184' : '100, 116, 139'; // color pizarra/gris complementario
+    const gradientTop2 = ctxTop.createLinearGradient(0, 0, 250, 0);
+    gradientTop2.addColorStop(0, `rgba(${secondaryRgb}, 0.75)`);
+    gradientTop2.addColorStop(1, `rgba(${secondaryRgb}, 0.25)`);
+
     window.dashboardCharts.topServices = new Chart(ctxTop, {
         type: 'bar',
         data: {
@@ -10701,17 +10757,17 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
                 {
                     label: 'Citas',
                     data: svcUnits,
-                    backgroundColor: 'rgba(56, 189, 248, 0.6)',
-                    borderRadius: 3,
-                    barThickness: 12,
+                    backgroundColor: gradientTop2,
+                    borderRadius: 4,
+                    barThickness: 10,
                     xAxisID: 'xUnits'
                 },
                 {
                     label: 'Ingresos ($)',
                     data: svcRevenue,
-                    backgroundColor: 'rgba(160, 93, 107, 0.6)',
-                    borderRadius: 3,
-                    barThickness: 12,
+                    backgroundColor: gradientTop1,
+                    borderRadius: 4,
+                    barThickness: 10,
                     xAxisID: 'xRevenue'
                 }
             ]
@@ -10734,7 +10790,11 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
                     position: 'top',
                     beginAtZero: true,
                     title: { display: true, text: 'Total Ingresos ($)', color: chartDim, font: { size: 9 } },
-                    grid: { color: chartGrid },
+                    grid: { 
+                        color: chartGrid,
+                        drawBorder: false,
+                        borderDash: [5, 5]
+                    },
                     ticks: { 
                         color: chartText, 
                         font: { size: 9 },

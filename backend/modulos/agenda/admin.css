@@ -395,9 +395,37 @@
 
 /* Simultaneidad input en dark mode */
 .dark-theme .category-group input[type="text"][maxlength="1"] {
-    background: #1e293b !important;
-    border-color: rgba(var(--accent-rgb), 0.25) !important;
-    color: var(--color-accent) !important;
+    background: rgba(0, 0, 0, 0.25) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+    color: #e2e8f0 !important;
+}
+.dark-theme .category-group input[type="text"][maxlength="1"]:focus {
+    border-color: var(--color-accent) !important;
+}
+
+/* Agenda Visual Button (Outlined Accent Style) */
+.agenda-visual-btn {
+    background: rgba(var(--accent-rgb), 0.05) !important;
+    color: var(--color-dark-pink) !important;
+    border: 2px solid var(--color-dark-pink) !important;
+    transition: all 0.3s ease;
+}
+.agenda-visual-btn:hover {
+    background: rgba(var(--accent-rgb), 0.15) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.2);
+}
+.agenda-visual-btn:active {
+    transform: translateY(0);
+}
+.dark-theme .agenda-visual-btn {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: var(--color-dark-pink) !important;
+    color: var(--color-dark-pink) !important;
+}
+.dark-theme .agenda-visual-btn:hover {
+    background: rgba(var(--accent-rgb), 0.12) !important;
+    box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.25);
 }
 
 /* Filas de servicios dentro del catálogo */
