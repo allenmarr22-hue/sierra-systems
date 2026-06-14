@@ -1263,8 +1263,8 @@ if(addCatBtn) {
 
 // Tab Navigation Logic
 window.showTab = function(tabId, element) {
-    // Resetear scroll global al inicio para evitar que la cabecera quede oculta al bloquear el scroll
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Quitar bloqueo de scroll temporalmente para permitir reposicionamiento correcto
+    document.body.classList.remove('no-global-scroll');
 
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
@@ -1273,12 +1273,29 @@ window.showTab = function(tabId, element) {
     // Show target tab
     document.getElementById(tabId).classList.add('active');
     
-    // Control de Scroll Global Inteligente
-    if (tabId === 'agenda-tab' || tabId === 'specialists-tab') {
-        document.body.classList.add('no-global-scroll');
-    } else {
-        document.body.classList.remove('no-global-scroll');
-    }
+    // Forzar scroll a cero de forma inmediata
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    // Control de Scroll Global Inteligente en el siguiente frame para asegurar reposicionamiento
+    setTimeout(() => {
+        if (tabId === 'agenda-tab' || tabId === 'specialists-tab') {
+            // Solo bloquear scroll si el formulario manual NO está expandido
+            const manualContainer = document.getElementById('manual-booking-container');
+            const isManualExpanded = manualContainer && manualContainer.classList.contains('expanded');
+            
+            if (tabId === 'agenda-tab' && isManualExpanded) {
+                document.body.classList.remove('no-global-scroll');
+            } else {
+                document.body.classList.add('no-global-scroll');
+                // Doble chequeo de seguridad para evitar congelamiento en posición scrolled
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+            }
+        }
+    }, 20);
 
     // Update active nav state
     if (element) {
@@ -1714,6 +1731,31 @@ window.toggleManualForm = function() {
         if (toggleBtn) toggleBtn.classList.toggle('expanded');
         
         if (container.classList.contains('expanded')) {
+            // Se acaba de abrir/expandir: desbloquear scroll para permitir rellenar el formulario
+            document.body.classList.remove('no-global-scroll');
+            
+            // Si estaba en modo aplazar, lo reseteamos al abrir para Nueva Cita limpia
+            if (window.rescheduleTargetIndex !== null && window.rescheduleTargetIndex !== undefined) {
+                window.rescheduleTargetIndex = null;
+                const formTitle = document.querySelector('#manual-booking-container h3');
+                if (formTitle) formTitle.innerText = 'Registrar Cita Manual';
+                const saveBtn = document.getElementById('manual-save-btn');
+                if (saveBtn) saveBtn.innerText = 'AGENDAR CITA';
+                
+                // Limpiar campos y resetear UI
+                document.getElementById('manual-name').value = '';
+                document.getElementById('manual-phone').value = '';
+                const catSelect = document.getElementById('manual-category-select');
+                const svcSelect = document.getElementById('manual-service-select');
+                const priceDisplay = document.getElementById('manual-price-display');
+                if (catSelect) catSelect.value = '';
+                if (svcSelect) svcSelect.innerHTML = '<option value="">-- Primero elige especialidad --</option>';
+                if (priceDisplay) priceDisplay.value = '';
+                
+                if (window.clearManualCart) window.clearManualCart();
+                if (window.resetManualFormUI) window.resetManualFormUI();
+            }
+            
             const catSelect = document.getElementById('manual-category-select');
             // Solo poblamos si está vacío o no tiene opciones reales aún
             if (catSelect && catSelect.options.length <= 1) {
@@ -1726,19 +1768,48 @@ window.toggleManualForm = function() {
                 manualDateInput.setAttribute('min', minDate);
             }
         } else {
-            // Se eliminó el borrado automático al cerrar para evitar pérdida de datos accidental
-            // if (window.clearManualCart) window.clearManualCart();
-            // if (window.resetManualFormUI) window.resetManualFormUI();
-            // ... etc
+            // Se acaba de cerrar/colapsar: volver a bloquear scroll y regresar arriba para evitar congelamientos
+            const activeTabId = document.querySelector('.tab-content.active')?.id;
+            if (activeTabId === 'agenda-tab' || activeTabId === 'specialists-tab') {
+                document.body.classList.add('no-global-scroll');
+            }
+            // Asegurar que el scroll regrese al tope
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+
+            // Limpiar modo reagendar y campos al colapsar
+            if (window.rescheduleTargetIndex !== null && window.rescheduleTargetIndex !== undefined) {
+                window.rescheduleTargetIndex = null;
+                const formTitle = document.querySelector('#manual-booking-container h3');
+                if (formTitle) formTitle.innerText = 'Registrar Cita Manual';
+                const saveBtn = document.getElementById('manual-save-btn');
+                if (saveBtn) saveBtn.innerText = 'AGENDAR CITA';
+                
+                document.getElementById('manual-name').value = '';
+                document.getElementById('manual-phone').value = '';
+                const catSelect = document.getElementById('manual-category-select');
+                const svcSelect = document.getElementById('manual-service-select');
+                const priceDisplay = document.getElementById('manual-price-display');
+                if (catSelect) catSelect.value = '';
+                if (svcSelect) svcSelect.innerHTML = '<option value="">-- Primero elige especialidad --</option>';
+                if (priceDisplay) priceDisplay.value = '';
+                
+                if (window.clearManualCart) window.clearManualCart();
+                if (window.resetManualFormUI) window.resetManualFormUI();
+            }
         }
     }
 };
 
 window.cancelManualBooking = function() {
-    // Al cancelar explícitamente, sí borramos todo
-    if (window.clearManualCart) window.clearManualCart();
-    if (window.resetManualFormUI) window.resetManualFormUI();
-    
+    // Resetear modo aplazar si estaba activo
+    window.rescheduleTargetIndex = null;
+    const formTitle = document.querySelector('#manual-booking-container h3');
+    if (formTitle) formTitle.innerText = 'Registrar Cita Manual';
+    const saveBtn = document.getElementById('manual-save-btn');
+    if (saveBtn) saveBtn.innerText = 'AGENDAR CITA';
+
     const nameInput = document.getElementById('manual-name');
     const phoneInput = document.getElementById('manual-phone');
     const catSelect = document.getElementById('manual-category-select');
@@ -1750,6 +1821,10 @@ window.cancelManualBooking = function() {
     if (catSelect) catSelect.value = '';
     if (svcSelect) svcSelect.innerHTML = '<option value="">-- Primero elige especialidad --</option>';
     if (priceDisplay) priceDisplay.value = '';
+
+    // Al cancelar explícitamente, sí borramos todo
+    if (window.clearManualCart) window.clearManualCart();
+    if (window.resetManualFormUI) window.resetManualFormUI();
     
     // Y cerramos el panel
     toggleManualForm();
@@ -2778,6 +2853,24 @@ window.calculateSmartAssignments = (anchorTime, data, fixedIdx = 0, fixedSpec = 
     window.renderManualVisualAgendaGrid();
     if (window.checkManualFormCompletion) checkManualFormCompletion();
     showToast(`Turno seleccionado: ${specialist} a las ${to12h(time)}`, "success");
+
+    // Auto-close visual agenda modal if appointment setup is complete
+    const isCombo = svcSelect && svcSelect.selectedIndex > 0 && svcSelect.options[svcSelect.selectedIndex].dataset.isCombo === 'true';
+    let comboComplete = true;
+    if (isCombo) {
+        if (!window.manualComboAssignments || window.manualComboAssignments.length === 0 || window.manualComboAssignments.some(a => !a)) {
+            comboComplete = false;
+        }
+        if (window.manualComboExtras && window.manualComboExtras.some(e => !e.time || !e.specialist)) {
+            comboComplete = false;
+        }
+    }
+    
+    if (!isCombo || comboComplete) {
+        setTimeout(() => {
+            if (window.closeManualVisualAgenda) window.closeManualVisualAgenda();
+        }, 600);
+    }
 };
 
 window.resetManualFormUI = function() {
@@ -2789,7 +2882,7 @@ window.resetManualFormUI = function() {
     const timeInput = document.getElementById('manual-time');
 
     if (summaryContainer) summaryContainer.style.display = 'none';
-    if (mainBtn) mainBtn.style.display = 'block';
+    if (mainBtn) mainBtn.style.display = 'flex';
     if (saveBtn) {
         saveBtn.style.opacity = '0.5';
         saveBtn.style.pointerEvents = 'none';
@@ -3119,9 +3212,14 @@ window.checkManualFormCompletion = function() {
         
         if (canSave) {
             saveBtn.style.opacity = '1';
-            saveBtn.style.background = 'var(--color-accent)';
             saveBtn.style.pointerEvents = 'auto';
-            saveBtn.innerText = 'AGENDAR CITA';
+            if (window.rescheduleTargetIndex !== undefined && window.rescheduleTargetIndex !== null && window.rescheduleTargetIndex >= 0) {
+                saveBtn.style.background = '#f39c12';
+                saveBtn.innerText = 'CONFIRMAR APLAZAMIENTO';
+            } else {
+                saveBtn.style.background = 'var(--color-accent)';
+                saveBtn.innerText = 'AGENDAR CITA';
+            }
         } else {
             saveBtn.style.opacity = '0.3';
             saveBtn.style.background = '#ccc';
@@ -3129,7 +3227,11 @@ window.checkManualFormCompletion = function() {
             if (isCombo && !comboComplete && hasTurn) {
                 saveBtn.innerText = 'PENDIENTE HORARIO';
             } else {
-                saveBtn.innerText = 'AGENDAR CITA';
+                if (window.rescheduleTargetIndex !== undefined && window.rescheduleTargetIndex !== null && window.rescheduleTargetIndex >= 0) {
+                    saveBtn.innerText = 'CONFIRMAR APLAZAMIENTO';
+                } else {
+                    saveBtn.innerText = 'AGENDAR CITA';
+                }
             }
         }
     }
@@ -3163,6 +3265,8 @@ window.renderManualVisualAgendaGrid = function() {
         const appointments = JSON.parse(localStorage.getItem('agenda_appointments') || '[]');
         const simultGroups = JSON.parse(localStorage.getItem('agenda_simult_groups') || '{}');
         const dbServices   = JSON.parse(localStorage.getItem('agenda_services') || '[]');
+        const targetIdx = parseInt(window.rescheduleTargetIndex);
+        const targetApt = (!isNaN(targetIdx) && targetIdx >= 0) ? appointments[targetIdx] : null;
 
         // ── Determinar catId y grupo de simultaneidad del servicio activo ──────────
         let activeCatId = selectedCatId;
@@ -3241,7 +3345,12 @@ window.renderManualVisualAgendaGrid = function() {
             if (aDate !== calDate) return false;
             const st = (a.status || "").toLowerCase().trim();
             // Ignorar canceladas, rechazadas Y finalizadas (accepted) para liberar el espacio
-            return st !== "cancelled" && st !== "rejected" && st !== "accepted";
+            if (st === "cancelled" || st === "rejected" || st === "accepted") return false;
+            
+            // Si estamos reprogramando, ignoramos esta cita específica para que no se autopostule como ocupada
+            if (targetApt && a.id === targetApt.id) return false;
+            
+            return true;
         });
 
         const isSpecFree = (specName, startMin, dur) => {
@@ -3386,6 +3495,19 @@ window.renderManualVisualAgendaGrid = function() {
                                             }
                                         }
 
+                                        // ── 1.5 ¿Es el slot original de la cita que se está reprogramando? ──
+                                        let isOriginalReschedule = false;
+                                        if (targetApt) {
+                                            const origDate = normDate(targetApt.date);
+                                            const origSpec = normalize(targetApt.specialist);
+                                            const origStart = getMin(targetApt.time);
+                                            const origDur = parseInt(targetApt.duration || 60);
+                                            const origEnd = origStart + origDur;
+                                            if (calDate === origDate && nSpec === origSpec && slotMin >= origStart && slotMin < origEnd) {
+                                                isOriginalReschedule = true;
+                                            }
+                                        }
+
                                         // ── 2. ¿DB ocupado para este profesional? ──────────────────
                                         const aptInSlot = dayApts.find(a => normalize(a.specialist || "") === nSpec && getMin(a.time) <= slotMin && (getMin(a.time) + (parseInt(a.duration) || 60)) > slotMin);
                                         const dayStart  = dayApts.filter(a => normalize(a.specialist || "") === nSpec && getMin(a.time) === slotMin);
@@ -3504,7 +3626,7 @@ window.renderManualVisualAgendaGrid = function() {
 
                                         const isPast = isToday && slotMin < nowMin;
                                         const clickable = isEmpty && canStartHere && !isPast && spec.canDoActive !== false;
-                                        return { time: t, slotMin, isYour, aptInSlot, dayStart, clickable, isPast, conf, eMin, canDoActive: spec.canDoActive };
+                                        return { time: t, slotMin, isYour, aptInSlot, dayStart, clickable, isPast, conf, eMin, canDoActive: spec.canDoActive, isOriginalReschedule };
                                     });
                                 return `
                                 <td style="position:relative; height:${rowH}px; padding:0; border-left:1px solid #f0f0f0;">
@@ -3605,6 +3727,22 @@ window.renderManualVisualAgendaGrid = function() {
                                                 </div>`;
                                             }
 
+                                            // 2.5 POSICIÓN ORIGINAL DE REPROGRAMACIÓN
+                                            if (sl.isOriginalReschedule && !sl.isYour && targetApt) {
+                                                const origStart = getMin(targetApt.time);
+                                                const origDur = parseInt(targetApt.duration || 60);
+                                                const origEnd = origStart + origDur;
+                                                if (sl.slotMin === origStart) {
+                                                    content += `<div style="position:absolute; top:${topOffset+2}px; left:8px; right:8px; height:${(origDur/60)*rowH-4}px; background:rgba(243, 156, 18, 0.08); border:2px dashed #f39c12; border-radius:12px; z-index:400; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:5px; color:#d35400; font-size:0.65rem; font-weight:800; text-align:center; pointer-events:none; box-shadow:inset 0 0 10px rgba(243,156,18,0.1); overflow:hidden;">
+                                                        <div style="text-transform:uppercase; font-size:0.55rem; display:flex; align-items:center; gap:4px; margin-bottom:1px; color:#d35400; font-weight:800;">
+                                                            <i class="fas fa-history"></i> EDITANDO (ORIGINAL)
+                                                        </div>
+                                                        <div style="font-size:0.62rem; opacity:0.9; font-weight:800; color:#333; margin:1px 0;">${targetApt.name || 'Cliente'}</div>
+                                                        <div style="font-size:0.52rem; opacity:0.7; font-weight:600; color:#666;">${fM(origStart)} - ${fM(origEnd)}</div>
+                                                    </div>`;
+                                                }
+                                            }
+
                                         // 3. MI SELECCIÓN ACTUAL (SERVICIO SIMPLE) - Solo si no es un combo
                                         if (sl.isYour && !window.manualComboAssignments) {
                                             const sM = sl.slotMin, eM = sM + bookingDur;
@@ -3612,7 +3750,7 @@ window.renderManualVisualAgendaGrid = function() {
                                             const svcTitle = rawTitle.split(' (')[0]; 
                                             const isEditingSingle = window.editingComboIdx === undefined && window._pendingIndividualEdit !== null;
 
-                                            content += `<div class="manual-selected-target ${isEditingSingle ? 'manual-pulse-edit' : ''}" onclick="window.editComboService(undefined); event.stopPropagation();" style="position:absolute; top:${topOffset+2}px; left:8px; right:8px; height:${(bookingDur/60)*rowH-4}px; background:${isEditingSingle ? 'linear-gradient(135deg, #f39c12, #d35400)' : 'var(--color-dark-pink)'}; border-radius:12px; z-index:2100; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; font-size:0.65rem; font-weight:900; border:2.5px solid #fff; box-shadow:0 8px 15px rgba(229,106,158,0.3); pointer-events:auto; cursor:pointer; padding:4px; text-align:center; opacity:${isEditingSingle ? '0.9' : '1'};">
+                                            content += `<div class="manual-selected-target ${isEditingSingle ? 'manual-pulse-edit' : ''}" onclick="window.editComboService(undefined); event.stopPropagation();" style="position:absolute; top:${topOffset+2}px; left:8px; right:8px; height:${(bookingDur/60)*rowH-4}px; background:${isEditingSingle ? 'linear-gradient(135deg, #f39c12, #d35400)' : 'var(--color-dark-pink)'}; border-radius:12px; z-index:2100; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; font-size:0.65rem; font-weight:900; border:2.5px solid #fff; box-shadow:0 8px 15px rgba(var(--accent-rgb),0.3); pointer-events:auto; cursor:pointer; padding:4px; text-align:center; opacity:${isEditingSingle ? '0.9' : '1'};">
                                                  <div style="text-transform:uppercase; font-size:0.75rem; letter-spacing:0.5px; opacity:0.95; margin-bottom:1px;"><i class="fas ${isEditingSingle ? 'fa-edit' : 'fa-check-circle'}"></i> ${isEditingSingle ? 'EDITANDO' : 'ELEGIDO'}</div>
                                                  <div style="font-size:0.68rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">
                                                      ${svcTitle} <span style="font-size:0.58rem; opacity:0.8; font-weight:700;">| ${fM(sM)} - ${fM(eM)}</span>
@@ -4224,7 +4362,106 @@ window.saveManualAppointment = async function() {
         showToast('⚠️ No se pueden agendar citas en fechas pasadas.', 'error');
         if (btn) {
             btn.disabled = false;
-            btn.innerText = 'AGENDAR CITA';
+            btn.innerText = (window.rescheduleTargetIndex !== undefined && window.rescheduleTargetIndex !== null && window.rescheduleTargetIndex >= 0) ? 'CONFIRMAR APLAZAMIENTO' : 'AGENDAR CITA';
+        }
+        return;
+    }
+
+    if (window.rescheduleTargetIndex !== undefined && window.rescheduleTargetIndex !== null && window.rescheduleTargetIndex >= 0) {
+        // --- MODO APLAZAR / REAGENDAR ---
+        let agenda = JSON.parse(localStorage.getItem('agenda_appointments')) || [];
+        const originalApt = agenda[window.rescheduleTargetIndex];
+        if (!originalApt) {
+            showToast('Error: Cita original no encontrada.', 'error');
+            if (btn) { btn.disabled = false; btn.innerText = 'AGENDAR CITA'; }
+            return;
+        }
+
+        const selectedSvc = svcSelect.options[svcSelect.selectedIndex];
+        const duration = selectedSvc.dataset.duration || "60";
+
+        // Validar conflicto individual por especialista y hora (excluyendo la misma cita)
+        if (checkConflict(date, time, specialist, parseInt(duration), originalApt.id)) {
+            showToast(`CONFLICTO: ${specialist} ya está ocupado(a) a las ${window.formatTime12h ? window.formatTime12h(time) : time}.`, 'error');
+            if (btn) { btn.disabled = false; btn.innerText = 'CONFIRMAR APLAZAMIENTO'; }
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
+        }
+
+        // Si es parte de un combo/paquete (grupo), preguntar si desea actualizar todo el grupo
+        const isGroupApt = originalApt.groupId && agenda.filter(a => a.groupId === originalApt.groupId).length > 1;
+
+        if (isGroupApt) {
+            // Actualizar todos los del mismo grupo a la nueva fecha
+            agenda.forEach(a => {
+                if (a.groupId === originalApt.groupId) {
+                    a.date = date;
+                    if (a.id === originalApt.id) {
+                        a.time = time;
+                        a.specialist = specialist;
+                        a.name = name;
+                        a.phone = phone;
+                        a.service = selectedSvc.dataset.name || selectedSvc.text;
+                        a.category = catSelect.options[catSelect.selectedIndex].text;
+                        a.price = selectedSvc.dataset.originalPrice || selectedSvc.dataset.price;
+                        a.duration = duration;
+                    }
+                    a.status = 'postponed';
+                }
+            });
+        } else {
+            // Cita individual normal
+            originalApt.name = name;
+            originalApt.phone = phone;
+            originalApt.service = selectedSvc.dataset.name || selectedSvc.text;
+            originalApt.category = catSelect.options[catSelect.selectedIndex].text;
+            originalApt.price = selectedSvc.dataset.originalPrice || selectedSvc.dataset.price;
+            originalApt.duration = duration;
+            originalApt.specialist = specialist;
+            originalApt.date = date;
+            originalApt.time = time;
+            originalApt.status = 'postponed';
+        }
+
+        try {
+            localStorage.setItem('agenda_appointments', JSON.stringify(agenda));
+            if (window.saveListToCloud) {
+                await window.saveListToCloud('citas_v2', agenda);
+            }
+
+            // Limpiar y resetear el form
+            window.rescheduleTargetIndex = null;
+            
+            // Restablecer textos originales del formulario
+            const formTitle = document.querySelector('#manual-booking-container h3');
+            if (formTitle) formTitle.innerText = 'Registrar Cita Manual';
+            if (btn) btn.innerText = 'AGENDAR CITA';
+
+            document.getElementById('manual-name').value = '';
+            document.getElementById('manual-phone').value = '';
+            catSelect.value = '';
+            svcSelect.innerHTML = '<option value="">-- Primero elige especialidad --</option>';
+            document.getElementById('manual-price-display').value = '';
+            
+            if (window.resetManualFormUI) window.resetManualFormUI();
+            if (window.clearManualCart) window.clearManualCart();
+
+            toggleManualForm();
+            renderAgenda();
+            renderCalendar();
+            showToast(`Cita reagendada con éxito.`, 'success');
+        } catch(err) {
+            console.error('Error al aplazar cita manual:', err);
+            showToast('Error al aplazar la cita.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'AGENDAR CITA';
+            }
         }
         return;
     }
@@ -4391,18 +4628,17 @@ window.saveManualAppointment = async function() {
         window._comboExtraSelectedSvc = null;
         window.editingComboIdx = undefined;
         window._manualComboLastDate = null;
-        if (window.resetManualFormUI) window.resetManualFormUI();
-        if (window.clearManualCart) window.clearManualCart();
         
         document.getElementById('manual-name').value = '';
         document.getElementById('manual-phone').value = '';
 
-        const catSelect = document.getElementById('manual-category-select');
-        const svcSelect = document.getElementById('manual-service-select');
-        const priceDisplay = document.getElementById('manual-price-display');
         if (catSelect) catSelect.value = '';
         if (svcSelect) svcSelect.innerHTML = '<option value="">-- Primero elige especialidad --</option>';
+        const priceDisplay = document.getElementById('manual-price-display');
         if (priceDisplay) priceDisplay.value = '';
+
+        if (window.resetManualFormUI) window.resetManualFormUI();
+        if (window.clearManualCart) window.clearManualCart();
 
         toggleManualForm();
         
@@ -4892,15 +5128,15 @@ function _doRenderAgenda() {
                                 <i class="far fa-clock"></i> ${daysInfo}
                             </div>
                         </div>
-                        <h4 style="margin:0 0 8px 0; font-size:1.2rem; color:#1a1a1a; font-family:var(--font-heading);">${clientName}</h4>
+                        <h4 style="margin:0 0 8px 0; font-size:1.2rem; color:var(--color-text); font-family:var(--font-heading);">${clientName}</h4>
                         <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">${servicesList}</div>
                         
                         <div style="display:flex; align-items:center; gap:15px;">
                             <a href="https://wa.me/${cleanPhone}" target="_blank" style="color:#2ecc71; text-decoration:none; font-weight:700; display: inline-flex; align-items: center; gap: 6px; font-size:1rem;">
                                 <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> ${clientPhone}
                             </a>
-                            <div style="font-size:0.7rem; color:#888; background:#f9f9f9; padding:4px 10px; border-radius:8px; display:flex; align-items:center; gap:5px;">
-                                <i class="fas fa-paper-plane" style="font-size:0.6rem; opacity:0.5;"></i> ${lastRemTxt}
+                            <div style="font-size:0.7rem; color:var(--color-text-muted); background:var(--dashed-bg); border:1px solid var(--border-color); padding:4px 10px; border-radius:8px; display:flex; align-items:center; gap:5px;">
+                                <i class="fas fa-paper-plane" style="font-size:0.6rem; opacity:0.6;"></i> ${lastRemTxt}
                             </div>
                         </div>
                     </div>
@@ -5406,7 +5642,7 @@ window.sendReminderWhatsApp = function(index, isMaintenance = false) {
 
 window.updateAptStatus = function(index, newStatus) {
     if (newStatus === 'postponed') {
-        openRescheduleModal(index);
+        window.openRescheduleInManualForm(index);
         return;
     }
 
@@ -5483,32 +5719,99 @@ function showConfirmManual(msg, cb) {
     }
 }
 
-// ----------------------------------------------------
-// APLAZAR CITAS
-// ----------------------------------------------------
-let currentRescheduleIndex = -1;
-
-window.openRescheduleModal = function(index) {
-    currentRescheduleIndex = index;
+window.openRescheduleInManualForm = function(index) {
     const agenda = JSON.parse(localStorage.getItem('agenda_appointments')) || [];
     const apt = agenda[index];
     if (!apt) return;
-    
-    const dateInp = document.getElementById('reschedule-date');
-    const timeInp = document.getElementById('reschedule-time');
-    
-    if (dateInp) {
-        dateInp.value = apt.date || '';
-        dateInp.setAttribute('min', new Date().toLocaleDateString('sv-SE'));
-    }
-    if (timeInp) timeInp.value = apt.time || '';
-    
-    document.getElementById('rescheduleModal').style.display = 'flex';
-}
 
-window.closeRescheduleModal = function() {
-    document.getElementById('rescheduleModal').style.display = 'none';
-}
+    window.rescheduleTargetIndex = index;
+
+    // Limpiar carrito manual al iniciar reagendamiento para evitar interferencias
+    if (window.clearManualCart) window.clearManualCart();
+
+    // 1. Mostrar/Expandir el contenedor de registro manual
+    const container = document.getElementById('manual-booking-container');
+    const toggleBtn = document.getElementById('btn-manual-toggle');
+    if (container && !container.classList.contains('expanded')) {
+        container.classList.add('expanded');
+        if (toggleBtn) toggleBtn.classList.add('expanded');
+    }
+
+    // 2. Poblamos campos básicos
+    document.getElementById('manual-name').value = apt.name || '';
+    document.getElementById('manual-phone').value = (apt.phone && apt.phone !== 'N/A') ? apt.phone : '';
+
+    // 3. Seleccionar categoría (Especialidad)
+    const catSelect = document.getElementById('manual-category-select');
+    if (catSelect) {
+        if (catSelect.options.length <= 1) {
+            if (window.populateManualCategories) window.populateManualCategories();
+        }
+        // Buscar el value por nombre de la categoría
+        let foundVal = '';
+        for (let i = 0; i < catSelect.options.length; i++) {
+            if (catSelect.options[i].text.toLowerCase().trim() === (apt.category || '').toLowerCase().trim()) {
+                foundVal = catSelect.options[i].value;
+                break;
+            }
+        }
+        catSelect.value = foundVal;
+        
+        // Cargar servicios
+        if (window.updateManualServices) window.updateManualServices();
+    }
+
+    // 4. Seleccionar servicio
+    const svcSelect = document.getElementById('manual-service-select');
+    if (svcSelect) {
+        let foundSvcVal = '';
+        for (let i = 0; i < svcSelect.options.length; i++) {
+            const opt = svcSelect.options[i];
+            const optName = opt.dataset.name || opt.text || '';
+            if (optName.toLowerCase().trim() === (apt.service || '').toLowerCase().trim()) {
+                foundSvcVal = opt.value;
+                break;
+            }
+        }
+        if (foundSvcVal) {
+            svcSelect.value = foundSvcVal;
+            if (window.updateManualPrice) window.updateManualPrice();
+        }
+    }
+
+    // 5. Cambiar textos de los títulos y botones del formulario
+    const formTitle = document.querySelector('#manual-booking-container h3');
+    if (formTitle) formTitle.innerHTML = '<i class="fas fa-history" style="color:#f39c12;"></i> Aplazar / Reagendar Cita';
+
+    const saveBtn = document.getElementById('manual-save-btn');
+    if (saveBtn) saveBtn.innerText = 'CONFIRMAR APLAZAMIENTO';
+
+    // 6. Limpiar selección previa de hora/fecha en el formulario
+    document.getElementById('manual-date').value = '';
+    document.getElementById('manual-time').value = '';
+    document.getElementById('manual-specialist').value = '';
+    
+    const summary = document.getElementById('manual-selection-summary-container');
+    if (summary) summary.style.display = 'none';
+
+    // Deshabilitar botón de guardar temporalmente hasta que elijan nuevo turno
+    if (window.checkManualFormCompletion) window.checkManualFormCompletion();
+
+    // 7. Scroll suave hacia el tope de la página (evitando recortar la cabecera)
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    setTimeout(() => {
+        if (window.openManualVisualAgenda) {
+            window.openManualVisualAgenda();
+        }
+    }, 600);
+
+    showToast('Selecciona el nuevo turno en la agenda visual para confirmar.');
+};
+
+
 
 window.exportHistory = function() {
     const agenda = JSON.parse(localStorage.getItem('agenda_appointments')) || [];
@@ -5798,50 +6101,7 @@ if (!window._autoCancelInterval) {
     window._autoCancelInterval = setInterval(window.autoCancelOverdueAppointments, 60000);
 }
 
-window.confirmReschedule = function() {
-    const newDate = document.getElementById('reschedule-date').value;
-    const newTime = document.getElementById('reschedule-time').value;
-    if (!newDate || !newTime) {
-        showToast('Elige fecha y hora válidas.', 'error');
-        return;
-    }
 
-    const todayStr = new Date().toLocaleDateString('sv-SE');
-    if (newDate < todayStr) {
-        showToast('⚠️ No se pueden aplazar citas a fechas pasadas.', 'error');
-        return;
-    }
-    let agenda = JSON.parse(localStorage.getItem('agenda_appointments')) || [];
-    const apt = agenda[currentRescheduleIndex];
-    if (!apt) return;
-
-    const isGroupApt = apt.groupId && agenda.filter(a => a.groupId === apt.groupId).length > 1;
-
-    // BUG FIX: Si la cita es de un grupo (combo/paquete), solo propagar la FECHA y el estado.
-    // Cada servicio del combo tiene su propia hora asignada — NO sobreescribirlas.
-    if (isGroupApt) {
-        agenda.forEach(a => {
-            if (a.groupId === apt.groupId) {
-                a.date = newDate;
-                // Preservar la hora individual de cada servicio del combo
-                a.status = 'postponed';
-            }
-        });
-    } else {
-        agenda[currentRescheduleIndex].date = newDate;
-        agenda[currentRescheduleIndex].time = newTime;
-        agenda[currentRescheduleIndex].status = 'postponed';
-    }
-
-    localStorage.setItem('agenda_appointments', JSON.stringify(agenda));
-    
-    if (window.saveListToCloud) {
-        window.saveListToCloud('citas_v2', agenda);
-    }
-    closeRescheduleModal();
-    renderAgenda();
-    showToast("Cita aplazada.");
-};
 
 // =============================================
 // PROMOTIONS & ANNOUNCEMENTS
@@ -5890,6 +6150,7 @@ window.selectSwitchedService = function(groupId, index, el) {
 // Global click to close custom dropdowns
 document.addEventListener('click', () => {
     document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.category-filter-container').forEach(c => c.classList.remove('open'));
 });
 
 window.toggleSvcDropdown = function(type) {
@@ -6782,6 +7043,134 @@ window.populateRemindersCategoryFilter = function() {
     // Restore previous selection if still valid
     if (currentVal && (currentVal === '' || categories.find(c => c.name === currentVal))) {
         catFilter.value = currentVal;
+    } else {
+        catFilter.value = '';
+    }
+
+    // Populate Custom Dropdown Menu
+    const customMenu = document.getElementById('agenda-category-filter-menu');
+    const customLabel = document.getElementById('agenda-category-filter-label');
+    if (customMenu && customLabel) {
+        const selectedValue = catFilter.value;
+        
+        let customHtml = `<div class="category-filter-item ${selectedValue === '' ? 'selected' : ''}" onclick="window.selectAgendaCategory('', 'Todas las Categorías', event)">
+            Todas las Categorías
+            <i class="fas fa-check"></i>
+        </div>`;
+        
+        categories.forEach(cat => {
+            customHtml += `<div class="category-filter-item ${selectedValue === cat.name ? 'selected' : ''}" onclick="window.selectAgendaCategory('${cat.name}', '${cat.name}', event)">
+                ${cat.name}
+                <i class="fas fa-check"></i>
+            </div>`;
+        });
+        
+        customMenu.innerHTML = customHtml;
+        
+        // Update label text
+        if (selectedValue === '') {
+            customLabel.innerText = 'Todas las Categorías';
+        } else {
+            customLabel.innerText = selectedValue;
+        }
+    }
+};
+
+window.toggleAgendaCategoryDropdown = function(event) {
+    if (event) event.stopPropagation();
+    
+    const container = document.getElementById('agenda-category-filter-container');
+    if (!container) return;
+    
+    const isOpen = container.classList.contains('open');
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.category-filter-container').forEach(c => c.classList.remove('open'));
+    document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('active'));
+    
+    if (!isOpen) {
+        container.classList.add('open');
+    } else {
+        container.classList.remove('open');
+    }
+};
+
+window.selectAgendaCategory = function(value, labelText, event) {
+    if (event) event.stopPropagation();
+    
+    const catFilter = document.getElementById('agenda-category-filter');
+    if (catFilter) {
+        catFilter.value = value;
+        catFilter.dispatchEvent(new Event('change'));
+    }
+    
+    const customLabel = document.getElementById('agenda-category-filter-label');
+    if (customLabel) {
+        customLabel.innerText = labelText;
+    }
+    
+    const customMenu = document.getElementById('agenda-category-filter-menu');
+    if (customMenu) {
+        customMenu.querySelectorAll('.category-filter-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+    }
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('selected');
+    }
+    
+    const container = document.getElementById('agenda-category-filter-container');
+    if (container) {
+        container.classList.remove('open');
+    }
+};
+
+window.toggleMaintCategoryDropdown = function(event) {
+    if (event) event.stopPropagation();
+    
+    const container = document.getElementById('maint-category-filter-container');
+    if (!container) return;
+    
+    const isOpen = container.classList.contains('open');
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.category-filter-container').forEach(c => c.classList.remove('open'));
+    document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('active'));
+    
+    if (!isOpen) {
+        container.classList.add('open');
+    } else {
+        container.classList.remove('open');
+    }
+};
+
+window.selectMaintCategory = function(value, labelText, event) {
+    if (event) event.stopPropagation();
+    
+    const catSelect = document.getElementById('maint-category-filter');
+    if (catSelect) {
+        catSelect.value = value;
+        catSelect.dispatchEvent(new Event('change'));
+    }
+    
+    const customLabel = document.getElementById('maint-category-filter-label');
+    if (customLabel) {
+        customLabel.innerText = labelText;
+    }
+    
+    const customMenu = document.getElementById('maint-category-filter-menu');
+    if (customMenu) {
+        customMenu.querySelectorAll('.category-filter-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+    }
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('selected');
+    }
+    
+    const container = document.getElementById('maint-category-filter-container');
+    if (container) {
+        container.classList.remove('open');
     }
 };
 
@@ -6795,11 +7184,18 @@ window.setAgendaTray = function(tray) {
     
     // Mostrar u ocultar botón de configuración de mantenimiento y filtro de categorías
     const configBtn = document.getElementById('maint-config-btn');
+    const catFilterContainer = document.getElementById('agenda-category-filter-container');
     const catFilter = document.getElementById('agenda-category-filter');
     if (configBtn) {
         configBtn.style.display = (tray === 'reminders') ? 'flex' : 'none';
     }
-    if (catFilter) {
+    
+    if (catFilterContainer) {
+        catFilterContainer.style.display = (tray === 'reminders') ? 'inline-block' : 'none';
+        if (tray === 'reminders') {
+            window.populateRemindersCategoryFilter();
+        }
+    } else if (catFilter) {
         catFilter.style.display = (tray === 'reminders') ? 'inline-block' : 'none';
         if (tray === 'reminders') {
             window.populateRemindersCategoryFilter();
@@ -9059,17 +9455,10 @@ window.renderVisualAgenda = function() {
                             return `
                                 <td style="border-left: 1px solid #f2f2f2; position: relative; height: 80px; padding: 0; vertical-align: top; background: white;">
                                     ${aptsInThisSlot.map((a, idx) => {
-                                        let bg = 'rgba(229, 169, 180, 0.2)'; // Predeterminado (Entrante)
-                                        let border = 'var(--color-dark-pink)';
-                                        let textColor = 'var(--color-dark-pink)';
-                                        
-                                        if (a.status === 'confirmed') { 
-                                            bg = 'rgba(46, 204, 113, 0.2)'; border = '#2ecc71'; textColor = '#27ae60';
-                                        } else if (a.status === 'postponed') { 
-                                            bg = 'rgba(243, 156, 18, 0.2)'; border = '#f39c12'; textColor = '#e67e22';
-                                        } else if (a.status === 'accepted') {
-                                            bg = 'rgba(52, 152, 219, 0.2)'; border = '#3498db'; textColor = '#2980b9';
-                                        }
+                                        let cardClass = 'agenda-card card-incoming';
+                                        if (a.status === 'confirmed') cardClass = 'agenda-card card-confirmed';
+                                        else if (a.status === 'postponed') cardClass = 'agenda-card card-postponed';
+                                        else if (a.status === 'accepted') cardClass = 'agenda-card card-completed';
 
                                         const timeParts = a.time.split(':');
                                         const h = parseInt(timeParts[0]);
@@ -9121,13 +9510,13 @@ window.renderVisualAgenda = function() {
                                         const serviceFs = isShort ? '0.75rem' : '0.85rem';
 
                                         return `
-                                            <div title="${tooltip}" style="position: absolute; top: ${topPos}px; left: calc(${leftOffset}% + 4px); width: calc(${colWidth}% - 8px); height: ${height-4}px; background:${bg}; border-left: 5px solid ${border}; border-radius: 12px; padding: ${padding}; z-index: ${zIndex}; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); transition: 0.2s; display:flex; flex-direction:column; justify-content:${isShort ? 'center' : 'flex-start'}; gap:${gap}; cursor: help;" class="hover-scale">
-                                                <div style="font-weight: 950; color: #000; line-height: 1.1; font-size: ${serviceFs}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; text-align: ${isShort ? 'center' : 'left'};">${a.service}</div>
+                                            <div title="${tooltip}" style="position: absolute; top: ${topPos}px; left: calc(${leftOffset}% + 4px); width: calc(${colWidth}% - 8px); height: ${height-4}px; border-radius: 12px; padding: ${padding}; z-index: ${zIndex}; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); transition: 0.2s; display:flex; flex-direction:column; justify-content:${isShort ? 'center' : 'flex-start'}; gap:${gap}; cursor: help;" class="hover-scale ${cardClass}">
+                                                <div class="agenda-service" style="font-weight: 950; line-height: 1.1; font-size: ${serviceFs}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; text-align: ${isShort ? 'center' : 'left'};">${a.service}</div>
                                                 
-                                                ${!isShort ? `<div style="color: #444; font-size: 0.68rem; font-weight: 700; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.name}</div>` : ''}
+                                                ${!isShort ? `<div class="agenda-name" style="font-size: 0.68rem; font-weight: 700; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.name}</div>` : ''}
                                                 
                                                 ${!isShort ? `
-                                                <div style="position: absolute; bottom: 3px; right: 4px; font-size: 0.6rem; color: #000; font-weight: 800; background: rgba(255,255,255,0.95); padding: 2px 6px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.03); display:flex; align-items:center; gap:3px;">
+                                                <div class="agenda-time-pill">
                                                     <i class="far fa-clock" style="font-size:0.55rem; opacity:0.6;"></i> ${window.formatTime12h(a.time)} - ${window.formatTime12h(endTimeStr)}
                                                 </div>` : ''}
                                             </div>
@@ -9239,7 +9628,6 @@ document.addEventListener('keydown', (e) => {
         // 2. Map and close static modals
         const modalConfigs = [
             { id: 'editSpecialistModal', closeFn: window.closeEditSpecialistModal },
-            { id: 'rescheduleModal', closeFn: window.closeRescheduleModal },
             { id: 'deleteHistoryModal', closeFn: window.closeDeleteHistoryModal },
             { id: 'specialistServicesModal', closeFn: window.closeSpecialistServicesModal },
             { id: 'specialistInfoModal', closeFn: window.closeSpecialistInfoModal },
@@ -9269,8 +9657,7 @@ window.initKeyboardShortcuts = function() {
     const mappings = [
         { container: 'new-specialist-form-container', action: () => window.addSpecialist() },
         { container: 'editSpecialistModal', action: () => window.saveSpecialistEdit() },
-        { container: 'manual-booking-container', action: () => window.addManualBooking() },
-        { container: 'rescheduleModal', action: () => window.confirmReschedule() }
+        { container: 'manual-booking-container', action: () => window.saveManualAppointment() }
     ];
 
     mappings.forEach(m => {
@@ -9729,6 +10116,24 @@ window.openMaintConfigModal = function() {
         });
         catSelect.innerHTML = catHtml;
         catSelect.value = 'all'; // Por defecto mostrar todos
+        
+        // Popular menú desplegable personalizado
+        const customMenu = document.getElementById('maint-category-filter-menu');
+        const customLabel = document.getElementById('maint-category-filter-label');
+        if (customMenu && customLabel) {
+            let customHtml = `<div class="category-filter-item selected" onclick="window.selectMaintCategory('all', 'Todas las Categorías', event)">
+                Todas las Categorías
+                <i class="fas fa-check"></i>
+            </div>`;
+            categories.forEach(cat => {
+                customHtml += `<div class="category-filter-item" onclick="window.selectMaintCategory('${cat.id}', '${cat.name}', event)">
+                    ${cat.name}
+                    <i class="fas fa-check"></i>
+                </div>`;
+            });
+            customMenu.innerHTML = customHtml;
+            customLabel.innerText = 'Todas las Categorías';
+        }
     }
 
     // Función de filtrado dinámico para la lista

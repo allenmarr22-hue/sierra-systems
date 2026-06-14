@@ -247,7 +247,7 @@
     top: 0;
     left: 0;
     bottom: 0;
-    width: 6px;
+    width: 8px;
     background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-hover, var(--color-accent)) 100%);
     border-radius: 6px 0 0 6px;
     z-index: 2;
@@ -258,7 +258,7 @@
     top: 0;
     left: 0;
     bottom: 0;
-    width: 6px;
+    width: 8px;
     background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
     border-radius: 6px 0 0 6px;
     z-index: 2;
@@ -269,6 +269,16 @@
 .dark-theme .reminder-card {
     background: rgba(30, 41, 59, 0.7) !important;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+}
+.dark-theme .appointment-group-card::before {
+    width: 8px !important;
+    filter: brightness(1.4) saturate(1.2) !important;
+    box-shadow: 2px 0 10px rgba(var(--accent-rgb), 0.5) !important;
+}
+.dark-theme .reminder-card::before {
+    width: 8px !important;
+    filter: brightness(1.4) saturate(1.2) !important;
+    box-shadow: 2px 0 10px rgba(56, 189, 248, 0.5) !important;
 }
 .dark-theme .appointment-group-card[data-paid="full"] {
     background: rgba(34, 197, 94, 0.12) !important;
@@ -1288,7 +1298,7 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-    max-width: 850px;
+    max-width: 100%;
     width: 100%;
     border: 1px solid rgba(var(--accent-rgb), 0.15);
     border-left: 5px solid var(--color-accent);
@@ -3229,3 +3239,298 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     background: #1e293b !important;
     border-bottom-color: rgba(255, 255, 255, 0.08) !important;
 }
+
+/* --- ESTILOS PARA EL FILTRO DE CATEGORÍAS PERSONALIZADO --- */
+.category-filter-container {
+    position: relative;
+    user-select: none;
+    height: 52px;
+}
+
+.category-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 100%;
+    padding: 0 20px;
+    border-radius: 15px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    outline: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    min-width: 180px;
+    max-width: 220px;
+    text-align: left;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+.category-filter-toggle:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.1);
+    transform: translateY(-1px);
+}
+
+.category-filter-toggle:active {
+    transform: translateY(0);
+}
+
+.category-filter-toggle span {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.category-filter-toggle i {
+    font-size: 0.8rem;
+    color: var(--color-accent);
+    transition: transform 0.2s ease;
+}
+
+.category-filter-container.open .category-filter-toggle i {
+    transform: rotate(180deg);
+}
+
+.category-filter-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 200px;
+    width: 100%;
+    background: white;
+    border: 1px solid rgba(var(--accent-rgb), 0.12);
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    z-index: 1050;
+    overflow-y: auto;
+    max-height: 250px;
+    padding: 6px 0;
+    display: none;
+    animation: categoryDropdownFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-filter-menu::-webkit-scrollbar {
+    width: 5px;
+}
+
+.category-filter-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.category-filter-menu::-webkit-scrollbar-thumb {
+    background: rgba(var(--accent-rgb), 0.2);
+    border-radius: 10px;
+}
+
+.category-filter-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--accent-rgb), 0.45);
+}
+
+.category-filter-container.open .category-filter-menu {
+    display: block;
+}
+
+.category-filter-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #4b5563;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.category-filter-item:hover {
+    background: rgba(var(--accent-rgb), 0.05);
+    color: var(--color-accent);
+    padding-left: 20px;
+}
+
+.category-filter-item.selected {
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--color-accent);
+    font-weight: 700;
+}
+
+.category-filter-item i {
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.category-filter-item.selected i {
+    opacity: 1;
+}
+
+@keyframes categoryDropdownFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Modo Noche / Dark Theme Overrides */
+.dark-theme .category-filter-toggle {
+    background-color: #1e293b !important;
+    color: var(--color-accent) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+}
+
+.dark-theme .category-filter-toggle:hover {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.15) !important;
+}
+
+.dark-theme .category-filter-toggle i {
+    color: var(--color-accent) !important;
+}
+
+.dark-theme .category-filter-menu {
+    background-color: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.35) !important;
+}
+
+.dark-theme .category-filter-item {
+    color: #94a3b8 !important;
+}
+
+.dark-theme .category-filter-item:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #f8fafc !important;
+}
+
+.dark-theme .category-filter-item.selected {
+    background: rgba(var(--accent-rgb), 0.15) !important;
+    color: var(--color-accent) !important;
+}
+
+/* Agenda Cards (Light Mode) */
+.agenda-card {
+    border-left: 5px solid var(--border-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.agenda-card.card-incoming {
+    background: rgba(229, 169, 180, 0.15) !important;
+    border-left-color: var(--color-dark-pink) !important;
+}
+.agenda-card.card-incoming .agenda-service {
+    color: #8c264a !important;
+}
+.agenda-card.card-incoming .agenda-name {
+    color: #a64268 !important;
+}
+
+.agenda-card.card-confirmed {
+    background: rgba(46, 204, 113, 0.15) !important;
+    border-left-color: #2ecc71 !important;
+}
+.agenda-card.card-confirmed .agenda-service {
+    color: #1e6b3c !important;
+}
+.agenda-card.card-confirmed .agenda-name {
+    color: #27854a !important;
+}
+
+.agenda-card.card-postponed {
+    background: rgba(243, 156, 18, 0.15) !important;
+    border-left-color: #f39c12 !important;
+}
+.agenda-card.card-postponed .agenda-service {
+    color: #9c5c16 !important;
+}
+.agenda-card.card-postponed .agenda-name {
+    color: #b86e1b !important;
+}
+
+.agenda-card.card-completed {
+    background: rgba(52, 152, 219, 0.15) !important;
+    border-left-color: #3498db !important;
+}
+.agenda-card.card-completed .agenda-service {
+    color: #1c5f8c !important;
+}
+.agenda-card.card-completed .agenda-name {
+    color: #247bb5 !important;
+}
+
+/* Time Pill in Visual Agenda */
+.agenda-time-pill {
+    position: absolute;
+    bottom: 3px;
+    right: 4px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #000000 !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    z-index: 200;
+}
+.agenda-time-pill i {
+    color: #000000 !important;
+    opacity: 0.6;
+}
+
+/* Dark mode overrides for time pill and cards */
+.dark-theme .agenda-time-pill {
+    background: rgba(15, 23, 42, 0.6) !important;
+    color: #cbd5e1 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.dark-theme .agenda-time-pill i {
+    color: #cbd5e1 !important;
+}
+
+.dark-theme .agenda-card.card-incoming {
+    background: rgba(184, 115, 129, 0.22) !important;
+    border-left-color: #e56a9e !important;
+}
+.dark-theme .agenda-card.card-incoming .agenda-service,
+.dark-theme .agenda-card.card-incoming .agenda-name {
+    color: #f8fafc !important;
+}
+
+.dark-theme .agenda-card.card-confirmed {
+    background: rgba(39, 174, 96, 0.22) !important;
+    border-left-color: #2ecc71 !important;
+}
+.dark-theme .agenda-card.card-confirmed .agenda-service,
+.dark-theme .agenda-card.card-confirmed .agenda-name {
+    color: #f8fafc !important;
+}
+
+.dark-theme .agenda-card.card-postponed {
+    background: rgba(211, 84, 0, 0.22) !important;
+    border-left-color: #f39c12 !important;
+}
+.dark-theme .agenda-card.card-postponed .agenda-service,
+.dark-theme .agenda-card.card-postponed .agenda-name {
+    color: #f8fafc !important;
+}
+
+.dark-theme .agenda-card.card-completed {
+    background: rgba(41, 128, 185, 0.22) !important;
+    border-left-color: #3498db !important;
+}
+.dark-theme .agenda-card.card-completed .agenda-service,
+.dark-theme .agenda-card.card-completed .agenda-name {
+    color: #f8fafc !important;
+}
+
