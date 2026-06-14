@@ -8185,7 +8185,7 @@ window.updateSpecialistReport = function() {
                     '<span style="color:#3498db; font-weight:bold; font-size:0.7rem; background:rgba(52,152,219,0.1); padding:2px 8px; border-radius:4px;"><i class="fas fa-clock"></i> PENDIENTE</span>');
 
             return `
-            <div style="background:rgba(255, 255, 255, 0.9); padding:15px; border-radius:12px; border:1px solid #eee; border-left:5px solid ${a.status === 'accepted' ? 'var(--color-dark-pink)' : '#ddd'}; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 3px 10px rgba(0,0,0,0.02); opacity: 1;">
+            <div data-status="${a.status}" style="background:rgba(255, 255, 255, 0.9); padding:15px; border-radius:12px; border:1px solid #eee; border-left:5px solid ${a.status === 'accepted' ? '#2ecc71' : '#ddd'}; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 3px 10px rgba(0,0,0,0.02); opacity: 1;">
                 <div style="flex:1;">
                     <div style="font-size:0.75rem; color:#666; margin-bottom:4px; font-weight:bold; letter-spacing:0.5px;">
                         <i class="far fa-calendar-alt" style="color:#888;"></i> ${a.date} <span style="margin:0 5px; color:#ccc;">|</span> <i class="far fa-clock" style="color:#888;"></i> ${window.formatTime12h(a.time)}

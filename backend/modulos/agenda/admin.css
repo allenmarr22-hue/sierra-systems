@@ -2796,8 +2796,14 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
 /* ── 5. Reporte de profesionales — Modal cards ─────── */
 .dark-theme #specialist-services-list > div {
     background: rgba(30, 41, 59, 0.8) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    border-top-color: rgba(255, 255, 255, 0.08) !important;
+    border-right-color: rgba(255, 255, 255, 0.08) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    border-left-color: rgba(255, 255, 255, 0.2) !important;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+}
+.dark-theme #specialist-services-list > div[data-status="accepted"] {
+    border-left-color: #2ecc71 !important;
 }
 /* Fecha/hora en el reporte */
 .dark-theme #specialist-services-list > div > div > div:first-child {
