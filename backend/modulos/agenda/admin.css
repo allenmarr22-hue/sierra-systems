@@ -305,17 +305,6 @@
     box-shadow: 2px 0 10px rgba(243, 156, 18, 0.5) !important;
 }
 
-/* 3. Pending (Default unpaid / unconfirmed) -> Orange Border */
-.appointment-group-card[data-paid="none"]::before,
-.appointment-group-card:not([data-status="accepted"]):not([data-status="postponed"]):not([data-paid="full"]):not([data-paid="partial"])::before {
-    background: linear-gradient(180deg, #ff9f43 0%, #e67e22 100%) !important;
-}
-.dark-theme .appointment-group-card[data-paid="none"]::before,
-.dark-theme .appointment-group-card:not([data-status="accepted"]):not([data-status="postponed"]):not([data-paid="full"]):not([data-paid="partial"])::before {
-    background: linear-gradient(180deg, #ff9f43 0%, #e67e22 100%) !important;
-    box-shadow: 2px 0 10px rgba(255, 159, 67, 0.5) !important;
-}
-
 /* Dark theme card background overrides */
 .dark-theme .appointment-group-card[data-paid="full"],
 .dark-theme .appointment-group-card[data-status="accepted"] {
@@ -327,9 +316,6 @@
 }
 .dark-theme .appointment-group-card[data-status="cancelled"] {
     background: rgba(239, 68, 68, 0.12) !important;
-}
-.dark-theme .appointment-group-card[data-paid="none"]:not([data-status="cancelled"]) {
-    background: rgba(249, 115, 22, 0.08) !important;
 }
 
 /* Card service title and price breakdown studio text color overrides */
@@ -366,23 +352,6 @@
 .dark-theme .appointment-group-card[data-status="postponed"] .appointment-studio-value {
     color: #ff9f43 !important;
 }
-/* 3. Pending (none payment) -> Orange */
-.appointment-group-card[data-paid="none"] .appointment-service-title,
-.appointment-group-card[data-paid="none"] .appointment-studio-label,
-.appointment-group-card[data-paid="none"] .appointment-studio-value,
-.appointment-group-card:not([data-paid="full"]):not([data-paid="partial"]):not([data-status="accepted"]):not([data-status="postponed"]) .appointment-service-title,
-.appointment-group-card:not([data-paid="full"]):not([data-paid="partial"]):not([data-status="accepted"]):not([data-status="postponed"]) .appointment-studio-label,
-.appointment-group-card:not([data-paid="full"]):not([data-paid="partial"]):not([data-status="accepted"]):not([data-status="postponed"]) .appointment-studio-value {
-    color: #d35400 !important;
-}
-.dark-theme .appointment-group-card[data-paid="none"] .appointment-service-title,
-.dark-theme .appointment-group-card[data-paid="none"] .appointment-studio-label,
-.dark-theme .appointment-group-card[data-paid="none"] .appointment-studio-value,
-.dark-theme .appointment-group-card:not([data-paid="full"]):not([data-paid="partial"]):not([data-status="accepted"]):not([data-status="postponed"]) .appointment-service-title,
-.dark-theme .appointment-group-card:not([data-paid="full"]):not([data-paid="partial"]):not([data-status="accepted"]):not([data-status="postponed"]) .appointment-studio-label,
-.dark-theme .appointment-group-card:not([data-paid="full"]):not([data-paid="partial"]):not([data-status="accepted"]):not([data-status="postponed"]) .appointment-studio-value {
-    color: #ff9f43 !important;
-}
 
 /* Discount badges background colors */
 .appointment-group-card .appointment-discount-badge {
@@ -394,10 +363,6 @@
 .appointment-group-card[data-paid="partial"] .appointment-discount-badge,
 .appointment-group-card[data-status="postponed"] .appointment-discount-badge {
     background: #f39c12 !important;
-}
-.appointment-group-card[data-paid="none"] .appointment-discount-badge,
-.appointment-group-card:not([data-paid="full"]):not([data-paid="partial"]):not([data-status="accepted"]):not([data-status="postponed"]) .appointment-discount-badge {
-    background: #ff9f43 !important;
 }
 
 /* ── Catálogo de Servicios — Dark Mode ── */
