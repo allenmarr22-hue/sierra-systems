@@ -2583,6 +2583,8 @@ function openModuleModal(id) {
     document.getElementById('mod-icon-input').value = mod.icon;
     document.getElementById('mod-status-input').value = mod.status;
     document.getElementById('mod-video-input').value = mod.videoUrl || '';
+    document.getElementById('mod-demo-value-input').value = mod.demoResetValue !== undefined ? mod.demoResetValue : 4;
+    document.getElementById('mod-demo-unit-input').value = mod.demoResetUnit || 'hours';
     
     const priceNum = parseInt(String(mod.price).replace(/\D/g, ''), 10);
     document.getElementById('mod-price-input').value = isNaN(priceNum) ? '' : priceNum.toLocaleString('es-CO');
@@ -2621,6 +2623,8 @@ function saveModule() {
         const status = document.getElementById('mod-status-input').value;
         const videoUrl = document.getElementById('mod-video-input').value;
         const image = document.getElementById('mod-image-base64')?.value || '';
+        const demoResetValue = parseInt(document.getElementById('mod-demo-value-input').value) || 4;
+        const demoResetUnit = document.getElementById('mod-demo-unit-input').value || 'hours';
 
         const updatedMod = {
             id: id,
@@ -2630,7 +2634,9 @@ function saveModule() {
             icon,
             status,
             videoUrl,
-            image
+            image,
+            demoResetValue,
+            demoResetUnit
         };
 
         try {

@@ -41,18 +41,19 @@
             }
         })();
 
-        // ====== RESTABLECIMIENTO AUTOMÁTICO EN MODO DEMO (AUTO-RESET AFTER 4 HOURS IN DEMO MODE) ======
+        // ====== RESTABLECIMIENTO AUTOMÁTICO EN MODO DEMO (AUTO-RESET AFTER INACTIVITY IN DEMO MODE) ======
         (function() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const instanceId = urlParams.get('instanceId');
                 if (!instanceId) {
-                    const resetThresholdMs = 4 * 60 * 60 * 1000; // 4 horas
+                    const storedThreshold = localStorage.getItem('agenda_demo_reset_time_ms');
+                    const resetThresholdMs = storedThreshold ? parseInt(storedThreshold) : (4 * 60 * 60 * 1000); // 4 horas por defecto
                     const lastActivity = localStorage.getItem('streetfeed_demo_last_activity') || localStorage.getItem('agenda_demo_last_activity');
                     const now = Date.now();
                     
                     if (lastActivity && (now - Number(lastActivity)) > resetThresholdMs) {
-                        console.warn("[Demo Reset] Excedido el límite de inactividad de 4 horas en demo. Restableciendo datos locales...");
+                        console.warn("[Demo Reset] Excedido el límite de inactividad en demo. Restableciendo datos locales...");
                         const demoKeys = [
                             'streetfeed_dishes', 'streetfeed_config', 'streetfeed_categories', 'streetfeed_auth',
                             'streetfeed_cart', 'streetfeed_combos', 'streetfeed_orders', 'streetfeed_state',
@@ -71,6 +72,22 @@
                     }
                     localStorage.setItem('streetfeed_demo_last_activity', now.toString());
                     localStorage.setItem('agenda_demo_last_activity', now.toString());
+
+                    // Actualizar el tiempo de reset en segundo plano desde el servidor
+                    fetch('/api/settings')
+                        .then(res => res.json())
+                        .then(data => {
+                            const mod = (data.modules || []).find(m => m.id === 'agenda');
+                            if (mod) {
+                                const val = parseInt(mod.demoResetValue) || 4;
+                                const unit = mod.demoResetUnit || 'hours';
+                                let ms = val * 60 * 60 * 1000;
+                                if (unit === 'minutes') ms = val * 60 * 1000;
+                                else if (unit === 'days') ms = val * 24 * 60 * 60 * 1000;
+                                localStorage.setItem('agenda_demo_reset_time_ms', ms.toString());
+                            }
+                        })
+                        .catch(() => {});
 
                     // --- INYECCIÓN DE BANNER DE MODO DEMO ---
                     const injectDemoBanner = () => {

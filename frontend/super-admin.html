@@ -1694,6 +1694,35 @@
                     </div>
                 </div>
 
+                <!-- CONFIGURACIÓN MODO DEMO -->
+                <div class="form-group-modern" style="border-top: 1px dashed var(--border-color); padding-top: 1.25rem; margin-top: 1.25rem;">
+                    <label style="color: var(--primary) !important; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="play-circle" style="width: 16px;"></i> AJUSTES MODO DEMO
+                    </label>
+                    <p class="field-hint-modern" style="margin-bottom:0.75rem;">Define el tiempo de inactividad antes de restablecer los datos de demostración en este módulo.</p>
+                    
+                    <div class="form-grid-modern">
+                        <div class="form-group-modern">
+                            <label>TIEMPO DE INACTIVIDAD</label>
+                            <div class="input-modern-wrap">
+                                <i data-lucide="hourglass" class="field-icon"></i>
+                                <input type="number" id="mod-demo-value-input" min="1" placeholder="4">
+                            </div>
+                        </div>
+                        <div class="form-group-modern">
+                            <label>UNIDAD DE TIEMPO</label>
+                            <div class="input-modern-wrap">
+                                <i data-lucide="calendar" class="field-icon"></i>
+                                <select id="mod-demo-unit-input" class="select-modern">
+                                    <option value="minutes">Minutos</option>
+                                    <option value="hours" selected>Horas</option>
+                                    <option value="days">Días</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- IMAGEN DEL MÓDULO -->
                 <div class="form-group-modern">
                     <label>IMAGEN DEL MÓDULO (CAPTURA DE PANTALLA)</label>

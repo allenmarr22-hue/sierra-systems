@@ -1819,7 +1819,9 @@ app.get('/api/settings', async (req, res) => {
             icon: m.icon || null,
             price: m.price,
             status: m.status,
-            image: m.image || null
+            image: m.image || null,
+            demoResetValue: m.demoResetValue !== undefined ? parseInt(m.demoResetValue) : 4,
+            demoResetUnit: m.demoResetUnit || 'hours'
         }));
         const publicPromotions = (dbState.promotions || []).filter(p => p.status === 'active');
         res.json({ config: publicConfig, modules: publicModules, promotions: publicPromotions });
