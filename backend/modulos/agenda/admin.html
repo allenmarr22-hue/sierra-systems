@@ -173,6 +173,38 @@
             max-width: 400px;
         }
         .logo { margin-bottom: 20px; }
+
+        /* Dark Theme overrides for Auth Section */
+        .dark-theme #auth-section {
+            background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), url('admin_bg.png') !important;
+        }
+        .dark-theme #auth-section p {
+            color: #94a3b8 !important;
+        }
+        .dark-theme .login-box {
+            background: rgba(30, 41, 59, 0.85) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .forgot-password-link {
+            color: #666;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .forgot-password-link:hover {
+            color: var(--color-dark-pink);
+        }
+        .dark-theme .forgot-password-link {
+            color: #94a3b8 !important;
+        }
+        .dark-theme .forgot-password-link:hover {
+            color: var(--color-accent) !important;
+        }
+        .dark-theme .login-box input::placeholder {
+            color: #64748b !important;
+        }
     </style>
 </head>
 <body>
@@ -252,7 +284,7 @@
             <input type="password" id="admin-password" placeholder="Contraseña" required>
             <button id="login-btn" class="btn-primary" style="margin-top: 20px; width: 100%;">ENTRAR AL PANEL</button>
             <div style="margin-top:15px; text-align:center;">
-                <a href="#" onclick="handleForgotPassword()" style="color:#666; font-size:0.85rem; text-decoration:none; transition:0.3s;" onmouseover="this.style.color='var(--color-dark-pink)'" onmouseout="this.style.color='#666'">¿Olvidaste tu contraseña?</a>
+                <a href="#" onclick="handleForgotPassword()" class="forgot-password-link">¿Olvidaste tu contraseña?</a>
             </div>
             <p id="auth-error" class="error-msg"></p>
         </div>
