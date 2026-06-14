@@ -85,12 +85,33 @@
                                 if (unit === 'minutes') ms = val * 60 * 1000;
                                 else if (unit === 'days') ms = val * 24 * 60 * 60 * 1000;
                                 localStorage.setItem('menu_comida_demo_reset_time_ms', ms.toString());
+
+                                // Actualizar el texto del banner si ya está en el DOM
+                                const labelText = document.getElementById('demo-reset-text');
+                                if (labelText) {
+                                    let newTimeText = '4h';
+                                    const totalMinutes = Math.round(ms / 1000 / 60);
+                                    if (totalMinutes < 60) newTimeText = `${totalMinutes} min`;
+                                    else if (totalMinutes < 1440) newTimeText = `${totalMinutes / 60}h`;
+                                    else newTimeText = `${Math.round(totalMinutes / 1440)}d`;
+                                    labelText.innerText = `Cambios temporales (se limpian tras ${newTimeText} de inactividad)`;
+                                }
                             }
                         })
                         .catch(() => {});
 
                     // --- INYECCIÓN DE BANNER DE MODO DEMO ---
                     const injectDemoBanner = () => {
+                        const storedThreshold = localStorage.getItem('menu_comida_demo_reset_time_ms');
+                        let timeText = '4h';
+                        if (storedThreshold) {
+                            const ms = parseInt(storedThreshold);
+                            const totalMinutes = Math.round(ms / 1000 / 60);
+                            if (totalMinutes < 60) timeText = `${totalMinutes} min`;
+                            else if (totalMinutes < 1440) timeText = `${totalMinutes / 60}h`;
+                            else timeText = `${Math.round(totalMinutes / 1440)}d`;
+                        }
+
                         const bannerHtml = `
                             <div id="demo-badge-banner" style="
                                 position: fixed;
@@ -126,7 +147,7 @@
                                 "></div>
                                 <span style="white-space: nowrap;">
                                     <strong style="color: var(--theme-accent, var(--color-accent, #ff8c00)); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Modo Demo</strong> 
-                                    · Cambios temporales (se limpian tras 4h de inactividad)
+                                    · <span id="demo-reset-text">Cambios temporales (se limpian tras ${timeText} de inactividad)</span>
                                 </span>
                                 <button onclick="document.getElementById('demo-badge-banner').style.opacity='0'; setTimeout(()=>document.getElementById('demo-badge-banner').remove(), 400);" style="
                                     background: transparent;
