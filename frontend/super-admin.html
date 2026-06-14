@@ -1683,14 +1683,21 @@
 
                 <div class="form-group-modern">
                     <label>ESTADO DE DISPONIBILIDAD</label>
-                    <div class="input-modern-wrap">
-                        <i data-lucide="activity" class="field-icon"></i>
-                        <select id="mod-status-input" class="select-modern">
-                            <option value="active">🟢 Activo / Disponible</option>
-                            <option value="coming_soon">🟡 Próximamente</option>
-                            <option value="maintenance">🔴 En Mantenimiento</option>
-                            <option value="hidden">⚪ Oculto</option>
-                        </select>
+                    <div class="custom-select-container" id="custom-select-status">
+                        <input type="hidden" id="mod-status-input" value="active">
+                        <div class="custom-select-trigger" onclick="window.toggleCustomSelect('custom-select-status')">
+                            <div style="display:flex; align-items:center; gap: 8px;">
+                                <i data-lucide="activity" class="field-icon" style="width: 18px; height: 18px;"></i>
+                                <span class="custom-select-label">🟢 Activo / Disponible</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="chevron-icon"></i>
+                        </div>
+                        <div class="custom-select-dropdown">
+                            <div class="custom-select-option" data-value="active" onclick="window.selectCustomOption('custom-select-status', 'active')">🟢 Activo / Disponible</div>
+                            <div class="custom-select-option" data-value="coming_soon" onclick="window.selectCustomOption('custom-select-status', 'coming_soon')">🟡 Próximamente</div>
+                            <div class="custom-select-option" data-value="maintenance" onclick="window.selectCustomOption('custom-select-status', 'maintenance')">🔴 En Mantenimiento</div>
+                            <div class="custom-select-option" data-value="hidden" onclick="window.selectCustomOption('custom-select-status', 'hidden')">⚪ Oculto</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1711,13 +1718,20 @@
                         </div>
                         <div class="form-group-modern">
                             <label>UNIDAD DE TIEMPO</label>
-                            <div class="input-modern-wrap">
-                                <i data-lucide="calendar" class="field-icon"></i>
-                                <select id="mod-demo-unit-input" class="select-modern">
-                                    <option value="minutes">Minutos</option>
-                                    <option value="hours" selected>Horas</option>
-                                    <option value="days">Días</option>
-                                </select>
+                            <div class="custom-select-container" id="custom-select-unit">
+                                <input type="hidden" id="mod-demo-unit-input" value="hours">
+                                <div class="custom-select-trigger" onclick="window.toggleCustomSelect('custom-select-unit')">
+                                    <div style="display:flex; align-items:center; gap: 8px;">
+                                        <i data-lucide="calendar" class="field-icon" style="width: 18px; height: 18px;"></i>
+                                        <span class="custom-select-label">Horas</span>
+                                    </div>
+                                    <i data-lucide="chevron-down" class="chevron-icon"></i>
+                                </div>
+                                <div class="custom-select-dropdown">
+                                    <div class="custom-select-option" data-value="minutes" onclick="window.selectCustomOption('custom-select-unit', 'minutes')">Minutos</div>
+                                    <div class="custom-select-option" data-value="hours" onclick="window.selectCustomOption('custom-select-unit', 'hours')">Horas</div>
+                                    <div class="custom-select-option" data-value="days" onclick="window.selectCustomOption('custom-select-unit', 'days')">Días</div>
+                                </div>
                             </div>
                         </div>
                     </div>

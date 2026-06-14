@@ -2573,6 +2573,67 @@ window.removeModuleImage = function() {
     if (removeBtn) removeBtn.style.display = 'none';
 };
 
+window.toggleCustomSelect = function(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const trigger = container.querySelector('.custom-select-trigger');
+    const dropdown = container.querySelector('.custom-select-dropdown');
+    
+    // Close other dropdowns
+    document.querySelectorAll('.custom-select-dropdown').forEach(d => {
+        if (d !== dropdown) d.classList.remove('active');
+    });
+    document.querySelectorAll('.custom-select-trigger').forEach(t => {
+        if (t !== trigger) t.classList.remove('active');
+    });
+    
+    trigger.classList.toggle('active');
+    dropdown.classList.toggle('active');
+    
+    if (window.event) window.event.stopPropagation();
+};
+
+window.selectCustomOption = function(containerId, value) {
+    window.setCustomSelectValue(containerId, value);
+    
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.querySelector('.custom-select-trigger')?.classList.remove('active');
+        container.querySelector('.custom-select-dropdown')?.classList.remove('active');
+    }
+    
+    if (window.event) window.event.stopPropagation();
+};
+
+window.setCustomSelectValue = function(containerId, value) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const input = container.querySelector('input[type="hidden"]');
+    const label = container.querySelector('.custom-select-label');
+    const option = container.querySelector(`.custom-select-option[data-value="${value}"]`);
+    
+    if (input) input.value = value;
+    if (label && option) {
+        label.innerHTML = option.innerHTML;
+    }
+    
+    // Update selected class
+    container.querySelectorAll('.custom-select-option').forEach(opt => {
+        if (opt.getAttribute('data-value') === value) {
+            opt.classList.add('selected');
+        } else {
+            opt.classList.remove('selected');
+        }
+    });
+};
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-select-container')) {
+        document.querySelectorAll('.custom-select-dropdown').forEach(d => d.classList.remove('active'));
+        document.querySelectorAll('.custom-select-trigger').forEach(t => t.classList.remove('active'));
+    }
+});
+
 function openModuleModal(id) {
     const mod = appState.modules.find(m => m.id == id);
     if (!mod) return;
@@ -2581,10 +2642,11 @@ function openModuleModal(id) {
     document.getElementById('mod-name-input').value = mod.name;
     document.getElementById('mod-desc-input').value = mod.desc;
     document.getElementById('mod-icon-input').value = mod.icon;
-    document.getElementById('mod-status-input').value = mod.status;
     document.getElementById('mod-video-input').value = mod.videoUrl || '';
+    
+    window.setCustomSelectValue('custom-select-status', mod.status);
+    window.setCustomSelectValue('custom-select-unit', mod.demoResetUnit || 'hours');
     document.getElementById('mod-demo-value-input').value = mod.demoResetValue !== undefined ? mod.demoResetValue : 4;
-    document.getElementById('mod-demo-unit-input').value = mod.demoResetUnit || 'hours';
     
     const priceNum = parseInt(String(mod.price).replace(/\D/g, ''), 10);
     document.getElementById('mod-price-input').value = isNaN(priceNum) ? '' : priceNum.toLocaleString('es-CO');
