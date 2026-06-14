@@ -327,7 +327,7 @@
 .dark-theme .appointment-group-card .appointment-service-title,
 .dark-theme .appointment-group-card .appointment-studio-label,
 .dark-theme .appointment-group-card .appointment-studio-value {
-    color: #e56a9e !important; /* bright pinkish-purple for readability in dark theme */
+    color: #ffffff !important; /* clean white for maximum readability in dark theme */
 }
 /* 1. Paid -> Green */
 .appointment-group-card[data-paid="full"] .appointment-service-title,
