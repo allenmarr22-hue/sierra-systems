@@ -273,7 +273,7 @@
 .dark-theme .appointment-group-card::before {
     width: 8px !important;
     filter: brightness(1.4) saturate(1.2) !important;
-    box-shadow: 2px 0 10px rgba(var(--accent-rgb), 0.5) !important;
+    box-shadow: none !important;
 }
 .dark-theme .reminder-card::before {
     width: 8px !important;
@@ -291,7 +291,7 @@
 .dark-theme .appointment-group-card[data-status="accepted"]::before,
 .dark-theme .appointment-group-card[data-paid="full"]::before {
     background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%) !important;
-    box-shadow: 2px 0 10px rgba(46, 204, 113, 0.5) !important;
+    box-shadow: none !important;
 }
 
 /* 2. Partially Paid / Postponed -> Yellow/Orange Border */
@@ -302,7 +302,7 @@
 .dark-theme .appointment-group-card[data-paid="partial"]::before,
 .dark-theme .appointment-group-card[data-status="postponed"]::before {
     background: linear-gradient(180deg, #f39c12 0%, #d35400 100%) !important;
-    box-shadow: 2px 0 10px rgba(243, 156, 18, 0.5) !important;
+    box-shadow: none !important;
 }
 
 /* Dark theme card background overrides */
