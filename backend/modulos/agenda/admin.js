@@ -9719,8 +9719,8 @@ window.setPaymentStatus = function(index, status) {
             card.style.borderLeftColor = '#f39c12';
             card.style.background = 'rgba(243, 156, 18, 0.05)';
         } else {
-            card.style.borderLeftColor = targetApt.manual ? 'var(--gold-primary)' : 'var(--color-dark-pink)';
-            card.style.background = 'white';
+            card.style.borderLeftColor = '';
+            card.style.background = '';
         }
 
         // 2. Actualizar TODOS los botones de pago del grupo (si es combo)
