@@ -17,8 +17,8 @@
     /* New Adaptative UI variables */
     --color-text-muted: #666666;
     --border-color: #eeeeee;
-    --earnings-bg: linear-gradient(135deg, #ffffff 0%, #fff0f2 100%);
-    --earnings-border: rgba(184, 115, 129, 0.15);
+    --earnings-bg: linear-gradient(135deg, #ffffff 0%, rgba(var(--accent-rgb), 0.05) 100%);
+    --earnings-border: rgba(var(--accent-rgb), 0.15);
     --input-bg: #ffffff;
     --input-border: #dddddd;
     --dashed-bg: #f9f9f9;
@@ -36,10 +36,6 @@
 .dark-theme {
     --color-bg: #0f172a;
     --color-text: #cbd5e1;
-    --color-accent: #38bdf8;
-    --gold-primary: #38bdf8;
-    --color-dark-pink: #38bdf8;
-    --accent-rgb: 56, 189, 248;
     --color-white: #1e293b;
     --glass-bg: rgba(30, 41, 59, 0.7);
     --glass-border: rgba(255, 255, 255, 0.1);
@@ -86,7 +82,7 @@
 
 .dark-theme div[id$="Modal"] label,
 .dark-theme div[id$="-modal"] label {
-    color: var(--color-accent) !important;
+    color: #cbd5e1 !important;
 }
 
 .dark-theme div[id$="Modal"] button:not(.btn-primary):not([class*="btn-"]):not([style*="background:none"]),
@@ -127,21 +123,50 @@
 
 /* Agenda tray buttons / tabs */
 .dark-theme .agenda-tabs {
-    background: rgba(30, 41, 59, 0.4) !important;
-    border-color: rgba(255, 255, 255, 0.05) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.07) !important;
+    backdrop-filter: blur(12px);
 }
 
 .dark-theme .tray-btn {
-    background: #1e293b !important;
-    color: #cbd5e1 !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    background: rgba(30, 41, 59, 0.8) !important;
+    color: #94a3b8 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-.dark-theme .tray-btn:hover,
+.dark-theme .tray-btn:hover {
+    background: rgba(51, 65, 85, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
 .dark-theme .tray-btn.active {
-    background: rgba(56, 189, 248, 0.15) !important;
-    color: var(--color-accent) !important;
+    background: var(--color-accent) !important;
+    color: #fff !important;
     border-color: var(--color-accent) !important;
+    box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.35) !important;
+}
+
+.dark-theme .tray-btn .badge {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #94a3b8 !important;
+}
+
+.dark-theme .tray-btn.active .badge {
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: #fff !important;
+}
+
+.dark-theme .tray-btn-reminders-special:not(.active) {
+    border-color: var(--color-accent) !important;
+    background: rgba(var(--accent-rgb), 0.12) !important;
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .tray-btn-reminders-special:not(.active) .badge {
+    background: var(--color-accent) !important;
+    color: #fff !important;
 }
 
 /* Calendar styling in dark theme */
@@ -258,6 +283,57 @@
     background: rgba(239, 68, 68, 0.12) !important;
 }
 
+/* ── Catálogo de Servicios — Dark Mode ── */
+.dark-theme .category-group > div:first-child {
+    background: rgba(var(--accent-rgb), 0.08) !important;
+    border-bottom-color: rgba(var(--accent-rgb), 0.12) !important;
+}
+
+/* Sobrescribir el color del h3 accordion-header en catálogo (modo noche) */
+.dark-theme .category-group .accordion-header,
+.dark-theme .category-group .accordion-header span {
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .category-group .accordion-header span i {
+    color: var(--color-accent) !important;
+    opacity: 1 !important;
+}
+
+/* Simultaneidad input en dark mode */
+.dark-theme .category-group input[type="text"][maxlength="1"] {
+    background: #1e293b !important;
+    border-color: rgba(var(--accent-rgb), 0.25) !important;
+    color: var(--color-accent) !important;
+}
+
+/* Filas de servicios dentro del catálogo */
+.dark-theme .category-group .accordion-content > div {
+    border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark-theme .category-group h4 {
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .category-group p {
+    color: #94a3b8 !important;
+}
+
+.dark-theme .category-group p strong {
+    color: #38bdf8 !important;
+}
+
+/* Botones de acción del catálogo (galería, editar, borrar) */
+.dark-theme .category-group button[style*="background:var(--color-bg)"]:not([onclick*="delete"]) {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+}
+.dark-theme .category-group button[style*="background:var(--color-bg)"]:not([onclick*="delete"]):hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
 /* Agenda Dashboard Layout */
 .agenda-dashboard-grid {
     margin-top: 5px; 
@@ -284,7 +360,7 @@
 
 .admin-input {
     padding: 10px;
-    border: 1px solid rgba(160, 93, 107, 0.2);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
     border-radius: 8px;
     font-family: var(--font-body);
     font-size: 0.95rem;
@@ -295,7 +371,7 @@
 .admin-input:focus {
     outline: none;
     border-color: var(--gold-primary);
-    box-shadow: 0 0 8px rgba(160, 93, 107, 0.2);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2);
 }
 
 /* CALENDAR STYLES */
@@ -310,8 +386,8 @@
     padding: 12px 2px; font-size: 0.9rem; cursor: pointer; border-radius: 8px; 
     position: relative; transition: 0.2s; border: 1px solid transparent;
 }
-.calendar-day:hover:not(.other-month) { background: rgba(160, 93, 107, 0.1); border-color: rgba(160, 93, 107, 0.2); }
-.calendar-day.today { color: var(--gold-primary); font-weight: 700; border: 1px solid rgba(160, 93, 107, 0.3); }
+.calendar-day:hover:not(.other-month) { background: rgba(var(--accent-rgb), 0.1); border-color: rgba(var(--accent-rgb), 0.2); }
+.calendar-day.today { color: var(--gold-primary); font-weight: 700; border: 1px solid rgba(var(--accent-rgb), 0.3); }
 .calendar-day.selected { background: var(--gold-primary); color: white !important; font-weight: 700; }
 .calendar-day.other-month { opacity: 0.2; cursor: default; }
 .calendar-day.disabled-day { 
@@ -321,7 +397,7 @@
 }
 
 .calendar-day.has-appointment {
-    background: rgba(160, 93, 107, 0.08);
+    background: rgba(var(--accent-rgb), 0.08);
     font-weight: 600;
     color: var(--color-dark-pink);
 }
@@ -364,7 +440,7 @@
 .admin-img-placeholder {
     width: 60px;
     height: 60px;
-    background: rgba(160, 93, 107, 0.05); /* Rosa suave */
+    background: rgba(var(--accent-rgb), 0.05); /* Rosa suave */
     border-radius: 10px;
     overflow: hidden;
     flex-shrink: 0;
@@ -406,7 +482,7 @@
 
 .tray-btn {
     background: white;
-    border: 1px solid rgba(160, 93, 107, 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.1);
     color: #666;
     padding: 12px 22px;
     border-radius: 12px;
@@ -422,7 +498,7 @@
 }
 
 .tray-btn:hover {
-    background: rgba(160, 93, 107, 0.05);
+    background: rgba(var(--accent-rgb), 0.05);
     color: var(--color-dark-pink);
 }
 
@@ -430,7 +506,7 @@
     background: var(--color-dark-pink);
     color: white !important;
     border-color: var(--color-dark-pink);
-    box-shadow: 0 6px 15px rgba(160, 93, 107, 0.25);
+    box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.25);
 }
 
 .tray-btn .badge {
@@ -452,7 +528,7 @@
 /* Estilo especial para cuando Recordatorios NO está activo */
 .tray-btn-reminders-special:not(.active) {
     border: 1.5px solid var(--color-dark-pink);
-    background: rgba(184, 115, 129, 0.05);
+    background: rgba(var(--accent-rgb), 0.05);
     color: var(--color-dark-pink);
 }
 
@@ -469,7 +545,7 @@
 
 .custom-multi-select-trigger {
     background: white;
-    border: 1px solid rgba(160, 93, 107, 0.3);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
     border-radius: 10px;
     padding: 12px 15px;
     display: flex;
@@ -484,7 +560,7 @@
 
 .custom-multi-select-trigger:hover {
     border-color: var(--color-dark-pink);
-    background: rgba(160, 93, 107, 0.05);
+    background: rgba(var(--accent-rgb), 0.05);
 }
 
 .custom-multi-select-trigger i {
@@ -503,7 +579,7 @@
     left: 0;
     right: 0;
     background: white;
-    border: 1px solid rgba(160, 93, 107, 0.15);
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
     border-radius: 12px;
     margin-top: 8px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.15);
@@ -535,7 +611,7 @@
     border-radius: 20px;
     font-weight: 800;
     margin-left: 10px;
-    box-shadow: 0 2px 5px rgba(160, 93, 107, 0.3);
+    box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3);
 }
 
 /* Redondeo de bordes para los items dentro del dropdown */
@@ -585,6 +661,11 @@
     to { transform: rotate(360deg); }
 }
 .fa-spin-soft { animation: spin-soft 4s infinite linear; }
+
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.88) translateY(10px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
 
 * { box-sizing: border-box; }
 
@@ -1203,10 +1284,14 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
 }
 
 .category-group {
-    margin-bottom: 5px;
-    border-radius: 10px;
+    margin-bottom: 15px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    max-width: 850px;
+    width: 100%;
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    border-left: 5px solid var(--color-accent);
 }
 
 /* Explicit form container overrides to allow smooth-collapse */
@@ -2090,6 +2175,59 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
 .dark-theme #stats-date-filter {
     background-color: transparent !important;
     border: none !important;
+    color-scheme: dark;
+}
+
+/* Dashboard filter bar — dark mode overrides */
+.dark-theme .stats-filters.glass-module {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark-theme .dropdown-trigger {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #cbd5e1 !important;
+}
+
+.dark-theme .dropdown-trigger:hover {
+    background: rgba(51, 65, 85, 0.9) !important;
+    border-color: var(--color-accent) !important;
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .dropdown-trigger.active-trigger {
+    background: var(--color-accent) !important;
+    color: #fff !important;
+    border-color: var(--color-accent) !important;
+}
+
+.dark-theme .dropdown-menu {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark-theme .dropdown-menu li {
+    color: #cbd5e1 !important;
+}
+
+.dark-theme .dropdown-menu li:hover {
+    background: rgba(var(--accent-rgb), 0.15) !important;
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .dropdown-menu li.active {
+    background: rgba(var(--accent-rgb), 0.2) !important;
+    color: var(--color-accent) !important;
+}
+
+.dark-theme .btn-reset-stats {
+    color: #f87171 !important;
+}
+
+.dark-theme .date-picker-mini i {
+    color: var(--color-accent) !important;
 }
 
 /* Header Theme Toggle & Actions */
@@ -2317,4 +2455,777 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     color: var(--color-accent, #A05D6B);
 }
 
+/* ============================================================
+   WARNING SETUP BANNER (Configuración Incompleta) — Premium v2
+   ============================================================ */
 
+/* ── Setup Onboarding Banner ────────────────────────────────── */
+.setup-onboarding-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.4rem;
+    /* Rich dual-tone gradient background */
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.12) 0%,
+        rgba(var(--accent-rgb), 0.08) 50%,
+        rgba(var(--accent-rgb), 0.06) 100%
+    );
+    /* Gradient border via outline + border trick */
+    border: 1.5px solid rgba(var(--accent-rgb), 0.35);
+    border-left: 4px solid var(--color-accent, #b87381);
+    border-radius: 16px;
+    margin: 8px 20px 16px 20px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    animation: slideDownBanner 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow:
+        0 6px 24px rgba(var(--accent-rgb), 0.14),
+        0 1px 3px rgba(var(--accent-rgb), 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    overflow: hidden;
+}
+
+/* Shimmer sweep on the banner */
+.setup-onboarding-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(
+        105deg,
+        transparent 20%,
+        rgba(255, 255, 255, 0.15) 50%,
+        transparent 80%
+    );
+    animation: bannerShimmer 3.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes bannerShimmer {
+    0%   { left: -60%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { left: 120%; opacity: 0; }
+}
+
+.dark-theme .setup-onboarding-banner {
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.12) 0%,
+        rgba(var(--accent-rgb), 0.07) 50%,
+        rgba(var(--accent-rgb), 0.04) 100%
+    );
+    border-color: rgba(var(--accent-rgb), 0.3);
+    box-shadow:
+        0 6px 28px rgba(0, 0, 0, 0.25),
+        0 1px 3px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.setup-onboarding-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--color-accent) 0%, rgba(var(--accent-rgb), 0.7) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow:
+        0 6px 18px rgba(var(--accent-rgb), 0.4),
+        0 2px 6px rgba(var(--accent-rgb), 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    animation: iconPulseGlow 2.8s ease-in-out infinite;
+}
+
+@keyframes iconPulseGlow {
+    0%, 100% { box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.4), 0 2px 6px rgba(var(--accent-rgb), 0.25), inset 0 1px 0 rgba(255,255,255,0.3); }
+    50%       { box-shadow: 0 8px 24px rgba(var(--accent-rgb), 0.6), 0 4px 10px rgba(var(--accent-rgb), 0.35), inset 0 1px 0 rgba(255,255,255,0.3); }
+}
+
+.setup-onboarding-icon i {
+    color: #fff;
+    font-size: 1.05rem;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.setup-onboarding-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.setup-onboarding-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-accent, #b87381);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    margin-bottom: 3px;
+}
+
+.setup-onboarding-desc {
+    font-size: 0.84rem;
+    color: var(--color-text, #555);
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dark-theme .setup-onboarding-title {
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .setup-onboarding-desc {
+    color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.setup-onboarding-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.setup-onboarding-btn {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--color-accent, #b87381) 0%, rgba(var(--accent-rgb), 0.85) 100%);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    box-shadow:
+        0 4px 12px rgba(var(--accent-rgb), 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Sheen hover effect on button */
+.setup-onboarding-btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -75%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(105deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.4s ease;
+}
+
+.setup-onboarding-btn:hover::after {
+    left: 125%;
+}
+
+.setup-onboarding-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.5);
+    filter: brightness(1.06);
+}
+
+.setup-onboarding-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 8px rgba(var(--accent-rgb), 0.35);
+}
+
+.setup-onboarding-dismiss {
+    background: transparent;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    color: var(--color-text-muted, #aaa);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 5px 7px;
+    border-radius: 8px;
+    line-height: 1;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.setup-onboarding-dismiss:hover {
+    color: var(--color-accent, #b87381);
+    background: rgba(var(--accent-rgb), 0.1);
+    border-color: rgba(var(--accent-rgb), 0.35);
+}
+
+@keyframes slideDownBanner {
+    from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 600px) {
+    .setup-onboarding-banner {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .setup-onboarding-desc {
+        white-space: normal;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   CORRECCIONES DARK MODE — REVISIÓN PROFUNDA v3
+   Áreas: Mantenimiento × btn | Recordatorios links |
+   Reporte profesionales | Categorías Simultaneidad |
+   Historial filas | Modales
+   ═══════════════════════════════════════════════════ */
+
+/* ── 1. Botón dismiss del onboarding (×) y botón de mantenimiento ──
+   Era casi invisible porque el fondo de la barra es oscuro en dark mode */
+.dark-theme .setup-onboarding-dismiss {
+    color: #94a3b8 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+.dark-theme .setup-onboarding-dismiss:hover {
+    color: #f1f5f9 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+.dark-theme #maint-config-btn {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: var(--color-accent) !important;
+}
+.dark-theme #maint-config-btn:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme .agenda-search-container {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── 2. WhatsApp phone links y días en tarjetas de recordatorios ──
+   El verde puro #2ecc71 sobre fondo oscuro es difícil de ver */
+.dark-theme a[href^="https://wa.me"] {
+    color: #4ade80 !important;
+}
+.dark-theme a[href^="https://wa.me"]:hover {
+    color: #86efac !important;
+}
+.dark-theme .reminder-card div[style*="color:#2ecc71"],
+.dark-theme .reminder-card div[style*="color: #2ecc71"],
+.dark-theme .reminder-card div[style*="color:#2ecc71;"],
+.dark-theme .reminder-card div[style*="color: #2ecc71;"] {
+    color: #4ade80 !important;
+    background-color: rgba(74, 222, 128, 0.1) !important;
+    border-color: rgba(74, 222, 128, 0.2) !important;
+}
+.dark-theme .reminder-card span[style*="color:var(--color-dark-pink)"],
+.dark-theme .reminder-card span[style*="color: var(--color-dark-pink)"],
+.dark-theme .reminder-card span[style*="color:var(--color-dark-pink);"],
+.dark-theme .reminder-card span[style*="color: var(--color-dark-pink);"] {
+    background: rgba(var(--accent-rgb), 0.25) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(var(--accent-rgb), 0.4) !important;
+}
+
+/* ── 3. Cajas de desglose de precio en tarjetas ───── */
+.dark-theme .appointment-group-card div[style*="rgba(0,0,0,0.03)"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── 4. Historial filas (ID correcto: history-list-container) ──
+   Fondo blanco degradado + textos #1a1a1a / #444 / #888 hardcodeados */
+.dark-theme #history-list-container > div {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+/* Títulos h4 dentro del historial */
+.dark-theme #history-list-container h4 {
+    color: #e2e8f0 !important;
+}
+/* Subtítulo p con servicio | especialista */
+.dark-theme #history-list-container p {
+    color: #94a3b8 !important;
+}
+.dark-theme #history-list-container p strong {
+    color: #cbd5e1 !important;
+}
+.dark-theme #history-list-container p span {
+    color: #64748b !important;
+}
+/* Badges de estado en el historial (Verde / Rojo) */
+.dark-theme #history-list-container span[style*="color:#2ecc71"],
+.dark-theme #history-list-container span[style*="color: #2ecc71"],
+.dark-theme #history-list-container span[style*="color:#2ecc71;"],
+.dark-theme #history-list-container span[style*="color: #2ecc71;"] {
+    color: #4ade80 !important;
+    border-color: #4ade80 !important;
+}
+.dark-theme #history-list-container span[style*="color:#e74c3c"],
+.dark-theme #history-list-container span[style*="color: #e74c3c"],
+.dark-theme #history-list-container span[style*="color:#e74c3c;"],
+.dark-theme #history-list-container span[style*="color: #e74c3c;"] {
+    color: #f87171 !important;
+    border-color: #f87171 !important;
+}
+
+/* ── 5. Reporte de profesionales — Modal cards ─────── */
+.dark-theme #specialist-services-list > div {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+}
+/* Fecha/hora en el reporte */
+.dark-theme #specialist-services-list > div > div > div:first-child {
+    color: #64748b !important;
+}
+/* Nombre del servicio */
+.dark-theme #specialist-services-list > div > div > div[style*="1.1rem"] {
+    color: #e2e8f0 !important;
+}
+/* Cliente */
+.dark-theme #specialist-services-list > div > div > div[style*="0.85rem"] {
+    color: #94a3b8 !important;
+}
+/* Precio en reporte (corregido para nieto div) */
+.dark-theme #specialist-services-list > div > div > div[style*="1.2rem"],
+.dark-theme #specialist-services-list [style*="1.2rem"] {
+    color: #e2e8f0 !important;
+}
+/* Total Bruto box — fondo oscuro */
+.dark-theme #specialist-services-footer div[style*="background:#1a1a1a"],
+.dark-theme #specialist-services-footer div[style*="background:#1a1a1a;"],
+.dark-theme #specialist-services-footer div[style*="background: #1a1a1a;"] {
+    background: #0f172a !important;
+}
+/* Cajas Estudio / Profesional en reporte */
+.dark-theme #specialist-services-footer div[style*="rgba(var(--accent-rgb), 0.05)"],
+.dark-theme #specialist-services-footer div[style*="rgba(39, 174, 96, 0.05)"],
+.dark-theme #specialist-services-footer div[style*="rgba(39,174,96,0.05)"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+/* Texto "PROFESIONAL" labels y montos en verde en reporte */
+.dark-theme #specialist-services-footer [style*="color:#27ae60"],
+.dark-theme #specialist-services-footer [style*="color: #27ae60"],
+.dark-theme #specialist-services-footer [style*="color:#27ae60;"],
+.dark-theme #specialist-services-footer [style*="color: #27ae60;"] {
+    color: #4ade80 !important;
+}
+
+/* ── 6. Categorías — simultaneidad, barra de categoría y modales ── */
+.dark-theme .category-group span[style*="color:#888"] {
+    color: #64748b !important;
+}
+.dark-theme .category-group input[maxlength="1"] {
+    background: #1e293b !important;
+    color: var(--color-accent) !important;
+    border-color: rgba(var(--accent-rgb), 0.3) !important;
+}
+/* Barra de categoría principal en catálogo */
+.dark-theme .category-group > div:first-child {
+    background: #1e293b !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+/* Modales de Categorías y Servicios */
+.dark-theme #newCategoryModal > div,
+.dark-theme #newServiceModal > div {
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme #newCategoryModal h3,
+.dark-theme #newServiceModal h3 {
+    color: var(--color-dark-pink) !important;
+}
+.dark-theme #newCategoryModal p,
+.dark-theme #newServiceModal p {
+    color: #94a3b8 !important;
+}
+.dark-theme #categories-manage-list > div {
+    background: #0f172a !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme #categories-manage-list button {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+}
+.dark-theme #categories-manage-list button:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+.dark-theme #categories-manage-list small {
+    color: #64748b !important;
+}
+
+/* ── 7. Appointment desglose: textos color:#777 / #1a1a1a ─ */
+.dark-theme .appointment-group-card span[style*="color:#777"],
+.dark-theme .appointment-group-card span[style*="color: #777"] {
+    color: #64748b !important;
+}
+.dark-theme .appointment-group-card span[style*="color:#1a1a1a"],
+.dark-theme .appointment-group-card span[style*="color: #1a1a1a"] {
+    color: #e2e8f0 !important;
+}
+.dark-theme .appointment-group-card div[style*="color: #1a1a1a"],
+.dark-theme .appointment-group-card div[style*="color:#1a1a1a"] {
+    color: #e2e8f0 !important;
+}
+.dark-theme .appointment-group-card span[style*="color:#2ecc71"],
+.dark-theme .appointment-group-card span[style*="color: #2ecc71"],
+.dark-theme .appointment-group-card span[style*="color:#27ae60"],
+.dark-theme .appointment-group-card span[style*="color: #27ae60"] {
+    color: #4ade80 !important;
+}
+
+/* ── 8. Colores en el modal del reporte specialist ───────── */
+.dark-theme #specialistServicesModal .glass-module,
+.dark-theme #specialistServicesModal [style*="background:white"],
+.dark-theme #specialistServicesModal [style*="background: white"] {
+    background: #1e293b !important;
+}
+.dark-theme #specialist-services-title {
+    color: #e2e8f0 !important;
+}
+.dark-theme #specialist-services-title small {
+    color: #64748b !important;
+}
+.dark-theme #specialistServicesModal > div > div:first-child {
+    background: rgba(15, 23, 42, 0.95) !important;
+    border-bottom-color: rgba(255,255,255,0.08) !important;
+}
+.dark-theme #specialistServicesModal > div > div:last-child {
+    background: rgba(15, 23, 42, 0.95) !important;
+    border-top-color: rgba(255,255,255,0.08) !important;
+}
+.dark-theme #specialist-services-footer div[style*="color:#aaa"] {
+    color: #64748b !important;
+}
+.dark-theme #specialist-services-footer span[style*="opacity:0.8"] {
+    color: #94a3b8 !important;
+}
+
+/* ── 9. Filtros de Historial ── */
+.dark-theme #history-filters input[type="date"],
+.dark-theme #history-filters select,
+.dark-theme #history-filters input[type="text"] {
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.dark-theme #history-filters label {
+    color: #94a3b8 !important;
+}
+.dark-theme #history-filters {
+    color: #e2e8f0 !important;
+}
+.dark-theme #history-filters span {
+    color: #94a3b8 !important;
+}
+.dark-theme #history-date-filters {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme #history-date-filters label {
+    color: #cbd5e1 !important;
+}
+.dark-theme #history-date-filters span {
+    color: #94a3b8 !important;
+}
+.dark-theme #history-date-filters input[type="date"],
+.dark-theme #history-date-filters select {
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ── 11. Cajas de Estados Vacíos (Contraste Correcto) ── */
+.dark-theme #agenda-list-container > p,
+.dark-theme #services-list-container > p,
+.dark-theme #history-list-container > p,
+.dark-theme .category-group p {
+    color: #94a3b8 !important;
+}
+.dark-theme #agenda-list-container > p {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme #specialist-services-list > div[style*="background:#fafafa"],
+.dark-theme #specialist-services-list > div[style*="background: #fafafa"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #94a3b8 !important;
+}
+.dark-theme #specialist-services-list > div[style*="background:#fafafa"] div,
+.dark-theme #specialist-services-list > div[style*="background: #fafafa"] div {
+    color: #cbd5e1 !important;
+}
+
+/* Botón Detalles y precio en el historial */
+.dark-theme #history-list-container button[onclick*="showHistoryDetails"] {
+    color: #cbd5e1 !important;
+}
+.dark-theme #history-list-container button[onclick*="showHistoryDetails"] i {
+    color: #cbd5e1 !important;
+}
+.dark-theme #history-list-container button[onclick*="showHistoryDetails"]:hover,
+.dark-theme #history-list-container button[onclick*="showHistoryDetails"]:hover i {
+    color: #ffffff !important;
+}
+.dark-theme #history-list-container span[style*="var(--gold-primary)"] {
+    color: #ffffff !important;
+}
+
+/* ── 12. Pestaña de Configuración (Settings Tab) ── */
+.dark-theme .settings-nav {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+}
+.dark-theme .settings-nav-btn {
+    color: #cbd5e1 !important;
+}
+.dark-theme .settings-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+}
+.dark-theme .settings-nav-btn.active {
+    background: var(--color-accent) !important;
+    color: #ffffff !important;
+}
+.dark-theme #settings-tab h3,
+.dark-theme #settings-tab h4 {
+    color: #ffffff !important;
+}
+.dark-theme #settings-tab label {
+    color: #cbd5e1 !important;
+}
+.dark-theme .badge-tag {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+.dark-theme .badge-tag:hover {
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+.dark-theme button[onclick^="resetAgendaTemplate"] {
+    color: #ffffff !important;
+}
+.dark-theme button[onclick^="resetAgendaTemplate"]:hover {
+    color: var(--color-accent) !important;
+}
+.dark-theme #settings-block-seguridad h3,
+.dark-theme #settings-block-seguridad label {
+    color: #ffffff !important;
+}
+.dark-theme #settings-block-seguridad input {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+}
+.dark-theme #settings-current-pass {
+    background: #1e293b !important;
+    border-color: rgba(243, 156, 18, 0.4) !important;
+    color: #f8fafc !important;
+}
+.dark-theme #settings-tab .btn-primary,
+.dark-theme #settings-tab button[onclick^="save"] {
+    background: var(--color-accent) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.25) !important;
+}
+.dark-theme #settings-tab .btn-primary:hover,
+.dark-theme #settings-tab button[onclick^="save"]:hover {
+    filter: brightness(1.1) !important;
+}
+.dark-theme .uploader-premium-card {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+}
+.dark-theme .uploader-premium-card:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: var(--color-accent) !important;
+}
+.dark-theme .uploader-premium-card h4 {
+    color: #ffffff !important;
+}
+.dark-theme .uploader-premium-card small {
+    color: #94a3b8 !important;
+}
+.dark-theme .uploader-premium-card p {
+    color: #cbd5e1 !important;
+}
+.dark-theme .premium-preview-container {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+.dark-theme .premium-select-btn:hover {
+    background: var(--color-accent) !important;
+    filter: brightness(1.1) !important;
+}
+.dark-theme #settings-block-redes h3 {
+    color: #ffffff !important;
+}
+.dark-theme #settings-block-promo-bubble p {
+    color: #cbd5e1 !important;
+}
+.dark-theme .promo-svg-box {
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+.dark-theme .promo-svg-box:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme .promo-svg-box.active {
+    background: rgba(var(--accent-rgb), 0.15) !important;
+}
+.dark-theme .promo-box-label {
+    color: #94a3b8 !important;
+}
+.dark-theme .promo-svg-box.active .promo-box-label {
+    color: #ffffff !important;
+}
+.dark-theme .promo-anim-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #cbd5e1 !important;
+}
+.dark-theme .promo-anim-card:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+}
+.dark-theme .promo-anim-card.active {
+    background: var(--color-accent) !important;
+    border-color: var(--color-accent) !important;
+    color: #ffffff !important;
+}
+.dark-theme .promo-icon-row {
+    background: rgba(0, 0, 0, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── 13. WhatsApp Templates - Textos Descriptivos y Contenedor de Tags ── */
+.dark-theme #settings-block-whatsapp-templates p[style*="color: #777"],
+.dark-theme #settings-block-whatsapp-templates p[style*="color:#777"] {
+    color: #94a3b8 !important;
+}
+.dark-theme #settings-block-whatsapp-templates small {
+    color: #94a3b8 !important;
+}
+.dark-theme #settings-block-whatsapp-templates div[style*="background: rgba(0,0,0,0.02)"],
+.dark-theme #settings-block-whatsapp-templates div[style*="background:rgba(0,0,0,0.02)"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+/* Textos descriptivos generales dentro del settings tab */
+.dark-theme #settings-tab p[style*="color: #777"],
+.dark-theme #settings-tab p[style*="color:#777"],
+.dark-theme #settings-tab p[style*="color:#666"],
+.dark-theme #settings-tab p[style*="color: #666"] {
+    color: #94a3b8 !important;
+}
+.dark-theme #settings-tab small[style*="color:#999"],
+.dark-theme #settings-tab small[style*="color: #999"] {
+    color: #64748b !important;
+}
+/* Diseño/colores — subtítulo */
+.dark-theme #settings-block-diseno p {
+    color: #94a3b8 !important;
+}
+.dark-theme #settings-block-diseno small {
+    color: #64748b !important;
+}
+/* Glassmorphism de settings blocks en dark */
+.dark-theme #settings-tab .glass-module {
+    background: rgba(30, 41, 59, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}/* ── 14. Upload Placeholder en Dark Mode ── */
+.dark-theme .premium-preview-container {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(var(--accent-rgb), 0.35) !important;
+}
+.dark-theme .premium-preview-container:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: var(--color-accent) !important;
+}
+.dark-theme .upload-placeholder-title {
+    color: var(--color-accent) !important;
+}
+.dark-theme .upload-placeholder-hint {
+    color: rgba(var(--accent-rgb), 0.6) !important;
+}
+.dark-theme .upload-placeholder svg {
+    color: var(--color-accent) !important;
+}
+
+/* ── 15. Corrección de Contraste para Iconos de Acento en Modo Noche ── */
+.dark-theme .section-title i,
+.dark-theme h1 i,
+.dark-theme h2 i,
+.dark-theme h3 i,
+.dark-theme h4 i,
+.dark-theme h5 i,
+.dark-theme .file-label i,
+.dark-theme .glass-module h3 i,
+.dark-theme .glass-module h4 i,
+.dark-theme .sidebar-nav nav a.active {
+    color: var(--color-accent) !important;
+    filter: brightness(1.75) saturate(1.3) !important;
+    opacity: 1 !important;
+}
+
+/* Brillo global para cualquier texto o icono en línea que use color de acento/rosa en Modo Noche */
+.dark-theme [style*="color:var(--color-dark-pink)"],
+.dark-theme [style*="color: var(--color-dark-pink)"],
+.dark-theme [style*="color:var(--color-accent)"],
+.dark-theme [style*="color: var(--color-accent)"] {
+    color: var(--color-accent) !important;
+    filter: brightness(1.75) saturate(1.3) !important;
+}
+
+/* Brillo para los toggles de encendido (típicamente de color de acento oscuro) */
+.dark-theme .switch-premium input:checked + .slider-premium {
+    filter: brightness(1.6) saturate(1.2) !important;
+}
+
+/* ── 16. Estilos Generales para Ciclos de Mantenimiento ── */
+.maint-config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border: 1px solid #eee;
+}
+.maint-input {
+    width: 60px;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    text-align: center;
+    font-weight: bold;
+    background: white;
+    color: #333;
+}
+.dark-theme .maint-config-item {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme .maint-config-item div {
+    color: #cbd5e1 !important;
+}
+.dark-theme .maint-input {
+    background: #151f32 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f1f5f9 !important;
+}
+.dark-theme #maintConfigModal .custom-modal > div:first-child {
+    background: #1e293b !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}

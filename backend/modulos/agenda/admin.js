@@ -86,6 +86,7 @@ window.normDate = function(d) {
 // SOPORTE DE DASHBOARD
 
 let editingIndex = null;
+let editingCatId = null;
 let base64Image = "";
 let base64GalleryImage = "";
 
@@ -308,8 +309,19 @@ window.syncAdminReady = async function() {
                 console.log("🧹 [Sincronización] Limpiando categorías duplicadas en la nube...");
                 window.saveListToCloud('categorias_v2', uniqueCats);
             }
-        } else if (JSON.parse(localStorage.getItem('agenda_categories') || '[]').length > 0 && window.saveListToCloud) {
-            await window.saveListToCloud('categorias_v2', JSON.parse(localStorage.getItem('agenda_categories')));
+        } else {
+            // La nube está vacía → usar datos locales (o sembrar los de fábrica)
+            const localCats = JSON.parse(localStorage.getItem('agenda_categories') || '[]');
+            const catsToSeed = localCats.length > 0 ? localCats : defaultCategories;
+            if (localCats.length === 0) {
+                // Primera vez: sembrar categorías por defecto
+                localStorage.setItem('agenda_categories', JSON.stringify(defaultCategories));
+                categories = defaultCategories;
+                console.log('🌱 [Sync] Categorías por defecto sembradas (primera vez).');
+            }
+            if (window.saveListToCloud) {
+                await window.saveListToCloud('categorias_v2', catsToSeed);
+            }
         }
         
         // 2. Services (Cloud-Priority Sync with Harmonization)
@@ -418,8 +430,8 @@ window.syncAdminReady = async function() {
             // Identidad del negocio y recursos multimedia
             if (cloudMeta.site_name) localStorage.setItem('agenda_site_name', cloudMeta.site_name);
             if (cloudMeta.admin_gender) localStorage.setItem('agenda_admin_gender', cloudMeta.admin_gender);
-            if (cloudMeta.whatsapp_number) localStorage.setItem('agenda_whatsapp_number', cloudMeta.whatsapp_number);
-            if (cloudMeta.site_address) localStorage.setItem('agenda_site_address', cloudMeta.site_address);
+            if (cloudMeta.whatsapp_number !== undefined && cloudMeta.whatsapp_number !== null) localStorage.setItem('agenda_whatsapp_number', cloudMeta.whatsapp_number);
+            if (cloudMeta.site_address !== undefined && cloudMeta.site_address !== null) localStorage.setItem('agenda_site_address', cloudMeta.site_address);
             if (cloudMeta.logo_url) localStorage.setItem('agenda_logo_url', cloudMeta.logo_url);
             if (cloudMeta.hero_url) localStorage.setItem('agenda_hero_url', cloudMeta.hero_url);
             if (cloudMeta.admin_bg) localStorage.setItem('agenda_admin_bg', cloudMeta.admin_bg);
@@ -428,8 +440,16 @@ window.syncAdminReady = async function() {
             // Tema visual
             if (cloudMeta.theme) {
                 localStorage.setItem('agenda_admin_theme', cloudMeta.theme);
-                if (window.applyTheme) window.applyTheme(cloudMeta.theme, true);
             }
+            if (cloudMeta.dark_mode !== undefined) {
+                localStorage.setItem('agenda_dark_mode', cloudMeta.dark_mode ? 'true' : 'false');
+            }
+            if (window.applyTheme) window.applyTheme(cloudMeta.theme || 'rose', true);
+            // Plantillas de WhatsApp (guardadas desde IA o manualmente)
+            if (cloudMeta.wa_template_booking_header) localStorage.setItem('agenda_wa_template_booking_header', cloudMeta.wa_template_booking_header);
+            if (cloudMeta.wa_template_booking_item)   localStorage.setItem('agenda_wa_template_booking_item',   cloudMeta.wa_template_booking_item);
+            if (cloudMeta.wa_template_reminder)       localStorage.setItem('agenda_wa_template_reminder',       cloudMeta.wa_template_reminder);
+            if (cloudMeta.wa_template_maintenance)    localStorage.setItem('agenda_wa_template_maintenance',    cloudMeta.wa_template_maintenance);
             console.log('✅ [Nube] Admin Meta cargado completamente:', Object.keys(cloudMeta).join(', '));
         } else {
             // Si no hay nada en la nube, subir lo local (primer dispositivo)
@@ -506,6 +526,9 @@ window.syncAdminReady = async function() {
             // Listener de Categorías
             window.listenToCollection('categorias_v2', (data) => {
                 if (!data) return;
+                // 🛡️ Ignorar arrays vacíos de la nube para no borrar las locales
+                if (!Array.isArray(data) || data.length === 0) return;
+
                 // Deduplicación local por Nombre
                 const seenCatNames = new Set();
                 const uniqueData = data.filter(cat => {
@@ -602,9 +625,22 @@ window.syncAdminReady = async function() {
                 if (data && !window._isSavingSettings) {
                     let changedUI = false;
                     
+                    let changedThemeOrMode = false;
                     if (data.theme && data.theme !== localStorage.getItem('agenda_admin_theme')) {
                         localStorage.setItem('agenda_admin_theme', data.theme);
-                        if (window.applyTheme) window.applyTheme(data.theme, true);
+                        changedThemeOrMode = true;
+                    }
+                    if (data.dark_mode !== undefined) {
+                        const localDark = localStorage.getItem('agenda_dark_mode') === 'true';
+                        if (data.dark_mode !== localDark) {
+                            localStorage.setItem('agenda_dark_mode', data.dark_mode ? 'true' : 'false');
+                            changedThemeOrMode = true;
+                        }
+                    }
+                    if (changedThemeOrMode) {
+                        const activeTheme = localStorage.getItem('agenda_admin_theme') || 'rose';
+                        if (window.applyTheme) window.applyTheme(activeTheme, true);
+                        if (window.renderThemeSelector) window.renderThemeSelector();
                     }
                     
                     const fields = ['site_name', 'admin_gender', 'whatsapp_number', 'admin_user', 'admin_pass', 'admin_email', 'logo_url', 'hero_url', 'admin_bg'];
@@ -1181,7 +1217,7 @@ if(addCatBtn) {
             addCatBtn.innerText = "Crear Nueva Categoría";
         } else {
             // Create new
-            const exists = categories.some(cat => cat.name.toLowerCase() === name.toLowerCase());
+            const exists = categories.some(cat => (cat && cat.name ? cat.name.toLowerCase() : "") === name.toLowerCase());
             if (exists) {
                 showToast(`Ya existe una categoría con el nombre "${name}".`, "error");
                 return;
@@ -1397,7 +1433,8 @@ function renderAdminServices() {
         services = JSON.parse(localStorage.getItem('agenda_services') || '[]');
         const customSimult = JSON.parse(localStorage.getItem('agenda_simult_groups') || '{}');
         
-        if(services.length === 0) {
+        // Si no hay categorías ni servicios → estado vacío
+        if(services.length === 0 && categories.length === 0) {
             listContainer.innerHTML = '<p style="text-align:center; padding:20px; color:#A9A9A9;">No hay servicios publicados.</p>';
             return;
         }
@@ -2729,7 +2766,7 @@ window.calculateSmartAssignments = (anchorTime, data, fixedIdx = 0, fixedSpec = 
             if (imgContainer) {
                 const specialists = JSON.parse(localStorage.getItem('agenda_specialists') || '[]');
                 const specData = specialists.find(s => (s.name || s) === specialist);
-                if (specData && specData.image) {
+                if (specData && specData.image && !specData.image.includes('placeholder.com')) {
                     imgContainer.innerHTML = `<img src="${specData.image}" style="width:100%; height:100%; object-fit:cover;">`;
                 } else {
                     imgContainer.innerHTML = `<i class="fas fa-user-circle" style="color: #ccc; font-size: 1.5rem;"></i>`;
@@ -3316,7 +3353,7 @@ window.renderManualVisualAgendaGrid = function() {
                         ${activeSpecs.map(s => `
                         <th style="padding:15px; color:#333; text-transform:uppercase; font-size:0.75rem; border-left:1px solid #eee;">
                             <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                                ${s.image ? `<img src="${s.image}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--color-dark-pink);">` : `<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;color:#999;"><i class="fas fa-user-circle"></i></div>`}
+                                ${s.image && !s.image.includes('placeholder.com') ? `<img src="${s.image}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--color-dark-pink);">` : `<div style="width:40px;height:40px;border-radius:50%;background:rgba(var(--accent-rgb), 0.12);display:flex;align-items:center;justify-content:center;color:var(--color-accent);font-size:1.1rem;"><i class="fas fa-user-tie"></i></div>`}
                                 <span style="font-weight:800;">${s.name}</span>
                             </div>
                         </th>`).join('')}
@@ -4662,10 +4699,17 @@ function _doRenderAgenda() {
         } else if (currentAgendaTray === 'postponed') {
             activeAgenda = activeAgenda.filter(a => a.status === 'postponed');
         } else if (currentAgendaTray === 'reminders') {
-            // 1. Filtrar registros de Uñas SOLO realizados (status === 'accepted')
+            // 1. Filtrar registros de la categoría seleccionada (o todas) SOLO realizados (status === 'accepted')
+            const catFilter = document.getElementById('agenda-category-filter');
+            const selectedCatVal = catFilter ? catFilter.value : '';
+
             let allNails = activeAgenda.filter(a => {
-                const cat = (a.category || "").toLowerCase();
-                return (cat.includes('uñ') || cat.includes('un')) && a.status === 'accepted';
+                if (a.status !== 'accepted') return false;
+                if (selectedCatVal) {
+                    const catName = getCategoryName(a.category || a.cat || a.catId || '');
+                    return catName.toLowerCase().trim() === selectedCatVal.toLowerCase().trim();
+                }
+                return true;
             });
 
             // 2. Ordenar por fecha (más reciente primero) para asegurar que tomamos la última visita
@@ -4965,7 +5009,7 @@ function _doRenderAgenda() {
                 const statusLabel = apt.status === 'postponed' ? '<span style="background:#f39c12; color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem; margin-top: -2px;">APLAZADA</span>' : '';
 
                 const specData = specialists.find(s => s.name === apt.specialist);
-                const specImg = specData && specData.image ? specData.image : '';
+                const specImg = specData && specData.image && !specData.image.includes('placeholder.com') ? specData.image : '';
                 const specInitial = apt.specialist ? apt.specialist.charAt(0).toUpperCase() : '?';
                 const profPct = (specData && specData.profitPercent) ? parseInt(specData.profitPercent) : 50;
 
@@ -4977,8 +5021,8 @@ function _doRenderAgenda() {
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:15px;">
                         <div style="flex:1;">
                                 <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
-                                    <div style="width:55px; height:55px; border-radius:15px; overflow:hidden; border:2px solid white; box-shadow:0 5px 15px rgba(0,0,0,0.08); flex-shrink:0; background:#f9f9f9; display:flex; align-items:center; justify-content:center;">
-                                        ${specImg ? `<img src="${specImg}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="font-size:1.4rem; font-weight:bold; color:#ddd;">${specInitial}</div>`}
+                                    <div style="width:55px; height:55px; border-radius:15px; overflow:hidden; border:2px solid white; box-shadow:0 5px 15px rgba(0,0,0,0.08); flex-shrink:0; background:rgba(var(--accent-rgb), 0.12); display:flex; align-items:center; justify-content:center;">
+                                        ${specImg ? `<img src="${specImg}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="font-size:1.4rem; color:var(--color-accent);"><i class="fas fa-user-tie"></i></div>`}
                                     </div>
                                     <div style="display:flex; flex-direction:column; gap:2px;">
                                         <h4 style="margin:0; color: #1a1a1a; font-family:var(--font-heading); font-size:1.3rem; line-height:1.2;">${apt.specialist || 'Keysi'} ${statusLabel}</h4>
@@ -6721,6 +6765,26 @@ window.showConfirm = function(message, onConfirm) {
 // Global State for Agenda Tabs
 let currentAgendaTray = 'incoming'; // Opción: 'incoming', 'confirmed', 'postponed', 'reminders'
 
+window.populateRemindersCategoryFilter = function() {
+    const catFilter = document.getElementById('agenda-category-filter');
+    if (!catFilter) return;
+
+    const categories = JSON.parse(localStorage.getItem('agenda_categories') || '[]');
+    const currentVal = catFilter.value;
+    
+    let html = `<option value="">Todas las Categorías</option>`;
+    categories.forEach(cat => {
+        html += `<option value="${cat.name}">${cat.name}</option>`;
+    });
+    
+    catFilter.innerHTML = html;
+    
+    // Restore previous selection if still valid
+    if (currentVal && (currentVal === '' || categories.find(c => c.name === currentVal))) {
+        catFilter.value = currentVal;
+    }
+};
+
 window.setAgendaTray = function(tray) {
     currentAgendaTray = tray;
     
@@ -6729,10 +6793,17 @@ window.setAgendaTray = function(tray) {
     const activeBtn = document.getElementById(`tray-btn-${tray}`);
     if(activeBtn) activeBtn.classList.add('active');
     
-    // Mostrar u ocultar botón de configuración de mantenimiento
+    // Mostrar u ocultar botón de configuración de mantenimiento y filtro de categorías
     const configBtn = document.getElementById('maint-config-btn');
+    const catFilter = document.getElementById('agenda-category-filter');
     if (configBtn) {
         configBtn.style.display = (tray === 'reminders') ? 'flex' : 'none';
+    }
+    if (catFilter) {
+        catFilter.style.display = (tray === 'reminders') ? 'inline-block' : 'none';
+        if (tray === 'reminders') {
+            window.populateRemindersCategoryFilter();
+        }
     }
     
     renderAgenda();
@@ -7131,8 +7202,8 @@ function renderSpecialists() {
                 const halfEarned = (dayTotal * profitPercent) / 100;
                 const studioEarned = (dayTotal * studioPercent) / 100;
 
-                const fallbackIcon = `<div style="background:var(--gold-primary)22; width:65px; height:65px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:1.8rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
-                const profileImg = spec.image ? `<img src="${spec.image}" style="width:65px; height:65px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : fallbackIcon;
+                const fallbackIcon = `<div style="background:rgba(var(--accent-rgb), 0.12); width:65px; height:65px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--color-accent); font-size:1.8rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
+                const profileImg = spec.image && !spec.image.includes('placeholder.com') ? `<img src="${spec.image}" style="width:65px; height:65px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : fallbackIcon;
 
                 const infoBtn = `
                     <button onclick="viewSpecialistInfo('${spec.name}')" style="background:rgba(160, 93, 107, 0.08); color:var(--color-dark-pink); border:1px solid var(--color-dark-pink); padding:8px 18px; border-radius:30px; font-weight:700; font-size:0.85rem; cursor:pointer; transition:0.3s; display:flex; align-items:center; gap:8px;">
@@ -7156,7 +7227,7 @@ function renderSpecialists() {
                     <div class="glass-module" style="padding:12px 20px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:15px; border-left:4px solid ${isActive ? 'var(--color-dark-pink)' : '#ccc'}; opacity:${isActive ? '1' : '0.65'}; transition:0.3s;">
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
                             <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; border:1px solid #eee; flex-shrink:0;">
-                                ${spec.image ? `<img src="${spec.image}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="background:#f0f0f0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#999;"><i class="fas fa-user"></i></div>`}
+                                ${spec.image && !spec.image.includes('placeholder.com') ? `<img src="${spec.image}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="background:rgba(var(--accent-rgb), 0.12); width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--color-accent);"><i class="fas fa-user-tie"></i></div>`}
                             </div>
                             <div style="min-width:150px;">
                                 <h5 style="margin:0; font-size:1rem; color:var(--color-text);">${spec.name}</h5>
@@ -7180,7 +7251,7 @@ function renderSpecialists() {
                     <div style="background:rgba(var(--accent-rgb), 0.05); padding:6px 10px; border-radius:8px; border:1px solid rgba(var(--accent-rgb), 0.1); text-align:center; font-size:0.7rem; color:var(--color-dark-pink); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">${s}</div>
                 `).join('');
 
-                const specProfileImg = spec.image ? `<img src="${spec.image}" style="width:55px; height:55px; border-radius:12px; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : `<div style="background:var(--gold-primary)15; width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:1.5rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
+                const specProfileImg = spec.image && !spec.image.includes('placeholder.com') ? `<img src="${spec.image}" style="width:55px; height:55px; border-radius:12px; object-fit:cover; border:2px solid var(--color-accent); flex-shrink:0;">` : `<div style="background:rgba(var(--accent-rgb), 0.12); width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--color-accent); font-size:1.5rem; flex-shrink:0;"><i class="fas fa-user-tie"></i></div>`;
 
                 return `
                 <div class="glass-module" style="padding:20px; border-radius:20px; position:relative; display:flex; flex-direction:column; gap:15px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); opacity:${isActive ? '1' : '0.6'}; transition:0.3s; border: 1px solid ${isActive ? 'rgba(184, 115, 129, 0.2)' : 'var(--border-color)'};">
@@ -7531,10 +7602,10 @@ window.openEditSpecialistModal = function(name) {
     document.getElementById('edit-specialist-photo').value = '';
 
     const photoContainer = document.getElementById('edit-specialist-current-photo');
-    if (spec.image) {
+    if (spec.image && !spec.image.includes('placeholder.com')) {
         photoContainer.innerHTML = `<img src="${spec.image}" style="width:100%; height:100%; object-fit:cover;">`;
     } else {
-        photoContainer.innerHTML = `<i class="fas fa-user-tie" style="color:#aaa; font-size:1.5rem;"></i>`;
+        photoContainer.innerHTML = `<div style="width:100%; height:100%; background:rgba(var(--accent-rgb), 0.12); display:flex; align-items:center; justify-content:center; color:var(--color-accent); font-size:2rem;"><i class="fas fa-user-tie"></i></div>`;
     }
 
     document.getElementById('editSpecialistModal').style.display = 'flex';
@@ -7915,10 +7986,10 @@ window.viewSpecialistInfo = function(name) {
     
     // Foto
     const photoDiv = document.getElementById('spec-info-photo');
-    if (spec.image) {
+    if (spec.image && !spec.image.includes('placeholder.com')) {
         photoDiv.innerHTML = `<img src="${spec.image}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid var(--color-accent); box-shadow:0 5px 15px rgba(0,0,0,0.1);">`;
     } else {
-        photoDiv.innerHTML = `<div style="background:var(--gold-primary)22; width:100px; height:100px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--gold-primary); font-size:2.5rem;"><i class="fas fa-user-tie"></i></div>`;
+        photoDiv.innerHTML = `<div style="width:100px; height:100px; border-radius:50%; background:rgba(var(--accent-rgb), 0.12); display:flex; align-items:center; justify-content:center; color:var(--color-accent); font-size:2.5rem; border:3px solid var(--color-accent); box-shadow:0 5px 15px rgba(0,0,0,0.1);"><i class="fas fa-user-tie"></i></div>`;
     }
 
     // Botón WhatsApp
@@ -8124,17 +8195,23 @@ window.syncAdminMetaToCloud = async function(silent = false) {
 
     const meta = {
         theme: localStorage.getItem('agenda_admin_theme') || 'rose',
+        dark_mode: localStorage.getItem('agenda_dark_mode') === 'true',
         site_name: localStorage.getItem('agenda_site_name') || 'StyleSync Pro',
         admin_gender: localStorage.getItem('agenda_admin_gender') || 'Femenino',
-        whatsapp_number: localStorage.getItem('agenda_whatsapp_number') || '3057726115',
-        site_address: localStorage.getItem('agenda_site_address') || 'Calle 14 # 11-74, Sevilla',
+        whatsapp_number: localStorage.getItem('agenda_whatsapp_number') || '',
+        site_address: localStorage.getItem('agenda_site_address') || '',
         admin_user: localStorage.getItem('agenda_admin_user') || 'admin',
         admin_pass: localStorage.getItem('agenda_admin_pass') || '123456',
         admin_email: localStorage.getItem('agenda_admin_email') || 'ejemplo@correo.com',
         social_links: JSON.parse(localStorage.getItem('agenda_social_links') || '{"insta":"","tiktok":"","face":""}'),
         logo_url: localStorage.getItem('agenda_logo_url') || '',
         hero_url: localStorage.getItem('agenda_hero_url') || '',
-        admin_bg: localStorage.getItem('agenda_admin_bg') || ''
+        admin_bg: localStorage.getItem('agenda_admin_bg') || '',
+        // Plantillas de WhatsApp — incluidas para persistencia en nube
+        wa_template_booking_header: localStorage.getItem('agenda_wa_template_booking_header') || '',
+        wa_template_booking_item:   localStorage.getItem('agenda_wa_template_booking_item') || '',
+        wa_template_reminder:       localStorage.getItem('agenda_wa_template_reminder') || '',
+        wa_template_maintenance:    localStorage.getItem('agenda_wa_template_maintenance') || ''
     };
     await window.saveDataToCloud('config_v2', 'admin_meta', meta);
     
@@ -8145,6 +8222,7 @@ window.syncAdminMetaToCloud = async function(silent = false) {
         site_address: meta.site_address,
         social: meta.social_links,
         theme: meta.theme,
+        dark_mode: meta.dark_mode,
         logo_url: meta.logo_url,
         hero_url: meta.hero_url
     };
@@ -8162,12 +8240,6 @@ window.saveIdentity = async function() {
     
     if(!name) {
         return showToast("El nombre del negocio no puede estar vacío.", "error");
-    }
-    if(!waNum) {
-        return showToast("El teléfono de reservas no puede estar vacío.", "error");
-    }
-    if(!address) {
-        return showToast("La dirección del negocio no puede estar vacía.", "error");
     }
 
     localStorage.setItem('agenda_site_name', name);
@@ -8232,6 +8304,11 @@ window.saveIdentity = async function() {
 
     showToast("¡Identidad y medios actualizados con éxito!", "success");
     
+    // Actualizar banner de advertencia (ocultarlo si ya están los campos requeridos)
+    if (typeof window.updateSetupWarningBanner === 'function') {
+        window.updateSetupWarningBanner();
+    }
+    
     // Guardar en la nube
     await window.syncAdminMetaToCloud(true);
     
@@ -8254,7 +8331,7 @@ window.previewImageLocal = function(inputEl, previewId) {
             preview.src = e.target.result;
             preview.style.display = 'block';
             // Ocultar el ícono de placeholder
-            const icon = preview.parentElement && preview.parentElement.querySelector('.premium-placeholder-icon');
+            const icon = preview.parentElement && preview.parentElement.querySelector('.upload-placeholder');
             if (icon) icon.style.display = 'none';
         };
         reader.readAsDataURL(inputEl.files[0]);
@@ -8318,7 +8395,7 @@ function _showSavedPreview(previewId, src) {
     if (preview && src) {
         preview.src = src;
         preview.style.display = 'block';
-        const icon = preview.parentElement && preview.parentElement.querySelector('.premium-placeholder-icon');
+        const icon = preview.parentElement && preview.parentElement.querySelector('.upload-placeholder');
         if (icon) icon.style.display = 'none';
     }
 }
@@ -8468,8 +8545,8 @@ window.saveSocialLinks = function() {
 function loadCurrentSettings() {
     document.getElementById('settings-site-name').value = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
     document.getElementById('settings-admin-gender').value = localStorage.getItem('agenda_admin_gender') || "Femenino";
-    document.getElementById('settings-site-whatsapp').value = localStorage.getItem('agenda_whatsapp_number') || "3057726115";
-    document.getElementById('settings-site-address').value = localStorage.getItem('agenda_site_address') || "Calle 14 # 11-74, Sevilla";
+    document.getElementById('settings-site-whatsapp').value = localStorage.getItem('agenda_whatsapp_number') || "";
+    document.getElementById('settings-site-address').value = localStorage.getItem('agenda_site_address') || "";
     
     const defaultBookingHeader = `Hola {negocio}!\n\n*Mi Nombre:* {cliente}\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total a pagar: {total}*`;
     const defaultBookingItem = `{numero}. *{servicio}*\n   - Precio: {precio}\n   - Fecha: {fecha}\n   - Horario: {horario}\n   - Profesional: {profesional}\n`;
@@ -8511,6 +8588,18 @@ function loadCurrentSettings() {
     if(social.insta) document.getElementById('settings-social-insta').value = social.insta;
     if(social.tiktok) document.getElementById('settings-social-tiktok').value = social.tiktok;
     if(social.face) document.getElementById('settings-social-face').value = social.face;
+    
+    if (typeof window.toggleWaTemplateEdit === 'function') {
+        window.toggleWaTemplateEdit();
+    }
+    
+    if (typeof window.checkFirstTimeSetup === 'function') {
+        window.checkFirstTimeSetup();
+    }
+    
+    if (typeof window.updateSetupWarningBanner === 'function') {
+        window.updateSetupWarningBanner();
+    }
 }
 
 window.clearClosureSettings = function() {
@@ -8566,7 +8655,7 @@ window.getThemesMap = function() {
         cyan: { accent: '#3498DB', bg: '#F4F9FC', rgb: '52, 152, 219' },
         purple: { accent: '#7D3C98', bg: '#F8F4F9', rgb: '125, 60, 152' },
         maroon: { accent: '#922B21', bg: '#FCF5F4', rgb: '146, 43, 33' },
-        slate: { accent: '#38bdf8', bg: '#0f172a', rgb: '56, 189, 248' },
+        slate: { accent: '#38bdf8', bg: '#F1F5F9', rgb: '56, 189, 248' },
         
         emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133' },
         mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96' },
@@ -8605,7 +8694,7 @@ window.renderThemeSelector = function() {
         cyan: 'Cyan Hielo',
         purple: 'Púrpura',
         maroon: 'Granate',
-        slate: 'Oscuro',
+        slate: 'Pizarra',
         emerald: 'Esmeralda',
         mint: 'Menta Suave',
         teal: 'Teal Luxe',
@@ -8630,6 +8719,7 @@ window.renderThemeSelector = function() {
 
     const themes = window.getThemesMap();
     const currentTheme = localStorage.getItem('agenda_admin_theme') || 'rose';
+    const isDark = document.documentElement.classList.contains('dark-theme');
     
     grid.innerHTML = '';
     
@@ -8645,9 +8735,15 @@ window.renderThemeSelector = function() {
             window.renderThemeSelector();
         };
         
+        const cardBg = isDark ? 'var(--color-white)' : '#fff';
+        const defaultBorder = isDark ? '2.5px solid rgba(255,255,255,0.08)' : '2.5px solid rgba(0,0,0,0.06)';
+        const cardBorder = isActive ? '2.5px solid ' + theme.accent : defaultBorder;
+        const labelColor = isActive ? theme.accent : (isDark ? '#cbd5e1' : '#555');
+        const circleBorder = isActive ? (isDark ? 'var(--color-white)' : '#fff') : (isDark ? 'var(--color-bg)' : '#f9f9f9');
+
         btn.style.cssText = `
-            background: #fff;
-            border: ${isActive ? '2.5px solid ' + theme.accent : '2.5px solid rgba(0,0,0,0.06)'};
+            background: ${cardBg};
+            border: ${cardBorder};
             border-radius: 18px;
             padding: 15px 10px;
             cursor: pointer;
@@ -8669,7 +8765,7 @@ window.renderThemeSelector = function() {
         };
         btn.onmouseout = () => {
             if (!isActive) {
-                btn.style.borderColor = 'rgba(0,0,0,0.06)';
+                btn.style.borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
                 btn.style.transform = 'none';
                 btn.style.boxShadow = '0 4px 15px rgba(0,0,0,0.02)';
             } else {
@@ -8685,7 +8781,7 @@ window.renderThemeSelector = function() {
             height: 35px;
             background: ${theme.accent};
             border-radius: 50%;
-            border: 3px solid ${isActive ? '#fff' : '#f9f9f9'};
+            border: 3px solid ${circleBorder};
             box-shadow: 0 5px 15px rgba(${theme.rgb}, 0.35);
             display: flex;
             align-items: center;
@@ -8703,7 +8799,7 @@ window.renderThemeSelector = function() {
         label.style.cssText = `
             font-size: 0.72rem;
             font-weight: 800;
-            color: ${isActive ? theme.accent : '#555'};
+            color: ${labelColor};
             letter-spacing: 0.5px;
             text-transform: uppercase;
             transition: all 0.3s;
@@ -8723,13 +8819,18 @@ window.applyTheme = function(themeName, silent = false) {
     root.style.setProperty('--color-accent', theme.accent);
     root.style.setProperty('--gold-primary', theme.accent);
     root.style.setProperty('--color-dark-pink', theme.accent);
-    root.style.setProperty('--color-bg', theme.bg);
     root.style.setProperty('--accent-rgb', theme.rgb);
     
-    if (themeName === 'slate') {
+    const isDark = localStorage.getItem('agenda_dark_mode') === 'true';
+    if (isDark) {
+        // Remove inline --color-bg so the CSS .dark-theme class rule (#0f172a) takes effect.
+        // Inline styles have higher specificity than class rules, so we must clear it here.
+        root.style.removeProperty('--color-bg');
         root.classList.add('dark-theme');
         root.classList.remove('light-theme');
     } else {
+        // In light mode, set the theme's light bg as an inline style (overrides any leftover class).
+        root.style.setProperty('--color-bg', theme.bg);
         root.classList.add('light-theme');
         root.classList.remove('dark-theme');
     }
@@ -8772,8 +8873,8 @@ window.applyTheme = function(themeName, silent = false) {
 window.updateSidebarThemeToggleUI = function() {
     const toggleBtn = document.getElementById('sidebar-theme-toggle');
     if (!toggleBtn) return;
-    const currentTheme = localStorage.getItem('agenda_admin_theme') || 'rose';
-    if (currentTheme === 'slate') {
+    const isDark = localStorage.getItem('agenda_dark_mode') === 'true';
+    if (isDark) {
         toggleBtn.innerHTML = '<i class="fas fa-sun" style="color: #f1c40f;"></i>';
         toggleBtn.title = 'Modo Día';
     } else {
@@ -8784,13 +8885,17 @@ window.updateSidebarThemeToggleUI = function() {
 
 window.toggleNightMode = function(event) {
     if (event) event.preventDefault();
+    const isDark = localStorage.getItem('agenda_dark_mode') === 'true';
+    const newDark = !isDark;
+    localStorage.setItem('agenda_dark_mode', newDark ? 'true' : 'false');
+    
     const currentTheme = localStorage.getItem('agenda_admin_theme') || 'rose';
-    if (currentTheme === 'slate') {
-        const targetTheme = localStorage.getItem('agenda_admin_last_light_theme') || 'rose';
-        window.applyTheme(targetTheme);
-    } else {
-        localStorage.setItem('agenda_admin_last_light_theme', currentTheme);
-        window.applyTheme('slate');
+    window.applyTheme(currentTheme, true); // silent theme apply to prevent double toast
+    
+    showToast(newDark ? 'Modo Noche activado' : 'Modo Noche desactivado', 'success');
+    
+    if (window.syncAdminMetaToCloud) {
+        window.syncAdminMetaToCloud(true);
     }
     if (window.renderThemeSelector) window.renderThemeSelector();
     window.updateSidebarThemeToggleUI();
@@ -8920,7 +9025,7 @@ window.renderVisualAgenda = function() {
                             <th style="width: ${colW}px; min-width: ${colW}px; padding: 15px; border-bottom: 2px solid #eee; background: #fff; border-left: 1px solid #f2f2f2;">
                                 <div style="display: flex; align-items: center; gap: 10px; justify-content: center; width: 100%;">
                                     <div class="admin-img-placeholder" style="width:40px; height:40px; min-width:40px; border-radius:12px;">
-                                    ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;" onload="this.classList.add('loaded')">` : `<div style="width:100%; height:100%; background:#f9f9f9; display:flex; align-items:center; justify-content:center; color:#ddd; font-size:1.4rem;"><i class="fas fa-user-circle"></i></div>`}
+                                    ${s.image && !s.image.includes('placeholder.com') ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;" onload="this.classList.add('loaded')">` : `<div style="width:100%; height:100%; background:rgba(var(--accent-rgb), 0.12); display:flex; align-items:center; justify-content:center; color:var(--color-accent); font-size:1.4rem;"><i class="fas fa-user-tie"></i></div>`}
                                 </div>
                                 <div style="text-align: left;">
                                     <div style="font-size: 0.9rem; font-weight: 800; color: #1a1a1a;">${s.name}</div>
@@ -9606,6 +9711,7 @@ window.openMaintConfigModal = function() {
     console.log("Abriendo configurador de ciclos de mantenimiento...");
     const modal = document.getElementById('maintConfigModal');
     const listMaint = document.getElementById('maint-config-list');
+    const catSelect = document.getElementById('maint-category-filter');
     if (!modal || !listMaint) return;
 
     modal.classList.add('show');
@@ -9615,26 +9721,54 @@ window.openMaintConfigModal = function() {
     const categories = JSON.parse(localStorage.getItem('agenda_categories') || '[]');
     const customCycles = JSON.parse(localStorage.getItem('agenda_maint_cycles') || '{}');
 
-    // 1. Población de Mantenimiento (Solo Uñas)
-    const nailCat = categories.find(c => c.name.toLowerCase().includes('uñ') || c.name.toLowerCase().includes('un'));
-    const nailServices = nailCat ? allServices.filter(s => s.cat === nailCat.id) : [];
-
-    if (nailServices.length === 0) {
-        listMaint.innerHTML = '<p style="color:#999; font-style:italic; text-align:center; padding:20px;">No hay servicios de uñas para configurar.</p>';
-    } else {
-        listMaint.innerHTML = nailServices.map(s => {
-            const currentVal = customCycles[s.title] || 21;
-            return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:#f9f9f9; border-radius:10px; margin-bottom:8px; border:1px solid #eee;">
-                    <div style="font-weight:700; color:#333; font-size:0.9rem;">${s.title}</div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <input type="number" class="maint-input" data-service="${s.title}" value="${currentVal}" style="width:60px; padding:6px; border-radius:6px; border:1px solid #ddd; text-align:center; font-weight:bold;">
-                        <span style="font-size:0.75rem; color:#888; font-weight:600;">días</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
+    // Popular selector de categorías del modal
+    if (catSelect) {
+        let catHtml = `<option value="all">Todas las Categorías</option>`;
+        categories.forEach(cat => {
+            catHtml += `<option value="${cat.id}">${cat.name}</option>`;
+        });
+        catSelect.innerHTML = catHtml;
+        catSelect.value = 'all'; // Por defecto mostrar todos
     }
+
+    // Función de filtrado dinámico para la lista
+    window.filterMaintServicesByCategory = function() {
+        const selectedCat = catSelect ? catSelect.value : 'all';
+        let filtered = allServices;
+        if (selectedCat !== 'all') {
+            const catObj = categories.find(c => c.id === selectedCat);
+            const catName = catObj ? catObj.name : '';
+            filtered = allServices.filter(s => {
+                const sCat = s.cat || s.category || '';
+                return sCat === selectedCat || (catName && sCat.toLowerCase().trim() === catName.toLowerCase().trim());
+            });
+        }
+
+        if (filtered.length === 0) {
+            listMaint.innerHTML = '<p style="color:#999; font-style:italic; text-align:center; padding:20px;">No hay servicios en esta categoría.</p>';
+        } else {
+            listMaint.innerHTML = filtered.map(s => {
+                const currentVal = customCycles[s.title] || 21;
+                const catObj = categories.find(c => c.id === s.cat);
+                const catName = catObj ? catObj.name : 'General';
+                return `
+                    <div class="maint-config-item">
+                        <div>
+                            <div style="font-weight:700; color:#333; font-size:0.9rem;">${s.title}</div>
+                            <div style="font-size:0.7rem; color:#888; font-weight:600; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px;">Categoría: ${catName}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="number" class="maint-input" data-service="${s.title}" value="${currentVal}">
+                            <span style="font-size:0.75rem; color:#888; font-weight:600;">días</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    };
+
+    // Renderizado inicial
+    filterMaintServicesByCategory();
 };
 
 window.saveAdvancedTimeConfig = function() {
@@ -9967,8 +10101,8 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
             datasets: [{
                 label: 'Ingresos',
                 data: trendValues,
-                borderColor: '#e91e63',
-                backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#38bdf8',
+                backgroundColor: 'rgba(var(--accent-rgb), 0.1)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
@@ -10023,6 +10157,14 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
         });
     }
 
+    const catColors = catData.length === 1 && catLabels[0] === "Sin datos"
+        ? [isDark ? '#334155' : '#e2e8f0']
+        : [
+            getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#38bdf8',
+            '#38bdf8', '#2ecc71', '#f1c40f', '#9b59b6',
+            '#e67e22', '#1abc9c', '#e74c3c', '#34495e', '#7f8c8d'
+          ];
+
     const ctxCat = document.getElementById('chart-categories').getContext('2d');
     if (window.dashboardCharts && window.dashboardCharts.categories) {
         window.dashboardCharts.categories.destroy();
@@ -10033,10 +10175,7 @@ window.renderDashboardStats = function(range = 'today', specificMonth = null, sp
             labels: catLabels,
             datasets: [{
                 data: catData,
-                backgroundColor: [
-                    '#A05D6B', '#38bdf8', '#2ecc71', '#f1c40f', '#9b59b6',
-                    '#e67e22', '#1abc9c', '#e74c3c', '#34495e', '#7f8c8d'
-                ],
+                backgroundColor: catColors,
                 borderWidth: 0,
                 hoverOffset: 12
             }]
@@ -10362,7 +10501,7 @@ window.insertTag = function(textareaId, tag) {
     const end = el.selectionEnd;
     const text = el.value;
     el.value = text.substring(0, start) + tag + text.substring(end);
-    el.focus();
+    el.focus({ preventScroll: true });
     el.selectionStart = el.selectionEnd = start + tag.length;
 };
 
@@ -10398,4 +10537,376 @@ window.resetAgendaTemplate = function(type) {
         showToast("Plantilla restablecida por defecto.");
     }
 };
+
+window.toggleWaTemplateEdit = function() {
+    const selector = document.getElementById('wa-template-selector');
+    if (!selector) return;
+    const selected = selector.value;
+    const ids = ['booking-header', 'booking-item', 'reminder', 'maintenance'];
+    ids.forEach(id => {
+        const el = document.getElementById('wa-template-section-' + id);
+        if (el) el.style.display = (id === selected) ? 'flex' : 'none';
+    });
+};
+
+// AI Generator Modal Controls
+window.openAiGeneratorModal = function() {
+    const modal = document.getElementById('ai-generator-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Auto-focus the input
+        setTimeout(() => {
+            const input = document.getElementById('ai-business-type');
+            if (input) input.focus();
+        }, 100);
+    }
+};
+
+window.closeAiGeneratorModal = function() {
+    const modal = document.getElementById('ai-generator-modal');
+    if (modal) {
+        // Reset loader/inputs
+        document.getElementById('ai-generator-loader').style.display = 'none';
+        document.getElementById('ai-generator-actions').style.display = 'flex';
+        modal.style.display = 'none';
+    }
+};
+
+window.generateWaTemplatesWithAI = async function() {
+    const businessType = document.getElementById('ai-business-type').value.trim();
+    const style = document.getElementById('ai-tone-style').value;
+
+    if (!businessType) {
+        showToast("Por favor ingresa tu tipo de negocio.", "error");
+        return;
+    }
+
+    const loader = document.getElementById('ai-generator-loader');
+    const actions = document.getElementById('ai-generator-actions');
+
+    // Toggle loader
+    loader.style.display = 'flex';
+    actions.style.display = 'none';
+
+    // Build authorization headers based on active session tokens
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    // Grab client session token if available
+    try {
+        const clientSession = JSON.parse(sessionStorage.getItem('clientSession') || '{}');
+        if (clientSession && clientSession.token) {
+            headers['Authorization'] = `Bearer ${clientSession.token}`;
+        }
+    } catch (e) {}
+
+    // Grab super admin token if client token is not present
+    if (!headers['Authorization']) {
+        const adminToken = localStorage.getItem('as_admin_token');
+        if (adminToken) {
+            headers['Authorization'] = `Bearer ${adminToken}`;
+        }
+    }
+
+    // Fallback to demo token if no authorization header is set and we are in demo mode
+    if (!headers['Authorization']) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const instanceId = urlParams.get('instanceId');
+        if (!instanceId) {
+            headers['Authorization'] = 'Bearer demo_session_token';
+        }
+    }
+
+    try {
+        const response = await fetch('/api/admin/ai-generate-templates', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ businessType, style })
+        });
+
+        if (!response.ok) {
+            let errMsg = `Error del servidor (${response.status})`;
+            try {
+                const errJson = await response.json();
+                errMsg = errJson.error || errMsg;
+            } catch (e) {}
+            throw new Error(errMsg);
+        }
+
+        const data = await response.json();
+        if (data.success && data.templates) {
+            const templates = data.templates;
+
+            // Populate the textareas in settings block
+            const elHeader = document.getElementById('settings-wa-booking-header');
+            if (elHeader && templates.bookingHeader) elHeader.value = templates.bookingHeader;
+
+            const elItem = document.getElementById('settings-wa-booking-item');
+            if (elItem && templates.bookingItem) elItem.value = templates.bookingItem;
+
+            const elReminder = document.getElementById('settings-wa-reminder');
+            if (elReminder && templates.reminder) elReminder.value = templates.reminder;
+
+            const elMaint = document.getElementById('settings-wa-maintenance');
+            if (elMaint && templates.maintenance) elMaint.value = templates.maintenance;
+
+            // Do NOT save automatically so the user can review, edit, and click "Guardar" manually
+            showToast("¡Plantillas generadas! Revisa y edita las secciones, y haz clic en 'Guardar Plantillas de Mensajes' para aplicar los cambios.", "success");
+            closeAiGeneratorModal();
+
+            // Refresh the current template display to show the updated value
+            if (window.toggleWaTemplateEdit) {
+                window.toggleWaTemplateEdit();
+            }
+        } else {
+            throw new Error(data.error || 'La respuesta de la IA no contenía las plantillas válidas.');
+        }
+    } catch (err) {
+        console.error('[AI Generation Error]', err);
+        showToast(`Error al generar plantillas: ${err.message}`, "error");
+        
+        // Restore actions buttons
+        loader.style.display = 'none';
+        actions.style.display = 'flex';
+    }
+};
+
+let setupPromptTimeout = null;
+window.checkFirstTimeSetup = function() {
+    // Solo mostrar si la sesión de admin está activa (el usuario ha ingresado)
+    const urlParams = new URLSearchParams(window.location.search);
+    const instanceId = urlParams.get('instanceId');
+    const sessionKey = instanceId ? `agenda_admin_session_${instanceId}` : 'agenda_admin_session';
+    if (localStorage.getItem(sessionKey) !== 'true') return;
+
+    // Evitar que aparezca múltiples veces en la misma sesión
+    if (sessionStorage.getItem('agenda_setup_prompt_shown')) return;
+
+    if (setupPromptTimeout) clearTimeout(setupPromptTimeout);
+    
+    setupPromptTimeout = setTimeout(() => {
+        const savedWa = localStorage.getItem('agenda_whatsapp_number') || "";
+        const savedAddress = localStorage.getItem('agenda_site_address') || "";
+        const savedName = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
+        const savedGender = localStorage.getItem('agenda_admin_gender') || "Femenino";
+
+        // Si están vacíos, mostrar el prompt
+        if (!savedWa || !savedAddress) {
+            sessionStorage.setItem('agenda_setup_prompt_shown', 'true');
+            
+            if (typeof Swal === 'undefined') {
+                console.warn('SweetAlert2 no está cargado aún.');
+                return;
+            }
+            
+            const isDark = document.body.classList.contains('dark-theme');
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#b87381';
+            const accentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim() || '184, 115, 129';
+
+            // Paleta de colores según el tema activo
+            const palette = {
+                bg:          isDark ? '#1e1e2e' : '#ffffff',
+                bgCard:      isDark ? '#2a2a3e' : '#f8f4f5',
+                color:       isDark ? '#e8d8dc' : '#3a2a2e',
+                colorMuted:  isDark ? 'rgba(232,216,220,0.55)' : '#888',
+                border:      isDark ? `rgba(${accentRgb}, 0.25)` : `rgba(${accentRgb}, 0.2)`,
+                inputBg:     isDark ? '#16161f' : '#ffffff',
+                inputColor:  isDark ? '#e8d8dc' : '#333',
+                inputBorder: isDark ? `rgba(${accentRgb}, 0.3)` : '#dcc8cc',
+                placeholder: isDark ? 'rgba(232,216,220,0.35)' : '#bbb',
+            };
+
+            const fieldStyle = `
+                margin: 0; width: 100%; box-sizing: border-box;
+                font-size: 0.9rem; height: 40px; border-radius: 10px;
+                border: 1.5px solid ${palette.inputBorder};
+                padding: 0 12px;
+                background: ${palette.inputBg};
+                color: ${palette.inputColor};
+                font-family: 'Montserrat', sans-serif;
+                outline: none;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            `;
+
+            Swal.fire({
+                title: '<span style="font-family:\'Montserrat\',sans-serif; font-weight:700; font-size:1.25rem;">✨ Identidad del Negocio</span>',
+                html: `
+                    <style>
+                        #swal-site-name:focus, #swal-site-whatsapp:focus, #swal-site-address:focus,
+                        #swal-admin-gender:focus {
+                            border-color: ${accentColor} !important;
+                            box-shadow: 0 0 0 3px rgba(${accentRgb},0.18) !important;
+                        }
+                        #swal-site-name::placeholder, #swal-site-whatsapp::placeholder,
+                        #swal-site-address::placeholder {
+                            color: ${palette.placeholder};
+                        }
+                        .swal2-validation-message {
+                            background: rgba(${accentRgb},0.12) !important;
+                            color: ${accentColor} !important;
+                            border-radius: 8px !important;
+                            font-size: 0.82rem !important;
+                        }
+                    </style>
+                    <div style="text-align:left; font-family:'Montserrat',sans-serif; margin-top:0.25rem;">
+                        <p style="font-size:0.83rem; color:${palette.colorMuted}; margin-bottom:1.3rem; line-height:1.5;">
+                            Configura los datos básicos de tu negocio para que tus clientes puedan reservar citas por WhatsApp y encontrarte en el mapa.
+                        </p>
+
+                        <div style="margin-bottom:0.9rem;">
+                            <label style="font-size:0.72rem; font-weight:700; color:${accentColor}; display:block; margin-bottom:0.35rem; letter-spacing:0.6px;">NOMBRE DE LA PÁGINA</label>
+                            <input id="swal-site-name" type="text" style="${fieldStyle}" value="${savedName}" placeholder="Ej: StyleSync Pro">
+                        </div>
+
+                        <div style="margin-bottom:0.9rem;">
+                            <label style="font-size:0.72rem; font-weight:700; color:${accentColor}; display:block; margin-bottom:0.35rem; letter-spacing:0.6px;">GÉNERO (PARA MENSAJES)</label>
+                            <select id="swal-admin-gender" style="${fieldStyle}">
+                                <option value="Femenino" ${savedGender === 'Femenino' ? 'selected' : ''}>Femenino (Ej: ¿Segura?)</option>
+                                <option value="Masculino" ${savedGender === 'Masculino' ? 'selected' : ''}>Masculino (Ej: ¿Seguro?)</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom:0.9rem;">
+                            <label style="font-size:0.72rem; font-weight:700; color:${accentColor}; display:block; margin-bottom:0.35rem; letter-spacing:0.6px;">TELÉFONO WHATSAPP <span style="color:${palette.colorMuted}; font-weight:400;">(para agendar)</span></label>
+                            <input id="swal-site-whatsapp" type="text" style="${fieldStyle}" value="${savedWa}" placeholder="Ej: 3001234567">
+                        </div>
+
+                        <div style="margin-bottom:0.4rem;">
+                            <label style="font-size:0.72rem; font-weight:700; color:${accentColor}; display:block; margin-bottom:0.35rem; letter-spacing:0.6px;">DIRECCIÓN DEL NEGOCIO <span style="color:${palette.colorMuted}; font-weight:400;">(ubicación)</span></label>
+                            <input id="swal-site-address" type="text" style="${fieldStyle}" value="${savedAddress}" placeholder="Ej: Calle 45 # 20-30, Bogotá">
+                        </div>
+                    </div>
+                `,
+                background: palette.bg,
+                color: palette.color,
+                showCancelButton: true,
+                confirmButtonText: '💾 Guardar y activar',
+                cancelButtonText: 'Configurar luego',
+                confirmButtonColor: accentColor,
+                cancelButtonColor: '#999',
+                reverseButtons: true,
+                preConfirm: () => {
+                    const name = document.getElementById('swal-site-name').value.trim();
+                    const gender = document.getElementById('swal-admin-gender').value;
+                    const whatsapp = document.getElementById('swal-site-whatsapp').value.trim();
+                    const address = document.getElementById('swal-site-address').value.trim();
+                    
+                    if (!name) {
+                        Swal.showValidationMessage('El nombre de la página es obligatorio.');
+                        return false;
+                    }
+                    if (!whatsapp) {
+                        Swal.showValidationMessage('El teléfono de WhatsApp es obligatorio.');
+                        return false;
+                    }
+                    if (!address) {
+                        Swal.showValidationMessage('La dirección es obligatoria.');
+                        return false;
+                    }
+                    return { name, gender, whatsapp, address };
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    // Actualizar inputs del formulario principal
+                    document.getElementById('settings-site-name').value = result.value.name;
+                    document.getElementById('settings-site-whatsapp').value = result.value.whatsapp;
+                    document.getElementById('settings-site-address').value = result.value.address;
+                    document.getElementById('settings-admin-gender').value = result.value.gender;
+                    
+                    // Guardar y sincronizar
+                    if (window.saveIdentity) {
+                        await window.saveIdentity();
+                    }
+                }
+            });
+        }
+    }, 1500);
+};
+
+window.updateSetupWarningBanner = function() {
+    const bannerContainer = document.getElementById('setup-warning-banner-container');
+    if (!bannerContainer) return;
+
+    // Solo mostrar si la sesión de admin está activa (el usuario ha ingresado)
+    const urlParams = new URLSearchParams(window.location.search);
+    const instanceId = urlParams.get('instanceId');
+    const sessionKey = instanceId ? `agenda_admin_session_${instanceId}` : 'agenda_admin_session';
+    if (localStorage.getItem(sessionKey) !== 'true') {
+        bannerContainer.innerHTML = '';
+        return;
+    }
+
+    const savedWa = localStorage.getItem('agenda_whatsapp_number') || "";
+    const savedAddress = localStorage.getItem('agenda_site_address') || "";
+
+    // No mostrar si ya fue descartado en esta sesión
+    if (sessionStorage.getItem('agenda_banner_dismissed')) {
+        bannerContainer.innerHTML = '';
+        return;
+    }
+
+    if (!savedWa || !savedAddress) {
+        const missingItems = [];
+        if (!savedWa) missingItems.push('número de WhatsApp');
+        if (!savedAddress) missingItems.push('dirección del negocio');
+        const missingText = missingItems.join(' y ');
+
+        bannerContainer.innerHTML = `
+            <div class="setup-onboarding-banner">
+                <div class="setup-onboarding-icon">
+                    <i class="fas fa-magic"></i>
+                </div>
+                <div class="setup-onboarding-body">
+                    <div class="setup-onboarding-title">¡Activa tu agenda pública!</div>
+                    <div class="setup-onboarding-desc">Agrega el ${missingText} para que tus clientes puedan reservar citas en línea.</div>
+                </div>
+                <div class="setup-onboarding-actions">
+                    <button class="setup-onboarding-btn" onclick="goToSetupBlock()">
+                        <i class="fas fa-arrow-right" style="margin-right:5px; font-size:0.75rem;"></i>Completar perfil
+                    </button>
+                    <button class="setup-onboarding-dismiss" title="Cerrar" onclick="
+                        sessionStorage.setItem('agenda_banner_dismissed','true');
+                        document.getElementById('setup-warning-banner-container').innerHTML='';
+                    ">×</button>
+                </div>
+            </div>
+        `;
+    } else {
+        bannerContainer.innerHTML = '';
+    }
+};
+
+window.goToSetupBlock = function() {
+    if (typeof showTab === 'function') {
+        const navLink = document.querySelector('a[onclick*="settings-tab"]');
+        if (navLink) {
+            showTab('settings-tab', navLink);
+        } else {
+            showTab('settings-tab');
+        }
+    }
+    
+    if (typeof showSettingsBlock === 'function') {
+        showSettingsBlock('identidad');
+    }
+    
+    setTimeout(() => {
+        const card = document.querySelector('#settings-block-identidad .glass-module');
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.transition = 'all 0.5s ease';
+            card.style.boxShadow = '0 0 25px rgba(184, 115, 129, 0.6)';
+            card.style.borderColor = 'rgba(184, 115, 129, 0.8)';
+            setTimeout(() => {
+                card.style.boxShadow = '';
+                card.style.borderColor = '';
+            }, 3000);
+        }
+        const nameInput = document.getElementById('settings-site-name');
+        if (nameInput) nameInput.focus();
+    }, 500);
+};
+
+
 

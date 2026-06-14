@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="admin.css?v=20260423.01">
+    <link rel="stylesheet" href="admin.css?v=20260614.5">
     <!-- Chart.js for Pro Graphics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -67,85 +67,8 @@
                     }
                     localStorage.setItem('streetfeed_demo_last_activity', now.toString());
                     localStorage.setItem('agenda_demo_last_activity', now.toString());
-
-                    // --- INYECCIÓN DE BANNER DE MODO DEMO ---
-                    const injectDemoBanner = () => {
-                        const bannerHtml = `
-                            <div id="demo-badge-banner" style="
-                                position: fixed;
-                                top: 12px;
-                                left: 50%;
-                                transform: translateX(-50%) translateY(-100px);
-                                z-index: 999999;
-                                background: rgba(18, 22, 43, 0.82);
-                                backdrop-filter: blur(16px) saturate(180%);
-                                -webkit-backdrop-filter: blur(16px) saturate(180%);
-                                border: 1px solid rgba(255, 255, 255, 0.08);
-                                border-radius: 40px;
-                                padding: 8px 16px 8px 12px;
-                                display: flex;
-                                align-items: center;
-                                gap: 10px;
-                                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.1);
-                                color: #fff;
-                                font-family: system-ui, -apple-system, sans-serif;
-                                font-size: 0.85rem;
-                                font-weight: 500;
-                                pointer-events: auto;
-                                transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
-                                opacity: 0;
-                            ">
-                                <div style="
-                                    background: var(--theme-accent, var(--color-accent, #ff8c00));
-                                    width: 8px;
-                                    height: 8px;
-                                    border-radius: 50%;
-                                    box-shadow: 0 0 10px var(--theme-accent, var(--color-accent, #ff8c00));
-                                    animation: demo-pulse 2s infinite;
-                                "></div>
-                                <span style="white-space: nowrap;">
-                                    <strong style="color: var(--theme-accent, var(--color-accent, #ff8c00)); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Modo Demo</strong> 
-                                    · Cambios temporales (se limpian tras 4h de inactividad)
-                                </span>
-                                <button onclick="document.getElementById('demo-badge-banner').style.opacity='0'; setTimeout(()=>document.getElementById('demo-badge-banner').remove(), 400);" style="
-                                    background: transparent;
-                                    border: none;
-                                    color: rgba(255,255,255,0.4);
-                                    cursor: pointer;
-                                    padding: 0;
-                                    display: flex;
-                                    align-items: center;
-                                    font-size: 1.1rem;
-                                    margin-left: 6px;
-                                    transition: color 0.2s;
-                                " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">&times;</button>
-                            </div>
-                            <style>
-                            @keyframes demo-pulse {
-                                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0.5); }
-                                70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 140, 0, 0); }
-                                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0); }
-                            }
-                            </style>
-                        `;
-                        const div = document.createElement('div');
-                        div.innerHTML = bannerHtml.trim();
-                        const bannerEl = div.firstChild;
-                        const styleEl = div.lastChild;
-                        document.body.appendChild(bannerEl);
-                        document.body.appendChild(styleEl);
-
-                        setTimeout(() => {
-                            bannerEl.style.transform = 'translateX(-50%) translateY(0)';
-                            bannerEl.style.opacity = '1';
-                        }, 1000);
-                    };
-
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', injectDemoBanner);
-                    } else {
-                        injectDemoBanner();
-                    }
+                    // Nota: el banner "Modo Demo" solo se inyecta en index.html (lado cliente),
+                    // NO en el panel de administración.
                 }
             } catch(e) {
                 console.error("Error en auto-reset demo:", e);
@@ -185,7 +108,7 @@
                     cyan: { accent: '#3498DB', bg: '#F4F9FC', rgb: '52, 152, 219' },
                     purple: { accent: '#7D3C98', bg: '#F8F4F9', rgb: '125, 60, 152' },
                     maroon: { accent: '#922B21', bg: '#FCF5F4', rgb: '146, 43, 33' },
-                    slate: { accent: '#38bdf8', bg: '#0f172a', rgb: '56, 189, 248' },
+                    slate: { accent: '#38bdf8', bg: '#F1F5F9', rgb: '56, 189, 248' },
                     emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133' },
                     mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96' },
                     teal: { accent: '#117A65', bg: '#E8F6F3', rgb: '17, 122, 101' },
@@ -213,12 +136,14 @@
                     root.style.setProperty('--color-accent', theme.accent);
                     root.style.setProperty('--gold-primary', theme.accent);
                     root.style.setProperty('--color-dark-pink', theme.accent);
-                    root.style.setProperty('--color-bg', theme.bg);
                     root.style.setProperty('--accent-rgb', theme.rgb);
-                    if (savedTheme === 'slate') {
+                    const isDark = localStorage.getItem('agenda_dark_mode') === 'true';
+                    if (isDark) {
+                        root.style.removeProperty('--color-bg');
                         root.classList.add('dark-theme');
                         root.classList.remove('light-theme');
                     } else {
+                        root.style.setProperty('--color-bg', theme.bg);
                         root.classList.add('light-theme');
                         root.classList.remove('dark-theme');
                     }
@@ -367,6 +292,7 @@
             <!-- MAIN CONTENT AREA -->
             <main class="main-content">
                 <div id="license-banner-container"></div>
+                <div id="setup-warning-banner-container"></div>
                 <header class="admin-header">
                     <h1 class="logo dynamic-brand-name" id="main-brand-logo"><a href="admin.html" style="text-decoration: none; color: inherit;">StyleSync Pro<span>.</span> Admin</a></h1>
                     <script>
@@ -541,14 +467,18 @@
                             <div class="agenda-list-main">
                                 <!-- La fila de bandejas se movió arriba a la barra de acciones -->
                                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
-                                    <div class="agenda-search-container" style="flex: 1; position: relative; background: #fff; border-radius: 15px; border: 1px solid rgba(184, 115, 129, 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; display: flex; align-items: center;">
-                                        <i class="fas fa-search" style="position: absolute; left: 18px; color: var(--color-dark-pink); opacity: 0.6; font-size: 1.1rem;"></i>
+                                    <div class="agenda-search-container" style="flex: 1; position: relative; background: #fff; border-radius: 15px; border: 1px solid rgba(var(--accent-rgb), 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; display: flex; align-items: center;">
+                                        <i class="fas fa-search" style="position: absolute; left: 18px; color: var(--color-accent); opacity: 0.6; font-size: 1.1rem;"></i>
                                         <input type="text" id="agenda-search-input" placeholder="Buscar por cliente o teléfono..." onkeyup="renderAgenda()" style="width: 100%; padding: 15px 15px 15px 50px; border: none; outline: none; font-size: 1rem; font-weight: 500; font-family: inherit; color: #333;">
                                         <button onclick="document.getElementById('agenda-search-input').value=''; renderAgenda();" style="background: none; border: none; padding: 15px; color: #999; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s;" title="Limpiar búsqueda">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
-                                    <button id="maint-config-btn" onclick="openMaintConfigModal()" style="display: none; background: white; border: 1px solid rgba(184, 115, 129, 0.3); color: var(--color-dark-pink); height: 52px; width: 52px; border-radius: 15px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03); align-items: center; justify-content: center;" title="Configurar tiempos de mantenimiento">
+                                    <!-- CATEGORY SELECTOR FOR REMINDERS (Only visible when tray is reminders) -->
+                                    <select id="agenda-category-filter" onchange="renderAgenda()" style="display: none; height: 52px; padding: 0 20px; border-radius: 15px; border: 1px solid rgba(var(--accent-rgb), 0.2); outline: none; font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--color-accent); background: white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.03); max-width: 200px;">
+                                        <!-- Populated dynamically -->
+                                    </select>
+                                    <button id="maint-config-btn" onclick="openMaintConfigModal()" style="display: none; background: white; border: 1px solid rgba(var(--accent-rgb), 0.3); color: var(--color-accent); height: 52px; width: 52px; border-radius: 15px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03); align-items: center; justify-content: center;" title="Configurar tiempos de mantenimiento">
                                         <i class="fas fa-sliders-h"></i>
                                     </button>
                                 </div>
@@ -567,14 +497,14 @@
                         <p style="margin:0 0 20px 0; opacity: 0.8;">Añade nuevos servicios a tu catálogo.</p>
                         
                         <div style="display:flex; gap:12px; overflow-x:auto; padding: 10px 5px 15px 5px; margin-bottom: 25px; white-space:nowrap; -webkit-overflow-scrolling: touch; align-items: center;">
-                            <button id="open-new-cat-btn" class="btn-primary" style="background:var(--color-bg); color:var(--color-dark-pink); border:2px solid var(--color-dark-pink); width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="toggleNewCategoryForm()">
+                            <button id="open-new-cat-btn" class="btn-primary" style="width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="toggleNewCategoryForm()">
                                 <i class="fas fa-folder-plus"></i> AÑADIR O EDITAR CATEGORÍA
                             </button>
                             <button id="open-new-service-btn" class="btn-primary" style="width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="toggleNewServiceForm()">
                                 <i class="fas fa-plus-circle"></i> AÑADIR NUEVO SERVICIO
                             </button>
 
-                            <button id="open-public-gallery-btn" class="btn-primary" style="background:var(--color-bg); color:var(--color-dark-pink); border:2px solid var(--color-dark-pink); width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="window.showGeneralGalleryModal()">
+                            <button id="open-public-gallery-btn" class="btn-primary" style="width:auto; border-radius:12px; height:50px; font-size:0.82rem; padding: 0 18px; flex-shrink:0;" onclick="window.showGeneralGalleryModal()">
                                 <i class="fas fa-camera"></i> GESTIONAR GALERÍA GENERAL
                             </button>
                         </div>
@@ -1139,7 +1069,7 @@
                         </div>
 
                         <!-- Botón Único Global -->
-                        <button onclick="saveAllPromos()" class="btn-primary" style="margin-top:25px; width:100%; height:55px; font-size:1.1rem; border-radius:15px; box-shadow:0 10px 20px rgba(184,115,129,0.2);">GUARDAR PROMOCIONES (DESCUENTO Y COMBO)</button>
+                        <button onclick="saveAllPromos()" class="btn-primary" style="margin-top:25px; width:100%; height:55px; font-size:1.1rem; border-radius:15px; box-shadow:0 10px 20px rgba(var(--accent-rgb),0.2);">GUARDAR PROMOCIONES (DESCUENTO Y COMBO)</button>
 
                         <div id="promo-status-summary" style="margin-top:30px; padding:20px; border-radius:15px; background: var(--earnings-bg); border: 1px solid var(--earnings-border); text-align:left; color:var(--color-text);">
                             <!-- Resumen consolidado -->
@@ -1322,7 +1252,7 @@
                             <button class="btn-save" onclick="exportHistory()" style="background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 1rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.2);"><i class="fas fa-file-excel" style="font-size: 1.2rem;"></i> Exportar a Excel</button>
                         </div>
                         
-                        <div style="margin-top: 20px; display: flex; align-items: center; gap: 12px; background: rgba(184, 115, 129, 0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(184, 115, 129, 0.2); flex-wrap: wrap;">
+                        <div id="history-date-filters" style="margin-top: 20px; display: flex; align-items: center; gap: 12px; background: rgba(184, 115, 129, 0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(184, 115, 129, 0.2); flex-wrap: wrap;">
                             <label style="font-weight: 600; color: var(--color-dark-pink); margin: 0; white-space: nowrap;"><i class="fas fa-calendar-day"></i> Fecha:</label>
                             <input type="date" id="history-stats-date" class="admin-input" style="width: auto; padding: 8px; margin: 0; cursor: pointer;" onchange="document.getElementById('history-month-filter').value=''; renderHistory();" onclick="this.showPicker()" onkeydown="return false;">
                             
@@ -1408,13 +1338,13 @@
                                     
                                     <div class="form-group" style="margin-top:15px;">
                                         <label style="font-weight:700; color:var(--color-dark-pink);">Teléfono WhatsApp (Para Agendar)</label>
-                                        <input type="text" id="settings-site-whatsapp" class="admin-input" placeholder="Ej: 3057726115" style="margin-top:5px;">
+                                        <input type="text" id="settings-site-whatsapp" class="admin-input" placeholder="Ej: 3001234567" style="margin-top:5px;">
                                         <small style="color:#999; display:block; margin-top:4px;">Cambiar este número actualizará todos los botones de agenda en la web principal.</small>
                                     </div>
                                     
                                     <div class="form-group" style="margin-top:15px;">
                                         <label style="font-weight:700; color:var(--color-dark-pink);">Dirección del Negocio (Ubicación)</label>
-                                        <input type="text" id="settings-site-address" class="admin-input" placeholder="Ej: Calle 14 # 11-74, Sevilla" style="margin-top:5px;">
+                                        <input type="text" id="settings-site-address" class="admin-input" placeholder="Ej: Calle 45 # 20-30, Bogotá" style="margin-top:5px;">
                                         <small style="color:#999; display:block; margin-top:4px;">Esta dirección es la que se abrirá en Google Maps al hacer clic en "Ubicación".</small>
                                     </div>
                                     
@@ -1455,43 +1385,58 @@
                                     }
                                     
                                     .premium-preview-container {
-                                        width: 140px;
-                                        height: 140px;
-                                        background: #ffffff;
-                                        border-radius: 24px;
+                                        width: 100%;
+                                        height: 160px;
+                                        background: rgba(var(--accent-rgb), 0.04);
+                                        border-radius: 16px;
                                         display: flex;
                                         align-items: center;
                                         justify-content: center;
-                                        border: 2px dashed rgba(var(--accent-rgb), 0.25);
+                                        border: 2px dashed rgba(var(--accent-rgb), 0.35);
                                         overflow: hidden;
                                         margin: 0 auto 1.25rem;
                                         position: relative;
                                         transition: all 0.3s ease;
-                                        box-shadow: inset 0 2px 8px rgba(0,0,0,0.02);
+                                        cursor: pointer;
                                     }
                                     
                                     .premium-preview-container:hover {
                                         border-color: var(--color-accent);
-                                        transform: scale(1.02);
+                                        background: rgba(var(--accent-rgb), 0.08);
                                     }
                                     
-                                    .premium-placeholder-icon {
-                                        font-size: 40px;
-                                        opacity: 0.35;
+                                    /* Upload placeholder — solo ícono centrado */
+                                    .upload-placeholder {
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        width: 100%;
+                                        height: 100%;
+                                        pointer-events: none;
+                                    }
+                                    .upload-placeholder svg {
+                                        width: 52px;
+                                        height: 52px;
+                                        opacity: 0.55;
                                         color: var(--color-accent);
-                                        transition: opacity 0.3s ease;
+                                        transition: opacity 0.3s ease, transform 0.3s ease;
+                                    }
+                                    .premium-preview-container:hover .upload-placeholder svg {
+                                        opacity: 0.9;
+                                        transform: scale(1.1);
                                     }
                                     
-                                    /* If the image preview is visible (display: block), hide the placeholder icon */
+                                    /* If the image preview has no src, hide it */
                                     .premium-preview-container img[src=""], 
                                     .premium-preview-container img:not([src]) {
                                         display: none !important;
                                     }
                                     
-                                    /* When image is shown, hide placeholder icon */
-                                    .premium-preview-container img[style*="display: block"] ~ .premium-placeholder-icon,
-                                    .premium-preview-container img[style*="display: inline"] ~ .premium-placeholder-icon,
-                                    .premium-preview-container img:not([style*="display: none"]) ~ .premium-placeholder-icon {
+                                    /* Hide placeholder when image is shown (has src and style display block/inline) */
+                                    .premium-preview-container img[src]:not([src=""])[style*="display: block"] ~ .upload-placeholder,
+                                    .premium-preview-container img[src]:not([src=""])[style*="display:block"] ~ .upload-placeholder,
+                                    .premium-preview-container img[src]:not([src=""])[style*="display: inline"] ~ .upload-placeholder,
+                                    .premium-preview-container img[src]:not([src=""])[style*="display:inline"] ~ .upload-placeholder {
                                         display: none !important;
                                     }
                                     
@@ -1536,9 +1481,17 @@
                                                     <small style="color: #666; display: block; margin-bottom: 15px; min-height: 32px;">Elige una imagen personalizada para el fondo de la pantalla de acceso.</small>
                                                 </div>
                                                 
-                                                <div class="premium-preview-container">
-                                                    <img id="settings-admin-bg-preview" src="" style="width:100%; height:100%; object-fit:contain; background:white; border-radius:20px; display:none; image-rendering:auto; padding:10px;">
-                                                    <i class="fas fa-image premium-placeholder-icon"></i>
+                                                <div class="premium-preview-container" onclick="document.getElementById('settings-admin-bg').click()">
+                                                    <img id="settings-admin-bg-preview" src="" style="width:100%; height:100%; object-fit:cover; border-radius:14px; display:none;">
+                                                    <div class="upload-placeholder">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                            <polyline points="21 15 16 10 5 21"/>
+                                                            <line x1="15" y1="2" x2="15" y2="6"/>
+                                                            <line x1="17" y1="4" x2="13" y2="4"/>
+                                                        </svg>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
@@ -1546,7 +1499,7 @@
                                             
                                             <input type="file" id="settings-admin-bg" accept="image/*" style="display: none;" onchange="window.previewImageLocal(this, 'settings-admin-bg-preview')">
                                             <button type="button" class="premium-select-btn" onclick="document.getElementById('settings-admin-bg').click()">
-                                                <i class="fas fa-cloud-upload-alt"></i> Seleccionar Imagen
+                                                <i class="fas fa-cloud-upload-alt"></i> Seleccionar Foto
                                             </button>
                                         </div>
                                         
@@ -1558,9 +1511,17 @@
                                                     <small style="color: #666; display: block; margin-bottom: 15px; min-height: 32px;">Sube el logo de tu negocio para mostrarlo en el panel y la web principal.</small>
                                                 </div>
                                                 
-                                                <div class="premium-preview-container">
-                                                    <img id="settings-site-logo-preview" src="" style="width:100%; height:100%; object-fit:contain; background:white; border-radius:20px; display:none; image-rendering:auto; padding:10px;">
-                                                    <i class="fas fa-image premium-placeholder-icon"></i>
+                                                <div class="premium-preview-container" onclick="document.getElementById('settings-site-logo').click()">
+                                                    <img id="settings-site-logo-preview" src="" style="width:100%; height:100%; object-fit:contain; border-radius:14px; display:none; padding:10px; box-sizing:border-box;">
+                                                    <div class="upload-placeholder">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                            <polyline points="21 15 16 10 5 21"/>
+                                                            <line x1="15" y1="2" x2="15" y2="6"/>
+                                                            <line x1="17" y1="4" x2="13" y2="4"/>
+                                                        </svg>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
@@ -1568,7 +1529,7 @@
                                             
                                             <input type="file" id="settings-site-logo" accept="image/*" style="display: none;" onchange="window.previewImageLocal(this, 'settings-site-logo-preview')">
                                             <button type="button" class="premium-select-btn" onclick="document.getElementById('settings-site-logo').click()">
-                                                <i class="fas fa-cloud-upload-alt"></i> Seleccionar Imagen
+                                                <i class="fas fa-cloud-upload-alt"></i> Seleccionar Logo
                                             </button>
                                         </div>
                                         
@@ -1580,17 +1541,25 @@
                                                     <small style="color: #666; display: block; margin-bottom: 15px; min-height: 32px;">Cambia la foto principal (de perfil/portada) de la landing page pública.</small>
                                                 </div>
                                                 
-                                                <div class="premium-preview-container">
-                                                    <img id="settings-site-hero-preview" src="" style="width:100%; height:100%; object-fit:contain; background:white; border-radius:20px; display:none; image-rendering:auto; padding:10px;">
-                                                    <i class="fas fa-image premium-placeholder-icon"></i>
+                                                <div class="premium-preview-container" onclick="document.getElementById('settings-site-hero').click()">
+                                                    <img id="settings-site-hero-preview" src="" style="width:100%; height:100%; object-fit:cover; border-radius:14px; display:none;">
+                                                    <div class="upload-placeholder">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                            <polyline points="21 15 16 10 5 21"/>
+                                                            <line x1="15" y1="2" x2="15" y2="6"/>
+                                                            <line x1="17" y1="4" x2="13" y2="4"/>
+                                                        </svg>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
-                                            <p style="font-size: 0.85rem; color: #555; margin: 0 0 15px 0; font-weight: 500;">Personaliza tu imagen de portada.</p>
+                                            <p style="font-size: 0.85rem; color: #555; margin: 0 0 15px 0; font-weight: 500;">Personaliza tu foto de portada.</p>
                                             
                                             <input type="file" id="settings-site-hero" accept="image/*" style="display: none;" onchange="window.previewImageLocal(this, 'settings-site-hero-preview')">
                                             <button type="button" class="premium-select-btn" onclick="document.getElementById('settings-site-hero').click()">
-                                                <i class="fas fa-cloud-upload-alt"></i> Seleccionar Imagen
+                                                <i class="fas fa-cloud-upload-alt"></i> Seleccionar Foto
                                             </button>
                                         </div>
                                         
@@ -1697,14 +1666,29 @@
 
                             <!-- Bloque: Plantillas de WhatsApp -->
                             <div id="settings-block-whatsapp-templates" class="settings-block">
-                                <div class="glass-module" style="padding: 25px; border-top: 4px solid var(--color-dark-pink); max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+                                <div class="glass-module" style="padding: 25px; border-top: 4px solid var(--color-dark-pink); max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
                                     <h3 style="margin-top:0; font-size:1.1rem; color:var(--color-dark-pink); display:flex; align-items:center; gap:10px; margin-bottom: 0;">
                                         <i class="fab fa-whatsapp"></i> Personalización de Mensajes de WhatsApp
                                     </h3>
-                                    <p style="font-size:0.85rem; color:#666; margin-top: -15px; margin-bottom: 0;">Personaliza las plantillas de los mensajes que se envían por WhatsApp. Haz clic en las etiquetas para insertarlas.</p>
+                                    <!-- Selector de Plantilla -->
+                                    <div style="display: flex; gap: 12px; align-items: flex-end; margin-bottom: 8px; flex-wrap: wrap;">
+                                        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 250px;">
+                                            <label style="font-size: 0.8rem; font-weight: 700; color: var(--color-dark-pink); text-transform: uppercase;">Selecciona la plantilla a personalizar</label>
+                                            <select id="wa-template-selector" class="admin-input" onchange="toggleWaTemplateEdit()" style="width: 100%; height: 42px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                                <option value="booking-header">1. Estructura del Mensaje de Cita (Cliente)</option>
+                                                <option value="booking-item">2. Fila de Cita Individual (Cliente)</option>
+                                                <option value="reminder">3. Recordatorio de Cita (Administrador)</option>
+                                                <option value="maintenance">4. Mantenimiento y Retorno (Administrador)</option>
+                                            </select>
+                                        </div>
+                                        <button onclick="openAiGeneratorModal()" class="btn-primary" style="height: 42px; padding: 0 20px; border-radius: 8px; background: linear-gradient(135deg, #a855f7, var(--color-dark-pink)); border: none; color: white; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(168,85,247,0.25); transition: transform 0.2s, box-shadow 0.2s; margin: 0;">
+                                            <i class="fas fa-magic"></i> Generar con IA
+                                        </button>
+                                    </div>
+
 
                                     <!-- 1. Cita del Cliente (Encabezado/Pie) -->
-                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div id="wa-template-section-booking-header" style="display: flex; flex-direction: column; gap: 8px;">
                                         <h4 style="margin: 0; font-size: 0.9rem; color: var(--color-dark-pink);">1. Estructura del Mensaje de Cita (Cliente)</h4>
                                         <p style="margin: 0; font-size: 0.78rem; color: #777;">Controla la estructura principal del mensaje enviado por el cliente al agendar.</p>
                                         <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px dashed rgba(var(--accent-rgb), 0.15);">
@@ -1714,12 +1698,12 @@
                                             <span class="badge-tag" onclick="insertTag('settings-wa-booking-header', '{citas}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{citas}</span>
                                             <span class="badge-tag" onclick="insertTag('settings-wa-booking-header', '{total}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{total}</span>
                                         </div>
-                                        <textarea id="settings-wa-booking-header" rows="6" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical;"></textarea>
+                                        <textarea id="settings-wa-booking-header" rows="10" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical; min-height: 180px;"></textarea>
                                         <button onclick="resetAgendaTemplate('booking-header')" style="align-self: flex-start; background: transparent; border: none; color: var(--color-dark-pink); font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 0;">Restablecer por defecto</button>
                                     </div>
 
                                     <!-- 2. Fila de Cita Individual (Cliente) -->
-                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div id="wa-template-section-booking-item" style="display: flex; flex-direction: column; gap: 8px; display: none;">
                                         <h4 style="margin: 0; font-size: 0.9rem; color: var(--color-dark-pink);">2. Fila de Cita Individual (Cliente)</h4>
                                         <p style="margin: 0; font-size: 0.78rem; color: #777;">Controla el formato de cada cita/servicio insertado en la etiqueta <code style="font-family: monospace;">{citas}</code>.</p>
                                         <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px dashed rgba(var(--accent-rgb), 0.15);">
@@ -1730,12 +1714,12 @@
                                             <span class="badge-tag" onclick="insertTag('settings-wa-booking-item', '{horario}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{horario}</span>
                                             <span class="badge-tag" onclick="insertTag('settings-wa-booking-item', '{profesional}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{profesional}</span>
                                         </div>
-                                        <textarea id="settings-wa-booking-item" rows="4" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical;"></textarea>
+                                        <textarea id="settings-wa-booking-item" rows="6" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical; min-height: 110px;"></textarea>
                                         <button onclick="resetAgendaTemplate('booking-item')" style="align-self: flex-start; background: transparent; border: none; color: var(--color-dark-pink); font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 0;">Restablecer por defecto</button>
                                     </div>
 
                                     <!-- 3. Recordatorio de Cita (Admin) -->
-                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div id="wa-template-section-reminder" style="display: flex; flex-direction: column; gap: 8px; display: none;">
                                         <h4 style="margin: 0; font-size: 0.9rem; color: var(--color-dark-pink);">3. Recordatorio de Cita (Administrador)</h4>
                                         <p style="margin: 0; font-size: 0.78rem; color: #777;">Controla el mensaje de recordatorio enviado a los clientes desde la agenda.</p>
                                         <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px dashed rgba(var(--accent-rgb), 0.15);">
@@ -1745,19 +1729,19 @@
                                             <span class="badge-tag" onclick="insertTag('settings-wa-reminder', '{horario}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{horario}</span>
                                             <span class="badge-tag" onclick="insertTag('settings-wa-reminder', '{especialista}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{especialista}</span>
                                         </div>
-                                        <textarea id="settings-wa-reminder" rows="6" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical;"></textarea>
+                                        <textarea id="settings-wa-reminder" rows="10" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical; min-height: 180px;"></textarea>
                                         <button onclick="resetAgendaTemplate('reminder')" style="align-self: flex-start; background: transparent; border: none; color: var(--color-dark-pink); font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 0;">Restablecer por defecto</button>
                                     </div>
 
                                     <!-- 4. Mantenimiento / Cuidado (Admin) -->
-                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div id="wa-template-section-maintenance" style="display: flex; flex-direction: column; gap: 8px; display: none;">
                                         <h4 style="margin: 0; font-size: 0.9rem; color: var(--color-dark-pink);">4. Mantenimiento y Retorno (Administrador)</h4>
                                         <p style="margin: 0; font-size: 0.78rem; color: #777;">Controla el mensaje de cuidado/mantenimiento enviado a los clientes desde la sección de alertas de la agenda.</p>
                                         <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px dashed rgba(var(--accent-rgb), 0.15);">
                                             <span class="badge-tag" onclick="insertTag('settings-wa-maintenance', '{negocio}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{negocio}</span>
                                             <span class="badge-tag" onclick="insertTag('settings-wa-maintenance', '{cliente}')" style="background: rgba(var(--accent-rgb), 0.08); color: var(--color-dark-pink); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-family: monospace; cursor: pointer; font-weight: 700;">{cliente}</span>
                                         </div>
-                                        <textarea id="settings-wa-maintenance" rows="6" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical;"></textarea>
+                                        <textarea id="settings-wa-maintenance" rows="10" class="admin-input" style="font-family: monospace; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; width: 100%; box-sizing: border-box; resize: vertical; min-height: 180px;"></textarea>
                                         <button onclick="resetAgendaTemplate('maintenance')" style="align-self: flex-start; background: transparent; border: none; color: var(--color-dark-pink); font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 0;">Restablecer por defecto</button>
                                     </div>
 
@@ -1771,6 +1755,55 @@
                     </section>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <!-- Modal: Generador de Plantillas con IA -->
+    <div id="ai-generator-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10001; align-items:center; justify-content:center; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);">
+        <div style="background:var(--modal-panel-bg, #ffffff); color:var(--color-text, #333333); padding:30px; border-radius:20px; width:95%; max-width:500px; position:relative; box-shadow:0 15px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: popIn 0.3s forwards; border: 1px solid rgba(var(--accent-rgb), 0.15); display: flex; flex-direction: column; gap: 20px;">
+            <button onclick="closeAiGeneratorModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; line-height:1; transition: 0.2s;" onmouseover="this.style.color='var(--color-dark-pink)'" onmouseout="this.style.color='#999'">&times;</button>
+            
+            <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(var(--accent-rgb), 0.15)); display: flex; align-items: center; justify-content: center; color: #a855f7; font-size: 1.8rem; margin-bottom: 8px; box-shadow: 0 8px 20px rgba(168,85,247,0.15);">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3 style="margin:0; font-size:1.4rem; color:var(--color-dark-pink); font-weight: 800;">Escribe tu WhatsApp con IA</h3>
+                <p style="margin:0; font-size:0.85rem; color:#777; line-height: 1.4;">Ingresa tu tipo de negocio y estilo para que la IA diseñe tus 4 plantillas de mensajes automáticamente.</p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Input: Tipo de Negocio -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--color-dark-pink);">Tipo de Negocio</label>
+                    <input type="text" id="ai-business-type" class="admin-input" placeholder="Ej: Barbería, Odontología, Salón de Uñas, Spa, Veterinaria..." style="width:100%; height:42px; border-radius:8px; padding: 0 12px; box-sizing: border-box;">
+                </div>
+
+                <!-- Select: Tono -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--color-dark-pink);">Tono / Estilo</label>
+                    <select id="ai-tone-style" class="admin-input" style="width:100%; height:42px; border-radius:8px; padding: 0 12px; box-sizing: border-box; cursor: pointer; font-weight: 600;">
+                        <option value="Casual/Cercano">😊 Casual / Cercano y Amigable</option>
+                        <option value="Formal">💼 Formal / Respetuoso y Profesional</option>
+                        <option value="Divertido con Emojis">🔥 Divertido con Emojis Temáticos</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loader Layer (hidden by default) -->
+            <div id="ai-generator-loader" style="display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 10px 0; text-align: center;">
+                <div class="ai-spinner" style="width: 40px; height: 40px; border: 4px solid rgba(168,85,247,0.15); border-left-color: #a855f7; border-radius: 50%; animation: spin-soft 1.2s linear infinite;"></div>
+                <p style="margin: 0; font-size: 0.85rem; font-weight: 600; color: #a855f7;">Invocando a la Inteligencia Artificial...</p>
+                <p style="margin: 0; font-size: 0.75rem; color: #888;">Esto puede tardar unos segundos, redactando plantillas...</p>
+            </div>
+
+            <div id="ai-generator-actions" style="display: flex; gap: 12px; margin-top: 8px;">
+                <button onclick="closeAiGeneratorModal()" class="btn-primary" style="flex: 1; background: #eee; color: #444; border: none; height: 45px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background='#eee'">
+                    Cancelar
+                </button>
+                <button onclick="generateWaTemplatesWithAI()" class="btn-primary" style="flex: 1.5; background: linear-gradient(135deg, #a855f7, var(--color-dark-pink)); border: none; color: white; height: 45px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(168,85,247,0.25); transition: 0.2s;">
+                    <i class="fas fa-magic"></i> Generar Plantillas
+                </button>
+            </div>
         </div>
     </div>
 
@@ -2125,19 +2158,25 @@
         <div class="custom-modal" style="background:white; padding:0; border-radius:25px; width:95%; max-width: 600px; text-align: left; position:relative; overflow:hidden;">
             <!-- Cabecera con Pestañas -->
             <div style="background:var(--color-bg); padding:20px 30px; border-bottom:1px solid #eee;">
-                <h3 style="margin:0 0 15px 0; color:var(--color-dark-pink); display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-clock"></i> Ciclos de Mantenimiento (Uñas)
+                <h3 style="margin:0 0 15px 0; color:var(--color-accent); display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-clock"></i> Ciclos de Mantenimiento
                 </h3>
                 <div style="display:flex; gap:20px; border-bottom:1px solid #ddd;">
-                    <button onclick="switchMaintTab('mantenimiento')" id="tab-btn-maint" style="background:none; border:none; padding:10px 0; font-weight:700; color:var(--color-dark-pink); border-bottom:3px solid var(--color-dark-pink); cursor:pointer; font-size:0.85rem;">RECOR./MANTENIMIENTO</button>
+                    <button onclick="switchMaintTab('mantenimiento')" id="tab-btn-maint" style="background:none; border:none; padding:10px 0; font-weight:700; color:var(--color-accent); border-bottom:3px solid var(--color-accent); cursor:pointer; font-size:0.85rem;">RECOR./MANTENIMIENTO</button>
                 </div>
             </div>
 
             <div style="padding:30px;">
-                <!-- Sección 1: Recordatorios de Uñas -->
+                <!-- Sección 1: Recordatorios de Mantenimiento -->
                 <div id="maint-section-recordatorios">
-                    <p style="font-size:0.85rem; color:#666; margin-bottom:20px;">Configura cuántos días debe pasar para que un servicio de uñas necesite retoque.</p>
-                    <div id="maint-config-list" style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                    <p style="font-size:0.85rem; color:#666; margin-bottom:20px;">Configura cuántos días deben transcurrir para que un servicio necesite retoque o mantenimiento.</p>
+                    <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 0.85rem; font-weight: bold; color: var(--color-accent);">Filtrar por Categoría:</span>
+                        <select id="maint-category-filter" onchange="filterMaintServicesByCategory()" style="flex: 1; height: 44px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(var(--accent-rgb), 0.15); outline: none; font-family: inherit; font-size: 0.9rem; color: #333; background: white; cursor: pointer;">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div id="maint-config-list" style="max-height: 280px; overflow-y: auto; padding-right: 5px;">
                         <!-- Inyectado dinámicamente -->
                     </div>
                 </div>
@@ -2146,7 +2185,7 @@
 
                 <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px; border-top:1px solid #eee; padding-top:20px;">
                     <button onclick="document.getElementById('maintConfigModal').classList.remove('show')" style="background:#eee; color:#666; border:none; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer;">Cancelar</button>
-                    <button onclick="saveAdvancedTimeConfig()" class="btn-primary" style="width:auto; padding:10px 25px; border-radius:10px; background:var(--color-dark-pink); color:white; border:none; cursor:pointer; font-weight:700;">GUARDAR CAMBIOS</button>
+                    <button onclick="saveAdvancedTimeConfig()" class="btn-primary" style="width:auto; padding:10px 25px; border-radius:10px; background:var(--color-accent); color:white; border:none; cursor:pointer; font-weight:700;">GUARDAR CAMBIOS</button>
                 </div>
             </div>
         </div>
@@ -2232,6 +2271,8 @@
         </div>
     </div>
 
-     <script src="admin.js?v=20260612.3"></script>
+     <!-- SweetAlert2 -->
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+     <script src="admin.js?v=20260614.5"></script>
  </body>
  </html>

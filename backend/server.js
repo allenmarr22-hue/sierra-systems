@@ -512,6 +512,16 @@ function requireAdminOrMatchingClient(req, res, next) {
     }
     const token = auth.split(' ')[1];
     
+    // Soporte para Modo Demo en la generación de plantillas con IA
+    if (token === 'demo_session_token') {
+        if (req.path === '/api/admin/ai-generate-templates') {
+            req.userRole = 'demo';
+            return next();
+        } else {
+            return res.status(401).json({ error: 'Acceso no autorizado. Acción no permitida en modo demo.' });
+        }
+    }
+    
     const session = verifySignedToken(token);
     if (!session) {
         return res.status(401).json({ error: 'Sesión expirada o inválida. Por favor inicia sesión de nuevo.' });
@@ -3340,6 +3350,241 @@ app.post('/api/tickets/:id/typing', requireAdminOrMatchingClient, async (req, re
     }
 });
 
+
+// ============================================================
+// AGENDA: Generador de Plantillas de WhatsApp con IA (Gemini)
+// ============================================================
+app.post('/api/admin/ai-generate-templates', requireAdminOrMatchingClient, async (req, res) => {
+    const { businessType, style } = req.body;
+    if (!businessType || !style) {
+        return res.status(400).json({ error: 'Faltan parámetros requeridos (businessType, style).' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        console.log('[AI Templates] ⚠️ GEMINI_API_KEY no configurada. Usando fallback local.');
+        const fallback = generateLocalFallback(businessType, style);
+        return res.json({ success: true, isFallback: true, templates: fallback });
+    }
+
+    const systemPrompt = `Eres un experto en marketing digital y redacción de mensajes para WhatsApp.
+Tu tarea es generar 4 plantillas de mensajes de WhatsApp personalizadas en español para un negocio del tipo: "${businessType}", utilizando un tono y estilo: "${style}".
+
+Las plantillas de mensajes deben incluir etiquetas de reemplazo dinámico (tags) obligatorias y específicas para cada tipo de mensaje. A continuación se detallan las plantillas a generar y los tags permitidos para cada una:
+
+1. bookingHeader (Estructura del Mensaje de Cita):
+   Este mensaje lo envía el cliente para confirmar su intención de reserva.
+   DEBE presentarse en un formato estructurado con saltos de línea (multilínea), organizando la información de forma vertical (campo por línea).
+   Debe incluir obligatoriamente las siguientes etiquetas para identificar al cliente y los detalles de la reserva: {negocio}, {cliente}, {telefono}, {citas} y {total}.
+   El formato debe basarse estrictamente en la siguiente estructura multilínea (adaptándola al tono, saludo y emojis del negocio):
+   
+   Hola {negocio}!
+   
+   *Mi Nombre:* {cliente}
+   *Celular:* {telefono}
+   
+   Quiero agendar los siguientes servicios:
+   {citas}
+   
+   *Total a pagar: {total}*
+
+2. bookingItem (Fila de Cita Individual):
+   Este fragmento representa una sola cita. Se insertará repetidamente en el tag {citas} del bookingHeader.
+   Tags permitidos (puedes usar todos o algunos):
+   - {numero} (Número consecutivo, ej: 1)
+   - {servicio} (Nombre del servicio)
+   - {precio} (Precio del servicio)
+   - {fecha} (Fecha de la cita)
+   - {horario} (Hora de la cita)
+   - {profesional} (Nombre del especialista)
+   Ejemplo de estructura básica: "{numero}. {servicio} con {profesional} el {fecha} a las {horario} - {precio}"
+
+3. reminder (Recordatorio de Cita):
+   Este mensaje lo envía el administrador/negocio para recordar la cita.
+   Tags permitidos (puedes usar todos o algunos):
+   - {negocio}
+   - {cliente}
+   - {servicio}
+   - {horario}
+   - {especialista} (Nombre del especialista)
+   Ejemplo de estructura básica: "Hola {cliente}, te recordamos tu cita de {servicio} en {negocio} a las {horario} con {especialista}."
+
+4. maintenance (Mantenimiento y Retorno):
+   Este mensaje lo envía el administrador para fidelizar y recordar al cliente que retorne para mantenimiento (ej: corte de cabello, limpieza dental, retoque de uñas, etc.).
+   Tags permitidos (puedes usar todos o algunos):
+   - {negocio}
+   - {cliente}
+
+Instrucciones de estilo:
+- Tono "${style}": adapte el vocabulario, las expresiones y los emojis de acuerdo con este tono y con la temática del negocio ("${businessType}").
+- Emojis: si el estilo requiere emojis (especialmente en "Divertido con Emojis" o "Casual/Cercano"), utilícelos de forma atractiva y moderada, usando emojis alusivos al negocio (ej: tijeras para barbería, dientes para odontología, uñas/esmaltes para salón de uñas).
+- Formato de salida: Devuelve estrictamente un objeto JSON con las claves exactas: "bookingHeader", "bookingItem", "reminder", "maintenance". No agregues texto explicativo fuera del JSON.`;
+
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const requestBody = {
+            contents: [{
+                parts: [{ text: systemPrompt }]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json"
+            }
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error(`[AI Templates] Error de API Gemini (${response.status}):`, errText);
+            throw new Error(`Error en API de Gemini: ${response.status}`);
+        }
+
+        const resultJson = await response.json();
+        const responseText = resultJson.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!responseText) {
+            throw new Error('No se recibió texto de respuesta de Gemini.');
+        }
+
+        const parsedTemplates = JSON.parse(responseText.trim());
+        
+        // Validar que tenga los campos necesarios
+        const validatedTemplates = {
+            bookingHeader: parsedTemplates.bookingHeader || parsedTemplates.booking_header || '',
+            bookingItem: parsedTemplates.bookingItem || parsedTemplates.booking_item || '',
+            reminder: parsedTemplates.reminder || '',
+            maintenance: parsedTemplates.maintenance || ''
+        };
+
+        return res.json({ success: true, isFallback: false, templates: validatedTemplates });
+
+    } catch (err) {
+        console.error('[AI Templates] Error llamando a Gemini. Usando fallback local:', err.message);
+        const fallback = generateLocalFallback(businessType, style);
+        return res.json({ success: true, isFallback: true, templates: fallback, errorMsg: err.message });
+    }
+});
+
+// Función de fallback local robusto para plantillas de WhatsApp
+function generateLocalFallback(businessType, style) {
+    const bizNormalized = businessType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isBarber = /barber|peluquer|estilo|cabello|barba|corte/i.test(bizNormalized);
+    const isDentist = /odontolog|dentis|dental|diente|clinica dental/i.test(bizNormalized);
+    const isNails = /unas|nail|manicur|pedicur|estetic|spa|salon/i.test(bizNormalized);
+
+    const tone = style.toLowerCase();
+
+    // Default general templates
+    let templates = {
+        bookingHeader: `Hola {negocio}!\n\n*Mi Nombre:* {cliente}\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total a pagar: {total}*`,
+        bookingItem: `{numero}. *{servicio}*\n   - Precio: {precio}\n   - Fecha: {fecha}\n   - Horario: {horario}\n   - Profesional: {profesional}\n`,
+        reminder: `✨ *Recordatorio de Cita* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* {servicio}\n⏰ *Hora:* {horario}\n👩🏻‍🎨 *Especialista:* {especialista}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`,
+        maintenance: `✨ *Cuidado de tu Servicio* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para saludarte y recordarte que ya es tiempo de realizar tu mantenimiento o programar tu próxima sesión. ✨\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`
+    };
+
+    if (isBarber) {
+        if (tone.includes('formal')) {
+            templates = {
+                bookingHeader: `Estimado/a {negocio},\n\n*Cliente:* {cliente}\n*Teléfono:* {telefono}\n\nSolicito formalmente agendar los siguientes servicios de barbería:\n{citas}\n\n*Total estimado: {total}*\n\nAgradezco su pronta confirmación.`,
+                bookingItem: `{numero}. {servicio} con el profesional {profesional} para el día {fecha} a las {horario} (Precio: {precio})\n`,
+                reminder: `Estimado/a {cliente},\n\nLe escribimos de {negocio} para recordarle su cita de barbería programada:\n\nServicio: {servicio}\nHora: {horario}\nEspecialista: {especialista}\n\nLe solicitamos confirmar su asistencia respondiendo a este mensaje. Atentamente.`,
+                maintenance: `Estimado/a {cliente},\n\nEsperamos que se encuentre bien. Le escribimos de {negocio} para recordarle que es momento de realizar su mantenimiento de corte y barba. Quedamos a su entera disposición para agendar su próxima visita.`
+            };
+        } else if (tone.includes('divertido') || tone.includes('emoji')) {
+            templates = {
+                bookingHeader: `¡Hola 💈 {negocio}! 🔥\n\n*Cliente:* {cliente} 🤙\n*Celular:* {telefono}\n\nQuiero agendar este combo de estilo:\n{citas}\n\n*Total: {total}* 💰\n\n¿Tienen espacio para mí? 😎`,
+                bookingItem: `{numero}. ⚡ {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `¡Hola {cliente}! 👋 💈\n\nDesde {negocio} te recordamos que tienes una cita de estilo programada:\n\n🔥 Servicio: {servicio}\n⏰ Hora: {horario}\n😎 Barbero: {especialista}\n\n¡No faltes! Confírmanos con un "Sí" si estás listo. 👍`,
+                maintenance: `¡Qué tal, {cliente}! 😎 👋\n\n¿Esa melena o barba ya necesitan un retoque de campeonato? 💈✂️\n\nEn {negocio} estamos listos para dejarte al 100%. ¿Te separamos un turno para esta semana? 😉`
+            };
+        } else { // casual
+            templates = {
+                bookingHeader: `¡Hola {negocio}!\n\n*Cliente:* {cliente}\n*Celular:* {telefono}\n\nMe gustaría reservar estos servicios:\n{citas}\n\n*Total: {total}*\n\n¿Me confirman disponibilidad?`,
+                bookingItem: `{numero}. {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `Hola {cliente}!\n\nTe escribimos de {negocio} para recordarte tu cita:\n\nServicio: {servicio}\nHora: {horario}\nProfesional: {especialista}\n\n¡Te esperamos! Confírmanos respondiendo con un sí.`,
+                maintenance: `¡Hola {cliente}!\n\n¿Cómo vas? Te escribimos de {negocio} para saludarte y recordarte que ya va siendo hora de renovar tu corte de cabello o barba. ¿Te agendamos un espacio para esta semana?`
+            };
+        }
+    } else if (isDentist) {
+        if (tone.includes('formal')) {
+            templates = {
+                bookingHeader: `Estimado/a {negocio},\n\n*Paciente:* {cliente}\n*Teléfono:* {telefono}\n\nSolicito agendar una cita clínica para los siguientes tratamientos odontológicos:\n{citas}\n\n*Total presupuestado: {total}*\n\nQuedo a la espera de su confirmación.`,
+                bookingItem: `{numero}. {servicio} con el Dr./Dra. {profesional} para el día {fecha} a las {horario} (Costo: {precio})\n`,
+                reminder: `Estimado/a {cliente},\n\nLe escribimos de la clínica {negocio} para recordarle su cita de salud dental:\n\nTratamiento: {servicio}\nHora: {horario}\nOdontólogo/a: {especialista}\n\nLe solicitamos confirmar su asistencia con anticipación. Atentamente.`,
+                maintenance: `Estimado/a {cliente},\n\nLe escribimos de {negocio} para recordarle la importancia de su limpieza dental semestral. Le sugerimos agendar una cita de mantenimiento preventivo para esta semana. Quedamos a su disposición.`
+            };
+        } else if (tone.includes('divertido') || tone.includes('emoji')) {
+            templates = {
+                bookingHeader: `¡Hola 🦷 {negocio}! ✨\n\n*Paciente:* {cliente} 😁\n*Celular:* {telefono}\n\nDeseo agendar cita para cuidar mi sonrisa:\n{citas}\n\n*Total: {total}* 🎉\n\n¿Tienen un espacio libre? ¡Nos vemos!`,
+                bookingItem: `{numero}. ⭐ {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `¡Hola {cliente}! 👋🦷\n\n¡Es hora de lucir esa gran sonrisa en {negocio}! Recuerda tu cita:\n\n✨ Tratamiento: {servicio}\n⏰ Hora: {horario}\n👩‍⚕️ Profesional: {especialista}\n\nConfírmanos con un "Sí" y prepárate para brillar. ✨`,
+                maintenance: `¡Hola {cliente}! 😁👋\n\n¡Que nada apague tu sonrisa de estrella! ✨🦷\n\nEn {negocio} queremos recordarte que ya toca tu control preventivo o limpieza para mantener tus dientes impecables. ¿Separamos tu espacio hoy mismo? 🌟`
+            };
+        } else { // casual
+            templates = {
+                bookingHeader: `¡Hola {negocio}!\n\n*Paciente:* {cliente}\n*Celular:* {telefono}\n\nMe gustaría reservar cita para los siguientes servicios:\n{citas}\n\n*Total: {total}*\n\n¿Tienen disponibilidad?`,
+                bookingItem: `{numero}. {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `Hola {cliente}!\n\nTe escribimos de {negocio} para recordarte tu cita dental:\n\nServicio: {servicio}\nHora: {horario}\nEspecialista: {especialista}\n\nRecuerda llegar a tiempo. Confírmanos tu asistencia respondiendo a este mensaje. ¡Gracias!`,
+                maintenance: `¡Hola {cliente}! 👋\n\n¿Cómo estás? En {negocio} queremos recordarte que ya han pasado unos meses desde tu última visita. Es momento de un chequeo dental de rutina para cuidar tu salud. ¿Te agendamos un turno?`
+            };
+        }
+    } else if (isNails) {
+        if (tone.includes('formal')) {
+            templates = {
+                bookingHeader: `Estimado/a {negocio},\n\n*Cliente:* {cliente}\n*Teléfono:* {telefono}\n\nSolicito agendar una cita para los siguientes servicios de estética:\n{citas}\n\n*Total estimado: {total}*\n\nAgradezco su confirmación.`,
+                bookingItem: `{numero}. {servicio} con la especialista {profesional} el {fecha} a las {horario} (Costo: {precio})\n`,
+                reminder: `Estimado/a {cliente},\n\nLe escribimos de {negocio} para recordarle su cita programada de estética y cuidado personal:\n\nServicio: {servicio}\nHora: {horario}\nEspecialista: {especialista}\n\nLe solicitamos amablemente confirmar su asistencia. Atentamente.`,
+                maintenance: `Estimado/a {cliente},\n\nLe saludamos de {negocio} para recordarle que es tiempo de realizar el retoque o mantenimiento de sus uñas/diseño. Quedamos a su servicio para coordinar una nueva cita.`
+            };
+        } else if (tone.includes('divertido') || tone.includes('emoji')) {
+            templates = {
+                bookingHeader: `¡Hola 💅 {negocio}! ✨\n\n*Cliente:* {cliente} 💕\n*Celular:* {telefono}\n\n¡Necesito un día de spa! Quiero agendar:\n{citas}\n\n*Total: {total}* 🛍️\n\n¿Tienen espacio para consentirme? 👑`,
+                bookingItem: `{numero}. 🌸 {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `¡Hola {cliente}! 👋💅\n\n¡Tu momento de brillar está cerca en {negocio}! No olvides tu cita:\n\n💖 Servicio: {servicio}\n⏰ Hora: {horario}\n🎨 Artista: {especialista}\n\n¿Confirmadísima? Responde con un "Sí" para asegurar tu cita de spa. 💎`,
+                maintenance: `¡Hola {cliente}! Princess time! 👑💅\n\n¿Esas uñitas ya necesitan un cambio de diseño o mantenimiento para seguir deslumbrando? ✨\n\nEn {negocio} tenemos listos los mejores tonos. ¡Escríbenos para agendar tu espacio esta semana! 💕`
+            };
+        } else { // casual
+            templates = {
+                bookingHeader: `¡Hola {negocio}!\n\n*Cliente:* {cliente}\n*Celular:* {telefono}\n\nQuiero reservar estos servicios de spa/uñas:\n{citas}\n\n*Total: {total}*\n\n¿Tienen citas disponibles?`,
+                bookingItem: `{numero}. {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `Hola {cliente}! 👋\n\nTe escribimos de {negocio} para recordarte tu cita programada:\n\nServicio: {servicio}\nHora: {horario}\nEspecialista: {especialista}\n\n¡Nos vemos pronto! Confírmanos tu asistencia respondiendo a este mensaje.`,
+                maintenance: `¡Hola {cliente}! 👋\n\n¿Qué tal tus uñas? Te escribimos de {negocio} para recordarte que ya toca consentirte con un retoque o mantenimiento de diseño. ¿Te separamos un espacio para esta semana?`
+            };
+        }
+    } else { // General fallback
+        if (tone.includes('formal')) {
+            templates = {
+                bookingHeader: `Estimado/a {negocio},\n\n*Cliente:* {cliente}\n*Teléfono:* {telefono}\n\nSolicito formalmente agendar los siguientes servicios:\n{citas}\n\n*Total: {total}*\n\nAgradezco su confirmación.`,
+                bookingItem: `{numero}. {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `Estimado/a {cliente},\n\nLe escribimos de {negocio} para recordarle su cita programada:\n\nServicio: {servicio}\nHora: {horario}\nEspecialista: {especialista}\n\nLe solicitamos confirmar su asistencia. Atentamente.`,
+                maintenance: `Estimado/a {cliente},\n\nLe escribimos de {negocio} para recordarle que es momento de su próxima sesión de mantenimiento. Quedamos a su entera disposición para agendar su cita.`
+            };
+        } else if (tone.includes('divertido') || tone.includes('emoji')) {
+            templates = {
+                bookingHeader: `¡Hola ✨ {negocio}! 🎉\n\n*Cliente:* {cliente} 👋\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total: {total}* 💰\n\n¿Tienen espacio para mí? 😄`,
+                bookingItem: `{numero}. 🎯 {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `¡Hola {cliente}! 👋✨\n\nTe recordamos tu cita programada en {negocio}:\n\n🌟 Servicio: {servicio}\n⏰ Hora: {horario}\n👩‍🎨 Especialista: {especialista}\n\n¡Te esperamos! Confírmanos con un "Sí". 👍`,
+                maintenance: `¡Hola {cliente}! 👋✨\n\n¡Es tiempo de cuidarte y consentirte de nuevo! En {negocio} estamos listos para atenderte en tu próxima sesión. ¿Te agendamos un turno esta semana? 😊`
+            };
+        } else { // casual
+            templates = {
+                bookingHeader: `¡Hola {negocio}!\n\n*Cliente:* {cliente}\n*Celular:* {telefono}\n\nMe gustaría reservar estos servicios:\n{citas}\n\n*Total: {total}*\n\n¿Me confirman si tienen disponibilidad?`,
+                bookingItem: `{numero}. {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
+                reminder: `Hola {cliente}!\n\nTe escribimos de {negocio} para recordarte tu cita programada:\n\nServicio: {servicio}\nHora: {horario}\nEspecialista: {especialista}\n\n¡Te esperamos! Por favor confírmanos respondiendo con un sí.`,
+                maintenance: `¡Hola {cliente}! 👋\n\n¿Cómo vas? En {negocio} te recordamos que ya toca tu visita de mantenimiento de tu servicio. ¿Te gustaría agendar una cita para esta semana?`
+            };
+        }
+    }
+
+    return templates;
+}
 
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, '../frontend', 'index.html'));

@@ -2580,6 +2580,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.categories = JSON.parse(localStorage.getItem('streetfeed_categories')) || state.categories;
             state.combos = JSON.parse(localStorage.getItem('streetfeed_combos')) || state.combos;
             state.config = JSON.parse(localStorage.getItem('streetfeed_config')) || state.config;
+            state.orders = JSON.parse(localStorage.getItem('streetfeed_orders')) || state.orders;
             
             // Re-renderizar todo el sistema en vivo
             updateUIFromConfig();

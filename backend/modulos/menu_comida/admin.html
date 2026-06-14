@@ -251,7 +251,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=2.1">
-    <link rel="stylesheet" href="css/admin.css?v=4.26">
+    <link rel="stylesheet" href="css/admin.css?v=4.28">
     <!-- Disable public logo shimmer on admin panel -->
     <style>
         .logo-text::after { display: none !important; }
@@ -764,6 +764,9 @@
                                         Pendientes
                                         <span id="badge-pending" style="background: #4caf50; color: #fff; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 900; display: none;">0</span>
                                     </button>
+                                    <button onclick="window.openWhatsAppTemplateModal()" class="order-settings-btn" title="Configurar plantilla de WhatsApp">
+                                        <i data-lucide="wrench" style="width: 16px; height: 16px;"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -834,6 +837,48 @@
                             </div>
                         </div>
 
+                        <!-- WhatsApp Template Modal (Ventana Flotante en Medio) -->
+                        <div id="wa-template-modal" class="modal hidden" style="z-index: 100015;">
+                            <div class="modal-content glass" style="max-width: 600px; padding: 2.5rem; border-radius: 24px; position: relative;">
+                                <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, var(--theme-accent) 0%, transparent 70%); opacity: 0.1; pointer-events: none;"></div>
+
+                                <button type="button" onclick="document.getElementById('wa-template-modal').classList.add('hidden')" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.05); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10;">
+                                    <i data-lucide="x" style="width: 18px;"></i>
+                                </button>
+
+                                <h3 class="font-serif" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.8rem; font-size: 1.5rem;">
+                                    <i data-lucide="message-square" style="color: var(--theme-accent); width: 24px; height: 24px;"></i> Plantilla de WhatsApp
+                                </h3>
+                                <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1.5rem;">Personaliza el mensaje que envían los clientes por WhatsApp cuando realizan un pedido. Haz clic en las etiquetas para insertarlas:</p>
+                                
+                                <form id="wa-template-form">
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.2rem; background: rgba(255,255,255,0.02); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{negocio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{negocio}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{cliente}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{cliente}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{telefono}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{telefono}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{entrega}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{detalles_entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{detalles_entrega}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{pago}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{pago}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{nota}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{nota}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{resumen_pedido}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{resumen_pedido}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{precios}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{precios}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{total}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{total}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_inicio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{emojis_inicio}</span>
+                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_fin}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{emojis_fin}</span>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <textarea id="conf-wa-template" rows="12" style="width: 100%; font-family: monospace; font-size: 0.9rem; padding: 0.8rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff; resize: vertical;"></textarea>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                                        <button type="button" class="save-config-btn" onclick="resetStreetFeedWATemplate()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); width: auto;"><i data-lucide="rotate-ccw"></i> Restablecer</button>
+                                        <button type="submit" class="save-config-btn" style="width: auto; margin-left: auto; background: var(--theme-accent); border: none; color: #fff; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.2);"><i data-lucide="save"></i> Guardar Cambios</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- Tab: History -->
@@ -879,7 +924,6 @@
                             <button type="button" class="subtab-btn" data-section="security-sec">Seguridad</button>
                             <button type="button" class="subtab-btn" data-section="hero-sec">Portada (Hero)</button>
                             <button type="button" class="subtab-btn" data-section="footer-sec">Pie de Página</button>
-                            <button type="button" class="subtab-btn" data-section="whatsapp-sec">💬 Plantilla WhatsApp</button>
                             <button type="button" class="subtab-btn subtab-btn-accent" data-section="appearance-sec">🎨 Apariencia</button>
                         </div>
 
@@ -1057,36 +1101,7 @@
                                 </div>
                             </div>
 
-                            <div id="whatsapp-sec" class="config-sub-section hidden">
-                                <div class="config-card">
-                                    <h3>Plantilla de Mensaje de WhatsApp</h3>
-                                    <p>Personaliza el mensaje que envían los clientes por WhatsApp cuando realizan un pedido. Haz clic en las etiquetas para insertarlas:</p>
-                                    
-                                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.2rem; background: rgba(255,255,255,0.02); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--glass-border);">
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{negocio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{negocio}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{cliente}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{cliente}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{telefono}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{telefono}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{entrega}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{detalles_entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{detalles_entrega}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{pago}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{pago}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{nota}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{nota}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{resumen_pedido}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{resumen_pedido}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{precios}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{precios}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{total}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{total}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_inicio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{emojis_inicio}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_fin}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{emojis_fin}</span>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <textarea id="conf-wa-template" rows="14" style="width: 100%; font-family: monospace; font-size: 0.9rem; padding: 0.8rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff; resize: vertical;"></textarea>
-                                    </div>
-                                    
-                                    <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
-                                        <button type="button" class="save-config-btn" onclick="resetStreetFeedWATemplate()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); width: auto;"><i data-lucide="rotate-ccw"></i> Restablecer por Defecto</button>
-                                        <button type="submit" class="save-config-btn" style="width: auto; margin-left: auto;"><i data-lucide="save"></i> Guardar Cambios</button>
-                                    </div>
-                                </div>
-                            </div>
+
 
                             <div id="appearance-sec" class="config-sub-section hidden">
                                 <div class="config-card">
@@ -1865,7 +1880,7 @@
         </div>
     </div>
 
-    <script src="js/script_v9.js?v=20260612.3"></script>
-    <script src="js/admin.js?v=4.26"></script>
+    <script src="js/script_v9.js?v=20260612.4"></script>
+    <script src="js/admin.js?v=4.30"></script>
 </body>
 </html>

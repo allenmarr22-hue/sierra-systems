@@ -2376,6 +2376,37 @@ body.light-mode input[type="date"]::-webkit-calendar-picker-indicator {
     color: #000 !important;
 }
 
+.order-settings-btn {
+    padding: 0.6rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    flex-shrink: 0;
+}
+.order-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--theme-accent);
+}
+.order-settings-btn:active {
+    transform: scale(0.92);
+}
+body.light-mode .order-settings-btn {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+body.light-mode .order-settings-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--theme-accent);
+}
+
+
 /* --- PREMIUM ORDERS DASHBOARD (v2.0) --- */
 .orders-container-pro {
     width: 100%;

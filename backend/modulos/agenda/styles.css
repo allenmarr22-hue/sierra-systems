@@ -277,13 +277,13 @@ img {
     -webkit-backdrop-filter: blur(15px);
     min-width: 220px;
     border-radius: 18px;
-    box-shadow: 0 20px 45px rgba(184, 115, 129, 0.25);
+    box-shadow: 0 20px 45px rgba(var(--accent-rgb), 0.25);
     padding: 12px 8px;
     opacity: 0;
     visibility: hidden;
     transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     list-style: none;
-    border: 1px solid rgba(184, 115, 129, 0.15);
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
     overflow: hidden;
 }
 
@@ -314,7 +314,7 @@ img {
 }
 
 .dropdown-menu li a:hover {
-    background: linear-gradient(135deg, rgba(184, 115, 129, 0.1), rgba(160, 93, 107, 0.05));
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(var(--accent-rgb), 0.05));
     color: var(--color-accent) !important;
     transform: translateX(5px);
 }
@@ -1260,7 +1260,7 @@ img {
 .btn-cancel { background: #f0f0f0; color: #777; }
 .btn-cancel:hover { background: #e0e0e0; color: #444; }
 .btn-confirm { background: var(--color-accent); color: white; }
-.btn-confirm:hover { background: var(--color-dark-pink); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(184, 115, 129, 0.3); }
+.btn-confirm:hover { background: var(--color-dark-pink); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(var(--accent-rgb), 0.3); }
 
 /* --- Floating WhatsApp Button with Tooltip --- */
 .whatsapp-float {
@@ -1398,7 +1398,7 @@ img {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: rgba(74, 46, 53, 0.95); /* High-end dark pink overlay */
+    background-color: rgba(15, 23, 42, 0.95); /* High-end dark slate overlay */
     backdrop-filter: blur(10px);
     cursor: zoom-out;
     align-items: center;
@@ -1570,9 +1570,9 @@ img {
 
 /* --- Promo Category Pills --- */
 .promo-category-pill {
-    background: rgba(184, 115, 129, 0.08); /* Fondo rosado muy suave */
+    background: rgba(var(--accent-rgb), 0.08); /* Fondo rosado muy suave */
     color: var(--color-dark-pink);
-    border: 1.5px solid rgba(184, 115, 129, 0.2);
+    border: 1.5px solid rgba(var(--accent-rgb), 0.2);
     padding: 8px 16px;
     border-radius: 12px; /* Cuadrito con puntas redondeadas */
     font-size: 0.85rem;
@@ -1588,7 +1588,7 @@ img {
     background: var(--color-dark-pink);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(184, 115, 129, 0.2);
+    box-shadow: 0 5px 15px rgba(var(--accent-rgb), 0.2);
 }
 
 /* --- Cart Animation --- */
@@ -1617,7 +1617,7 @@ img {
     border-radius: 20px;
     padding: 20px;
     margin-bottom: 25px;
-    box-shadow: 0 10px 30px rgba(184, 115, 129, 0.1);
+    box-shadow: 0 10px 30px rgba(var(--accent-rgb), 0.1);
 }
 
 .slots-grid {
@@ -1726,6 +1726,16 @@ img {
     background: #f9f9f9;
     border: 2px solid white;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* Placeholder de avatar para especialistas sin foto */
+.specialist-avatar-placeholder {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--accent-rgb, 229, 169, 180), 0.12) !important;
+    color: var(--color-accent, #E5A9B4) !important;
+    font-size: 1.4rem;
 }
 
 .specialist-mini-name {
@@ -1874,9 +1884,9 @@ td:hover .choose-hint {
 
 /* Animación para etiquetas de oferta */
 @keyframes pulse-badge {
-    0% { transform: scale(1); box-shadow: 0 4px 10px rgba(184,115,129,0.4); }
-    50% { transform: scale(1.05); box-shadow: 0 6px 15px rgba(184,115,129,0.6); }
-    100% { transform: scale(1); box-shadow: 0 4px 10px rgba(184,115,129,0.4); }
+    0% { transform: scale(1); box-shadow: 0 4px 10px rgba(var(--accent-rgb),0.4); }
+    50% { transform: scale(1.05); box-shadow: 0 6px 15px rgba(var(--accent-rgb),0.6); }
+    100% { transform: scale(1); box-shadow: 0 4px 10px rgba(var(--accent-rgb),0.4); }
 }
 .agenda-header-responsive-wrapper { display: inline-block; }
 .agenda-icon-responsive { font-size: inherit; color: var(--color-dark-pink); margin-right: 5px; }
@@ -2169,3 +2179,271 @@ td:hover .choose-hint {
     background-color: #1e293b !important;
     color: #cbd5e1 !important;
 }
+
+/* Menu Dropdown de navegacion en modo oscuro */
+.dark-theme .dropdown-menu {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4) !important;
+}
+.dark-theme .dropdown-menu li a {
+    color: #cbd5e1 !important;
+}
+.dark-theme .dropdown-menu li a:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--color-accent) !important;
+}
+
+/* Booking inputs y formularios en modo oscuro */
+.dark-theme .booking-input {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+.dark-theme .booking-input:focus {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 5px rgba(var(--accent-rgb), 0.3) !important;
+}
+.dark-theme .unified-booking-panel {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border-color: rgba(var(--accent-rgb), 0.3) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Slot chips de seleccion en modo oscuro */
+.dark-theme .slot-chip {
+    background-color: #1e293b !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(var(--accent-rgb), 0.4) !important;
+}
+.dark-theme .slot-chip:hover {
+    background-color: rgba(var(--accent-rgb), 0.15) !important;
+    color: #ffffff !important;
+}
+.dark-theme .slot-chip.active {
+    background-color: var(--color-accent) !important;
+    color: #ffffff !important;
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 5px 15px rgba(var(--accent-rgb), 0.4) !important;
+}
+
+/* Vista de lineas de tiempo de especialistas en modo oscuro */
+.dark-theme .specialist-info-card {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+.dark-theme .specialist-mini-name {
+    color: #e2e8f0 !important;
+}
+.dark-theme .specialist-avatar-placeholder {
+    background: rgba(var(--accent-rgb, 229, 169, 180), 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme .timeline-track {
+    background: #151f32 !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+.dark-theme .timeline-hour-marker {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+.dark-theme .timeline-hour-label {
+    color: #64748b !important;
+}
+.dark-theme .appointment-block {
+    background: rgba(var(--accent-rgb), 0.2) !important;
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+.dark-theme .appointment-block-status {
+    color: #ffffff !important;
+}
+.dark-theme .appointment-block-time {
+    color: #cbd5e1 !important;
+}
+
+/* Modales customizados en modo oscuro */
+.dark-theme .custom-modal {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+}
+.dark-theme .responsive-agenda-grid td:first-child {
+    color: #cbd5e1 !important;
+}
+
+/* ── Specialist Selection Window ─────────────────────── */
+.dark-theme .window-option {
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+.dark-theme .window-option:hover {
+    background: rgba(var(--accent-rgb), 0.15) !important;
+    color: #f8fafc !important;
+}
+.dark-theme .window-option.disabled {
+    background: #151f32 !important;
+    opacity: 0.4 !important;
+}
+.dark-theme .window-option .opt-status {
+    color: #94a3b8 !important;
+}
+#specialist-window-list {
+    background: var(--color-white);
+}
+
+/* ── Booking Modal Overlay ───────────────────────────── */
+.dark-theme .booking-modal {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+}
+.dark-theme .booking-modal-content {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(var(--accent-rgb), 0.4) !important;
+}
+.dark-theme .booking-modal-content label {
+    color: #cbd5e1 !important;
+}
+.dark-theme .booking-modal-close {
+    color: #94a3b8 !important;
+}
+.dark-theme .booking-modal-close:hover {
+    color: #f8fafc !important;
+}
+
+/* ── Glass Module dark adjustments ───────────────────── */
+.dark-theme .glass-module {
+    background: rgba(15, 23, 42, 0.7) !important;
+    border-color: rgba(var(--accent-rgb), 0.4) !important;
+}
+.dark-theme #promo-modal h2 {
+    color: #e2e8f0 !important;
+}
+.dark-theme #promo-modal p {
+    color: #cbd5e1 !important;
+}
+.dark-theme #promo-timer-display {
+    color: #e2e8f0 !important;
+}
+
+/* ── Agenda Title/Icon Colors ─────────────────────────── */
+.dark-theme .agenda-title-responsive,
+.dark-theme .agenda-icon-responsive {
+    color: var(--color-accent) !important;
+}
+.dark-theme .agenda-subtitle-responsive {
+    color: #64748b !important;
+}
+
+/* ── Category & Section Headings ─────────────────────── */
+.dark-theme .category-item h4 {
+    color: #e2e8f0 !important;
+}
+.dark-theme .section-title,
+.dark-theme .section-subtitle {
+    color: #e2e8f0 !important;
+}
+.dark-theme h2:not(.swal2-title),
+.dark-theme h3:not(.swal2-title) {
+    color: #e2e8f0;
+}
+
+/* ── Category Circle placeholders ────────────────────── */
+.dark-theme .category-circle {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ── Hero & Header elements ───────────────────────────── */
+.dark-theme header {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+.dark-theme .hero-text h1,
+.dark-theme .hero-text h2 {
+    color: #f1f5f9 !important;
+}
+.dark-theme .hero-text p {
+    color: #94a3b8 !important;
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+.dark-theme .footer,
+.dark-theme footer {
+    background: #0a1628 !important;
+    color: #94a3b8 !important;
+    border-top: 1px solid rgba(255,255,255,0.06) !important;
+}
+.dark-theme .footer a,
+.dark-theme footer a {
+    color: #cbd5e1 !important;
+}
+
+/* ── Nav links & buttons ─────────────────────────────── */
+.dark-theme nav a,
+.dark-theme .nav-link {
+    color: #cbd5e1 !important;
+}
+.dark-theme nav a:hover,
+.dark-theme .nav-link:hover {
+    color: var(--color-accent) !important;
+}
+.dark-theme .cart-icon-wrapper {
+    color: #e2e8f0 !important;
+}
+
+/* ── Dark mode toggle btn ─────────────────────────────── */
+.dark-theme #dark-mode-toggle {
+    background: rgba(255,255,255,0.08) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(255,255,255,0.12) !important;
+}
+.dark-theme #dark-mode-toggle:hover {
+    background: rgba(255,255,255,0.14) !important;
+}
+
+/* ── Gallery Items ────────────────────────────────────── */
+.dark-theme .cat-gallery-item {
+    background: #1e293b !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important;
+}
+
+/* ── Promo bubble reminder ────────────────────────────── */
+.dark-theme #promo-reminder-btn {
+    background: var(--color-accent) !important;
+    color: #fff !important;
+}
+
+/* ── Status Banner ────────────────────────────────────── */
+.dark-theme .status-banner {
+    background: rgba(30, 41, 59, 0.95) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(var(--accent-rgb), 0.3) !important;
+}
+
+/* ── Cart Drawer ──────────────────────────────────────── */
+.dark-theme #cart-drawer {
+    background: #0f172a !important;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.5) !important;
+}
+.dark-theme #cart-drawer h3,
+.dark-theme #cart-drawer h4 {
+    color: #e2e8f0 !important;
+}
+.dark-theme #cart-drawer p,
+.dark-theme #cart-drawer span {
+    color: #94a3b8 !important;
+}
+.dark-theme #cart-drawer .cart-item-name {
+    color: #e2e8f0 !important;
+}
+
+/* ── Input labels in booking panel ───────────────────── */
+.dark-theme label {
+    color: #cbd5e1 !important;
+}
+.dark-theme input::placeholder,
+.dark-theme textarea::placeholder {
+    color: #64748b !important;
+}
+

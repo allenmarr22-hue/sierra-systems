@@ -417,6 +417,7 @@ function renderBizTypeSelector() {
             grid.querySelectorAll('.biz-type-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             state.config.bizType = bizId;
+            state.config.waManualMode = false;
 
             const biz = BIZ_TYPES.find(b => b.id === bizId);
             if (!biz) return;
@@ -490,6 +491,10 @@ function updateBizPreview(bizId) {
     if (editBtn) {
         editBtn.onclick = () => {
             state.config.waManualMode = true;
+            if (!state.config.waCustomEmojis) {
+                state.config.waCustomEmojis = biz.emojis;
+            }
+            state.config.orderEmojis = state.config.waCustomEmojis;
             updateBizPreview(bizId);
         };
     }
@@ -498,6 +503,7 @@ function updateBizPreview(bizId) {
     if (resetBtn) {
         resetBtn.onclick = () => {
             state.config.waManualMode = false;
+            state.config.orderEmojis = biz.emojis;
             updateBizPreview(bizId);
         };
     }
@@ -506,6 +512,7 @@ function updateBizPreview(bizId) {
     if (emojisInp) {
         emojisInp.oninput = (e) => {
             state.config.waCustomEmojis = e.target.value;
+            state.config.orderEmojis = e.target.value;
             // Update preview icons
             const previewText = preview.querySelector('.preview-text');
             const previewIcon = preview.querySelector('.preview-emojis');
@@ -602,7 +609,9 @@ window.setPromoIcon = function(id) {
 
 window.setPromoAnim = function(id) {
     state.config.promoAnim = id;
+    saveStateToLocal();
     renderPromoConfig();
+    if (typeof updatePromoBubbleUI === 'function') updatePromoBubbleUI();
 };
 
 
@@ -814,7 +823,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeBizCard = document.querySelector('.biz-type-card.active');
             const bizId = activeBizCard ? activeBizCard.dataset.bizId : (state.config.bizType || 'burgers');
             state.config.bizType = bizId;
-            if (bizId === 'custom') {
+            if (state.config.waManualMode === true && state.config.waCustomEmojis) {
+                state.config.orderEmojis = state.config.waCustomEmojis;
+            } else if (bizId === 'custom') {
                 state.config.orderEmojis = document.getElementById('conf-order-emojis').value;
             } else {
                 const biz = BIZ_TYPES.find(b => b.id === bizId);
@@ -3361,6 +3372,8 @@ window.showOrderDetails = function(id) {
     }
 
     document.getElementById('order-details-modal').classList.remove('hidden');
+    const modalBody = document.querySelector('#order-details-modal .modal-body-pro');
+    if (modalBody) modalBody.scrollTop = 0;
     if (window.lucide) lucide.createIcons();
 }
 
@@ -4299,7 +4312,7 @@ window.insertTag = function(textareaId, tag) {
     const end = el.selectionEnd;
     const text = el.value;
     el.value = text.substring(0, start) + tag + text.substring(end);
-    el.focus();
+    el.focus({ preventScroll: true });
     el.selectionStart = el.selectionEnd = start + tag.length;
 };
 
@@ -4328,4 +4341,53 @@ window.resetStreetFeedWATemplate = function() {
         showToast("Plantilla restablecida por defecto.");
     }
 };
+
+window.openWhatsAppTemplateModal = function() {
+    const modal = document.getElementById('wa-template-modal');
+    if (modal) {
+        const textarea = document.getElementById('conf-wa-template');
+        if (textarea && state.config) {
+            textarea.value = state.config.waTemplateOrder || `*NUEVO PEDIDO - {negocio}*
+--------------------------
+👤 *CLIENTE:* {cliente}
+📞 *TELÉFONO:* {telefono}
+🚚 *ENTREGA:* {entrega}
+📍 {detalles_entrega}
+💵 *PAGO:* {pago}
+📝 *NOTA:* {nota}
+--------------------------
+
+🛒 *RESUMEN DEL PEDIDO:*
+{resumen_pedido}
+
+--------------------------
+{precios}
+💵 *TOTAL A PAGAR: {total}*
+--------------------------
+
+🚀 _Enviado desde el Menú Digital_`;
+        }
+        modal.classList.remove('hidden');
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.location.pathname.endsWith('admin.html')) return;
+
+    const waTemplateForm = document.getElementById('wa-template-form');
+    if (waTemplateForm) {
+        waTemplateForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const waTemplateEl = document.getElementById('conf-wa-template');
+            if (waTemplateEl) {
+                state.config.waTemplateOrder = waTemplateEl.value;
+                saveStateToLocal();
+                if (typeof updateUIFromConfig === 'function') updateUIFromConfig();
+                showToast("Plantilla de WhatsApp guardada ✅");
+                document.getElementById('wa-template-modal').classList.add('hidden');
+            }
+        });
+    }
+});
+
 

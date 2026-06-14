@@ -35,8 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             orange: { accent: '#E67E22', bg: '#FFF8F2', rgb: '230, 126, 34', hover: '#F39C12', dark: '#D35400' },
             cyan: { accent: '#3498DB', bg: '#F2F8FC', rgb: '52, 152, 219', hover: '#5DADE2', dark: '#1A5276' },
             purple: { accent: '#7D3C98', bg: '#F8F2FC', rgb: '125, 60, 152', hover: '#9B59B6', dark: '#4A235A' },
-            maroon: { accent: '#922B21', bg: '#FDEDEC', rgb: '146, 43, 33', hover: '#C0392B', dark: '#78281F' },
-            slate: { accent: '#38bdf8', bg: '#0f172a', rgb: '56, 189, 248', hover: '#0ea5e9', dark: '#0369a1' },
+            slate: { accent: '#38bdf8', bg: '#F1F5F9', rgb: '56, 189, 248', hover: '#0ea5e9', dark: '#0369a1' },
             
             emerald: { accent: '#16A085', bg: '#E8F8F5', rgb: '22, 160, 133', hover: '#1ABC9C', dark: '#0E6251' },
             mint: { accent: '#27AE60', bg: '#E8F8F0', rgb: '39, 174, 96', hover: '#2ECC71', dark: '#196F3D' },
@@ -63,13 +62,17 @@ document.addEventListener('DOMContentLoaded', () => {
         root.style.setProperty('--color-accent', theme.accent);
         root.style.setProperty('--color-accent-hover', theme.hover);
         root.style.setProperty('--color-dark-pink', theme.dark);
-        root.style.setProperty('--color-bg', theme.bg);
         root.style.setProperty('--accent-rgb', theme.rgb);
         
-        if (themeName === 'slate') {
+        const isDark = localStorage.getItem('agenda_client_dark_mode') === 'true';
+        if (isDark) {
+            // Remove inline --color-bg so the CSS .dark-theme class rule takes effect.
+            root.style.removeProperty('--color-bg');
             root.classList.add('dark-theme');
             root.classList.remove('light-theme');
         } else {
+            // In light mode, set the theme's light bg inline.
+            root.style.setProperty('--color-bg', theme.bg);
             root.classList.add('light-theme');
             root.classList.remove('dark-theme');
         }
@@ -323,14 +326,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 3. Actualizar enlace del botón de ubicación pública
-        const address = localStorage.getItem('agenda_site_address') || "Calle 14 # 11-74, Sevilla";
+        const address = localStorage.getItem('agenda_site_address') || "";
         const locBtn = document.getElementById('public-location-btn');
         if (locBtn) {
-            locBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+            if (address) {
+                locBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+                locBtn.style.display = 'inline-flex';
+            } else {
+                locBtn.style.display = 'none';
+            }
         }
     };
     window.applyPublicWhatsappLinks = function() {
-        const savedWa = localStorage.getItem('agenda_whatsapp_number') || "3057726115";
+        const savedWa = localStorage.getItem('agenda_whatsapp_number') || "";
+        if (!savedWa) {
+            document.querySelectorAll('a[href*="wa.me"]').forEach(link => {
+                link.style.display = 'none';
+            });
+            const floatWa = document.querySelector('.whatsapp-float');
+            if (floatWa) floatWa.style.display = 'none';
+            return;
+        }
         let cleanNum = savedWa.replace(/\D/g, '');
         // Si tiene 10 dígitos, añadir el código de país de Colombia (57) por defecto
         const fullWa = cleanNum.length === 10 ? "57" + cleanNum : cleanNum;
@@ -557,8 +573,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (data.social) localStorage.setItem('agenda_social_links', JSON.stringify(data.social));
                             if (data.theme) {
                                 localStorage.setItem('agenda_client_theme', data.theme);
-                                window.applyClientTheme(data.theme);
                             }
+                            if (data.dark_mode !== undefined) {
+                                localStorage.setItem('agenda_client_dark_mode', data.dark_mode ? 'true' : 'false');
+                            }
+                            window.applyClientTheme(localStorage.getItem('agenda_client_theme') || 'rose');
                             if (data.logo_url !== undefined) {
                                 if (data.logo_url) localStorage.setItem('agenda_logo_url', data.logo_url);
                                 else localStorage.removeItem('agenda_logo_url');
@@ -948,7 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sectionsContainer = document.getElementById('dynamic-services-sections');
 
         if(desktopNav) desktopNav.innerHTML = navHtml;
-        if(mobileNav) mobileNav.innerHTML = mobileNavHtml + `<li><a href="#galeria">Galería</a></li><li><a href="https://wa.me/573057726115" class="btn-primary" style="margin-top: 20px;">Agenda tu cita</a></li>`;
+        if(mobileNav) mobileNav.innerHTML = mobileNavHtml + `<li><a href="#galeria">Galería</a></li><li><a href="https://wa.me/573001234567" class="btn-primary" style="margin-top: 20px;">Agenda tu cita</a></li>`;
 
         // Inyectar HTML estructural inmediatamente (No más setTimeout/fadeOut para evitar pestañeo)
         if(categoryGrid) categoryGrid.innerHTML = gridHtml;
@@ -996,7 +1015,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (isInPromo && discPercent > 0) {
-                    promoBadge = `<div style="position:absolute; top:10px; right:10px; background:var(--color-accent); color:white; padding:5px 12px; border-radius:30px; font-size:0.75rem; font-weight:700; z-index:2; box-shadow:0 4px 10px rgba(184,115,129,0.3);">¡OFERTA -${discPercent}%!</div>`;
+                    promoBadge = `<div style="position:absolute; top:10px; right:10px; background:var(--color-accent); color:white; padding:5px 12px; border-radius:30px; font-size:0.75rem; font-weight:700; z-index:2; box-shadow:0 4px 10px rgba(var(--accent-rgb),0.3);">¡OFERTA -${discPercent}%!</div>`;
                     
                     const priceStr = svc.price ? String(svc.price) : "0";
                     const originalPriceNum = parseInt(priceStr.replace(/[^0-9]/g, '')) || 0;
@@ -1657,7 +1676,7 @@ window.renderCart = function() {
     }
 
     totalHtml += `
-    <div style="background:linear-gradient(135deg, var(--color-accent), var(--color-dark-pink)); border-radius:12px; padding:18px; margin-top:5px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 10px 20px rgba(184,115,129,0.2);">
+    <div style="background:linear-gradient(135deg, var(--color-accent), var(--color-dark-pink)); border-radius:12px; padding:18px; margin-top:5px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 10px 20px rgba(var(--accent-rgb),0.2);">
         <span style="color:#fff; font-family:var(--font-heading); font-size:1.15rem; letter-spacing:1px;">TOTAL A PAGAR:</span>
         <span style="color:#fff; font-weight:800; font-size:1.4rem;">${finalTotalFormatted}</span>
     </div>`;
@@ -1715,12 +1734,18 @@ window.updateCartItem = function(itemId, field, value) {
 }
 
 window.sendCartToWhatsApp = async function() {
+    const savedWa = localStorage.getItem('agenda_whatsapp_number') || "";
+    if (!savedWa) {
+        showToast('Este negocio aún no ha configurado su número de WhatsApp para recibir reservas.', 'error');
+        return;
+    }
+
     const name = document.getElementById('cart-client-name').value.trim();
     const phone = document.getElementById('cart-client-phone').value.trim();
     const sendBtn = document.querySelector('.whatsapp-btn');
     
     if (!name || name.length < 3) { showToast('Por favor escribe tu nombre completo.', 'error'); return; }
-    if (!phone || phone.length !== 10) { showToast('El número de celular debe tener exactamente 10 dígitos (Ej: 3057726115).', 'error'); return; }
+    if (!phone || phone.length !== 10) { showToast('El número de celular debe tener exactamente 10 dígitos (Ej: 3001234567).', 'error'); return; }
 
     // Feedback visual inmediato
     const originalBtnText = sendBtn ? sendBtn.innerHTML : '';
@@ -2091,7 +2116,7 @@ window.sendCartToWhatsApp = async function() {
     };
 
     // Build WhatsApp message
-    const savedWa = localStorage.getItem('agenda_whatsapp_number') || "3057726115";
+    const savedWa = localStorage.getItem('agenda_whatsapp_number') || "";
     const businessName = localStorage.getItem('agenda_site_name') || "StyleSync Pro";
     let cleanNum = savedWa.replace(/\D/g, '');
     const waNumber = cleanNum.length === 10 ? "57" + cleanNum : cleanNum;
@@ -2447,7 +2472,7 @@ function checkPromotions(force = false, isUserClick = false) {
         // Estética: Ordenar por longitud para que se vean balanceados
         itemsToDisplay.sort((a, b) => a.length - b.length);
 
-        categoryDisplay.innerHTML = itemsToDisplay.map(n => `<span style="background:rgba(229,169,180,0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');
+        categoryDisplay.innerHTML = itemsToDisplay.map(n => `<span style="background:rgba(var(--accent-rgb),0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');
 
         if (discountActive) {
             text.innerHTML += `<br><br><span style="font-size:0.9rem; color:var(--color-accent); font-weight:700;">¡Y además ${promos.discount.percent}% OFF en otras categorías!</span>`;
@@ -2463,10 +2488,10 @@ function checkPromotions(force = false, isUserClick = false) {
 
         const isSvcMode = promos.discount.mode === 'service';
         if (promos.discount.category === 'all') {
-            categoryDisplay.innerHTML = `<span style="display:inline-block; background:rgba(229,169,180,0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:20px; padding:4px 16px; font-size:0.78rem; font-weight:700; letter-spacing:0.5px; margin:3px 4px;">TODAS LAS CATEGORÁAS ✨</span>`;
+            categoryDisplay.innerHTML = `<span style="display:inline-block; background:rgba(var(--accent-rgb),0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:20px; padding:4px 16px; font-size:0.78rem; font-weight:700; letter-spacing:0.5px; margin:3px 4px;">TODAS LAS CATEGORÍAS ✨</span>`;
         } else if (isSvcMode && Array.isArray(promos.discount.services)) {
             const svcs = [...promos.discount.services].sort((a, b) => a.length - b.length);
-            categoryDisplay.innerHTML = svcs.map(n => `<span style="background:rgba(229,169,180,0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');
+            categoryDisplay.innerHTML = svcs.map(n => `<span style="background:rgba(var(--accent-rgb),0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');
         } else {
              const catsList = JSON.parse(localStorage.getItem('agenda_categories') || '[]');
              const names = (promos.discount.category || []).map(id => {
@@ -2474,7 +2499,7 @@ function checkPromotions(force = false, isUserClick = false) {
                 return m ? m.name : id;
             });
             names.sort((a, b) => a.length - b.length);
-            categoryDisplay.innerHTML = names.map(n => `<span style="background:rgba(229,169,180,0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');
+            categoryDisplay.innerHTML = names.map(n => `<span style="background:rgba(var(--accent-rgb),0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');
         }
     }
 
@@ -2891,7 +2916,7 @@ function renderServiceGallery() {
                 if (isSvcMatch || isCatAll || isCatMatch) {
                     discPercent = parseInt(d.percent) || 0;
                     if (discPercent > 0) {
-                        promoBadge = `<div style="position:absolute; top:10px; left:10px; background:var(--color-accent); color:white; padding:5px 12px; border-radius:30px; font-size:0.72rem; font-weight:800; z-index:3; box-shadow:0 4px 10px rgba(184,115,129,0.4); letter-spacing:0.5px; animation: pulse-badge 1.8s ease-in-out infinite;">¡OFERTA -${discPercent}%!</div>`;
+                        promoBadge = `<div style="position:absolute; top:10px; left:10px; background:var(--color-accent); color:white; padding:5px 12px; border-radius:30px; font-size:0.72rem; font-weight:800; z-index:3; box-shadow:0 4px 10px rgba(var(--accent-rgb),0.4); letter-spacing:0.5px; animation: pulse-badge 1.8s ease-in-out infinite;">¡OFERTA -${discPercent}%!</div>`;
                     }
                 }
             }
@@ -3311,7 +3336,10 @@ window.renderPublicAgenda = function() {
     // 2. Generar filas por especialista
     specialists.forEach(spec => {
         const sName = typeof spec === 'string' ? spec : spec.name;
-        const sImg = spec.image || 'https://via.placeholder.com/100';
+        const hasImg = typeof spec === 'object' && spec.image && !spec.image.includes('placeholder.com');
+        const sImgHtml = hasImg 
+            ? `<img src="${spec.image}" class="specialist-mini-thumb" alt="${sName}">` 
+            : `<div class="specialist-mini-thumb specialist-avatar-placeholder"><i class="fas fa-user-tie"></i></div>`;
         const active = typeof spec === 'object' ? spec.active !== false : true;
 
         if (!active) return;
@@ -3352,7 +3380,7 @@ window.renderPublicAgenda = function() {
         html += `
             <div class="specialist-timeline-row">
                 <div class="specialist-info-card">
-                    <img src="${sImg}" class="specialist-mini-thumb" alt="${sName}">
+                    ${sImgHtml}
                     <div class="specialist-mini-name">${sName}</div>
                 </div>
                 <div class="timeline-track">
@@ -4035,19 +4063,32 @@ window.renderPublicVisualAgendaGrid = function() {
         currentBookingDuration = window.getDurationInMins(activeItem.duration || activeItem._realDuration || activeItem.time, activeItem.service);
     }
 
+    const isDark = document.documentElement.classList.contains('dark-theme');
+    const darkWrapperBg  = isDark ? '#1e293b'                : 'white';
+    const darkWrapperShadow = isDark ? '0 10px 30px rgba(0,0,0,0.35)' : '0 10px 30px rgba(0,0,0,0.1)';
+    const darkTheadBg    = isDark ? '#151f32'               : '#fdfdfd';
+    const darkTheadBorder= isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0';
+    const darkThColor    = isDark ? '#94a3b8'               : '#555';
+    const darkThBorder   = isDark ? 'rgba(255,255,255,0.06)' : '#eee';
+    const darkTrBorder   = isDark ? 'rgba(255,255,255,0.05)' : '#eee';
+    const darkTdClockBg  = isDark ? '#151f32'               : '#fafafa';
+    const darkTdClockColor = isDark ? '#94a3b8'             : '#777';
+    const darkTdClockBorder = isDark ? 'rgba(255,255,255,0.06)' : '#eee';
+    const darkCellBorder = isDark ? 'rgba(255,255,255,0.04)' : '#f0f0f0';
+
     let html = `
-    <div style="overflow-x:auto; border-radius:15px; background:white; box-shadow:0 10px 30px rgba(0,0,0,0.1); -webkit-overflow-scrolling:touch; overflow-anchor:none;">
+    <div style="overflow-x:auto; border-radius:15px; background:${darkWrapperBg}; box-shadow:${darkWrapperShadow}; -webkit-overflow-scrolling:touch; overflow-anchor:none;">
         <table class="responsive-agenda-grid" style="width:100%; border-collapse:collapse; min-width:700px; font-family:'Montserrat', sans-serif; table-layout:fixed;">
-            <thead style="background:#fdfdfd; border-bottom:2px solid #f0f0f0;">
+            <thead style="background:${darkTheadBg}; border-bottom:2px solid ${darkTheadBorder};">
                 <tr>
-                    <th style="width:80px; padding:20px; color:#555; text-transform:uppercase; font-size:0.75rem;">Hora</th>
+                    <th style="width:80px; padding:20px; color:${darkThColor}; text-transform:uppercase; font-size:0.75rem;">Hora</th>
                     ${activeSpecs.map(s => {
                         const name = typeof s === 'object' ? s.name : s;
                         const img = typeof s === 'object' && s.image ? s.image : '';
                         return `
-                        <th style="padding:15px; color:#333; text-transform:uppercase; font-size:0.75rem; border-left:1px solid #eee;">
+                        <th style="padding:15px; color:${isDark ? '#e2e8f0' : '#333'}; text-transform:uppercase; font-size:0.75rem; border-left:1px solid ${darkThBorder};">
                             <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                                ${img ? `<img src="${img}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent);">` : `<div style="width:40px; height:40px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; color:#999;"><i class="fas fa-user-circle"></i></div>`}
+                                ${img ? `<img src="${img}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent);">` : `<div style="width:40px; height:40px; border-radius:50%; background:${isDark ? '#334155' : '#eee'}; display:flex; align-items:center; justify-content:center; color:${isDark ? '#94a3b8' : '#999'};"><i class="fas fa-user-circle"></i></div>`}
                                 <span style="font-weight:800;">${name}</span>
                             </div>
                         </th>`;
@@ -4058,8 +4099,8 @@ window.renderPublicVisualAgendaGrid = function() {
                 ${hours.map(hour => {
                     const hStart = parseInt(hour.split(':')[0]);
                     return `
-                    <tr style="border-bottom:1px solid #eee;">
-                        <td style="height:${rowH}px; text-align:center; color:#777; font-weight:700; background:#fafafa; border-right:1px solid #eee;">${window.formatTime12h(hour)}</td>
+                    <tr style="border-bottom:1px solid ${darkTrBorder};">
+                        <td style="height:${rowH}px; text-align:center; color:${darkTdClockColor}; font-weight:700; background:${darkTdClockBg}; border-right:1px solid ${darkTdClockBorder};">${window.formatTime12h(hour)}</td>
                         ${activeSpecs.map((spec, sIdx) => {
                             const sName = typeof spec === 'object' ? spec.name : spec;
                             const nSpec = normalize(sName);
@@ -4150,7 +4191,7 @@ window.renderPublicVisualAgendaGrid = function() {
                             });
 
                             return `
-                            <td style="position:relative; height:${rowH}px; padding:0; border-left:1px solid #f0f0f0;">
+                            <td style="position:relative; height:${rowH}px; padding:0; border-left:1px solid ${darkCellBorder};">
                                 <!-- Mitad Superior (:00) y Mitad Inferior (:30) -->
                                 ${slots.map((sl, idx) => {
                                     const topOffset = idx * 45; // 45px es media celda (90/2)
@@ -4174,9 +4215,12 @@ window.renderPublicVisualAgendaGrid = function() {
                                              </div>
                                         </div>`;
                                     } else if (sl.isPast && !sl.dayS.length && !sl.isYour && !sl.cartExt) {
+                                        const pastBg = isDark ? '#1a2540' : '#f0f0f0';
+                                        const pastBorder = isDark ? 'rgba(255,255,255,0.05)' : '#e5e5e5';
+                                        const pastColor = isDark ? '#475569' : '#888';
                                         content += `
-                                        <div style="position:absolute; top:${topOffset+2}px; left:4px; right:4px; height:41px; background:#f0f0f0; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px solid #e5e5e5; pointer-events:none; z-index:5;">
-                                             <span style="font-size:0.55rem; color:#888; font-weight:800; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:3px;">
+                                        <div style="position:absolute; top:${topOffset+2}px; left:4px; right:4px; height:41px; background:${pastBg}; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px solid ${pastBorder}; pointer-events:none; z-index:5;">
+                                             <span style="font-size:0.55rem; color:${pastColor}; font-weight:800; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:3px;">
                                                 <i class="fas fa-history" style="font-size:0.6rem; opacity:0.6;"></i> Pasado
                                              </span>
                                         </div>`;
@@ -4185,8 +4229,11 @@ window.renderPublicVisualAgendaGrid = function() {
                                         const isNoCapable = sl.canDoActive === false;
                                         const blockText = isNoCapable ? "NO DISPONIBLE" : "CRUCE";
                                         const blockIcon = isNoCapable ? "fa-user-slash" : "fa-ban";
+                                        const confBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
+                                        const confBorder = isDark ? 'rgba(255,255,255,0.08)' : '#ccc';
+                                        const confColor = isDark ? '#475569' : '#aaa';
                                         content += `
-                                        <div style="position:absolute; top:${topOffset+2}px; left:4px; right:4px; height:41px; background:rgba(0,0,0,0.03); border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px dashed #ccc; pointer-events:none; z-index:5; color:#aaa; flex-direction:column; gap:2px;">
+                                        <div style="position:absolute; top:${topOffset+2}px; left:4px; right:4px; height:41px; background:${confBg}; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px dashed ${confBorder}; pointer-events:none; z-index:5; color:${confColor}; flex-direction:column; gap:2px;">
                                              <i class="fas ${blockIcon}" style="font-size:0.6rem;"></i>
                                              <span style="font-size:0.5rem; font-weight:900; text-transform:uppercase; letter-spacing:1px;">${blockText}</span>
                                          </div>`;
@@ -4217,7 +4264,7 @@ window.renderPublicVisualAgendaGrid = function() {
                                         const oSM = getMin(sl.cartExt.time);
                                         const oEM = oSM + d;
                                         const isShortExt = d <= 30;
-                                        content += `<div onclick="window.togglePublicCartEditMode('${sl.cartExt.id}'); event.stopPropagation();" style="position:absolute; top:${topOffset+2}px; left:8px; right:8px; height:${(d/60)*rowH-4}px; background:#c4888f; border:2px solid #b07078; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:2100; color:white; text-align:center; pointer-events:auto; cursor:pointer; box-shadow:0 8px 15px rgba(180,120,130,0.3); padding:${isShortExt ? '2px 8px' : '5px 10px'};">
+                                        content += `<div onclick="window.togglePublicCartEditMode('${sl.cartExt.id}'); event.stopPropagation();" style="position:absolute; top:${topOffset+2}px; left:8px; right:8px; height:${(d/60)*rowH-4}px; background:var(--color-accent); border:2px solid var(--color-dark-pink); border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:2100; color:white; text-align:center; pointer-events:auto; cursor:pointer; box-shadow:0 8px 15px rgba(var(--accent-rgb),0.3); padding:${isShortExt ? '2px 8px' : '5px 10px'};">
                                             ${!isShortExt ? `<div style="font-size:0.58rem; opacity:0.95; text-transform:uppercase; font-weight:800; margin-bottom:5px; letter-spacing:0.5px; background:rgba(255,255,255,0.15); padding:1px 8px; border-radius:10px;">Tu Reserva</div>` : ''}
                                             <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; flex-wrap:nowrap;">
                                                 <div style="font-size:${isShortExt ? '0.75rem' : '0.85rem'}; font-weight:900; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${isShortExt ? '<i class="fas fa-shopping-bag" style="font-size:0.6rem;"></i> ' : ''}${sl.cartExt.service || sl.cartExt.name}</div>
@@ -4262,7 +4309,7 @@ window.renderPublicVisualAgendaGrid = function() {
             opacity: 1 !important;
         }
         .agenda-trigger-half:hover {
-            background: rgba(229, 106, 158, 0.03);
+            background: rgba(var(--accent-rgb), 0.04);
         }
         @keyframes pulse-edit {
             0% { box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.4); transform: scale(1); }

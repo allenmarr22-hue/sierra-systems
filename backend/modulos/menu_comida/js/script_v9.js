@@ -2576,18 +2576,18 @@ function sendOrderToWhatsApp(order) {
     }
 
     let message = template
-        .replace('{emojis_inicio}', eStart)
-        .replace('{emojis_fin}', eEnd)
-        .replace('{negocio}', storeName.toUpperCase())
-        .replace('{cliente}', order.customer.name)
-        .replace('{telefono}', order.customer.phone)
-        .replace('{entrega}', entregaVal)
-        .replace('{detalles_entrega}', detallesEntregaVal)
-        .replace('{pago}', order.customer.payment)
-        .replace('{nota}', order.customer.note || 'Ninguna')
-        .replace('{resumen_pedido}', resumenVal.trim())
-        .replace('{precios}', preciosVal)
-        .replace('{total}', order.total.toLocaleString());
+        .replaceAll('{emojis_inicio}', eStart)
+        .replaceAll('{emojis_fin}', eEnd)
+        .replaceAll('{negocio}', storeName.toUpperCase())
+        .replaceAll('{cliente}', order.customer.name)
+        .replaceAll('{telefono}', order.customer.phone)
+        .replaceAll('{entrega}', entregaVal)
+        .replaceAll('{detalles_entrega}', detallesEntregaVal)
+        .replaceAll('{pago}', order.customer.payment)
+        .replaceAll('{nota}', order.customer.note || 'Ninguna')
+        .replaceAll('{resumen_pedido}', resumenVal.trim())
+        .replaceAll('{precios}', preciosVal)
+        .replaceAll('{total}', order.total.toLocaleString());
 
     // Limpieza de líneas vacías sobrantes si nota o detalles no aplican
     if (!detallesEntregaVal) {
@@ -2701,6 +2701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.categories = JSON.parse(localStorage.getItem('streetfeed_categories')) || state.categories;
             state.combos = JSON.parse(localStorage.getItem('streetfeed_combos')) || state.combos;
             state.config = JSON.parse(localStorage.getItem('streetfeed_config')) || state.config;
+            state.orders = JSON.parse(localStorage.getItem('streetfeed_orders')) || state.orders;
             
             // Re-renderizar todo el sistema en vivo
             updateUIFromConfig();
