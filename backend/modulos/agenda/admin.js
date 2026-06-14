@@ -6284,16 +6284,22 @@ window.renderPromoCategories = function() {
             categoriesList.forEach(cat => {
                 const catSvcs = servicesList.filter(s => s.cat === cat.id);
                 if (catSvcs.length > 0) {
-                    html += `<div style="padding:5px 0; border-bottom:1px solid #eee; margin-top:5px;"><strong style="font-size:0.7rem; color:#999; text-transform:uppercase;">${cat.name}</strong></div>`;
+                    html += `
+                        <div style="padding:5px 0; border-bottom:1px solid #eee; margin-top:10px; margin-bottom:5px;">
+                            <strong style="font-size:0.7rem; color:#999; text-transform:uppercase;">${cat.name}</strong>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 15px; padding: 5px 0; margin-left: 5px; margin-bottom: 10px;">
+                    `;
                     catSvcs.forEach(s => {
                         const sId = s.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
                         html += `
-                            <div style="display:flex; align-items:center; gap:10px; padding:3px 0; margin-left:10px;">
-                                <input type="checkbox" name="promo-${type}-svc-selection" value="${s.title}" id="chk-promo-${type}-svc-${sId}" onchange="window.updateSvcCountBadge('${type}')">
-                                <label for="chk-promo-${type}-svc-${sId}" style="color:var(--color-text); cursor:pointer; margin:0; font-size:0.8rem;">${s.title}</label>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" name="promo-${type}-svc-selection" value="${s.title}" id="chk-promo-${type}-svc-${sId}" onchange="window.updateSvcCountBadge('${type}')" style="margin: 0; flex-shrink: 0;">
+                                <label for="chk-promo-${type}-svc-${sId}" style="color:var(--color-text); cursor:pointer; margin:0; font-size:0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.title}">${s.title}</label>
                             </div>
                         `;
                     });
+                    html += `</div>`;
                 }
             });
             return html;
