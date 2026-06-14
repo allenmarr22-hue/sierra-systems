@@ -996,10 +996,22 @@
 
                                 <div id="promo-discount-cat-group" class="form-group" style="margin-bottom: 20px;">
                                     <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Categorías</label>
-                                    <div id="promo-discount-categories-wrapper" class="promo-cat-checklist glass-module">
-                                        <!-- Dinámico -->
+                                    
+                                    <div class="custom-multi-select-container">
+                                        <div id="combo-cat-trigger-discount" class="custom-multi-select-trigger" onclick="window.toggleCatDropdown('discount')">
+                                            <div style="display:flex; align-items:center;">
+                                                <span id="promo-discount-cat-label">Elegir categorías...</span>
+                                                <span id="promo-discount-cat-count" class="svc-count-badge" style="display:none;">0</span>
+                                            </div>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <div id="promo-discount-cat-dropdown" class="custom-multi-select-dropdown">
+                                            <div id="promo-discount-categories-wrapper" class="promo-cat-checklist glass-module">
+                                                <!-- Dinámico -->
+                                            </div>
+                                        </div>
                                     </div>
-                                    <small style="color:#888; font-size:0.75rem;">El descuento se aplicará a TODOS los servicios de las categorías marcadas.</small>
+                                    <small style="color:#888; font-size:0.75rem; margin-top:10px; display:block;">El descuento se aplicará a TODOS los servicios de las categorías marcadas.</small>
                                 </div>
 
                                 <div id="promo-discount-svc-group" class="form-group" style="margin-bottom: 20px; display: none;">
@@ -1066,10 +1078,22 @@
 
                                 <div id="promo-combo-cat-group" class="form-group" style="margin-bottom: 20px; display: none;">
                                     <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase;">Selecciona Categorías</label>
-                                    <div id="promo-combo-categories-wrapper" class="promo-cat-checklist glass-module">
-                                        <!-- Dinámico -->
+                                    
+                                    <div class="custom-multi-select-container">
+                                        <div id="combo-cat-trigger-combo" class="custom-multi-select-trigger" onclick="window.toggleCatDropdown('combo')">
+                                            <div style="display:flex; align-items:center;">
+                                                <span id="promo-combo-cat-label">Elegir categorías...</span>
+                                                <span id="promo-combo-cat-count" class="svc-count-badge" style="display:none;">0</span>
+                                            </div>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <div id="promo-combo-cat-dropdown" class="custom-multi-select-dropdown">
+                                            <div id="promo-combo-categories-wrapper" class="promo-cat-checklist glass-module">
+                                                <!-- Dinámico -->
+                                            </div>
+                                        </div>
                                     </div>
-                                    <small style="color:#888; font-size:0.75rem;">El cliente debe elegir UN servicio de cada categoría marcada.</small>
+                                    <small style="color:#888; font-size:0.75rem; margin-top:10px; display:block;">El cliente debe elegir UN servicio de cada categoría marcada.</small>
                                 </div>
 
                                 <div id="promo-combo-svc-group" class="form-group" style="margin-bottom: 20px;">

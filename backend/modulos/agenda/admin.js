@@ -6172,6 +6172,45 @@ window.toggleSvcDropdown = function(type) {
     event.stopPropagation();
 };
 
+window.toggleCatDropdown = function(type) {
+    const dropdown = document.getElementById(`promo-${type}-cat-dropdown`);
+    const trigger = document.getElementById(`combo-cat-trigger-${type}`);
+    
+    // Cerrar otros dropdowns si están abiertos
+    document.querySelectorAll('.custom-multi-select-dropdown').forEach(d => {
+        if (d.id !== `promo-${type}-cat-dropdown`) d.classList.remove('active');
+    });
+    document.querySelectorAll('.custom-multi-select-trigger').forEach(t => {
+        if (t.id !== `combo-cat-trigger-${type}`) t.classList.remove('active');
+    });
+
+    dropdown.classList.toggle('active');
+    trigger.classList.toggle('active');
+    
+    // Prevenir que el click se propague al document
+    event.stopPropagation();
+};
+
+window.updateCatCountBadge = function(type) {
+    const master = document.getElementById(`promo-${type}-all`);
+    const checks = document.querySelectorAll(`input[name="promo-${type}-cat-selection"]:checked`);
+    const label = document.getElementById(`promo-${type}-cat-label`);
+    const countBadge = document.getElementById(`promo-${type}-cat-count`);
+    
+    if (master && master.checked) {
+        label.innerText = 'Todas las categorías';
+        countBadge.innerText = 'Todas';
+        countBadge.style.display = 'none';
+    } else if (checks.length > 0) {
+        label.innerText = `${checks.length} seleccionadas`;
+        countBadge.innerText = checks.length;
+        countBadge.style.display = 'inline-block';
+    } else {
+        label.innerText = 'Elegir categorías...';
+        countBadge.style.display = 'none';
+    }
+};
+
 // Cerrar dropdowns al hacer click fuera
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.custom-multi-select-container')) {
@@ -6224,14 +6263,14 @@ window.renderPromoCategories = function() {
         const generateHtml = (type) => {
             let html = `
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
-                    <input type="checkbox" id="promo-${type}-all" value="all" onchange="window.togglePromoSideAll('${type}', this)">
+                    <input type="checkbox" id="promo-${type}-all" value="all" onchange="window.togglePromoSideAll('${type}', this); window.updateCatCountBadge('${type}')">
                     <label for="promo-${type}-all" style="font-weight:700; color:var(--color-dark-pink); cursor:pointer; margin:0; font-size:0.8rem;">TODAS</label>
                 </div>
             `;
             categoriesList.forEach(cat => {
                 html += `
                     <div style="display:flex; align-items:center; gap:10px; padding:3px 0;">
-                        <input type="checkbox" name="promo-${type}-cat-selection" value="${cat.id}" id="chk-promo-${type}-${cat.id}">
+                        <input type="checkbox" name="promo-${type}-cat-selection" value="${cat.id}" id="chk-promo-${type}-${cat.id}" onchange="window.updateCatCountBadge('${type}')">
                         <label for="chk-promo-${type}-${cat.id}" style="color:var(--color-text); cursor:pointer; margin:0; font-size:0.85rem;">${cat.name}</label>
                     </div>
                 `;
@@ -6272,6 +6311,8 @@ window.renderPromoCategories = function() {
 
         updateSvcCountBadge('discount');
         updateSvcCountBadge('combo');
+        updateCatCountBadge('discount');
+        updateCatCountBadge('combo');
 
         // Load existing settings AFTER rendering
         loadPromoSettings();
@@ -6436,6 +6477,8 @@ window.loadPromoSettings = function() {
 
     updateSvcCountBadge('discount');
     updateSvcCountBadge('combo');
+    updateCatCountBadge('discount');
+    updateCatCountBadge('combo');
     updatePromoSummary(promos);
 };
 
