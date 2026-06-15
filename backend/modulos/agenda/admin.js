@@ -11214,7 +11214,7 @@ window.checkFirstTimeSetup = function() {
                 return;
             }
             
-            const isDark = document.body.classList.contains('dark-theme');
+            const isDark = document.documentElement.classList.contains('dark-theme');
             const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#b87381';
             const accentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim() || '184, 115, 129';
 
@@ -11222,13 +11222,13 @@ window.checkFirstTimeSetup = function() {
             const palette = {
                 bg:          isDark ? '#1e1e2e' : '#ffffff',
                 bgCard:      isDark ? '#2a2a3e' : '#f8f4f5',
-                color:       isDark ? '#e8d8dc' : '#3a2a2e',
-                colorMuted:  isDark ? 'rgba(232,216,220,0.55)' : '#888',
-                border:      isDark ? `rgba(${accentRgb}, 0.25)` : `rgba(${accentRgb}, 0.2)`,
+                color:       isDark ? '#f8fafc' : '#1e293b',
+                colorMuted:  isDark ? 'rgba(248, 250, 252, 0.6)' : '#64748b',
+                border:      isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                 inputBg:     isDark ? '#16161f' : '#ffffff',
-                inputColor:  isDark ? '#e8d8dc' : '#333',
-                inputBorder: isDark ? `rgba(${accentRgb}, 0.3)` : '#dcc8cc',
-                placeholder: isDark ? 'rgba(232,216,220,0.35)' : '#bbb',
+                inputColor:  isDark ? '#f8fafc' : '#1e293b',
+                inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : '#cbd5e1',
+                placeholder: isDark ? 'rgba(255,255,255,0.3)' : '#94a3b8',
             };
 
             const fieldStyle = `
@@ -11247,6 +11247,17 @@ window.checkFirstTimeSetup = function() {
                 title: '<span style="font-family:\'Montserrat\',sans-serif; font-weight:700; font-size:1.25rem;">✨ Identidad del Negocio</span>',
                 html: `
                     <style>
+                        .swal2-popup {
+                            border-radius: 20px !important;
+                            box-shadow: 0 15px 40px rgba(0,0,0,${isDark ? '0.35' : '0.1'}) !important;
+                            border: 1px solid ${palette.border} !important;
+                            background: ${palette.bg} !important;
+                            color: ${palette.color} !important;
+                        }
+                        .swal2-title {
+                            color: ${isDark ? '#ffffff' : '#1e293b'} !important;
+                            padding-top: 10px !important;
+                        }
                         #swal-site-name:focus, #swal-site-whatsapp:focus, #swal-site-address:focus,
                         #swal-admin-gender:focus {
                             border-color: ${accentColor} !important;
@@ -11261,6 +11272,37 @@ window.checkFirstTimeSetup = function() {
                             color: ${accentColor} !important;
                             border-radius: 8px !important;
                             font-size: 0.82rem !important;
+                        }
+                        .swal2-confirm {
+                            font-family: 'Montserrat', sans-serif !important;
+                            font-weight: 600 !important;
+                            font-size: 0.88rem !important;
+                            padding: 12px 28px !important;
+                            border-radius: 12px !important;
+                            background-color: ${accentColor} !important;
+                            color: #ffffff !important;
+                            box-shadow: 0 5px 15px rgba(${accentRgb}, 0.25) !important;
+                            border: none !important;
+                            transition: all 0.2s ease !important;
+                        }
+                        .swal2-confirm:hover {
+                            filter: brightness(0.95) !important;
+                            transform: translateY(-1px) !important;
+                        }
+                        .swal2-cancel {
+                            font-family: 'Montserrat', sans-serif !important;
+                            font-weight: 600 !important;
+                            font-size: 0.88rem !important;
+                            padding: 12px 28px !important;
+                            border-radius: 12px !important;
+                            background-color: ${isDark ? '#334155' : '#e2e8f0'} !important;
+                            color: ${isDark ? '#cbd5e1' : '#475569'} !important;
+                            border: none !important;
+                            transition: all 0.2s ease !important;
+                        }
+                        .swal2-cancel:hover {
+                            background-color: ${isDark ? '#475569' : '#cbd5e1'} !important;
+                            transform: translateY(-1px) !important;
                         }
                     </style>
                     <div style="text-align:left; font-family:'Montserrat',sans-serif; margin-top:0.25rem;">
@@ -11297,8 +11339,6 @@ window.checkFirstTimeSetup = function() {
                 showCancelButton: true,
                 confirmButtonText: '💾 Guardar y activar',
                 cancelButtonText: 'Configurar luego',
-                confirmButtonColor: accentColor,
-                cancelButtonColor: '#999',
                 reverseButtons: true,
                 preConfirm: () => {
                     const name = document.getElementById('swal-site-name').value.trim();
