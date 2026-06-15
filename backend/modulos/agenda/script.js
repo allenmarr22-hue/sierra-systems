@@ -64,18 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
         root.style.setProperty('--color-dark-pink', theme.dark);
         root.style.setProperty('--accent-rgb', theme.rgb);
         
-        const isDark = localStorage.getItem('agenda_client_dark_mode') === 'true';
-        if (isDark) {
-            // Remove inline --color-bg so the CSS .dark-theme class rule takes effect.
-            root.style.removeProperty('--color-bg');
-            root.classList.add('dark-theme');
-            root.classList.remove('light-theme');
-        } else {
-            // In light mode, set the theme's light bg inline.
-            root.style.setProperty('--color-bg', theme.bg);
-            root.classList.add('light-theme');
-            root.classList.remove('dark-theme');
-        }
+        // El modo noche es exclusivo del panel de administración. El portal del cliente siempre se mantiene claro.
+        root.style.setProperty('--color-bg', theme.bg);
+        root.classList.add('light-theme');
+        root.classList.remove('dark-theme');
     };
 
     const cachedTheme = localStorage.getItem('agenda_client_theme') || 'rose';

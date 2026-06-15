@@ -253,16 +253,10 @@
             root.style.setProperty('--color-accent-hover', theme.hover);
             root.style.setProperty('--color-dark-pink', theme.dark);
             root.style.setProperty('--accent-rgb', theme.rgb);
-            const isDark = localStorage.getItem('agenda_client_dark_mode') === 'true';
-            if (isDark) {
-                root.style.removeProperty('--color-bg');
-                root.classList.add('dark-theme');
-                root.classList.remove('light-theme');
-            } else {
-                root.style.setProperty('--color-bg', theme.bg);
-                root.classList.add('light-theme');
-                root.classList.remove('dark-theme');
-            }
+            // El modo noche es exclusivo del panel de administración. El index del cliente siempre se mantiene claro.
+            root.style.setProperty('--color-bg', theme.bg);
+            root.classList.add('light-theme');
+            root.classList.remove('dark-theme');
         })();
 
         if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
