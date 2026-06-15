@@ -2064,7 +2064,15 @@
                 confirmButtonColor: color,
                 width: '600px',
                 background: '#ffffff',
-              window.openDemoModal = function(modId, modName) {
+                color: '#0f172a',
+                showCloseButton: true,
+                customClass: {
+                    popup: 'enterprise-terms-modal'
+                }
+            });
+        };
+
+        window.openDemoModal = function(modId, modName) {
             const isAgenda = modId.toLowerCase() === 'agenda';
             const clientUrl = isAgenda ? '/modules/agenda/index.html' : '/modules/order-system/index.html';
             const adminUrl = isAgenda ? '/modules/agenda/admin.html' : '/modules/order-system/admin.html';
