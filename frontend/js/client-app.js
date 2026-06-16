@@ -1130,6 +1130,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 });
             },
+            didOpen: () => {
+                lucide.createIcons();
+                // Upgrade module select to premium dropdown
+                window.makeSwalSelect('ticket-module');
+            },
             preConfirm: () => {
                 const mod = document.getElementById('ticket-module').value;
                 const desc = document.getElementById('ticket-desc').value;
@@ -1355,6 +1360,78 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 // Mapeo inteligente para sugerencias de módulos según el tipo de negocio
+// ── Utility: converts a native <select> inside Swal into a premium custom dropdown ──
+window.makeSwalSelect = window.makeSwalSelect || function(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel || sel.dataset.swalSelectInit) return;
+    sel.dataset.swalSelectInit = '1';
+    sel.style.display = 'none';
+
+    const chevronSVG = `<svg class="swal-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'swal-select-wrap';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'swal-select-btn';
+
+    const label = document.createElement('span');
+    label.className = 'swal-select-label';
+    btn.appendChild(label);
+    btn.insertAdjacentHTML('beforeend', chevronSVG);
+
+    const panel = document.createElement('div');
+    panel.className = 'swal-select-panel hidden';
+
+    const options = Array.from(sel.options);
+    options.forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'swal-select-item';
+        item.dataset.value = opt.value;
+        item.textContent = opt.text;
+        if (opt.selected) { item.classList.add('selected'); label.textContent = opt.text; }
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sel.value = opt.value;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            label.textContent = opt.text;
+            panel.querySelectorAll('.swal-select-item').forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            panel.classList.add('hidden');
+            btn.classList.remove('open');
+        });
+        panel.appendChild(item);
+    });
+
+    if (!label.textContent && options[0]) {
+        label.textContent = options[0].text;
+        sel.value = options[0].value;
+    }
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !panel.classList.contains('hidden');
+        document.querySelectorAll('.swal-select-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.swal-select-btn').forEach(b => b.classList.remove('open'));
+        if (!isOpen) { panel.classList.remove('hidden'); btn.classList.add('open'); }
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(panel);
+    sel.parentNode.insertBefore(wrap, sel.nextSibling);
+
+    const popup = sel.closest('.swal2-popup');
+    if (popup) {
+        popup.addEventListener('click', (e) => {
+            if (!e.target.closest('.swal-select-wrap')) {
+                panel.classList.add('hidden');
+                btn.classList.remove('open');
+            }
+        });
+    }
+};
+
 function getSuggestedModule(clientBiz) {
     if (!clientBiz) return 'streetfeed';
     const type = (clientBiz.type || '').toLowerCase().trim();
