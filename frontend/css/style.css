@@ -2157,14 +2157,26 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
 
 .select-modern {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.75)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1.2rem;
+    background-position: right 0.9rem center;
+    background-size: 1.1rem;
+    cursor: pointer;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.select-modern:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.select-modern:focus {
+    outline: none;
+    border-color: var(--primary, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
 }
 
 .select-modern option {
-    background: #1e293b; /* Color sólido para las opciones */
+    background: #1e293b;
     color: white;
     padding: 10px;
 }
@@ -2412,10 +2424,21 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
 /* --- Select dropdown arrow (light) --- */
 [data-theme="light"] .select-modern {
     background-color: #ffffff !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
-    background-position: right 1rem center !important;
-    background-size: 1.2rem !important;
+    background-position: right 0.9rem center !important;
+    background-size: 1.1rem !important;
+    color: #0f172a !important;
+    border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-theme="light"] .select-modern:hover {
+    border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+[data-theme="light"] .select-modern:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
 }
 
 [data-theme="light"] .select-modern option {
