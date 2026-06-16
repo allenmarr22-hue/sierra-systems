@@ -4442,36 +4442,43 @@ html[data-accent="slate"][data-theme="light"] {
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+
 /* ==========================================================================
-   SWAL PREMIUM SELECT — Custom dropdown for SweetAlert2 modals
+   SWAL PREMIUM SELECT — Custom Premium Dropdown for SweetAlert2 modals
    ========================================================================== */
+
+/* Hide the native <select> completely once converted */
 .swal-select-wrap {
     position: relative;
     width: 100%;
 }
 
+/* Also hide via CSS in case JS runs before display:none is set */
+.swal-select-wrap > select[data-swal-select-init="1"] {
+    display: none !important;
+}
+
+/* ── Trigger button ── */
 .swal-select-btn {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    height: 46px;
-    padding: 0 1rem 0 0.9rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    height: 48px;
+    padding: 0 1rem;
+    background: var(--bg-surface-light, #334155);
+    border: 1.5px solid rgba(99, 102, 241, 0.2);
+    border-radius: 14px;
     color: var(--text-main);
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.92rem;
+    font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     user-select: none;
     box-sizing: border-box;
     text-align: left;
     outline: none;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
 
 .swal-select-btn:hover {
@@ -4481,16 +4488,17 @@ html[data-accent="slate"][data-theme="light"] {
 
 .swal-select-btn.open {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
-    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    background: rgba(99, 102, 241, 0.07);
 }
 
+/* Chevron icon inside the button */
 .swal-select-btn .swal-chevron {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
     color: var(--text-muted);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s;
 }
 
 .swal-select-btn.open .swal-chevron {
@@ -4498,92 +4506,88 @@ html[data-accent="slate"][data-theme="light"] {
     color: var(--primary);
 }
 
+/* ── Dropdown panel ── */
 .swal-select-panel {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     left: 0;
     right: 0;
     background: var(--bg-surface, #1e293b);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(99, 102, 241, 0.15);
     border-radius: 14px;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(99,102,241,0.1);
+    padding: 0.45rem;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(99,102,241,0.08);
     z-index: 99999;
-    padding: 0.4rem;
-    animation: slideDownSelect 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
+    animation: slideDownSelect 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .swal-select-panel.hidden {
     display: none;
 }
 
+/* ── Items ── */
 .swal-select-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0.65rem 0.85rem;
+    justify-content: space-between;
+    padding: 0.7rem 0.9rem;
     border-radius: 10px;
     font-size: 0.88rem;
     font-weight: 500;
     color: var(--text-main);
     cursor: pointer;
-    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    transition: background 0.18s ease, color 0.18s ease, padding-left 0.18s ease;
 }
 
 .swal-select-item:hover {
-    background: rgba(99, 102, 241, 0.12);
+    background: rgba(99, 102, 241, 0.1);
     color: var(--primary);
-    padding-left: 1.1rem;
+    padding-left: 1.15rem;
 }
 
 .swal-select-item.selected {
-    background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15));
+    background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12));
     color: var(--primary);
     font-weight: 700;
 }
 
 .swal-select-item.selected::after {
     content: "✓";
-    margin-left: auto;
+    font-size: 0.85rem;
     font-weight: 800;
     color: var(--primary);
-    font-size: 0.8rem;
 }
 
-/* Light mode */
+/* ── Light Mode Overrides ── */
 [data-theme="light"] .swal-select-btn {
     background: #ffffff;
-    border-color: rgba(99, 102, 241, 0.18);
+    border-color: rgba(99, 102, 241, 0.2);
     color: #0f172a;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
 [data-theme="light"] .swal-select-btn:hover {
     border-color: var(--primary);
-    background: rgba(99, 102, 241, 0.05);
+    background: rgba(99, 102, 241, 0.04);
 }
 [data-theme="light"] .swal-select-btn.open {
     border-color: var(--primary);
-    background: rgba(99, 102, 241, 0.05);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    background: rgba(99, 102, 241, 0.04);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 [data-theme="light"] .swal-select-panel {
     background: #ffffff;
-    border-color: rgba(99, 102, 241, 0.15);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+    border-color: rgba(99, 102, 241, 0.14);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0,0,0,0.06);
 }
 [data-theme="light"] .swal-select-item {
-    color: #0f172a;
+    color: #1e293b;
 }
 [data-theme="light"] .swal-select-item:hover {
-    background: rgba(99, 102, 241, 0.08);
+    background: rgba(99, 102, 241, 0.07);
     color: var(--primary);
 }
 [data-theme="light"] .swal-select-item.selected {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(99, 102, 241, 0.09);
     color: var(--primary);
 }
-

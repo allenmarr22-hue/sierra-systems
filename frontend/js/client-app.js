@@ -1047,10 +1047,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         color: #475569 !important;
                     }
                 </style>
-                <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; margin-top:1.5rem; overflow:hidden;">
+                <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; margin-top:1.5rem; overflow:visible;">
                     <div>
                         <label class="pro-label">Módulo Afectado</label>
-                        <select id="ticket-module" class="pro-input">
+                        <select id="ticket-module" class="pro-input" style="display:none;">
                             <option value="">Selecciona un módulo...</option>
                             <option>StreetFeed Pro</option>
                             <option>StyleSync Pro</option>

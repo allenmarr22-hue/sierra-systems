@@ -133,13 +133,13 @@ async function promptYearMonth(title) {
             <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; padding: 0.5rem;">
                 <div>
                     <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">AÑO</label>
-                    <select id="swal-year" class="swal2-select" style="margin: 0; width: 100%; box-sizing: border-box; background: var(--bg-surface-light); color: var(--text); border: 1px solid var(--border-color); border-radius: 8px; height: 40px; padding: 0 0.5rem; outline: none; font-family: inherit;">
+                    <select id="swal-year" class="swal2-select" style="display:none;">
                         ${yearOptions}
                     </select>
                 </div>
                 <div>
                     <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">MES</label>
-                    <select id="swal-month" class="swal2-select" style="margin: 0; width: 100%; box-sizing: border-box; background: var(--bg-surface-light); color: var(--text); border: 1px solid var(--border-color); border-radius: 8px; height: 40px; padding: 0 0.5rem; outline: none; font-family: inherit;">
+                    <select id="swal-month" class="swal2-select" style="display:none;">
                         ${monthOptions}
                     </select>
                 </div>
@@ -3969,14 +3969,14 @@ window.billingGiftDays = async function(bizId) {
             
             <div style="margin-bottom:1rem;">
                 <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Módulo</label>
-                <select id="gift-module-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:0.9rem;">
+                <select id="gift-module-select" style="display:none;">
                     ${uniqueModules.map(m => `<option value="${m.moduleId}">${m.moduleName}</option>`).join('')}
                 </select>
             </div>
             
             <div style="margin-bottom:1rem;">
                 <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Sede</label>
-                <select id="gift-branch-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:0.9rem;">
+                <select id="gift-branch-select" style="display:none;">
                     <!-- Se llena dinámicamente -->
                 </select>
             </div>
@@ -6589,14 +6589,14 @@ window.openPromoFormModal = function(id = '') {
             <div style="text-align:left;font-family:'Outfit',sans-serif;color:var(--text-main);display:flex;flex-direction:column;gap:12px;">
                 <div>
                     <label style="font-weight:700;font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Módulo Relacionado</label>
-                    <select id="swal-promo-module" class="swal2-input" style="width:100%;margin:4px 0 0;height:44px;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);padding:0 10px;">
+                    <select id="swal-promo-module" class="swal2-input" style="display:none;">
                         ${optionsHtml}
                     </select>
                 </div>
                 
                 <div>
                     <label style="font-weight:700;font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Tipo de Oferta</label>
-                    <select id="swal-promo-type" class="swal2-input" style="width:100%;margin:4px 0 0;height:44px;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);padding:0 10px;">
+                    <select id="swal-promo-type" class="swal2-input" style="display:none;">
                         <option value="percentage" ${promo && promo.discountType === 'percentage' ? 'selected' : ''}>Porcentaje de Descuento (ej: -20%)</option>
                         <option value="fixed_price" ${promo && promo.discountType === 'fixed_price' ? 'selected' : ''}>Precio Fijo Promocional (ej: $ 80.000)</option>
                     </select>
@@ -6768,7 +6768,7 @@ async function openMarketplaceSettingsModal() {
                         <div>
                             <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">⭐ Módulo Recomendado</label>
                             <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Módulo destacado con badge especial en la tienda del cliente.</p>
-                            <select id="swal-rec-module" class="swal2-input" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem;">
+                            <select id="swal-rec-module" class="swal2-input" style="display:none;">
                                 ${moduleOptions}
                             </select>
                         </div>
