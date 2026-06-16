@@ -818,7 +818,7 @@
                     <h2 class="page-title">Módulos</h2>
                     <p class="page-subtitle">Catálogo de aplicaciones de AS Sierra Systems</p>
                 </div>
-                <button class="btn-primary" id="btn-config-modules" style="font-weight:600; display:flex; align-items:center; gap:0.5rem; background:#8b5cf6; border:none;" data-roles="Super Admin,Administrador">
+                <button class="btn-primary" id="btn-config-modules" style="font-weight:600; display:flex; align-items:center; gap:0.5rem;" data-roles="Super Admin,Administrador">
                     <i data-lucide="settings"></i> Ajustes de Marketplace
                 </button>
             </div>
@@ -1247,7 +1247,7 @@
             <!-- Internal Sub-Navigation -->
             <div style="max-width: 580px; margin: 0 auto 2rem; display: flex; gap: 0.75rem;">
                 <button class="config-nav-btn active" data-config-tab="config-brand" style="flex: 1; border-radius: 12px; padding: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; cursor: pointer; white-space: nowrap;">
-                    <i data-lucide="palette" style="width: 20px;"></i> Identidad
+                    <i data-lucide="user" style="width: 20px;"></i> Identidad
                 </button>
                 <button class="config-nav-btn" data-config-tab="config-security" style="flex: 1; border-radius: 12px; padding: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; cursor: pointer; white-space: nowrap;">
                     <i data-lucide="shield-check" style="width: 20px;"></i> Seguridad
@@ -1330,10 +1330,18 @@
                                 </div>
                             </div>
 
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Tiempo de Inactividad de Sesión (Minutos)</label>
+                                <div class="input-icon-wrap">
+                                    <i data-lucide="clock"></i>
+                                    <input type="number" id="settings-session-timeout" min="1" max="120" placeholder="15">
+                                </div>
+                            </div>
+
                             <div style="background: rgba(245, 158, 11, 0.05); padding: 1rem; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.1);">
                                 <p style="font-size: 0.8rem; color: var(--warning); display: flex; gap: 0.5rem;">
                                     <i data-lucide="alert-triangle" style="width: 16px; flex-shrink: 0;"></i>
-                                    <span>Se requiere cerrar sesión tras el cambio.</span>
+                                    <span>Se requiere cerrar sesión tras el cambio de usuario/clave.</span>
                                 </p>
                             </div>
                         </form>
@@ -1807,6 +1815,274 @@
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ===================== LOCK SCREEN ===================== -->
+<div id="lock-screen" class="lock-screen-overlay" style="display: none;">
+    <style>
+        .lock-screen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.95) 0%, rgba(8, 12, 24, 0.99) 100%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            z-index: 1000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .lock-screen-overlay::before {
+            content: '';
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.08) 60%, transparent 100%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            filter: blur(60px);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .lock-screen-overlay.show {
+            opacity: 1;
+        }
+        .lock-card {
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            padding: 3rem 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                        0 0 80px rgba(99, 102, 241, 0.08);
+            transform: scale(0.9);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .lock-screen-overlay.show .lock-card {
+            transform: scale(1);
+        }
+        .lock-avatar-container {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .lock-avatar-container:hover {
+            transform: scale(1.06);
+            box-shadow: 0 12px 30px rgba(99, 102, 241, 0.45);
+        }
+        .lock-avatar-icon {
+            width: 44px;
+            height: 44px;
+            color: #ffffff;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+        }
+        .lock-badge {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 0.85rem;
+            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.08);
+        }
+        .lock-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+        .lock-subtitle {
+            font-size: 0.88rem;
+            color: rgba(255, 255, 255, 0.55);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+        .lock-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .lock-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        .lock-input-wrap svg.lock-field-icon,
+        .lock-input-wrap .lock-field-icon {
+            position: absolute;
+            left: 16px;
+            color: rgba(255, 255, 255, 0.4);
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            transition: color 0.25s ease;
+        }
+        .lock-input {
+            width: 100%;
+            height: 52px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 0 46px 0 48px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .lock-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        }
+        .lock-input-wrap:focus-within svg.lock-field-icon,
+        .lock-input-wrap:focus-within .lock-field-icon {
+            color: var(--primary);
+        }
+        .lock-input-wrap button.lock-eye-btn {
+            position: absolute;
+            right: 16px;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s;
+        }
+        .lock-input-wrap button.lock-eye-btn:hover {
+            color: #fff;
+        }
+        .lock-input-wrap:focus-within button.lock-eye-btn {
+            color: var(--primary);
+        }
+        .btn-unlock {
+            height: 52px;
+            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+            border: none;
+            border-radius: 14px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.25);
+            font-family: inherit;
+        }
+        .btn-unlock:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(99, 102, 241, 0.4);
+            filter: brightness(1.05);
+        }
+        .btn-unlock:active {
+            transform: translateY(0);
+        }
+        .btn-unlock:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none !important;
+        }
+        .lock-footer-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 0.75rem;
+            display: inline-block;
+            font-family: inherit;
+        }
+        .lock-footer-btn:hover {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        }
+        .lock-error-text {
+            color: #ef4444;
+            font-size: 0.8rem;
+            margin-top: -0.8rem;
+            margin-bottom: 0.2rem;
+            text-align: left;
+            display: none;
+            font-weight: 500;
+        }
+        @keyframes lock-shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .shake-animation {
+            animation: lock-shake 0.4s ease;
+        }
+    </style>
+    <div class="lock-card" id="lock-card">
+        <div class="lock-avatar-container">
+            <i data-lucide="shield-alert" class="lock-avatar-icon"></i>
+        </div>
+        <div class="lock-badge">Seguridad activa</div>
+        <h3 class="lock-title" id="lock-username">Allenmar</h3>
+        <p class="lock-subtitle">Tu sesión está bloqueada temporalmente por inactividad.</p>
+        <form id="lock-form" class="lock-form" novalidate>
+            <div class="lock-input-wrap">
+                <i data-lucide="lock" class="lock-field-icon"></i>
+                <input type="password" id="lock-pass" class="lock-input" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+                <button type="button" class="lock-eye-btn" id="lock-toggle-pass-btn" title="Mostrar contraseña">
+                    <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+            <div id="lock-error" class="lock-error-text">Contraseña incorrecta. Inténtalo de nuevo.</div>
+            <button type="submit" class="btn-unlock" id="btn-unlock-submit">
+                <i data-lucide="unlock" style="width: 18px; height: 18px;"></i>
+                <span>Desbloquear Sesión</span>
+            </button>
+        </form>
+        <button type="button" class="lock-footer-btn" id="lock-logout-btn">
+            Cerrar Sesión / Salir
+        </button>
     </div>
 </div>
 

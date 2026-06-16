@@ -41,60 +41,135 @@
             }
         })();
 
-        // ====== RESTABLECIMIENTO AUTOMÁTICO EN MODO DEMO (AUTO-RESET AFTER INACTIVITY IN DEMO MODE) ======
+        // ====== RESTABLECIMIENTO AUTOMÁTICO EN MODO DEMO CON CONTEO EN TIEMPO REAL ======
         (function() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const instanceId = urlParams.get('instanceId');
                 if (!instanceId) {
-                    const storedThreshold = localStorage.getItem('agenda_demo_reset_time_ms');
-                    const resetThresholdMs = storedThreshold ? parseInt(storedThreshold) : (4 * 60 * 60 * 1000); // 4 horas por defecto
-                    const lastActivity = localStorage.getItem('streetfeed_demo_last_activity') || localStorage.getItem('agenda_demo_last_activity');
-                    const now = Date.now();
+                    const isAgenda = window.location.pathname.includes('agenda');
+                    const resetKey = isAgenda ? 'agenda_demo_reset_time_ms' : 'menu_comida_demo_reset_time_ms';
+                    const lastResetKey = isAgenda ? 'agenda_demo_last_reset' : 'streetfeed_demo_last_reset';
                     
-                    if (lastActivity && (now - Number(lastActivity)) > resetThresholdMs) {
-                        console.warn("[Demo Reset] Excedido el límite de inactividad en demo. Restableciendo datos locales...");
+                    const getResetThreshold = () => {
+                        const storedThreshold = localStorage.getItem(resetKey);
+                        return storedThreshold ? parseInt(storedThreshold) : (4 * 60 * 60 * 1000); // 4 horas por defecto
+                    };
+
+                    const doReset = () => {
+                        console.warn("[Demo Reset] Límite de tiempo absoluto alcanzado. Restableciendo datos locales...");
+                        
+                        // 1. Eliminar llaves estáticas conocidas
                         const demoKeys = [
                             'streetfeed_dishes', 'streetfeed_config', 'streetfeed_categories', 'streetfeed_auth',
                             'streetfeed_cart', 'streetfeed_combos', 'streetfeed_orders', 'streetfeed_state',
-                            'streetfeed_isLoggedIn', 'streetfeed_order_counter', 'streetfeed_demo_last_activity',
+                            'streetfeed_isLoggedIn', 'streetfeed_order_counter',
                             'streetfeed_admin_theme', 'streetfeed_expenses',
                             'agenda_admin_user', 'agenda_admin_pass', 'agenda_auth', 'agenda_admin_session',
                             'agenda_categories', 'agenda_services', 'agenda_specialists', 'agenda_promos',
                             'agenda_gallery', 'agenda_service_galleries', 'agenda_simult_groups', 'agenda_site_name',
                             'agenda_admin_gender', 'agenda_whatsapp_number', 'agenda_site_address', 'agenda_logo_url',
                             'agenda_hero_url', 'agenda_admin_bg', 'agenda_social_links', 'agenda_admin_theme',
-                            'agenda_appointments', 'agenda_salon_open', 'agenda_closure_dates', 'agenda_demo_last_activity',
+                            'agenda_appointments', 'agenda_salon_open', 'agenda_closure_dates',
                             'agenda_client_theme', 'agenda_site_whatsapp', 'agenda_salon_trigger', 'agenda_admin_email',
-                            'agenda_admin_expense_pass'
+                            'agenda_admin_expense_pass', 'menu_comida_demo_reset_time_ms', 'agenda_demo_reset_time_ms',
+                            'agenda_demo_last_reset', 'streetfeed_demo_last_reset'
                         ];
                         demoKeys.forEach(key => localStorage.removeItem(key));
-                    }
-                    localStorage.setItem('streetfeed_demo_last_activity', now.toString());
-                    localStorage.setItem('agenda_demo_last_activity', now.toString());
 
-                    // Actualizar el tiempo de reset en segundo plano desde el servidor
+                        // 2. Eliminar dinámicamente llaves locales de base de datos offline (_local_) y prefijos
+                        const keysToRemove = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && (
+                                key.startsWith('_local_') || 
+                                key.startsWith('agenda_') || 
+                                key.startsWith('streetfeed_') ||
+                                key.startsWith('menu_comida_')
+                            )) {
+                                keysToRemove.push(key);
+                            }
+                        }
+                        keysToRemove.forEach(key => localStorage.removeItem(key));
+                        
+                        // Registrar nuevo reset inmediatamente
+                        const nowStr = Date.now().toString();
+                        localStorage.setItem(lastResetKey, nowStr);
+                        
+                        window.location.reload();
+                    };
+
+                    // Inicializar last_reset si no existe
+                    if (!localStorage.getItem(lastResetKey)) {
+                        localStorage.setItem(lastResetKey, Date.now().toString());
+                    }
+
+                    let localLastReset = localStorage.getItem(lastResetKey);
+
+                    // Verificar tiempo absoluto y actualizar banner cada segundo
+                    setInterval(() => {
+                        const now = Date.now();
+                        const currentLastReset = localStorage.getItem(lastResetKey);
+                        
+                        // Sincronizar recarga entre pestañas si otra pestaña ya hizo reset
+                        if (currentLastReset !== localLastReset) {
+                            window.location.reload();
+                            return;
+                        }
+
+                        const lastReset = parseInt(currentLastReset) || now;
+                        const resetThresholdMs = getResetThreshold();
+                        const remainingMs = resetThresholdMs - (now - lastReset);
+
+                        if (remainingMs <= 0) {
+                            doReset();
+                        } else {
+                            // Actualizar texto en tiempo real si el banner existe en el DOM
+                            const labelText = document.getElementById('demo-reset-text');
+                            if (labelText) {
+                                let timeText = '';
+                                const totalSecs = Math.max(0, Math.round(remainingMs / 1000));
+                                if (totalSecs < 60) {
+                                    timeText = `${totalSecs}s`;
+                                } else if (totalSecs < 3600) {
+                                    const mins = Math.floor(totalSecs / 60);
+                                    const secs = totalSecs % 60;
+                                    timeText = `${mins}m ${secs}s`;
+                                } else {
+                                    const hrs = Math.floor(totalSecs / 3600);
+                                    const mins = Math.floor((totalSecs % 3600) / 60);
+                                    timeText = `${hrs}h ${mins}m`;
+                                }
+                                labelText.innerText = `Cambios temporales (se limpian en ${timeText})`;
+                            }
+                        }
+                    }, 1000);
+
+                    // Sincronizar dinámicamente desde el servidor al iniciar
+                    const serverModuleId = isAgenda ? 'agenda' : 'streetfeed';
                     fetch('/api/settings')
                         .then(res => res.json())
                         .then(data => {
-                            const mod = (data.modules || []).find(m => m.id === 'agenda');
+                            const mod = (data.modules || []).find(m => m.id === serverModuleId);
                             if (mod) {
                                 const val = parseInt(mod.demoResetValue) || 4;
                                 const unit = mod.demoResetUnit || 'hours';
                                 let ms = val * 60 * 60 * 1000;
                                 if (unit === 'minutes') ms = val * 60 * 1000;
                                 else if (unit === 'days') ms = val * 24 * 60 * 60 * 1000;
-                                localStorage.setItem('agenda_demo_reset_time_ms', ms.toString());
-
-                                // Actualizar el texto del banner si ya está en el DOM
-                                const labelText = document.getElementById('demo-reset-text');
-                                if (labelText) {
-                                    let newTimeText = '4h';
-                                    const totalMinutes = Math.round(ms / 1000 / 60);
-                                    if (totalMinutes < 60) newTimeText = `${totalMinutes} min`;
-                                    else if (totalMinutes < 1440) newTimeText = `${totalMinutes / 60}h`;
-                                    else newTimeText = `${Math.round(totalMinutes / 1440)}d`;
-                                    labelText.innerText = `Cambios temporales (se limpian tras ${newTimeText} de inactividad)`;
+                                
+                                const oldThreshold = localStorage.getItem(resetKey);
+                                const newThresholdStr = ms.toString();
+                                
+                                if (oldThreshold !== newThresholdStr) {
+                                    localStorage.setItem(resetKey, newThresholdStr);
+                                    
+                                    // Si cambia el threshold, puede que el tiempo actual ya haya expirado.
+                                    const now = Date.now();
+                                    const lastReset = parseInt(localStorage.getItem(lastResetKey)) || now;
+                                    if (ms - (now - lastReset) <= 0) {
+                                        doReset();
+                                    }
                                 }
                             }
                         })
@@ -102,14 +177,23 @@
 
                     // --- INYECCIÓN DE BANNER DE MODO DEMO ---
                     const injectDemoBanner = () => {
-                        const storedThreshold = localStorage.getItem('agenda_demo_reset_time_ms');
-                        let timeText = '4h';
-                        if (storedThreshold) {
-                            const ms = parseInt(storedThreshold);
-                            const totalMinutes = Math.round(ms / 1000 / 60);
-                            if (totalMinutes < 60) timeText = `${totalMinutes} min`;
-                            else if (totalMinutes < 1440) timeText = `${totalMinutes / 60}h`;
-                            else timeText = `${Math.round(totalMinutes / 1440)}d`;
+                        const storedThreshold = localStorage.getItem(resetKey);
+                        const lastReset = parseInt(localStorage.getItem(lastResetKey)) || Date.now();
+                        const resetThresholdMs = storedThreshold ? parseInt(storedThreshold) : (4 * 60 * 60 * 1000);
+                        const remainingMs = Math.max(0, resetThresholdMs - (Date.now() - lastReset));
+
+                        let timeText = '';
+                        const totalSecs = Math.round(remainingMs / 1000);
+                        if (totalSecs < 60) {
+                            timeText = `${totalSecs}s`;
+                        } else if (totalSecs < 3600) {
+                            const mins = Math.floor(totalSecs / 60);
+                            const secs = totalSecs % 60;
+                            timeText = `${mins}m ${secs}s`;
+                        } else {
+                            const hrs = Math.floor(totalSecs / 3600);
+                            const mins = Math.floor((totalSecs % 3600) / 60);
+                            timeText = `${hrs}h ${mins}m`;
                         }
 
                         const bannerHtml = `
@@ -147,7 +231,7 @@
                                 "></div>
                                 <span style="white-space: nowrap;">
                                     <strong style="color: var(--theme-accent, var(--color-accent, #ff8c00)); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Modo Demo</strong> 
-                                    · <span id="demo-reset-text">Cambios temporales (se limpian tras ${timeText} de inactividad)</span>
+                                    · <span id="demo-reset-text">Cambios temporales (se limpian en ${timeText})</span>
                                 </span>
                                 <button onclick="document.getElementById('demo-badge-banner').style.opacity='0'; setTimeout(()=>document.getElementById('demo-badge-banner').remove(), 400);" style="
                                     background: transparent;

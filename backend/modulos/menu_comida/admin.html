@@ -58,6 +58,8 @@
 
                     const doReset = () => {
                         console.warn("[Demo Reset] Límite de tiempo absoluto alcanzado. Restableciendo datos locales...");
+                        
+                        // 1. Eliminar llaves estáticas conocidas
                         const demoKeys = [
                             'streetfeed_dishes', 'streetfeed_config', 'streetfeed_categories', 'streetfeed_auth',
                             'streetfeed_cart', 'streetfeed_combos', 'streetfeed_orders', 'streetfeed_state',
@@ -74,6 +76,21 @@
                             'agenda_demo_last_reset', 'streetfeed_demo_last_reset'
                         ];
                         demoKeys.forEach(key => localStorage.removeItem(key));
+
+                        // 2. Eliminar dinámicamente llaves locales de base de datos offline (_local_) y prefijos
+                        const keysToRemove = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && (
+                                key.startsWith('_local_') || 
+                                key.startsWith('agenda_') || 
+                                key.startsWith('streetfeed_') ||
+                                key.startsWith('menu_comida_')
+                            )) {
+                                keysToRemove.push(key);
+                            }
+                        }
+                        keysToRemove.forEach(key => localStorage.removeItem(key));
                         
                         // Registrar nuevo reset inmediatamente
                         const nowStr = Date.now().toString();

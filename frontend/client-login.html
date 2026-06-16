@@ -614,7 +614,9 @@
             return path;
         }
 
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
 
         // Particle animation on canvas
         const canvas = document.getElementById('particles-canvas');
@@ -753,7 +755,9 @@
                 input.type = 'password';
                 icon.setAttribute('data-lucide', 'eye');
             }
-            lucide.createIcons();
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
         });
 
         // Email validation micro-feedback
@@ -823,7 +827,9 @@
             } catch (err) {
                 errorText.textContent = err.message;
                 errorMsg.classList.add('show');
-                lucide.createIcons();
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
                 btn.disabled = false;
                 spinner.style.display = 'none';
                 loginIcon.style.display = 'block';

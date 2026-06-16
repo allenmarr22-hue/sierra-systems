@@ -1214,7 +1214,7 @@ app.post('/api/client/profile/update', async (req, res) => {
     const session = verifySignedToken(token);
     if (!session || !session.clientId) return res.status(401).json({ error: 'No autorizado' });
 
-    const { newName, ownerName, phone, nit, address, city, clientEmail } = req.body;
+    const { newName, ownerName, phone, nit, address, city, clientEmail, type } = req.body;
     if (!newName || newName.trim() === '') return res.status(400).json({ error: 'El nombre del negocio es requerido.' });
 
     try {
@@ -1233,7 +1233,8 @@ app.post('/api/client/profile/update', async (req, res) => {
             nit: nit || '', 
             address: address || '', 
             city: city || '',
-            clientEmail: clientEmail || biz.client_email
+            clientEmail: clientEmail || biz.client_email,
+            type: type || biz.type || 'restaurant'
         });
 
         broadcastUpdate();
@@ -1245,7 +1246,8 @@ app.post('/api/client/profile/update', async (req, res) => {
             nit: nit || '', 
             address: address || '', 
             city: city || '',
-            clientEmail: clientEmail || biz.client_email
+            clientEmail: clientEmail || biz.client_email,
+            type: type || biz.type || 'restaurant'
         });
     } catch (err) {
         console.error('Error actualizando perfil cliente:', err);
@@ -1810,7 +1812,10 @@ app.get('/api/settings', async (req, res) => {
             supportPhone: dbState.config?.supportPhone || '573001234567',
             recommendedModuleId: dbState.config?.recommendedModuleId || null,
             multiSedeDiscount: dbState.config?.multiSedeDiscount !== undefined ? dbState.config.multiSedeDiscount : 30,
-            recommendedLabel: dbState.config?.recommendedLabel || 'RECOMENDADO'
+            recommendedLabel: dbState.config?.recommendedLabel || 'RECOMENDADO',
+            sessionTimeout: dbState.config?.sessionTimeout !== undefined ? parseInt(dbState.config.sessionTimeout) : 15,
+            demoUser: dbState.config?.demoUser || 'admin',
+            demoPass: dbState.config?.demoPass || '123456'
         };
         const publicModules = (dbState.modules || []).map(m => ({
             id: m.id,
@@ -1831,7 +1836,7 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
-    const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass, recommendedModuleId, multiSedeDiscount, recommendedLabel, syncExisting } = req.body;
+    const { logo, companyName, supportEmail, supportPhone, adminUser, adminPass, currentPass, recommendedModuleId, multiSedeDiscount, recommendedLabel, syncExisting, sessionTimeout, demoUser, demoPass } = req.body;
     try {
         let dbState = await readDb();
         if (!dbState.config) dbState.config = {};
@@ -1857,6 +1862,9 @@ app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
         if (recommendedModuleId !== undefined) dbState.config.recommendedModuleId = recommendedModuleId;
         if (multiSedeDiscount !== undefined) dbState.config.multiSedeDiscount = parseInt(multiSedeDiscount);
         if (recommendedLabel !== undefined) dbState.config.recommendedLabel = recommendedLabel;
+        if (sessionTimeout !== undefined) dbState.config.sessionTimeout = parseInt(sessionTimeout);
+        if (demoUser !== undefined) dbState.config.demoUser = demoUser;
+        if (demoPass !== undefined) dbState.config.demoPass = demoPass;
 
         if (syncExisting && multiSedeDiscount !== undefined) {
             const newDisc = parseInt(multiSedeDiscount);
@@ -2737,8 +2745,9 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
         const { bizId } = req.params;
         const { days, instanceId } = req.body;
         const daysInt = parseInt(days, 10);
+        const absDays = Math.abs(daysInt);
 
-        if (!daysInt || daysInt < 1 || daysInt > 365) {
+        if (!daysInt || absDays < 1 || absDays > 365) {
             return res.status(400).json({ ok: false, message: 'El número de días debe estar entre 1 y 365.' });
         }
 
@@ -2809,8 +2818,13 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
             }
         }
 
-        // Registrar en historial de pagos SQL directo (Obsequio de Días)
-        const concept = `Cortesía / Obsequio de ${daysInt} días — ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}`;
+        const isReduction = daysInt < 0;
+
+        // Registrar en historial de pagos SQL directo
+        const concept = isReduction
+            ? `Reducción / Ajuste de ${absDays} días — ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}`
+            : `Cortesía / Obsequio de ${daysInt} días — ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}`;
+
         try {
             await db.pool.query(`
                 INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
@@ -2829,15 +2843,24 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
 
         // Registrar notificación en tiempo real para auditoría
         pushNotification(dbState, {
-            title: 'Días de Cortesía Otorgados',
-            desc: `Se obsequiaron ${daysInt} días adicionales a "${biz.name}" en ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}.`,
-            icon: 'gift',
-            color: '#10b981'
+            title: isReduction ? 'Días de Suscripción Reducidos' : 'Días de Cortesía Otorgados',
+            desc: isReduction
+                ? `Se redujeron ${absDays} días a "${biz.name}" en ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}.`
+                : `Se obsequiaron ${daysInt} días adicionales a "${biz.name}" en ${targetInstance ? `${moduleName} (${branchName})` : 'Suscripción General'}.`,
+            icon: isReduction ? 'minus-circle' : 'gift',
+            color: isReduction ? '#ef4444' : '#10b981'
         });
 
         await writeDb(dbState);
         broadcastUpdate();
-        res.json({ ok: true, message: `Se regalaron ${daysInt} día(s) al módulo. Nuevo corte: ${newDateStr}.`, newDate: newDateStr });
+        
+        res.json({ 
+            ok: true, 
+            message: isReduction 
+                ? `Se redujeron ${absDays} día(s) al módulo. Nuevo corte: ${newDateStr}.`
+                : `Se regalaron ${daysInt} día(s) al módulo. Nuevo corte: ${newDateStr}.`, 
+            newDate: newDateStr 
+        });
     } catch (err) {
         console.error('[Payment] Error extendiendo suscripción:', err);
         res.status(500).json({ ok: false, message: 'Error interno del servidor.' });

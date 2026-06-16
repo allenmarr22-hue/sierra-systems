@@ -129,7 +129,24 @@ loginBtn.addEventListener('click', async () => {
     const storedUser = localStorage.getItem('agenda_admin_user') || 'admin';
     const storedPass = localStorage.getItem('agenda_admin_pass') || '123456';
 
-    if((enteredEmail === storedUser && enteredPass === storedPass) || (enteredEmail === 'admin' && enteredPass === '123456')) {
+    let dynamicDemoUser = 'admin';
+    let dynamicDemoPass = '123456';
+    try {
+        const settingsRes = await fetch('/api/settings');
+        if (settingsRes.ok) {
+            const settingsData = await settingsRes.json();
+            if (settingsData.config) {
+                dynamicDemoUser = settingsData.config.demoUser || 'admin';
+                dynamicDemoPass = settingsData.config.demoPass || '123456';
+            }
+        }
+    } catch (e) {
+        console.error('Error fetching settings config:', e);
+    }
+
+    if ((enteredEmail === storedUser && enteredPass === storedPass) || 
+        (enteredEmail === 'admin' && enteredPass === '123456') || 
+        (enteredEmail === dynamicDemoUser && enteredPass === dynamicDemoPass)) {
         localStorage.setItem('agenda_admin_session', 'true');
         toggleView(true);
     } else {

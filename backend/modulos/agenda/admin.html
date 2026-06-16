@@ -54,6 +54,8 @@
 
                     const doReset = () => {
                         console.warn("[Demo Reset] Límite de tiempo absoluto alcanzado. Restableciendo datos locales...");
+                        
+                        // 1. Eliminar llaves estáticas conocidas
                         const demoKeys = [
                             'streetfeed_dishes', 'streetfeed_config', 'streetfeed_categories', 'streetfeed_auth',
                             'streetfeed_cart', 'streetfeed_combos', 'streetfeed_orders', 'streetfeed_state',
@@ -70,6 +72,21 @@
                             'agenda_demo_last_reset', 'streetfeed_demo_last_reset'
                         ];
                         demoKeys.forEach(key => localStorage.removeItem(key));
+
+                        // 2. Eliminar dinámicamente llaves locales de base de datos offline (_local_) y prefijos
+                        const keysToRemove = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && (
+                                key.startsWith('_local_') || 
+                                key.startsWith('agenda_') || 
+                                key.startsWith('streetfeed_') ||
+                                key.startsWith('menu_comida_')
+                            )) {
+                                keysToRemove.push(key);
+                            }
+                        }
+                        keysToRemove.forEach(key => localStorage.removeItem(key));
                         
                         // Registrar nuevo reset inmediatamente
                         const nowStr = Date.now().toString();
@@ -153,6 +170,104 @@
                             }
                         })
                         .catch(() => {});
+
+                    // --- INYECCIÓN DE BANNER DE MODO DEMO ---
+                    const injectDemoBanner = () => {
+                        const storedThreshold = localStorage.getItem(resetKey);
+                        const lastReset = parseInt(localStorage.getItem(lastResetKey)) || Date.now();
+                        const resetThresholdMs = storedThreshold ? parseInt(storedThreshold) : (4 * 60 * 60 * 1000);
+                        const remainingMs = Math.max(0, resetThresholdMs - (Date.now() - lastReset));
+
+                        let timeText = '';
+                        const totalSecs = Math.round(remainingMs / 1000);
+                        if (totalSecs < 60) {
+                            timeText = `${totalSecs}s`;
+                        } else if (totalSecs < 3600) {
+                            const mins = Math.floor(totalSecs / 60);
+                            const secs = totalSecs % 60;
+                            timeText = `${mins}m ${secs}s`;
+                        } else {
+                            const hrs = Math.floor(totalSecs / 3600);
+                            const mins = Math.floor((totalSecs % 3600) / 60);
+                            timeText = `${hrs}h ${mins}m`;
+                        }
+
+                        const bannerHtml = `
+                            <div id="demo-badge-banner" style="
+                                position: fixed;
+                                top: 12px;
+                                left: 50%;
+                                transform: translateX(-50%) translateY(-100px);
+                                z-index: 999999;
+                                background: rgba(18, 22, 43, 0.82);
+                                backdrop-filter: blur(16px) saturate(180%);
+                                -webkit-backdrop-filter: blur(16px) saturate(180%);
+                                border: 1px solid rgba(255, 255, 255, 0.08);
+                                border-radius: 40px;
+                                padding: 8px 16px 8px 12px;
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+                                color: #fff;
+                                font-family: system-ui, -apple-system, sans-serif;
+                                font-size: 0.85rem;
+                                font-weight: 500;
+                                pointer-events: auto;
+                                transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+                                opacity: 0;
+                            ">
+                                <div style="
+                                    background: var(--theme-accent, var(--color-accent, #ff8c00));
+                                    width: 8px;
+                                    height: 8px;
+                                    border-radius: 50%;
+                                    box-shadow: 0 0 10px var(--theme-accent, var(--color-accent, #ff8c00));
+                                    animation: demo-pulse 2s infinite;
+                                "></div>
+                                <span style="white-space: nowrap;">
+                                    <strong style="color: var(--theme-accent, var(--color-accent, #ff8c00)); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Modo Demo</strong> 
+                                    · <span id="demo-reset-text">Cambios temporales (se limpian en ${timeText})</span>
+                                </span>
+                                <button onclick="document.getElementById('demo-badge-banner').style.opacity='0'; setTimeout(()=>document.getElementById('demo-badge-banner').remove(), 400);" style="
+                                    background: transparent;
+                                    border: none;
+                                    color: rgba(255,255,255,0.4);
+                                    cursor: pointer;
+                                    padding: 0;
+                                    display: flex;
+                                    align-items: center;
+                                    font-size: 1.1rem;
+                                    margin-left: 6px;
+                                    transition: color 0.2s;
+                                " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">&times;</button>
+                            </div>
+                            <style>
+                            @keyframes demo-pulse {
+                                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0.5); }
+                                70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 140, 0, 0); }
+                                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0); }
+                            }
+                            </style>
+                        `;
+                        const div = document.createElement('div');
+                        div.innerHTML = bannerHtml.trim();
+                        const bannerEl = div.firstChild;
+                        const styleEl = div.lastChild;
+                        document.body.appendChild(bannerEl);
+                        document.body.appendChild(styleEl);
+
+                        setTimeout(() => {
+                            bannerEl.style.transform = 'translateX(-50%) translateY(0)';
+                            bannerEl.style.opacity = '1';
+                        }, 1000);
+                    };
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', injectDemoBanner);
+                    } else {
+                        injectDemoBanner();
+                    }
                 }
             } catch(e) {
                 console.error("Error en auto-reset demo:", e);

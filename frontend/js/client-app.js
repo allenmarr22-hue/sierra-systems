@@ -416,6 +416,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentAddress = clientBiz?.address || '';
         const currentCity = clientBiz?.city || '';
         const currentEmail = clientBiz?.clientEmail || '';
+        const currentType = clientBiz?.type || 'restaurant';
+
+        const standardTypeIds = ['restaurant', 'retail', 'services', 'salon', 'health', 'education'];
+        const isCustomType = currentType && !standardTypeIds.includes(currentType);
+        const targetType = isCustomType ? 'other' : currentType;
 
         Swal.fire({
             title: 'Mi Perfil',
@@ -429,6 +434,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .profile-input:focus {
                         border-color: var(--primary);
                         box-shadow: 0 0 0 3px var(--primary-alpha);
+                    }
+                    select.profile-input {
+                        height: 48px;
+                        padding: 0 0.8rem;
+                        appearance: none;
+                        -webkit-appearance: none;
+                        -moz-appearance: none;
+                        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+                        background-repeat: no-repeat;
+                        background-position: right 0.8rem center;
+                        background-size: 1.2rem;
+                        cursor: pointer;
+                        padding-right: 2.5rem;
+                    }
+                    [data-theme="light"] select.profile-input {
+                        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
                     }
                     .profile-label {
                         font-size: 0.72rem; color: var(--text-muted); font-weight: 700;
@@ -454,9 +475,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: left;">
-                        <div style="grid-column: span 2;">
+                        <div>
                             <label class="profile-label">Nombre del Negocio *</label>
                             <input type="text" id="profile-name-input" class="profile-input" value="${currentName}">
+                        </div>
+                        <div>
+                            <label class="profile-label">Tipo de Negocio *</label>
+                            <select id="profile-type-select" class="profile-input">
+                                <option value="restaurant" ${targetType === 'restaurant' ? 'selected' : ''}>Restaurante</option>
+                                <option value="retail" ${targetType === 'retail' ? 'selected' : ''}>Tienda</option>
+                                <option value="services" ${targetType === 'services' ? 'selected' : ''}>Servicios</option>
+                                <option value="salon" ${targetType === 'salon' ? 'selected' : ''}>Belleza</option>
+                                <option value="health" ${targetType === 'health' ? 'selected' : ''}>Salud</option>
+                                <option value="education" ${targetType === 'education' ? 'selected' : ''}>Educación</option>
+                                <option value="other" ${targetType === 'other' ? 'selected' : ''}>Otros</option>
+                            </select>
+                        </div>
+                        <div id="profile-type-custom-wrap" style="grid-column: span 2; display: ${isCustomType ? 'block' : 'none'};">
+                            <label class="profile-label">Especificar Tipo de Negocio *</label>
+                            <input type="text" id="profile-type-custom" class="profile-input" value="${isCustomType ? currentType : ''}" placeholder="Escribe tu tipo de negocio">
                         </div>
                         <div>
                             <label class="profile-label">Nombre del Propietario</label>
@@ -505,9 +542,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     reader.readAsDataURL(file);
                 });
 
+                // Toggle custom type input wrapper dynamically
+                const selectType = document.getElementById('profile-type-select');
+                const customWrap = document.getElementById('profile-type-custom-wrap');
+                const customInput = document.getElementById('profile-type-custom');
+                
+                selectType?.addEventListener('change', (e) => {
+                    if (e.target.value === 'other') {
+                        customWrap.style.display = 'block';
+                        customInput?.focus();
+                    } else {
+                        customWrap.style.display = 'none';
+                        if (customInput) customInput.value = '';
+                    }
+                });
+
                 // Bind Enter key to submit profile
                 const inputs = [
-                    'profile-name-input', 'profile-owner-input', 'profile-phone-input',
+                    'profile-name-input', 'profile-type-custom', 'profile-owner-input', 'profile-phone-input',
                     'profile-nit-input', 'profile-city-input', 'profile-address-input',
                     'profile-email-input'
                 ].map(id => document.getElementById(id));
@@ -523,6 +575,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             },
             preConfirm: async () => {
                 const newName = document.getElementById('profile-name-input').value;
+                const selectTypeValue = document.getElementById('profile-type-select').value;
+                const customTypeValue = document.getElementById('profile-type-custom').value;
                 const ownerName = document.getElementById('profile-owner-input').value;
                 const phone = document.getElementById('profile-phone-input').value;
                 const nit = document.getElementById('profile-nit-input').value;
@@ -530,6 +584,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const address = document.getElementById('profile-address-input').value;
                 const clientEmail = document.getElementById('profile-email-input').value;
                 
+                let finalType = selectTypeValue;
+                if (selectTypeValue === 'other') {
+                    if (!customTypeValue || customTypeValue.trim() === '') {
+                        Swal.showValidationMessage('Por favor especifica tu tipo de negocio.');
+                        return false;
+                    }
+                    finalType = customTypeValue.trim();
+                }
+
                 const fileInput = document.getElementById('avatar-file-input');
                 const sessionRaw = sessionStorage.getItem('clientSession');
                 if (!sessionRaw) return false;
@@ -557,14 +620,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 try {
                     // 1. Update Profile Info if changed
-                    if (newName !== currentName || ownerName !== currentOwner || phone !== currentPhone || nit !== currentNit || address !== currentAddress || city !== currentCity || clientEmail !== currentEmail) {
+                    if (newName !== currentName || finalType !== currentType || ownerName !== currentOwner || phone !== currentPhone || nit !== currentNit || address !== currentAddress || city !== currentCity || clientEmail !== currentEmail) {
                         const profileRes = await fetch('/api/client/profile/update', {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${session.token}`
                             },
-                            body: JSON.stringify({ newName, ownerName, phone, nit, address, city, clientEmail })
+                            body: JSON.stringify({ 
+                                newName, 
+                                ownerName, 
+                                phone, 
+                                nit, 
+                                address, 
+                                city, 
+                                clientEmail,
+                                type: finalType
+                            })
                         });
                         await handleRes(profileRes, 'Error al actualizar perfil.');
                     }
@@ -583,7 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         finalAvatarUrl = avData.avatarUrl;
                     }
 
-                    return { newName, ownerName, phone, nit, address, city, clientEmail, avatarUrl: finalAvatarUrl };
+                    return { newName, type: finalType, ownerName, phone, nit, address, city, clientEmail, avatarUrl: finalAvatarUrl };
                 } catch (err) {
                     Swal.showValidationMessage(err.message);
                     return false;
@@ -591,12 +663,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                const { newName, ownerName, phone, nit, address, city, clientEmail, avatarUrl } = result.value;
+                const { newName, type, ownerName, phone, nit, address, city, clientEmail, avatarUrl } = result.value;
                 
                 // Update local state and re-render header info
                 const clientBiz = appState.businesses.find(b => b.id === CLIENT_ID);
                 if (clientBiz) {
                     clientBiz.name = newName;
+                    clientBiz.type = type;
                     clientBiz.ownerName = ownerName;
                     clientBiz.phone = phone;
                     clientBiz.nit = nit;
@@ -646,6 +719,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         wrap.innerHTML = `<span id="client-avatar">${businessName.substring(0, 2).toUpperCase()}</span>`;
                     }
                 }
+                
+                // Refrescar el dashboard e incluir la sugerencia inteligente al instante
+                renderDashboard();
                 
                 Swal.fire({ icon: 'success', title: 'Perfil actualizado', timer: 2000, showConfirmButton: false, background: 'var(--bg-surface)', color: 'var(--text)' });
             }
@@ -1277,6 +1353,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
+
+// Mapeo inteligente para sugerencias de módulos según el tipo de negocio
+function getSuggestedModule(clientBiz) {
+    if (!clientBiz) return 'streetfeed';
+    const type = (clientBiz.type || '').toLowerCase().trim();
+    
+    // Mapeos estándar directos
+    if (type === 'restaurant' || type === 'retail') return 'streetfeed';
+    if (type === 'services' || type === 'salon' || type === 'health' || type === 'education') return 'agenda';
+    
+    // Si es personalizado, buscar en el tipo y nombre del negocio
+    const name = (clientBiz.name || '').toLowerCase();
+    const searchString = `${type} ${name}`;
+    
+    const streetfeedKeywords = [
+        'comida', 'food', 'restaurant', 'restaurante', 'tienda', 'retail', 'ropa', 'venta', 'market', 
+        'super', 'cafe', 'café', 'panader', 'pastel', 'pizz', 'comercio', 'boutique', 'licor', 'bar', 
+        'helad', 'hamburg', 'perr', 'frut', 'carn', 'shop', 'store', 'calzado', 'mercado', 'alimento', 
+        'bebida', 'distribuidor', 'comestible', 'minimarket', 'bodega'
+    ];
+    
+    const agendaKeywords = [
+        'citas', 'agenda', 'uñas', 'unas', 'peluquer', 'salon', 'salón', 'estetic', 'barber', 'spa', 
+        'consult', 'medico', 'médico', 'doctor', 'odontol', 'psicol', 'clase', 'academi', 'taller', 
+        'mecanic', 'mecánic', 'asesor', 'consultor', 'clinic', 'clínica', 'veterin', 'vet', 'gimn', 
+        'gym', 'trainer', 'abogad', 'ingenier', 'arquitect', 'curso', 'escuela', 'serv', 'odontologia', 
+        'dental', 'terapia', 'abogac', 'mecanica', 'autocuidado', 'belleza', 'estetica'
+    ];
+    
+    for (const kw of streetfeedKeywords) {
+        if (searchString.includes(kw)) return 'streetfeed';
+    }
+    
+    for (const kw of agendaKeywords) {
+        if (searchString.includes(kw)) return 'agenda';
+    }
+    
+    // Por defecto, sugerir streetfeed si no se logra clasificar
+    return 'streetfeed';
+}
 
 // ====================== DATA LOADING ======================
 async function loadData() {
@@ -1912,13 +2028,11 @@ function renderDashboard() {
                     priceHtml = `<div style="font-weight:800; font-size:1.5rem; color:var(--text); margin:1.5rem 0 1rem;">${priceDisplay}</div>`;
                 }
 
-                const isRecommended = String(mod.id) === String(appState.config?.recommendedModuleId);
-                const recLabel = appState.config?.recommendedLabel || 'RECOMENDADO';
-                const badge = (mod.status === 'active' && isRecommended)
-                    ? `<div class="marketplace-badge" style="background:linear-gradient(135deg, #a855f7 0%, #ec4899 100%); color:#ffffff; box-shadow:0 0 15px rgba(236,72,153,0.4); border:none; top:12px; right:12px; font-weight:800;">✨ ${recLabel}</div>`
-                    : ((mod.status === 'active' && i === 0 && !activePromo)
-                        ? `<div class="marketplace-badge" style="background:var(--primary-gradient); color:#ffffff; box-shadow:var(--shadow-primary); border:none; top:12px; right:12px; font-weight:800;">⭐ POPULAR</div>`
-                        : (discountBadge || ''));
+                const suggestedId = getSuggestedModule(clientBiz);
+                const isSuggested = String(mod.id) === String(suggestedId);
+                const badge = (mod.status === 'active' && isSuggested)
+                    ? `<div class="marketplace-badge" style="background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color:#ffffff; box-shadow:0 0 15px rgba(99,102,241,0.4); border:none; top:12px; right:12px; font-weight:800;">⭐ SUGERIDO</div>`
+                    : (discountBadge || '');
 
                 let buttonHtml = '';
                 if (mod.status === 'maintenance') {

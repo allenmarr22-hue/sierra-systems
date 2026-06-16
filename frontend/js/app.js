@@ -783,10 +783,19 @@ document.addEventListener('DOMContentLoaded', () => {
         applyRolePermissions();
         loadData();
         initRealTimeSync();
+
+        // Iniciar tracking de inactividad
+        initInactivityTracker();
+
+        // Verificar si la sesión estaba bloqueada
+        if (localStorage.getItem('as_locked') === 'true') {
+            showLockScreen();
+        }
     } else {
         localStorage.removeItem('as_auth');
         localStorage.removeItem('as_user');
         localStorage.removeItem('as_admin_token');
+        localStorage.removeItem('as_locked');
         appState.user = null;
         showView('login-view');
         lucide.createIcons();
@@ -830,6 +839,10 @@ async function loadData() {
         if (appState.config.companyName) {
             const input = document.getElementById('settings-company-name');
             if (input) input.value = appState.config.companyName;
+        }
+        if (appState.config.sessionTimeout !== undefined) {
+            const input = document.getElementById('settings-session-timeout');
+            if (input) input.value = appState.config.sessionTimeout;
         }
         if (appState.config.supportEmail) {
             const input = document.getElementById('settings-support-email');
@@ -1106,6 +1119,10 @@ function setupEventListeners() {
                     document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
                     loadData();
                     initRealTimeSync();
+
+                    // Iniciar/reiniciar inactividad en login exitoso
+                    localStorage.removeItem('as_locked');
+                    initInactivityTracker();
                 } else {
                     document.getElementById('login-error').classList.remove('hidden');
                 }
@@ -1544,6 +1561,13 @@ function setupEventListeners() {
         window._securityCallback = null;
     });
 
+    document.getElementById('security-pass-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('security-confirm-btn')?.click();
+        }
+    });
+
     document.getElementById('security-confirm-btn')?.addEventListener('click', async () => {
         const passInput = document.getElementById('security-pass-input');
         const errorMsg = document.getElementById('security-error-msg');
@@ -1714,6 +1738,9 @@ function setupEventListeners() {
             return showToast('Debes ingresar tu contraseña actual para cambiar credenciales', 'error');
         }
 
+        const sessionTimeoutInput = document.getElementById('settings-session-timeout');
+        const sessionTimeout = sessionTimeoutInput ? parseInt(sessionTimeoutInput.value) : 15;
+
         try {
             const res = await adminFetch('/api/settings/save', {
                 method: 'POST',
@@ -1725,7 +1752,8 @@ function setupEventListeners() {
                     supportPhone: supportPhone || null,
                     adminUser: adminUser || null,
                     adminPass: adminPass || null,
-                    currentPass: currentPass || null
+                    currentPass: currentPass || null,
+                    sessionTimeout: !isNaN(sessionTimeout) ? sessionTimeout : null
                 })
             });
             const data = await res.json();
@@ -1747,6 +1775,10 @@ function setupEventListeners() {
                     if (companyName) appState.config.companyName = companyName;
                     if (supportEmail) appState.config.supportEmail = supportEmail;
                     if (supportPhone) appState.config.supportPhone = supportPhone;
+                    if (!isNaN(sessionTimeout)) {
+                        appState.config.sessionTimeout = sessionTimeout;
+                        resetInactivityTimer();
+                    }
                 }
             } else {
                 showToast(data.error || 'Error al guardar', 'error');
@@ -2525,7 +2557,7 @@ function renderModulesGrid() {
         const priceDisplay = (mod.price && !isNaN(priceNum) && priceNum > 0) ? `<span style="white-space: nowrap;">$ ${priceNum.toLocaleString('es-CO')} <span style="font-size: 0.8em;">COP</span></span>` : 'Cotizar';
         
         const isRec = String(mod.id) === String(appState.config?.recommendedModuleId);
-        const recBadgeHtml = isRec ? `<div style="margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 4px; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.25); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; width: fit-content;">✨ RECOMENDADO</div>` : '';
+        const recBadgeHtml = isRec ? `<div style="margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 4px; background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-border); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; width: fit-content;">✨ RECOMENDADO</div>` : '';
 
         return `
         <div class="biz-card" data-module-id="${mod.id}">
@@ -2544,7 +2576,7 @@ function renderModulesGrid() {
                 ${priceDisplay}
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 1.25rem;">
-                <button class="btn-primary edit-mod-btn" data-id="${mod.id}" style="flex:2; justify-content: center; background: #8b5cf6; border:none;">
+                <button class="btn-primary edit-mod-btn" data-id="${mod.id}" style="flex:2; justify-content: center;">
                     <i data-lucide="settings"></i> Configurar
                 </button>
                 <button class="btn-ghost toggle-mod-btn" data-id="${mod.id}" data-status="${mod.status === 'active' ? 'hidden' : 'active'}" 
@@ -3823,8 +3855,17 @@ window.billingGiftDays = async function(bizId) {
     const htmlContent = `
         <div style="text-align:left; font-size:0.9rem; color:var(--text-main);">
             <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.25rem;">
-                Selecciona el módulo y la sede a la que deseas otorgar los días de suscripción.
+                Selecciona el módulo y la sede a la que deseas ajustar los días de suscripción.
             </p>
+            
+            <div style="margin-bottom:1rem; display: flex; gap: 0.5rem; background: var(--bg-surface-light); padding: 0.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <button type="button" id="toggle-action-add" class="toggle-action-btn active" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: var(--primary); color: white;">
+                    ➕ Adicionar
+                </button>
+                <button type="button" id="toggle-action-remove" class="toggle-action-btn" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted);">
+                    ➖ Quitar
+                </button>
+            </div>
             
             <div style="margin-bottom:1rem;">
                 <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Módulo</label>
@@ -3846,15 +3887,17 @@ window.billingGiftDays = async function(bizId) {
             </div>
 
             <div style="margin-bottom:0.5rem;">
-                <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Días Adicionales</label>
+                <label id="gift-days-label" style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Días Adicionales</label>
                 <input type="number" id="gift-days-input" min="1" max="365" value="30" style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:1.2rem; font-weight:700; text-align:center;">
             </div>
-            <p style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin:0.3rem 0 0;">días a regalar</p>
+            <p id="gift-days-help" style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin:0.3rem 0 0;">días a regalar</p>
         </div>
     `;
 
+    let selectedAction = 'add';
+
     const { value: result, isConfirmed } = await Swal.fire({
-        title: `<span style="font-size:1rem;font-weight:800;color:var(--text-main);">🎁 Regalar días a</span><br><span style="color:var(--primary);font-size:1.1rem;">${biz.name}</span>`,
+        title: `<span style="font-size:1rem;font-weight:800;color:var(--text-main);">🎁 Ajustar Días de Suscripción a</span><br><span style="color:var(--primary);font-size:1.1rem;">${biz.name}</span>`,
         html: htmlContent,
         background: 'var(--bg-surface)',
         color: 'var(--text-main)',
@@ -3868,6 +3911,42 @@ window.billingGiftDays = async function(bizId) {
             const branchSelect = popup.querySelector('#gift-branch-select');
             const expiryDisplay = popup.querySelector('#current-expiry-display');
             const daysInput = popup.querySelector('#gift-days-input');
+            
+            const btnAdd = popup.querySelector('#toggle-action-add');
+            const btnRemove = popup.querySelector('#toggle-action-remove');
+            const daysLabel = popup.querySelector('#gift-days-label');
+            const daysHelp = popup.querySelector('#gift-days-help');
+            const submitBtn = popup.querySelector('.swal2-confirm');
+
+            const setAction = (action) => {
+                selectedAction = action;
+                if (action === 'add') {
+                    btnAdd.style.background = 'var(--primary)';
+                    btnAdd.style.color = 'white';
+                    btnRemove.style.background = 'transparent';
+                    btnRemove.style.color = 'var(--text-muted)';
+                    if (daysLabel) daysLabel.textContent = 'Días Adicionales';
+                    if (daysHelp) daysHelp.textContent = 'días a regalar';
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '🎁 Regalar días';
+                        submitBtn.style.backgroundColor = '#10b981';
+                    }
+                } else {
+                    btnRemove.style.background = '#ef4444';
+                    btnRemove.style.color = 'white';
+                    btnAdd.style.background = 'transparent';
+                    btnAdd.style.color = 'var(--text-muted)';
+                    if (daysLabel) daysLabel.textContent = 'Días a Remover';
+                    if (daysHelp) daysHelp.textContent = 'días a quitar';
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '✂️ Quitar días';
+                        submitBtn.style.backgroundColor = '#ef4444';
+                    }
+                }
+            };
+
+            btnAdd?.addEventListener('click', () => setAction('add'));
+            btnRemove?.addEventListener('click', () => setAction('remove'));
 
             if (daysInput) {
                 daysInput.addEventListener('keydown', (e) => {
@@ -3927,9 +4006,12 @@ window.billingGiftDays = async function(bizId) {
                 return false;
             }
 
+            const finalDays = selectedAction === 'remove' ? -daysVal : daysVal;
+
             return {
                 instanceId,
-                days: daysVal,
+                days: finalDays,
+                action: selectedAction,
                 moduleName: moduleSelect.options[moduleSelect.selectedIndex].text,
                 branchName: branchSelect.options[branchSelect.selectedIndex].text
             };
@@ -3949,14 +4031,17 @@ window.billingGiftDays = async function(bizId) {
         });
         const data = await resp.json();
         if (data.ok) {
-            showToast(`🎁 ${result.days} día(s) regalados a ${result.moduleName} (${result.branchName}). Nuevo corte: ${data.newDate}`, 'success');
+            const successMsg = result.action === 'remove'
+                ? `✂️ ${Math.abs(result.days)} día(s) removidos a ${result.moduleName} (${result.branchName}). Nuevo corte: ${data.newDate}`
+                : `🎁 ${result.days} día(s) regalados a ${result.moduleName} (${result.branchName}). Nuevo corte: ${data.newDate}`;
+            showToast(successMsg, 'success');
             await loadData();
             renderBillingTab();
         } else {
-            showToast('❌ ' + (data.message || 'Error al regalar días'), 'error');
+            showToast('❌ ' + (data.message || 'Error al ajustar días'), 'error');
         }
     } catch (e) {
-        showToast('❌ Error de red al regalar días.', 'error');
+        showToast('❌ Error de red al ajustar días.', 'error');
     }
 };
 
@@ -5449,9 +5534,12 @@ window.renderGlobalPaymentsHistory = function() {
         const badgeBorder = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)';
         const badgeLabel = ph.status === 'APPROVED' ? 'Aprobado' : 'Declinado';
 
-        const method = (parseFloat(ph.amount) === 0 || String(ph.transaction_id || '').includes('gift') || String(ph.desc || '').toLowerCase().includes('cortesía') || String(ph.desc || '').toLowerCase().includes('obsequio'))
-            ? 'Cortesía'
-            : 'Tarjeta de Crédito';
+        const isReductionOrAdjustment = String(ph.desc || '').toLowerCase().includes('reducción') || String(ph.desc || '').toLowerCase().includes('ajuste');
+        const method = isReductionOrAdjustment
+            ? 'Ajuste'
+            : (parseFloat(ph.amount) === 0 || String(ph.transaction_id || '').includes('gift') || String(ph.desc || '').toLowerCase().includes('cortesía') || String(ph.desc || '').toLowerCase().includes('obsequio'))
+                ? 'Cortesía'
+                : 'Tarjeta de Crédito';
 
         return `
             <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
@@ -6520,7 +6608,7 @@ document.addEventListener('keydown', (e) => {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT')) {
                 if (activeEl.closest('.modal-overlay:not(.hidden)')) {
-                    const saveBtn = activeModal.querySelector('#business-modal-save, .btn-save-modern, #module-modal-save, #security-modal-save, #delete-modal-confirm, .btn-primary, .btn-danger');
+                    const saveBtn = activeModal.querySelector('#business-modal-save, .btn-save-modern, #module-modal-save, #security-modal-save, #delete-modal-confirm, .btn-primary, .btn-danger, #security-confirm-btn');
                     if (saveBtn) {
                         e.preventDefault();
                         saveBtn.click();
@@ -6535,6 +6623,7 @@ async function openMarketplaceSettingsModal() {
     requestSecurityCheck(async () => {
         const currentPass = document.getElementById('security-pass-input').value;
         const config = appState.config || {};
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#8b5cf6';
         
         // Generar las opciones del selector de módulos activos
         const activeModules = appState.modules.filter(m => m.status === 'active');
@@ -6546,33 +6635,60 @@ async function openMarketplaceSettingsModal() {
         const result = await Swal.fire({
             title: 'Ajustes de Marketplace',
             html: `
-                <div style="text-align: left; display: flex; flex-direction: column; gap: 1.25rem;">
-                    <div>
-                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">⭐ Módulo Recomendado</label>
-                        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Módulo destacado con badge especial en la tienda del cliente.</p>
-                        <select id="swal-rec-module" class="swal2-input" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem;">
-                            ${moduleOptions}
-                        </select>
+                <div style="text-align: left; display: flex; flex-direction: column;">
+                    <!-- Tab Bar -->
+                    <div class="swal-tab-container" style="display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 1.25rem;">
+                        <button type="button" id="swal-tab-market" class="swal-tab-btn active" style="flex: 1; padding: 8px 12px; border: none; background: transparent; color: var(--text-main); font-weight: 700; font-size: 0.88rem; cursor: pointer; border-radius: 8px; transition: all 0.2s; border-bottom: 3px solid ${primaryColor}; outline: none;">
+                            🛒 Tienda
+                        </button>
+                        <button type="button" id="swal-tab-demo" class="swal-tab-btn" style="flex: 1; padding: 8px 12px; border: none; background: transparent; color: var(--text-muted); font-weight: 500; font-size: 0.88rem; cursor: pointer; border-radius: 8px; transition: all 0.2s; border-bottom: 3px solid transparent; outline: none;">
+                            👤 Usuario Demo
+                        </button>
                     </div>
-                    <div>
-                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏷️ Etiqueta de Recomendación</label>
-                        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Texto del badge destacado (ej. RECOMENDADO, MÁS COMPRADO, OFERTA).</p>
-                        <input type="text" id="swal-rec-label" class="swal2-input" placeholder="RECOMENDADO" value="${config.recommendedLabel || 'RECOMENDADO'}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+
+                    <!-- Pane 1: Marketplace / Tienda -->
+                    <div id="swal-pane-market" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">⭐ Módulo Recomendado</label>
+                            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Módulo destacado con badge especial en la tienda del cliente.</p>
+                            <select id="swal-rec-module" class="swal2-input" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem;">
+                                ${moduleOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏷️ Etiqueta de Recomendación</label>
+                            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Texto del badge destacado (ej. RECOMENDADO, MÁS COMPRADO, OFERTA).</p>
+                            <input type="text" id="swal-rec-label" class="swal2-input" placeholder="RECOMENDADO" value="${config.recommendedLabel || 'RECOMENDADO'}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏢 Descuento Segundas Sedes (%)</label>
+                            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Porcentaje de descuento permanente al adquirir el mismo módulo para una sucursal adicional.</p>
+                            <input type="number" id="swal-multi-discount" class="swal2-input" min="0" max="100" placeholder="30" value="${config.multiSedeDiscount !== undefined ? config.multiSedeDiscount : 30}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 0.25rem;">
+                            <input type="checkbox" id="swal-sync-existing" style="width: 18px; height: 18px; cursor: pointer; accent-color: ${primaryColor};">
+                            <label for="swal-sync-existing" style="font-size: 0.85rem; color: var(--text-main); cursor: pointer; font-weight: 500;">Actualizar precios de sedes secundarias existentes</label>
+                        </div>
                     </div>
-                    <div>
-                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏢 Descuento Segundas Sedes (%)</label>
-                        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Porcentaje de descuento permanente al adquirir el mismo módulo para una sucursal adicional.</p>
-                        <input type="number" id="swal-multi-discount" class="swal2-input" min="0" max="100" placeholder="30" value="${config.multiSedeDiscount !== undefined ? config.multiSedeDiscount : 30}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 0.25rem;">
-                        <input type="checkbox" id="swal-sync-existing" style="width: 18px; height: 18px; cursor: pointer; accent-color: #8b5cf6;">
-                        <label for="swal-sync-existing" style="font-size: 0.85rem; color: var(--text-main); cursor: pointer; font-weight: 500;">Actualizar precios de sedes secundarias existentes</label>
+
+                    <!-- Pane 2: Demo User Config -->
+                    <div id="swal-pane-demo" style="display: none; flex-direction: column; gap: 1.25rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">👤 Usuario del Demo</label>
+                            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Nombre de usuario que se mostrará y usará para ingresar a las demostraciones.</p>
+                            <input type="text" id="swal-demo-user" class="swal2-input" placeholder="admin" value="${config.demoUser || 'admin'}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🔑 Clave del Demo</label>
+                            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Contraseña asociada para ingresar a las demostraciones.</p>
+                            <input type="text" id="swal-demo-pass" class="swal2-input" placeholder="123456" value="${config.demoPass || '123456'}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                        </div>
                     </div>
                 </div>
             `,
             background: 'var(--bg-surface)',
             color: 'var(--text-main)',
-            confirmButtonColor: '#8b5cf6',
+            confirmButtonColor: primaryColor,
             confirmButtonText: 'Guardar Ajustes',
             showCancelButton: true,
             cancelButtonText: 'Cancelar',
@@ -6586,6 +6702,38 @@ async function openMarketplaceSettingsModal() {
                         }
                     });
                 });
+
+                // Tab switching logic
+                const tabMarket = popup.querySelector('#swal-tab-market');
+                const tabDemo = popup.querySelector('#swal-tab-demo');
+                const paneMarket = popup.querySelector('#swal-pane-market');
+                const paneDemo = popup.querySelector('#swal-pane-demo');
+
+                tabMarket.addEventListener('click', () => {
+                    tabMarket.style.borderBottom = `3px solid ${primaryColor}`;
+                    tabMarket.style.color = 'var(--text-main)';
+                    tabMarket.style.fontWeight = '700';
+
+                    tabDemo.style.borderBottom = '3px solid transparent';
+                    tabDemo.style.color = 'var(--text-muted)';
+                    tabDemo.style.fontWeight = '500';
+
+                    paneMarket.style.display = 'flex';
+                    paneDemo.style.display = 'none';
+                });
+
+                tabDemo.addEventListener('click', () => {
+                    tabDemo.style.borderBottom = `3px solid ${primaryColor}`;
+                    tabDemo.style.color = 'var(--text-main)';
+                    tabDemo.style.fontWeight = '700';
+
+                    tabMarket.style.borderBottom = '3px solid transparent';
+                    tabMarket.style.color = 'var(--text-muted)';
+                    tabMarket.style.fontWeight = '500';
+
+                    paneMarket.style.display = 'none';
+                    paneDemo.style.display = 'flex';
+                });
             },
             preConfirm: () => {
                 const recommendedModuleId = document.getElementById('swal-rec-module').value;
@@ -6593,9 +6741,19 @@ async function openMarketplaceSettingsModal() {
                 const multiSedeDiscountRaw = document.getElementById('swal-multi-discount').value;
                 const multiSedeDiscount = parseInt(multiSedeDiscountRaw, 10);
                 const syncExisting = document.getElementById('swal-sync-existing').checked;
+                const demoUser = document.getElementById('swal-demo-user').value.trim();
+                const demoPass = document.getElementById('swal-demo-pass').value.trim();
 
                 if (isNaN(multiSedeDiscount) || multiSedeDiscount < 0 || multiSedeDiscount > 100) {
                     Swal.showValidationMessage('El descuento debe ser un número entre 0 y 100');
+                    return false;
+                }
+                if (!demoUser) {
+                    Swal.showValidationMessage('El usuario del demo no puede estar vacío');
+                    return false;
+                }
+                if (!demoPass) {
+                    Swal.showValidationMessage('La clave del demo no puede estar vacía');
                     return false;
                 }
 
@@ -6604,6 +6762,8 @@ async function openMarketplaceSettingsModal() {
                     recommendedLabel: recommendedLabel || 'RECOMENDADO',
                     multiSedeDiscount,
                     syncExisting,
+                    demoUser,
+                    demoPass,
                     currentPass
                 };
             }
@@ -6891,3 +7051,196 @@ window.triggerAdminGlobalLogout = async function() {
         }
     });
 })();
+
+// ====================== LOCK SCREEN AND INACTIVITY SYSTEM ======================
+let lastActivityTime = Date.now();
+let inactivityInterval = null;
+
+function initInactivityTracker() {
+    if (window._inactivityTrackerInitialized) return;
+    window._inactivityTrackerInitialized = true;
+
+    const updateActivity = () => {
+        if (localStorage.getItem('as_locked') === 'true') return;
+        lastActivityTime = Date.now();
+    };
+
+    let throttleTimer = null;
+    const throttledUpdate = () => {
+        if (throttleTimer) return;
+        throttleTimer = setTimeout(() => {
+            throttleTimer = null;
+            updateActivity();
+        }, 1000);
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(event => {
+        window.addEventListener(event, throttledUpdate, { passive: true });
+    });
+
+    if (inactivityInterval) clearInterval(inactivityInterval);
+    inactivityInterval = setInterval(() => {
+        if (localStorage.getItem('as_auth') !== 'true') return;
+        if (localStorage.getItem('as_locked') === 'true') return;
+
+        const timeoutMinutes = appState.config?.sessionTimeout !== undefined ? parseInt(appState.config.sessionTimeout) : 15;
+        const timeoutMs = timeoutMinutes * 60 * 1000;
+
+        if (Date.now() - lastActivityTime >= timeoutMs) {
+            lockAdminSession();
+        }
+    }, 5000);
+}
+
+function resetInactivityTimer() {
+    lastActivityTime = Date.now();
+}
+
+function lockAdminSession() {
+    localStorage.setItem('as_locked', 'true');
+    showLockScreen();
+}
+
+function showLockScreen() {
+    const lockEl = document.getElementById('lock-screen');
+    if (!lockEl) return;
+
+    const userData = localStorage.getItem('as_user');
+    const lockUsername = document.getElementById('lock-username');
+    if (lockUsername && userData) {
+        try {
+            const parsed = JSON.parse(userData);
+            lockUsername.textContent = parsed.name || parsed.user || 'Administrador';
+        } catch(e) {
+            lockUsername.textContent = 'Administrador';
+        }
+    }
+
+    const lockPass = document.getElementById('lock-pass');
+    if (lockPass) {
+        lockPass.value = '';
+        lockPass.type = 'password';
+    }
+    const lockError = document.getElementById('lock-error');
+    if (lockError) lockError.style.display = 'none';
+
+    const eyeIcon = document.querySelector('#lock-toggle-pass-btn i');
+    if (eyeIcon) eyeIcon.setAttribute('data-lucide', 'eye');
+
+    lockEl.style.display = 'flex';
+    lockEl.offsetHeight; // force reflow
+    lockEl.classList.add('show');
+
+    setTimeout(() => {
+        if (lockPass) lockPass.focus();
+    }, 200);
+
+    setupLockScreenEventsOnce();
+}
+
+function hideLockScreen() {
+    const lockEl = document.getElementById('lock-screen');
+    if (!lockEl) return;
+
+    lockEl.classList.remove('show');
+    setTimeout(() => {
+        lockEl.style.display = 'none';
+    }, 400);
+}
+
+function setupLockScreenEventsOnce() {
+    if (window._lockEventsInitialized) return;
+    window._lockEventsInitialized = true;
+
+    // Toggle password visibility
+    document.getElementById('lock-toggle-pass-btn')?.addEventListener('click', () => {
+        const passInput = document.getElementById('lock-pass');
+        const icon = document.querySelector('#lock-toggle-pass-btn i');
+        if (passInput) {
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                icon?.setAttribute('data-lucide', 'eye-off');
+            } else {
+                passInput.type = 'password';
+                icon?.setAttribute('data-lucide', 'eye');
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    });
+
+    // Submit lock form
+    document.getElementById('lock-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const passInput = document.getElementById('lock-pass');
+        const pass = passInput ? passInput.value : '';
+        const lockCard = document.getElementById('lock-card');
+        const lockError = document.getElementById('lock-error');
+        const btnSubmit = document.getElementById('btn-unlock-submit');
+
+        if (!pass) return;
+
+        if (btnSubmit) btnSubmit.disabled = true;
+        if (lockError) lockError.style.display = 'none';
+
+        const userData = localStorage.getItem('as_user');
+        let username = 'admin';
+        if (userData) {
+            try {
+                const parsed = JSON.parse(userData);
+                username = parsed.user || 'admin';
+            } catch(e) {}
+        }
+
+        try {
+            const res = await fetch('/api/admin/refresh-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: username, pass })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.ok && data.token) {
+                localStorage.setItem('as_admin_token', data.token);
+                localStorage.setItem('as_auth', 'true');
+                localStorage.removeItem('as_locked');
+
+                resetInactivityTimer();
+                hideLockScreen();
+                showToast('Sesión desbloqueada con éxito', 'success');
+            } else {
+                if (lockError) lockError.style.display = 'block';
+                if (lockCard) {
+                    lockCard.classList.add('shake-animation');
+                    setTimeout(() => lockCard.classList.remove('shake-animation'), 400);
+                }
+                if (passInput) {
+                    passInput.value = '';
+                    passInput.focus();
+                }
+            }
+        } catch (err) {
+            showToast('Error de red al intentar desbloquear', 'error');
+        } finally {
+            if (btnSubmit) btnSubmit.disabled = false;
+        }
+    });
+
+    // Logout from lock screen
+    document.getElementById('lock-logout-btn')?.addEventListener('click', () => {
+        hideLockScreen();
+        closeRealTimeSync();
+        localStorage.removeItem('as_auth');
+        localStorage.removeItem('as_user');
+        localStorage.removeItem('as_admin_token');
+        localStorage.removeItem('as_locked');
+        appState.user = null;
+        appState.isInitialized = false;
+        initTheme();
+        showView('login-view');
+        document.querySelector('.nav-btn[data-tab="tab-dashboard"]')?.click();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        showToast('Sesión cerrada correctamente', 'info');
+    });
+}
+

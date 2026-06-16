@@ -2081,11 +2081,29 @@ function setupEventListeners() {
 
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
-        loginForm.onsubmit = (e) => {
+        loginForm.onsubmit = async (e) => {
             e.preventDefault();
             const u = document.getElementById('login-user').value;
             const p = document.getElementById('login-pass').value;
-            if ((u === state.auth.user && p === state.auth.pass) || (u === 'admin' && p === '123456')) {
+
+            let dynamicDemoUser = 'admin';
+            let dynamicDemoPass = '123456';
+            try {
+                const settingsRes = await fetch('/api/settings');
+                if (settingsRes.ok) {
+                    const settingsData = await settingsRes.json();
+                    if (settingsData.config) {
+                        dynamicDemoUser = settingsData.config.demoUser || 'admin';
+                        dynamicDemoPass = settingsData.config.demoPass || '123456';
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching settings config:', err);
+            }
+
+            if ((u === state.auth.user && p === state.auth.pass) || 
+                (u === 'admin' && p === '123456') ||
+                (u === dynamicDemoUser && p === dynamicDemoPass)) {
                 state.isLoggedIn = true;
                 localStorage.setItem('streetfeed_isLoggedIn', 'true');
                 switchView('admin');

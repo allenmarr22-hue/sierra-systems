@@ -190,7 +190,9 @@ async function runMigration() {
                 url VARCHAR(255) NULL,
                 admin_url VARCHAR(255) NULL,
                 video_url VARCHAR(255) NULL,
-                image VARCHAR(255) NULL
+                image VARCHAR(255) NULL,
+                demo_reset_value INT NULL DEFAULT 4,
+                demo_reset_unit VARCHAR(50) NULL DEFAULT 'hours'
             )
         `);
  
