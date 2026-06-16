@@ -3704,3 +3704,51 @@ textarea.form-input { min-height: 120px; border-radius: 15px; }
     color: #4ade80 !important;
 }
 
+/* =======================================================================
+   PREMIUM SELECT — Modernized dropdown arrow for all agenda selects
+   ======================================================================= */
+select.admin-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23b5945a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    background-size: 1rem;
+    padding-right: 2.4rem !important;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+select.admin-input:hover {
+    border-color: rgba(var(--accent-rgb), 0.45);
+}
+
+select.admin-input:focus {
+    outline: none;
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+}
+
+/* Dark theme arrow — indigo chevron */
+.dark-theme select.admin-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23818cf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.8rem center !important;
+    background-size: 1rem !important;
+}
+
+.dark-theme select.admin-input:focus {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.18) !important;
+}
+
+select.admin-input option {
+    background: #ffffff;
+    color: #1e293b;
+}
+
+.dark-theme select.admin-input option {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+}

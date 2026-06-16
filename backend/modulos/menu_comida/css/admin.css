@@ -3095,12 +3095,24 @@ body.light-mode .orders-container-pro {
 
 .form-group select {
     appearance: none !important;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(100, 116, 139, 0.8)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(247,147,30,0.9)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
     background-repeat: no-repeat !important;
     background-position: right 1rem center !important;
-    background-size: 1.2em !important;
+    background-size: 1.1em !important;
     padding-right: 2.8rem !important;
     cursor: pointer;
+    border-radius: 12px !important;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease !important;
+}
+
+.form-group select:hover {
+    border-color: rgba(var(--primary-rgb, 247, 147, 30), 0.55) !important;
+}
+
+.form-group select:focus {
+    border-color: var(--theme-accent, #f7931e) !important;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 247, 147, 30), 0.18) !important;
+    outline: none !important;
 }
 
 body.light-mode .form-group select {

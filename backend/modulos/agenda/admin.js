@@ -11357,6 +11357,11 @@ window.checkFirstTimeSetup = function() {
                 confirmButtonText: '💾 Guardar y activar',
                 cancelButtonText: 'Configurar luego',
                 reverseButtons: true,
+                didOpen: () => {
+                    if (typeof window.makeSwalSelect === 'function') {
+                        window.makeSwalSelect('swal-admin-gender');
+                    }
+                },
                 preConfirm: () => {
                     const name = document.getElementById('swal-site-name').value.trim();
                     const gender = document.getElementById('swal-admin-gender').value;
