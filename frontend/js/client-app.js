@@ -1891,9 +1891,9 @@ function renderDashboard() {
                 const modUrl    = (inst.url     || '').replace('menu_comida', 'order-system');
                 const modAdmUrl = (inst.adminUrl || '').replace('menu_comida', 'order-system');
 
-                const accessUntilMs = new Date(inst.accessUntil).getTime();
-                const daysLeft = Math.max(0, Math.ceil((accessUntilMs - Date.now()) / (1000 * 60 * 60 * 24)));
-                const accessDate = new Date(inst.accessUntil).toLocaleDateString('es-CO');
+                const accessUntilMs = inst.accessUntil ? new Date(inst.accessUntil).getTime() : 0;
+                const daysLeft = inst.accessUntil ? Math.max(0, Math.ceil((accessUntilMs - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+                const accessDate = inst.accessUntil ? new Date(inst.accessUntil).toLocaleDateString('es-CO') : '—';
 
                 // Color de urgencia
                 const urgencyColor = daysLeft <= 5 ? '#ef4444' : (daysLeft <= 10 ? '#f97316' : '#f59e0b');
@@ -2464,8 +2464,18 @@ function initClientCharts() {
         gradient.addColorStop(0.6, 'rgba(99, 102, 241, 0.12)');
         gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
 
-        // Datos: historial relativo + proyección del mes siguiente
-        const base = monthlyTotal > 0 ? monthlyTotal : 100000; // valor base de referencia
+        // Labels dinámicos: últimos 5 meses reales + mes actual proyectado
+        const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const now = new Date();
+        const chartLabels = [];
+        for (let i = 5; i >= 1; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            chartLabels.push(MONTH_NAMES[d.getMonth()]);
+        }
+        chartLabels.push(`${MONTH_NAMES[now.getMonth()]} (Proy)`);
+
+        // Datos: historial relativo + proyección del mes actual
+        const base = monthlyTotal > 0 ? monthlyTotal : 100000;
         const dataPoints = [
             Math.round(base * 0.40),
             Math.round(base * 0.55),
@@ -2475,10 +2485,15 @@ function initClientCharts() {
             Math.round(base * 1.15)
         ];
 
+        // Color del grid adaptado al tema
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+        const tickColor = isDark ? '#94a3b8' : '#64748b';
+
         clientBillingChart = new Chart(ctxBilling, {
             type: 'line',
             data: {
-                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun (Proy)'],
+                labels: chartLabels,
                 datasets: [{
                     label: 'Consumo COP',
                     data: dataPoints,
@@ -2519,16 +2534,16 @@ function initClientCharts() {
                 scales: {
                     y: {
                         beginAtZero: false,
-                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        grid: { color: gridColor },
                         ticks: {
-                            color: '#94a3b8',
+                            color: tickColor,
                             font: { family: 'Outfit', size: 10 },
                             callback: v => `$${(v / 1000).toFixed(0)}k`
                         }
                     },
                     x: {
                         grid: { display: false },
-                        ticks: { color: '#94a3b8', font: { family: 'Outfit', size: 10 } }
+                        ticks: { color: tickColor, font: { family: 'Outfit', size: 10 } }
                     }
                 }
             }
@@ -6319,7 +6334,7 @@ function renderSuspensionAlerts() {
                     <span style="font-size:1.5rem; animation: pulse 2s infinite;">⚠️</span>
                     <div>
                         <strong style="color:#f87171; display:block; font-size:0.95rem;">Suscripción Suspendida por Impago</strong>
-                        <span style="color:#cbd5e1; font-size:0.85rem;">Registra una tarjeta activa en la pestaña 'Suscripción' y realiza el pago para restaurar tu servicio. Monto pendiente: <strong style="color:#f87171;">$${totalAmount.toLocaleString('es-CO')} COP</strong></span>
+                        <span style="color:var(--text-muted); font-size:0.85rem;">Registra una tarjeta activa en la pestaña 'Suscripción' y realiza el pago para restaurar tu servicio. Monto pendiente: <strong style="color:#f87171;">$${totalAmount.toLocaleString('es-CO')} COP</strong></span>
                     </div>
                 </div>
                 <button onclick="payPendingBalance()" class="btn-primary" style="background:linear-gradient(135deg,#ef4444,#b91c1c); box-shadow:0 4px 14px rgba(239,68,68,0.3); padding:0.6rem 1.2rem; border-radius:8px; font-weight:700; color:white; font-size:0.85rem; display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer;">
@@ -6338,7 +6353,7 @@ function renderSuspensionAlerts() {
                     <i data-lucide="alert-octagon" style="color:#ef4444; width:20px; height:20px;"></i>
                     <strong style="color:#ef4444; font-size:0.95rem;">Suscripción Suspendida — Factura Pendiente</strong>
                 </div>
-                <p style="color:#cbd5e1; font-size:0.85rem; line-height:1.5; margin:0;">
+                <p style="color:var(--text-muted); font-size:0.85rem; line-height:1.5; margin:0;">
                     El intento de cobro automático mensual ha fallado. Tienes un saldo pendiente de <strong>$${totalAmount.toLocaleString('es-CO')} COP</strong> correspondientes a tus sedes activas. 
                     Por favor, selecciona una tarjeta guardada en el wallet (o agrega una nueva) y haz clic en el botón de abajo para reactivar tu cuenta inmediatamente.
                 </p>
