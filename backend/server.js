@@ -2784,8 +2784,10 @@ app.post('/api/payment/extend-billing/:bizId', requireSuperAdmin, async (req, re
             newDateStr = baseDate.toISOString().slice(0, 10);
             targetInstance.renewalDate = newDateStr;
 
-            // Reactivar instancia si estaba cancelada/suspendida
-            targetInstance.status = 'active';
+            // Solo reactivar instancia si se están AÑADIENDO días (no si se reducen)
+            if (daysInt > 0) {
+                targetInstance.status = 'active';
+            }
 
             // Sincronizar también con la fecha global de corte del negocio si aplica
             biz.billing = {

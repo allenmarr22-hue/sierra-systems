@@ -4063,8 +4063,7 @@ window.billingGiftDays = async function(bizId) {
                 if (prev) prev.remove();
                 delete branchSelect.dataset.swalSelectInit;
                 window.makeSwalSelect('gift-branch-select');
-                // Re-listen change on the native select for expiry
-                branchSelect.addEventListener('change', updateExpiry, { once: false });
+                // updateExpiry ya está vinculado al branchSelect nativo más abajo — no agregar duplicado
             };
 
             const updateBranches = () => {
