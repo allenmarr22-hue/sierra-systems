@@ -3685,7 +3685,7 @@ function renderBillingTab() {
 
         return `<tr>
             <td>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">
+                <div style="font-weight:700; color:var(--text-main); font-size:0.95rem;">
                     ${biz.name}
                 </div>
                 <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.3rem;">
