@@ -4503,7 +4503,7 @@ html[data-accent="slate"][data-theme="light"] {
     top: calc(100% + 6px);
     left: 0;
     right: 0;
-    background: var(--glass-bg, rgba(15, 23, 42, 0.95));
+    background: var(--bg-surface, #1e293b);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -4571,7 +4571,7 @@ html[data-accent="slate"][data-theme="light"] {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 [data-theme="light"] .swal-select-panel {
-    background: rgba(255, 255, 255, 0.98);
+    background: #ffffff;
     border-color: rgba(99, 102, 241, 0.15);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
 }
