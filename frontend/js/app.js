@@ -4050,11 +4050,11 @@ window.billingGiftDays = async function(bizId) {
             </p>
             
             <div style="margin-bottom:1rem; display: flex; gap: 0.5rem; background: var(--bg-surface-light); padding: 0.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
-                <button type="button" id="toggle-action-add" class="toggle-action-btn active" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: var(--primary); color: white;">
-                    ➕ Adicionar
+                <button type="button" id="toggle-action-add" class="toggle-action-btn active" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: var(--primary); color: white; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+                    <span id="toggle-add-icon" style="color: #4ade80; font-weight: 800; font-size: 1.1rem; line-height: 1;">+</span> Adicionar
                 </button>
-                <button type="button" id="toggle-action-remove" class="toggle-action-btn" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted);">
-                    ➖ Quitar
+                <button type="button" id="toggle-action-remove" class="toggle-action-btn" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+                    <span id="toggle-remove-icon" style="color: #ef4444; font-weight: 800; font-size: 1.1rem; line-height: 1;">-</span> Quitar
                 </button>
             </div>
             
@@ -4111,11 +4111,18 @@ window.billingGiftDays = async function(bizId) {
 
             const setAction = (action) => {
                 selectedAction = action;
+                const toggleAddIcon = popup.querySelector('#toggle-add-icon');
+                const toggleRemoveIcon = popup.querySelector('#toggle-remove-icon');
+
                 if (action === 'add') {
                     btnAdd.style.background = 'var(--primary)';
                     btnAdd.style.color = 'white';
+                    if (toggleAddIcon) toggleAddIcon.style.color = '#4ade80'; // Verde brillante sobre azul
+                    
                     btnRemove.style.background = 'transparent';
                     btnRemove.style.color = 'var(--text-muted)';
+                    if (toggleRemoveIcon) toggleRemoveIcon.style.color = '#ef4444'; // Rojo cuando está inactivo
+                    
                     if (daysLabel) daysLabel.textContent = 'Días Adicionales';
                     if (daysHelp) daysHelp.textContent = 'días a regalar';
                     if (submitBtn) {
@@ -4125,8 +4132,12 @@ window.billingGiftDays = async function(bizId) {
                 } else {
                     btnRemove.style.background = '#ef4444';
                     btnRemove.style.color = 'white';
+                    if (toggleRemoveIcon) toggleRemoveIcon.style.color = 'white'; // Blanco sobre fondo rojo
+                    
                     btnAdd.style.background = 'transparent';
                     btnAdd.style.color = 'var(--text-muted)';
+                    if (toggleAddIcon) toggleAddIcon.style.color = '#10b981'; // Verde estándar cuando está inactivo
+                    
                     if (daysLabel) daysLabel.textContent = 'Días a Remover';
                     if (daysHelp) daysHelp.textContent = 'días a quitar';
                     if (submitBtn) {
