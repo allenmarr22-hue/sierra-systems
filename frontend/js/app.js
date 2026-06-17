@@ -2678,8 +2678,13 @@ window.makeSwalSelect = function(selectId) {
     const label = document.createElement('span');
     label.className = 'swal-select-label';
 
+    const showChevron = !sel.dataset.noChevron;
     btn.appendChild(label);
-    btn.insertAdjacentHTML('beforeend', chevronSVG);
+    if (showChevron) {
+        btn.insertAdjacentHTML('beforeend', chevronSVG);
+    } else {
+        label.style.width = '100%';
+    }
 
     const options = Array.from(sel.options);
     options.forEach(opt => {
