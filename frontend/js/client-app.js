@@ -557,6 +557,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
+                // Convert type select to premium select dropdown
+                if (selectType) {
+                    makeSwalSelect('profile-type-select');
+                }
+
                 // Bind Enter key to submit profile
                 const inputs = [
                     'profile-name-input', 'profile-type-custom', 'profile-owner-input', 'profile-phone-input',
@@ -1361,7 +1366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Mapeo inteligente para sugerencias de módulos según el tipo de negocio
 // ── Utility: converts a native <select> inside Swal into a premium custom dropdown ──
-window.makeSwalSelect = window.makeSwalSelect || function(selectId) {
+window.makeSwalSelect = function(selectId) {
     const sel = document.getElementById(selectId);
     if (!sel || sel.dataset.swalSelectInit) return;
     sel.dataset.swalSelectInit = '1';
@@ -1369,6 +1374,7 @@ window.makeSwalSelect = window.makeSwalSelect || function(selectId) {
 
     const chevronSVG = `<svg class="swal-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
+    // Build wrap
     const wrap = document.createElement('div');
     wrap.className = 'swal-select-wrap';
 
@@ -1376,8 +1382,18 @@ window.makeSwalSelect = window.makeSwalSelect || function(selectId) {
     btn.type = 'button';
     btn.className = 'swal-select-btn';
 
+    // Copy original padding if set (e.g. for icons at left)
+    const style = window.getComputedStyle(sel);
+    if (style.paddingLeft && style.paddingLeft !== '0px' && style.paddingLeft !== '8px' && style.paddingLeft !== '16px') {
+        btn.style.paddingLeft = style.paddingLeft;
+    }
+    if (style.paddingRight && style.paddingRight !== '0px') {
+        btn.style.paddingRight = style.paddingRight;
+    }
+
     const label = document.createElement('span');
     label.className = 'swal-select-label';
+
     btn.appendChild(label);
     btn.insertAdjacentHTML('beforeend', chevronSVG);
 
@@ -1390,7 +1406,10 @@ window.makeSwalSelect = window.makeSwalSelect || function(selectId) {
         item.className = 'swal-select-item';
         item.dataset.value = opt.value;
         item.textContent = opt.text;
-        if (opt.selected) { item.classList.add('selected'); label.textContent = opt.text; }
+        if (opt.selected) {
+            item.classList.add('selected');
+            label.textContent = opt.text;
+        }
         item.addEventListener('click', (e) => {
             e.stopPropagation();
             sel.value = opt.value;
@@ -1409,24 +1428,43 @@ window.makeSwalSelect = window.makeSwalSelect || function(selectId) {
         sel.value = options[0].value;
     }
 
+    // Dynamic sync if native select value changes from outside JS
+    sel.addEventListener('change', () => {
+        const selectedOpt = sel.options[sel.selectedIndex];
+        if (selectedOpt) {
+            label.textContent = selectedOpt.text;
+            panel.querySelectorAll('.swal-select-item').forEach(i => {
+                if (i.dataset.value === sel.value) {
+                    i.classList.add('selected');
+                } else {
+                    i.classList.remove('selected');
+                }
+            });
+        }
+    });
+
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = !panel.classList.contains('hidden');
         document.querySelectorAll('.swal-select-panel').forEach(p => p.classList.add('hidden'));
         document.querySelectorAll('.swal-select-btn').forEach(b => b.classList.remove('open'));
-        if (!isOpen) { panel.classList.remove('hidden'); btn.classList.add('open'); }
+        if (!isOpen) {
+            panel.classList.remove('hidden');
+            btn.classList.add('open');
+        }
     });
 
     wrap.appendChild(btn);
     wrap.appendChild(panel);
     sel.parentNode.insertBefore(wrap, sel.nextSibling);
 
-    const popup = sel.closest('.swal2-popup');
-    if (popup) {
-        popup.addEventListener('click', (e) => {
+    // Global document outside click listener registered only once
+    if (!window.hasSwalSelectGlobalListener) {
+        window.hasSwalSelectGlobalListener = true;
+        document.addEventListener('click', (e) => {
             if (!e.target.closest('.swal-select-wrap')) {
-                panel.classList.add('hidden');
-                btn.classList.remove('open');
+                document.querySelectorAll('.swal-select-panel').forEach(p => p.classList.add('hidden'));
+                document.querySelectorAll('.swal-select-btn').forEach(b => b.classList.remove('open'));
             }
         });
     }
