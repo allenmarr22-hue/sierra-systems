@@ -6863,6 +6863,9 @@ async function openMarketplaceSettingsModal() {
                         <button type="button" id="swal-tab-demo" class="swal-tab-btn" style="flex: 1; padding: 8px 12px; border: none; background: transparent; color: var(--text-muted); font-weight: 500; font-size: 0.88rem; cursor: pointer; border-radius: 8px; transition: all 0.2s; border-bottom: 3px solid transparent; outline: none;">
                             👤 Usuario Demo
                         </button>
+                        <button type="button" id="swal-tab-sedes" class="swal-tab-btn" style="flex: 1; padding: 8px 12px; border: none; background: transparent; color: var(--text-muted); font-weight: 500; font-size: 0.88rem; cursor: pointer; border-radius: 8px; transition: all 0.2s; border-bottom: 3px solid transparent; outline: none;">
+                            🏢 Sedes
+                        </button>
                     </div>
 
                     <!-- Pane 1: Marketplace / Tienda -->
@@ -6879,15 +6882,6 @@ async function openMarketplaceSettingsModal() {
                             <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Texto del badge destacado (ej. RECOMENDADO, MÁS COMPRADO, OFERTA).</p>
                             <input type="text" id="swal-rec-label" class="swal2-input" placeholder="RECOMENDADO" value="${config.recommendedLabel || 'RECOMENDADO'}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
                         </div>
-                        <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏢 Descuento Segundas Sedes (%)</label>
-                            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Porcentaje de descuento permanente al adquirir el mismo módulo para una sucursal adicional.</p>
-                            <input type="number" id="swal-multi-discount" class="swal2-input" min="0" max="100" placeholder="30" value="${config.multiSedeDiscount !== undefined ? config.multiSedeDiscount : 30}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 0.25rem;">
-                            <input type="checkbox" id="swal-sync-existing" style="width: 18px; height: 18px; cursor: pointer; accent-color: ${primaryColor};">
-                            <label for="swal-sync-existing" style="font-size: 0.85rem; color: var(--text-main); cursor: pointer; font-weight: 500;">Actualizar precios de sedes secundarias existentes</label>
-                        </div>
                     </div>
 
                     <!-- Pane 2: Demo User Config -->
@@ -6901,6 +6895,19 @@ async function openMarketplaceSettingsModal() {
                             <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🔑 Clave del Demo</label>
                             <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Contraseña asociada para ingresar a las demostraciones.</p>
                             <input type="text" id="swal-demo-pass" class="swal2-input" placeholder="123456" value="${config.demoPass || '123456'}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <!-- Pane 3: Sedes / Descuentos -->
+                    <div id="swal-pane-sedes" style="display: none; flex-direction: column; gap: 1.25rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">🏢 Descuento Segundas Sedes (%)</label>
+                            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem 0;">Porcentaje de descuento permanente al adquirir el mismo módulo para una sucursal adicional.</p>
+                            <input type="number" id="swal-multi-discount" class="swal2-input" min="0" max="100" placeholder="30" value="${config.multiSedeDiscount !== undefined ? config.multiSedeDiscount : 30}" style="width: 100%; margin: 0; background: var(--bg-surface-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; height: 45px; font-family: inherit; font-size: 0.9rem; padding: 0 0.75rem; box-sizing: border-box;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 0.25rem;">
+                            <input type="checkbox" id="swal-sync-existing" style="width: 18px; height: 18px; cursor: pointer; accent-color: ${primaryColor};">
+                            <label for="swal-sync-existing" style="font-size: 0.85rem; color: var(--text-main); cursor: pointer; font-weight: 500;">Actualizar precios de sedes secundarias existentes</label>
                         </div>
                     </div>
                 </div>
@@ -6928,34 +6935,37 @@ async function openMarketplaceSettingsModal() {
                 // Tab switching logic
                 const tabMarket = popup.querySelector('#swal-tab-market');
                 const tabDemo = popup.querySelector('#swal-tab-demo');
+                const tabSedes = popup.querySelector('#swal-tab-sedes');
+                
                 const paneMarket = popup.querySelector('#swal-pane-market');
                 const paneDemo = popup.querySelector('#swal-pane-demo');
+                const paneSedes = popup.querySelector('#swal-pane-sedes');
 
-                tabMarket.addEventListener('click', () => {
-                    tabMarket.style.borderBottom = `3px solid ${primaryColor}`;
-                    tabMarket.style.color = 'var(--text-main)';
-                    tabMarket.style.fontWeight = '700';
+                const activateTab = (activeTab, activePane) => {
+                    const tabs = [
+                        { btn: tabMarket, pane: paneMarket },
+                        { btn: tabDemo, pane: paneDemo },
+                        { btn: tabSedes, pane: paneSedes }
+                    ];
 
-                    tabDemo.style.borderBottom = '3px solid transparent';
-                    tabDemo.style.color = 'var(--text-muted)';
-                    tabDemo.style.fontWeight = '500';
+                    tabs.forEach(t => {
+                        if (t.btn === activeTab) {
+                            t.btn.style.borderBottom = `3px solid ${primaryColor}`;
+                            t.btn.style.color = 'var(--text-main)';
+                            t.btn.style.fontWeight = '700';
+                            t.pane.style.display = 'flex';
+                        } else {
+                            t.btn.style.borderBottom = '3px solid transparent';
+                            t.btn.style.color = 'var(--text-muted)';
+                            t.btn.style.fontWeight = '500';
+                            t.pane.style.display = 'none';
+                        }
+                    });
+                };
 
-                    paneMarket.style.display = 'flex';
-                    paneDemo.style.display = 'none';
-                });
-
-                tabDemo.addEventListener('click', () => {
-                    tabDemo.style.borderBottom = `3px solid ${primaryColor}`;
-                    tabDemo.style.color = 'var(--text-main)';
-                    tabDemo.style.fontWeight = '700';
-
-                    tabMarket.style.borderBottom = '3px solid transparent';
-                    tabMarket.style.color = 'var(--text-muted)';
-                    tabMarket.style.fontWeight = '500';
-
-                    paneMarket.style.display = 'none';
-                    paneDemo.style.display = 'flex';
-                });
+                tabMarket.addEventListener('click', () => activateTab(tabMarket, paneMarket));
+                tabDemo.addEventListener('click', () => activateTab(tabDemo, paneDemo));
+                tabSedes.addEventListener('click', () => activateTab(tabSedes, paneSedes));
             },
             preConfirm: () => {
                 const recommendedModuleId = document.getElementById('swal-rec-module').value;
