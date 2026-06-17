@@ -868,6 +868,122 @@ canvas {
 .biz-info-status { flex: 1; display: flex; justify-content: center; min-width: 100px; }
 .biz-actions { flex: 1; display: flex; justify-content: flex-end; min-width: 120px; }
 
+/* Placeholder de Agregar Tarjeta en el Wallet */
+.cc-add-card-slot {
+    width: 320px;
+    height: 200px;
+    border-radius: 18px;
+    padding: 1.5rem 1.75rem;
+    border: 2px dashed var(--primary-border);
+    background: var(--bg-surface-light);
+    color: var(--text-muted);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+    transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.cc-add-card-slot:hover {
+    border-color: var(--primary);
+    background: var(--primary-alpha);
+    transform: translateY(-6px);
+    box-shadow: 0 15px 35px -10px var(--primary-alpha);
+}
+
+.cc-add-card-slot:hover .add-btn-circle {
+    transform: scale(1.15);
+    background: var(--primary-bg);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Elementos internos del placeholder de tarjeta */
+.cc-add-card-slot .cc-chip-mock {
+    width: 42px;
+    height: 30px;
+    border-radius: 6px;
+    border: 2px solid var(--primary-border);
+    background: var(--primary-alpha);
+    display: grid;
+    place-items: center;
+    transition: all 0.3s ease;
+}
+
+.cc-add-card-slot .cc-chip-mock-inner {
+    width: 20px;
+    height: 14px;
+    border: 1px solid var(--primary-border);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.cc-add-card-slot .cc-brand-mock {
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-size: 1rem;
+    color: var(--primary);
+    opacity: 0.6;
+    transition: all 0.3s ease;
+}
+
+.cc-add-card-slot .cc-holder-bar {
+    width: 100px;
+    height: 10px;
+    background: var(--primary-border);
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.cc-add-card-slot .add-btn-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border: 1px solid var(--primary-border);
+}
+
+.cc-add-card-slot .cc-overlay-btn-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.03);
+    backdrop-filter: blur(0.5px);
+    gap: 0.75rem;
+}
+
+/* En tema oscuro, un fondo un poco más opaco para el overlay */
+[data-theme="dark"] .cc-add-card-slot .cc-overlay-btn-wrap {
+    background: rgba(15, 23, 42, 0.2);
+}
+
+/* Ajustes de hover para elementos del chip y marca */
+.cc-add-card-slot:hover .cc-chip-mock {
+    border-color: var(--primary);
+}
+.cc-add-card-slot:hover .cc-chip-mock-inner {
+    border-color: var(--primary);
+}
+.cc-add-card-slot:hover .cc-brand-mock {
+    opacity: 0.9;
+}
+.cc-add-card-slot:hover .cc-holder-bar {
+    background: var(--primary);
+}
+
 /* REsponsive para la lista */
 @media (max-width: 900px) {
     .biz-list-item {

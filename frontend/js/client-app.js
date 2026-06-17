@@ -4934,48 +4934,39 @@ function renderCardWallet() {
 
     // Tarjeta de "Agregar nueva" siempre al inicio (Diseño de tarjeta en blanco pro)
     const addCardHTML = `
-    <div id="cc-add-slot" onclick="openAddCardModal()" style="
-        width:320px; height:200px; border-radius:18px; padding:1.5rem 1.75rem;
-        border:2px dashed rgba(99,102,241,0.5);
-        background:linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.8) 100%);
-        color:rgba(148,163,184,0.8);
-        position:relative; overflow:hidden; cursor:pointer;
-        display:flex; flex-direction:column; justify-content:space-between;
-        box-sizing:border-box; transition:all .3s ease; flex-shrink:0;
-    " onmouseover="this.style.borderColor='rgba(99,102,241,1)';this.style.background='linear-gradient(135deg, rgba(30,41,59,0.9) 0%, rgba(15,23,42,1) 100%)';this.style.transform='translateY(-6px)';this.style.boxShadow='0 15px 35px -10px rgba(99,102,241,0.3)';this.querySelector('.add-btn-circle').style.transform='scale(1.15)';this.querySelector('.add-btn-circle').style.background='rgba(99,102,241,0.2)';"
-       onmouseout="this.style.borderColor='rgba(99,102,241,.5)';this.style.background='linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.8) 100%)';this.style.transform='translateY(0)';this.style.boxShadow='none';this.querySelector('.add-btn-circle').style.transform='scale(1)';this.querySelector('.add-btn-circle').style.background='rgba(99,102,241,0.1)';">
+    <div id="cc-add-slot" class="cc-add-card-slot" onclick="openAddCardModal()">
         
         <!-- Contenido Fantasma de la Tarjeta (Visible y estético) -->
         <div style="display:flex;justify-content:space-between;align-items:flex-start; opacity:0.85;">
-            <div style="width:42px;height:30px;border-radius:6px;border:2px solid rgba(99,102,241,0.4); background:rgba(99,102,241,0.05); display:grid;place-items:center;">
-                <div style="width:20px;height:14px;border:1px solid rgba(99,102,241,0.4);border-radius:2px;"></div>
+            <div class="cc-chip-mock">
+                <div class="cc-chip-mock-inner"></div>
             </div>
-            <div style="font-weight:800;letter-spacing:2px;font-size:1rem;color:rgba(99,102,241,0.6);">BRAND</div>
+            <div class="cc-brand-mock">BRAND</div>
         </div>
         
-        <div style="font-size:1.35rem;letter-spacing:4px;font-family:monospace;font-weight:700;color:rgba(226,232,240,0.6);text-shadow:0 1px 2px rgba(0,0,0,0.5);margin-top:0.5rem;">
+        <div style="font-size:1.35rem;letter-spacing:4px;font-family:monospace;font-weight:700;color:var(--text-muted);opacity:0.3;margin-top:0.5rem;">
             •••• •••• •••• ••••
         </div>
         
         <div style="display:flex;justify-content:space-between;align-items:flex-end;opacity:0.85;">
             <div>
-                <div style="font-size:0.55rem;text-transform:uppercase;letter-spacing:.15em;margin-bottom:4px;color:rgba(148,163,184,0.7);">Titular</div>
-                <div style="width:100px;height:10px;background:rgba(99,102,241,0.25);border-radius:5px;"></div>
+                <div style="font-size:0.55rem;text-transform:uppercase;letter-spacing:.15em;margin-bottom:4px;color:var(--text-muted);opacity:0.7;">Titular</div>
+                <div class="cc-holder-bar"></div>
             </div>
             <div style="text-align:right;">
-                <div style="font-size:0.55rem;text-transform:uppercase;letter-spacing:.15em;margin-bottom:4px;color:rgba(148,163,184,0.7);">Vence</div>
-                <div style="font-size:0.9rem;font-weight:800;color:rgba(226,232,240,0.8);">MM/AA</div>
+                <div style="font-size:0.55rem;text-transform:uppercase;letter-spacing:.15em;margin-bottom:4px;color:var(--text-muted);opacity:0.7;">Vence</div>
+                <div style="font-size:0.9rem;font-weight:800;color:var(--text-muted);opacity:0.8;">MM/AA</div>
             </div>
         </div>
 
-        <!-- Botón Central Superpuesto (Con menos oscurecimiento para dejar ver el fondo) -->
-        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,23,42,0.15);backdrop-filter:blur(1px);gap:0.75rem;">
-            <div class="add-btn-circle" style="width:56px;height:56px;border-radius:50%;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:0 8px 25px rgba(0,0,0,0.3);border:1px solid var(--primary-border);backdrop-filter:blur(4px);">
+        <!-- Botón Central Superpuesto -->
+        <div class="cc-overlay-btn-wrap">
+            <div class="add-btn-circle">
                 <i data-lucide="plus" style="width:28px;height:28px;"></i>
             </div>
-            <div style="text-align:center;text-shadow:0 2px 8px rgba(0,0,0,0.8);background:rgba(15,23,42,0.4);padding:0.25rem 0.75rem;border-radius:12px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.05);">
-                <div style="font-weight:800;color:#f8fafc;font-size:1.05rem;letter-spacing:0.02em;">Agregar Tarjeta</div>
-                <div style="font-size:0.75rem;color:#cbd5e1;margin-top:2px;font-weight:600;">Nueva forma de pago</div>
+            <div style="text-align:center;background:var(--bg-surface);padding:0.35rem 0.85rem;border-radius:12px;border:1px solid var(--border-color);box-shadow:var(--shadow-sm);">
+                <div style="font-weight:800;color:var(--text-main);font-size:0.95rem;letter-spacing:0.02em;">Agregar Tarjeta</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:1px;font-weight:600;">Nueva forma de pago</div>
             </div>
         </div>
     </div>`;
