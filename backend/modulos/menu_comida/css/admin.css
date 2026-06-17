@@ -1039,6 +1039,11 @@ body.light-mode .dropdown-trigger {
     border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+body.light-mode .dropdown-trigger:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: #0f172a !important;
+}
+
 body.light-mode .dropdown-trigger.active-trigger {
     background: var(--theme-accent) !important;
     color: #000 !important;
