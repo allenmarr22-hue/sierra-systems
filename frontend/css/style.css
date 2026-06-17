@@ -2061,6 +2061,7 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background-
     color: var(--text-muted);
     pointer-events: none;
     transition: all 0.3s;
+    z-index: 2;
 }
 
 .input-modern-wrap input, 
