@@ -4534,10 +4534,7 @@ html[data-accent="slate"][data-theme="light"] {
 
 /* ── Dropdown panel ── */
 .swal-select-panel {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    right: 0;
+    position: fixed;
     background: var(--bg-surface, #0f172a);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
@@ -4599,13 +4596,6 @@ html[data-accent="slate"][data-theme="light"] {
     box-shadow: 0 4px 12px var(--primary-alpha, rgba(99, 102, 241, 0.25));
 }
 
-.swal-select-item.selected::after {
-    content: "✓";
-    font-size: 0.85rem;
-    font-weight: 800;
-    color: #ffffff;
-}
-
 /* ── Light Mode Overrides ── */
 [data-theme="light"] .swal-select-btn {
     background: #ffffff;
@@ -4653,8 +4643,4 @@ html[data-accent="slate"][data-theme="light"] {
     background: var(--primary-gradient, linear-gradient(135deg, var(--primary), var(--secondary))) !important;
     color: #ffffff !important;
     box-shadow: 0 4px 10px var(--primary-alpha, rgba(79, 70, 229, 0.25));
-}
-
-[data-theme="light"] .swal-select-item.selected::after {
-    color: #ffffff;
 }

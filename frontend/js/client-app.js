@@ -1467,23 +1467,61 @@ window.makeSwalSelect = function(selectId) {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = !panel.classList.contains('hidden');
+        // Close all other open panels
         document.querySelectorAll('.swal-select-panel').forEach(p => p.classList.add('hidden'));
         document.querySelectorAll('.swal-select-btn').forEach(b => b.classList.remove('open'));
         if (!isOpen) {
+            // Calculate position from button bounding rect for fixed positioning
+            const rect = btn.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            const openUpward = spaceBelow < 150 && spaceAbove > spaceBelow;
+
+            panel.style.width = rect.width + 'px';
+            panel.style.left = rect.left + 'px';
+
+            if (openUpward) {
+                panel.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+                panel.style.top = 'auto';
+            } else {
+                panel.style.top = (rect.bottom + 6) + 'px';
+                panel.style.bottom = 'auto';
+            }
+
             panel.classList.remove('hidden');
             btn.classList.add('open');
         }
     });
 
+    // Append panel to body so it escapes any overflow:hidden parent
     wrap.appendChild(btn);
-    wrap.appendChild(panel);
+    document.body.appendChild(panel);
     sel.parentNode.insertBefore(wrap, sel.nextSibling);
+
+    // Reposition panel on scroll/resize
+    const reposition = () => {
+        if (panel.classList.contains('hidden')) return;
+        const rect = btn.getBoundingClientRect();
+        panel.style.left = rect.left + 'px';
+        panel.style.width = rect.width + 'px';
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        if (spaceBelow < 150 && spaceAbove > spaceBelow) {
+            panel.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+            panel.style.top = 'auto';
+        } else {
+            panel.style.top = (rect.bottom + 6) + 'px';
+            panel.style.bottom = 'auto';
+        }
+    };
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
 
     // Global document outside click listener registered only once
     if (!window.hasSwalSelectGlobalListener) {
         window.hasSwalSelectGlobalListener = true;
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.swal-select-wrap')) {
+            if (!e.target.closest('.swal-select-wrap') && !e.target.closest('.swal-select-panel')) {
                 document.querySelectorAll('.swal-select-panel').forEach(p => p.classList.add('hidden'));
                 document.querySelectorAll('.swal-select-btn').forEach(b => b.classList.remove('open'));
             }
