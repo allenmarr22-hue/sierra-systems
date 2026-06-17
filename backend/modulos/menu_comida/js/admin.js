@@ -4371,8 +4371,105 @@ window.openWhatsAppTemplateModal = function() {
     }
 };
 
+window.initializeCustomAdminSelect = function(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel || sel.dataset.customSelectInit) return;
+    sel.dataset.customSelectInit = '1';
+    sel.style.display = 'none';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-custom-select-wrap';
+
+    const trigger = document.createElement('div');
+    trigger.className = 'admin-custom-select-trigger';
+
+    const label = document.createElement('span');
+    label.className = 'admin-custom-select-label';
+    trigger.appendChild(label);
+
+    const chevron = document.createElement('span');
+    chevron.className = 'admin-custom-select-chevron';
+    chevron.innerHTML = `<i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--text-dim, #94a3b8);transition:transform 0.2s;display:block;"></i>`;
+    trigger.appendChild(chevron);
+
+    const panel = document.createElement('div');
+    panel.className = 'admin-custom-select-panel';
+
+    const options = Array.from(sel.options);
+    options.forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'admin-custom-select-item';
+        item.textContent = opt.text;
+        item.dataset.value = opt.value;
+        if (opt.selected) {
+            item.classList.add('selected');
+            label.textContent = opt.text;
+        }
+
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sel.value = opt.value;
+            
+            wrap.querySelectorAll('.admin-custom-select-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            label.textContent = opt.text;
+            
+            panel.style.display = 'none';
+            const iconSvg = chevron.querySelector('svg');
+            if (iconSvg) iconSvg.style.transform = 'rotate(0deg)';
+            
+            sel.dispatchEvent(new Event('change'));
+        });
+
+        panel.appendChild(item);
+    });
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = panel.style.display === 'block';
+        document.querySelectorAll('.admin-custom-select-panel').forEach(p => {
+            if (p !== panel) {
+                p.style.display = 'none';
+                const parentChevron = p.parentNode.querySelector('.admin-custom-select-chevron svg');
+                if (parentChevron) parentChevron.style.transform = 'rotate(0deg)';
+            }
+        });
+
+        if (isOpen) {
+            panel.style.display = 'none';
+            const iconSvg = chevron.querySelector('svg');
+            if (iconSvg) iconSvg.style.transform = 'rotate(0deg)';
+        } else {
+            panel.style.display = 'block';
+            const iconSvg = chevron.querySelector('svg');
+            if (iconSvg) iconSvg.style.transform = 'rotate(180deg)';
+        }
+    });
+
+    document.addEventListener('click', () => {
+        panel.style.display = 'none';
+        const iconSvg = chevron.querySelector('svg');
+        if (iconSvg) iconSvg.style.transform = 'rotate(0deg)';
+    });
+
+    wrap.appendChild(trigger);
+    wrap.appendChild(panel);
+    sel.parentNode.insertBefore(wrap, sel.nextSibling);
+
+    if (window.lucide) {
+        window.lucide.createIcons({ node: wrap });
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.location.pathname.endsWith('admin.html')) return;
+
+    // Convertir los selectores nativos de gastos a selectores modernizados
+    if (typeof window.initializeCustomAdminSelect === 'function') {
+        window.initializeCustomAdminSelect('expense-month-filter');
+        window.initializeCustomAdminSelect('expense-category');
+        window.initializeCustomAdminSelect('stats-month-filter');
+    }
 
     const waTemplateForm = document.getElementById('wa-template-form');
     if (waTemplateForm) {
