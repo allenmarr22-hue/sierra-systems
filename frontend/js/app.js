@@ -814,6 +814,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('user-role')) {
         makeSwalSelect('user-role');
     }
+    if (document.getElementById('ticket-priority-filter')) {
+        makeSwalSelect('ticket-priority-filter');
+    }
+    if (document.getElementById('ticket-module-filter')) {
+        makeSwalSelect('ticket-module-filter');
+    }
 });
 
 // ====================== SECURITY GATEKEEPER (GLOBAL) ======================
@@ -2641,6 +2647,25 @@ window.makeSwalSelect = function(selectId) {
     btn.type = 'button';
     btn.className = 'swal-select-btn';
 
+    const panel = document.createElement('div');
+    panel.className = 'swal-select-panel hidden';
+
+    // Copy inline styles if set on the original select (for exact alignment/size in bars)
+    if (sel.style.width) {
+        wrap.style.width = sel.style.width;
+        wrap.style.display = 'inline-block';
+    }
+    if (sel.style.height) {
+        btn.style.height = sel.style.height;
+    }
+    if (sel.style.borderRadius) {
+        btn.style.borderRadius = sel.style.borderRadius;
+        panel.style.borderRadius = sel.style.borderRadius;
+    }
+    if (sel.style.fontSize) {
+        btn.style.fontSize = sel.style.fontSize;
+    }
+
     // Copy original padding if set (e.g. for icons at left)
     const style = window.getComputedStyle(sel);
     if (style.paddingLeft && style.paddingLeft !== '0px' && style.paddingLeft !== '8px' && style.paddingLeft !== '16px') {
@@ -2655,9 +2680,6 @@ window.makeSwalSelect = function(selectId) {
 
     btn.appendChild(label);
     btn.insertAdjacentHTML('beforeend', chevronSVG);
-
-    const panel = document.createElement('div');
-    panel.className = 'swal-select-panel hidden';
 
     const options = Array.from(sel.options);
     options.forEach(opt => {
