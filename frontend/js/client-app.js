@@ -4970,7 +4970,7 @@ function renderCardWallet() {
 
         <!-- Botón Central Superpuesto (Con menos oscurecimiento para dejar ver el fondo) -->
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,23,42,0.15);backdrop-filter:blur(1px);gap:0.75rem;">
-            <div class="add-btn-circle" style="width:56px;height:56px;border-radius:50%;background:rgba(99,102,241,0.1);color:#818cf8;display:flex;align-items:center;justify-content:center;transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:0 8px 25px rgba(0,0,0,0.3);border:1px solid rgba(99,102,241,0.4);backdrop-filter:blur(4px);">
+            <div class="add-btn-circle" style="width:56px;height:56px;border-radius:50%;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:0 8px 25px rgba(0,0,0,0.3);border:1px solid var(--primary-border);backdrop-filter:blur(4px);">
                 <i data-lucide="plus" style="width:28px;height:28px;"></i>
             </div>
             <div style="text-align:center;text-shadow:0 2px 8px rgba(0,0,0,0.8);background:rgba(15,23,42,0.4);padding:0.25rem 0.75rem;border-radius:12px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.05);">
@@ -5578,7 +5578,7 @@ window.viewClientTicketDetails = function(ticketId) {
                 <!-- Header -->
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
+                        <div style="width:38px;height:38px;border-radius:10px;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
                             <i data-lucide="ticket" style="width:18px;height:18px;color:white;"></i>
                         </div>
                         <div style="text-align:left;">
@@ -5611,7 +5611,7 @@ window.viewClientTicketDetails = function(ticketId) {
                 <div style="border:1px solid var(--border-color);border-radius:14px;overflow:hidden;background:var(--chat-outer-bg);">
                     <div style="padding:8px 14px;background:var(--chat-header-bg);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;"></div>
+                            <div style="width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);"></div>
                             <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">Chat con Soporte</span>
                         </div>
                         <div style="display:flex;align-items:center;background:var(--chat-search-bg);border:1px solid var(--border-color);border-radius:8px;padding:4px 10px;width:140px;transition:all 0.2s;" onfocusin="this.style.width='200px';this.style.borderColor='var(--primary)';" onfocusout="this.style.width='140px';this.style.borderColor='var(--border-color)';">
@@ -5637,7 +5637,7 @@ window.viewClientTicketDetails = function(ticketId) {
                                 <i data-lucide="image" style="width:15px;height:15px;"></i>
                             </button>
                             <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--chat-input-bg);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
-                            <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','client')" style="width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary),#818cf8);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                            <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','client')" style="width:34px;height:34px;border-radius:8px;border:none;background:var(--primary-gradient);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
                                 <i data-lucide="send" style="width:14px;height:14px;"></i>
                             </button>
                         </div>
