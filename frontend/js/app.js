@@ -3769,7 +3769,7 @@ function renderBillingTab() {
             : '<span style="color:#64748b;">$0</span>';
 
         // Botones de acción
-        const detailsBtn = `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;color:#818cf8;border:1px solid rgba(99,102,241,0.25);border-radius:7px;" onclick="billingShowDetail(${biz.id})" title="Ver detalle de facturación"><i data-lucide="file-text" style="width:13px;height:13px;"></i> Detalle</button>`;
+        const detailsBtn = `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;color:var(--primary);border:1px solid var(--primary-border);border-radius:7px;" onclick="billingShowDetail(${biz.id})" title="Ver detalle de facturación"><i data-lucide="file-text" style="width:13px;height:13px;"></i> Detalle</button>`;
 
         // Botón Regalar días (siempre visible para el Admin)
         const giftDaysBtn = `<button class="btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;color:#10b981;border:1px solid rgba(16,185,129,0.25);border-radius:7px;" onclick="billingGiftDays(${biz.id})" title="Regalar días de suscripción"><i data-lucide="gift" style="width:13px;height:13px;"></i> Días</button>`;
@@ -3887,20 +3887,20 @@ window.billingShowDetail = async function(bizId) {
         html: `
             <div style="text-align:left;font-size:0.88rem;color:var(--text-main);">
                 <!-- Botón de descarga de PDF individual -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; background:rgba(99,102,241,0.05); padding:0.6rem 0.8rem; border-radius:10px; border:1px solid rgba(99,102,241,0.15);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; background:var(--primary-alpha); padding:0.6rem 0.8rem; border-radius:10px; border:1px solid var(--primary-border);">
                     <div>
-                        <div style="font-size:0.7rem; color:#818cf8; text-transform:uppercase; font-weight:700;">Ficha del Negocio</div>
+                        <div style="font-size:0.7rem; color:var(--primary); text-transform:uppercase; font-weight:700;">Ficha del Negocio</div>
                         <div style="font-weight:700; color:var(--text-main); font-size:0.85rem;">Exportar reporte actual</div>
                     </div>
-                    <button class="btn-primary" style="font-size:0.75rem; padding:0.4rem 0.8rem; background:#6366f1; border:none; border-radius:6px; color:#fff; font-weight:600; display:flex; align-items:center; gap:0.3rem; cursor:pointer;" onclick="downloadIndividualBusinessPDF(${biz.id})">
+                    <button class="btn-primary" style="font-size:0.75rem; padding:0.4rem 0.8rem; background:var(--primary); border:none; border-radius:6px; color:#fff; font-weight:600; display:flex; align-items:center; gap:0.3rem; cursor:pointer;" onclick="downloadIndividualBusinessPDF(${biz.id})">
                         <i data-lucide="download" style="width:13px;height:13px;"></i> Descargar PDF
                     </button>
                 </div>
 
                 <!-- Grilla de KPIs de Facturación -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
-                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);padding:0.75rem;border-radius:10px;">
-                        <div style="font-size:0.7rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Estado</div>
+                    <div style="background:var(--primary-bg);border:1px solid var(--primary-border);padding:0.75rem;border-radius:10px;">
+                        <div style="font-size:0.7rem;color:var(--primary);text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Estado</div>
                         <div style="font-weight:700;color:var(--text-main);">${displayStatus}</div>
                     </div>
                     <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);padding:0.75rem;border-radius:10px;">
@@ -3918,7 +3918,7 @@ window.billingShowDetail = async function(bizId) {
                 </div>
 
                 <!-- Datos del Cliente / Propietario -->
-                <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Información del Cliente</div>
+                <div style="font-size:0.72rem;color:var(--primary);text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Información del Cliente</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;background:var(--bg-surface-light);padding:0.75rem;border-radius:10px;border:1px solid var(--border-color);">
                     <div>
                         <span style="color:var(--text-muted);font-size:0.75rem;display:block;">Propietario / Cliente</span>
@@ -3952,7 +3952,7 @@ window.billingShowDetail = async function(bizId) {
 
                 <!-- Desglose de Módulos Activos -->
                 ${instLines.length > 0 ? `
-                    <div style="font-size:0.72rem;color:#818cf8;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Módulos / Sedes activas</div>
+                    <div style="font-size:0.72rem;color:var(--primary);text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">Módulos / Sedes activas</div>
                     <div class="custom-scrollbar" style="max-height:190px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-surface-light); margin-bottom:0.75rem; padding:0 0.25rem;">
                         <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
                             <thead>
@@ -4059,14 +4059,14 @@ window.billingGiftDays = async function(bizId) {
             </div>
             
             <div style="margin-bottom:1rem;">
-                <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Módulo</label>
+                <label style="display:block; font-size:0.75rem; color:var(--primary); text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Módulo</label>
                 <select id="gift-module-select" style="display:none;">
                     ${uniqueModules.map(m => `<option value="${m.moduleId}">${m.moduleName}</option>`).join('')}
                 </select>
             </div>
             
             <div style="margin-bottom:1rem;">
-                <label style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Sede</label>
+                <label style="display:block; font-size:0.75rem; color:var(--primary); text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Sede</label>
                 <select id="gift-branch-select" style="display:none;">
                     <!-- Se llena dinámicamente -->
                 </select>
@@ -4078,7 +4078,7 @@ window.billingGiftDays = async function(bizId) {
             </div>
 
             <div style="margin-bottom:0.5rem;">
-                <label id="gift-days-label" style="display:block; font-size:0.75rem; color:#818cf8; text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Días Adicionales</label>
+                <label id="gift-days-label" style="display:block; font-size:0.75rem; color:var(--primary); text-transform:uppercase; font-weight:700; margin-bottom:0.4rem;">Días Adicionales</label>
                 <input type="number" id="gift-days-input" min="1" max="365" value="30" style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-surface-light); color:var(--text-main); font-size:1.2rem; font-weight:700; text-align:center;">
             </div>
             <p id="gift-days-help" style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin:0.3rem 0 0;">días a regalar</p>
@@ -4721,7 +4721,7 @@ window.selectChatStatusOption = function(newStatus) {
             actionBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
         } else {
             actionBtn.textContent = 'Cerrar';
-            actionBtn.style.background = 'linear-gradient(135deg, var(--primary), #818cf8)';
+            actionBtn.style.background = 'var(--primary-gradient)';
         }
     }
     
@@ -4887,7 +4887,7 @@ window.viewTicketDetails = function(ticketId) {
                 <!-- Header pill -->
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
+                        <div style="width:38px;height:38px;border-radius:10px;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
                             <i data-lucide="ticket" style="width:18px;height:18px;color:white;"></i>
                         </div>
                         <div style="text-align:left;">
@@ -4970,7 +4970,7 @@ window.viewTicketDetails = function(ticketId) {
 
                             <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--chat-input-bg);color:var(--text-main);font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" />
                             
-                            <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','admin')" style="width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary),#818cf8);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                            <button id="chat-send-btn" onclick="sendTicketMessage('${ticket.id}','admin')" style="width:34px;height:34px;border-radius:8px;border:none;background:var(--primary-gradient);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
                                 <i data-lucide="send" style="width:14px;height:14px;"></i>
                             </button>
                         </div>
@@ -5001,7 +5001,7 @@ window.viewTicketDetails = function(ticketId) {
                         </div>
                     </div>
                     <!-- Cerrar / Confirmar button -->
-                    <button id="chat-modal-action-btn" class="btn-primary" onclick="handleChatModalAction('${ticket.id}')" style="padding:8px 24px; font-size:0.85rem; border:none; border-radius:8px; cursor:pointer; font-weight:700; background:linear-gradient(135deg,var(--primary),#818cf8); color:white; transition: all 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                    <button id="chat-modal-action-btn" class="btn-primary" onclick="handleChatModalAction('${ticket.id}')" style="padding:8px 24px; font-size:0.85rem; border:none; border-radius:8px; cursor:pointer; font-weight:700; background:var(--primary-gradient); color:white; transition: all 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
                         Cerrar
                     </button>
                 </div>
