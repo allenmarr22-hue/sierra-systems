@@ -4493,15 +4493,15 @@ html[data-accent="slate"][data-theme="light"] {
 }
 
 .swal-select-btn:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    background: rgba(99, 102, 241, 0.05);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+    border-color: var(--primary-border, rgba(99, 102, 241, 0.25));
+    background: var(--primary-alpha, rgba(99, 102, 241, 0.08));
+    box-shadow: 0 4px 12px var(--primary-alpha, rgba(99, 102, 241, 0.08));
 }
 
 .swal-select-btn.open {
     border-color: var(--primary, #6366f1);
-    background: rgba(99, 102, 241, 0.08);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(99, 102, 241, 0.12);
+    background: var(--primary-alpha, rgba(99, 102, 241, 0.08));
+    box-shadow: 0 0 0 3px var(--primary-alpha, rgba(99, 102, 241, 0.25)), 0 4px 12px var(--primary-alpha, rgba(99, 102, 241, 0.12));
 }
 
 /* Chevron icon inside the button */
@@ -4545,7 +4545,7 @@ html[data-accent="slate"][data-theme="light"] {
     overflow-y: auto;
     box-sizing: border-box;
     scrollbar-width: thin;
-    scrollbar-color: rgba(99, 102, 241, 0.25) transparent;
+    scrollbar-color: var(--primary-border, rgba(99, 102, 241, 0.25)) transparent;
 }
 
 /* Custom Scrollbar for Panel */
@@ -4556,11 +4556,11 @@ html[data-accent="slate"][data-theme="light"] {
     background: transparent;
 }
 .swal-select-panel::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.25);
+    background: var(--primary-border, rgba(99, 102, 241, 0.25));
     border-radius: 10px;
 }
 .swal-select-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.45);
+    background: var(--primary, #6366f1);
 }
 
 .swal-select-panel.hidden {
@@ -4584,16 +4584,16 @@ html[data-accent="slate"][data-theme="light"] {
 }
 
 .swal-select-item:hover {
-    background: rgba(99, 102, 241, 0.12);
+    background: var(--primary-alpha, rgba(99, 102, 241, 0.12));
     color: var(--primary-light, #818cf8);
     padding-left: 1.15rem;
 }
 
 .swal-select-item.selected {
-    background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+    background: var(--primary-gradient, linear-gradient(135deg, var(--primary), var(--secondary))) !important;
     color: #ffffff !important;
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 4px 12px var(--primary-alpha, rgba(99, 102, 241, 0.25));
 }
 
 .swal-select-item.selected::after {
@@ -4620,21 +4620,21 @@ html[data-accent="slate"][data-theme="light"] {
 [data-theme="light"] .swal-select-btn.open {
     border-color: var(--primary, #4f46e5);
     background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), 0 4px 12px rgba(79, 70, 229, 0.08);
+    box-shadow: 0 0 0 3px var(--primary-alpha, rgba(79, 70, 229, 0.15)), 0 4px 12px var(--primary-alpha, rgba(79, 70, 229, 0.08));
 }
 
 [data-theme="light"] .swal-select-panel {
     background: #ffffff;
     border-color: #e2e8f0;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
-    scrollbar-color: rgba(79, 70, 229, 0.2) transparent;
+    scrollbar-color: var(--primary-border, rgba(79, 70, 229, 0.2)) transparent;
 }
 
 [data-theme="light"] .swal-select-panel::-webkit-scrollbar-thumb {
-    background: rgba(79, 70, 229, 0.2);
+    background: var(--primary-border, rgba(79, 70, 229, 0.2));
 }
 [data-theme="light"] .swal-select-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(79, 70, 229, 0.4);
+    background: var(--primary, #4f46e5);
 }
 
 [data-theme="light"] .swal-select-item {
@@ -4647,9 +4647,9 @@ html[data-accent="slate"][data-theme="light"] {
 }
 
 [data-theme="light"] .swal-select-item.selected {
-    background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+    background: var(--primary-gradient, linear-gradient(135deg, var(--primary), var(--secondary))) !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+    box-shadow: 0 4px 10px var(--primary-alpha, rgba(79, 70, 229, 0.25));
 }
 
 [data-theme="light"] .swal-select-item.selected::after {
