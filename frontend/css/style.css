@@ -874,8 +874,9 @@ canvas {
     height: 200px;
     border-radius: 18px;
     padding: 1.5rem 1.75rem;
-    border: 2px dashed var(--primary-border);
+    border: 2px dashed var(--primary);
     background: var(--bg-surface-light);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     color: var(--text-muted);
     position: relative;
     overflow: hidden;
