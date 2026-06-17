@@ -4469,7 +4469,8 @@ html[data-accent="slate"][data-theme="light"] {
     justify-content: space-between;
     width: 100%;
     height: 48px;
-    padding: 0 1.25rem;
+    min-height: 36px;
+    padding: 0 0.85rem;
     background: var(--bg-surface-light, #1e293b);
     border: 1.5px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
@@ -4484,6 +4485,8 @@ html[data-accent="slate"][data-theme="light"] {
     outline: none;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 /* Ensure no pseudo-element arrow is added */
