@@ -7041,12 +7041,12 @@ window.refreshAdminDevicesInline = async function() {
            </p>`
         : sessions.map((s, idx) => `
             <div style="display:flex;align-items:center;gap:0.9rem;padding:0.85rem 0;${idx < sessionCount - 1 ? 'border-bottom:1px solid rgba(var(--border-color-rgb,148,163,184),0.15);' : ''}">
-                <div style="flex-shrink:0;width:42px;height:42px;border-radius:10px;background:rgba(99,102,241,0.08);display:flex;align-items:center;justify-content:center;">
-                    <i data-lucide="${deviceIcon(s.deviceType)}" style="width:20px;height:20px;color:#6366f1;"></i>
+                <div style="flex-shrink:0;width:42px;height:42px;border-radius:10px;background:var(--primary-alpha);display:flex;align-items:center;justify-content:center;">
+                    <i data-lucide="${deviceIcon(s.deviceType)}" style="width:20px;height:20px;color:var(--primary);"></i>
                 </div>
                 <div style="flex:1;min-width:0;text-align:left;">
                     <div style="font-size:0.875rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.browser}</div>
-                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${s.os} &nbsp;·&nbsp; IP: <code style="font-size:0.78rem;background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:4px;">${s.ip}</code></div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${s.os} &nbsp;·&nbsp; IP: <code style="font-size:0.78rem;background:var(--bg-base);padding:1px 5px;border-radius:4px;">${s.ip}</code></div>
                 </div>
                 <div style="flex-shrink:0;text-align:right;">
                     <span style="font-size:0.75rem;color:var(--text-muted);display:block;">${relTime(s.connectedAt)}</span>
@@ -7061,8 +7061,8 @@ window.refreshAdminDevicesInline = async function() {
         container.innerHTML = `
             <div style="width:100%;padding:0 0.25rem;">
                 <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:1.25rem;">
-                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="shield-check" style="width:20px;height:20px;color:#6366f1;"></i>
+                    <div style="width:40px;height:40px;border-radius:10px;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="shield-check" style="width:20px;height:20px;color:var(--primary);"></i>
                     </div>
                     <div style="text-align:left;">
                         <div style="font-size:0.95rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;">
@@ -7072,7 +7072,7 @@ window.refreshAdminDevicesInline = async function() {
                         <div style="font-size:0.78rem;color:var(--text-muted);">${sessionCount === 1 ? '1 conexión detectada' : `${sessionCount} conexiones detectadas`}</div>
                     </div>
                 </div>
-                <div class="custom-scrollbar" style="background:rgba(0,0,0,0.12);border-radius:10px;padding:0 0.9rem;max-height:215px;overflow-y:auto;border:1px solid var(--border-color);">
+                <div class="custom-scrollbar" style="background:var(--bg-surface-light);border-radius:10px;padding:0 0.9rem;max-height:215px;overflow-y:auto;border:1px solid var(--border-color);">
                     ${sessionListHtml}
                 </div>
                 <p style="font-size:0.78rem;color:var(--text-muted);margin-top:1.25rem;text-align:center;line-height:1.5;margin-bottom:0;">
