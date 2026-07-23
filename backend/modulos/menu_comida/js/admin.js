@@ -772,10 +772,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) targetTab.classList.remove('hidden');
             
             if (tabId === 'stats-tab') {
-                renderStats('today');
+                if (typeof window.reRenderCurrentStats === 'function') {
+                    window.reRenderCurrentStats();
+                } else if (typeof renderStats === 'function') {
+                    renderStats('today');
+                }
+            }
+            if (tabId === 'my-metrics-tab') {
+                if (typeof window.reRenderCurrentMyMetrics === 'function') {
+                    window.reRenderCurrentMyMetrics();
+                } else if (typeof renderMyMetrics === 'function') {
+                    renderMyMetrics('today');
+                }
             }
             if (tabId === 'orders-tab') {
                 if (typeof renderOrders === 'function') renderOrders();
@@ -785,6 +797,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (tabId === 'expenses-tab') {
                 if (typeof checkExpensesLockState === 'function') checkExpensesLockState();
+            }
+            if (tabId === 'employees-tab') {
+                if (typeof loadEmployees === 'function') loadEmployees();
             }
         });
     });
@@ -911,8 +926,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (addCatBtn) {
         addCatBtn.addEventListener('click', () => {
-            catForm.reset();
-            catModal.classList.remove('hidden');
+            requireSecurityAuth(() => {
+                catForm.reset();
+                catModal.classList.remove('hidden');
+            });
         });
     }
     if (closeCatModal) {
@@ -945,7 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Item Modal
     const addItemBtn = document.getElementById('add-item-btn');
     const closeAdminModal = document.getElementById('close-admin-modal');
-    if (addItemBtn) addItemBtn.addEventListener('click', () => openAdminModal());
+    if (addItemBtn) addItemBtn.addEventListener('click', () => requireSecurityAuth(() => openAdminModal()));
     if (closeAdminModal) closeAdminModal.addEventListener('click', () => document.getElementById('admin-modal').classList.add('hidden'));
 
     // Item Form Submit
@@ -1555,7 +1572,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAdminDiscounts();
 
     const addComboBtn = document.getElementById('add-combo-btn');
-    if (addComboBtn) addComboBtn.addEventListener('click', () => openComboModal());
+    if (addComboBtn) addComboBtn.addEventListener('click', () => requireSecurityAuth(() => openComboModal()));
 
     const closeComboModalBtn = document.getElementById('close-combo-modal');
     if (closeComboModalBtn) closeComboModalBtn.addEventListener('click', () => {
@@ -1611,7 +1628,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Admin Discounts UI ---
     const addDiscountBtn = document.getElementById('add-discount-btn');
-    if (addDiscountBtn) addDiscountBtn.addEventListener('click', () => openDiscountModal());
+    if (addDiscountBtn) addDiscountBtn.addEventListener('click', () => requireSecurityAuth(() => openDiscountModal()));
 
     const closeDiscountBtn = document.getElementById('close-discount-modal');
     if (closeDiscountBtn) closeDiscountBtn.addEventListener('click', () => {
@@ -2307,7 +2324,12 @@ let charts = {
     categories: null,
     topProducts: null,
     monthlyRevenue: null,
-    salesTrend: null
+    salesTrend: null,
+    mySalesTrend: null,
+    myMonthlyRevenue: null,
+    myPayments: null,
+    myHours: null,
+    myTopProducts: null
 };
 
 function generateMockData() {
@@ -2698,7 +2720,7 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    // 1b. Handle Order Sub-Tabs (only incoming / pending now)
+    // 1b. Handle Order Sub-Tabs (incoming, preparing, unpaid)
     const subTabBtn = e.target.closest('.sub-tab-btn');
     if (subTabBtn) {
         const subtab = subTabBtn.dataset.subtab;
@@ -2714,10 +2736,14 @@ document.addEventListener('click', (e) => {
         subTabBtn.style.color = '#fff';
         subTabBtn.style.border = '1px solid transparent';
 
-        document.getElementById('incoming-orders-list').classList.toggle('hidden', subtab !== 'incoming');
-        document.getElementById('pending-orders-list').classList.toggle('hidden', subtab !== 'pending');
+        const incEl = document.getElementById('incoming-orders-list');
+        const prepEl = document.getElementById('preparing-orders-list');
+        const unpEl = document.getElementById('unpaid-orders-list');
 
-        // (Search bar is now permanently visible, no need to hide on tab switch)
+        if (incEl) incEl.classList.toggle('hidden', subtab !== 'incoming');
+        if (prepEl) prepEl.classList.toggle('hidden', subtab !== 'preparing');
+        if (unpEl) unpEl.classList.toggle('hidden', subtab !== 'unpaid');
+
         renderOrders();
         return;
     }
@@ -2840,30 +2866,57 @@ function initCustomDropdowns() {
                 items.forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 
-                // Active trigger style if it's a range and not "today" (or just highlight it)
+                // Active trigger style and label reset
                 if (dropdown.id === 'range-dropdown') {
                     trigger.classList.add('active-trigger');
-                    // Reset month if needed
                     const monthDisplay = document.querySelector('#current-month');
                     if (monthDisplay) monthDisplay.textContent = "Meses...";
                     document.querySelectorAll('#month-dropdown li').forEach(li => li.classList.remove('active'));
-                } else {
-                    // It's a month
+                } else if (dropdown.id === 'month-dropdown') {
                     const rangeDisplay = document.querySelector('#current-range');
-                    if (rangeDisplay) rangeDisplay.textContent = "Rango..."; // O dejarlo en el ultimo?
+                    if (rangeDisplay) rangeDisplay.textContent = "Rango...";
                     document.querySelectorAll('#range-dropdown li').forEach(li => li.classList.remove('active'));
                     trigger.classList.add('active-trigger');
+                } else if (dropdown.id === 'my-range-dropdown') {
+                    trigger.classList.add('active-trigger');
+                    const monthDisplay = document.querySelector('#my-current-month');
+                    if (monthDisplay) monthDisplay.textContent = "Meses...";
+                    document.querySelectorAll('#my-month-dropdown li').forEach(li => li.classList.remove('active'));
+                } else if (dropdown.id === 'emp-preset-dropdown') {
+                    trigger.classList.add('active-trigger');
+                    const monthDisplay = document.querySelector('#emp-current-month');
+                    if (monthDisplay) monthDisplay.textContent = "Meses...";
+                    document.querySelectorAll('#emp-month-dropdown li').forEach(li => li.classList.remove('active'));
+                    window._activeEmpPresetValue = value;
+                    window._activeEmpMonthValue = '';
+                } else if (dropdown.id === 'emp-month-dropdown') {
+                    const rangeDisplay = document.querySelector('#emp-current-preset');
+                    if (rangeDisplay) rangeDisplay.textContent = "Todo el tiempo";
+                    document.querySelectorAll('#emp-preset-dropdown li').forEach(li => li.classList.remove('active'));
+                    trigger.classList.add('active-trigger');
+                    window._activeEmpMonthValue = value;
+                    window._activeEmpPresetValue = 'all';
                 }
 
                 // Clear date input
                 const dateInput = document.getElementById('stats-date-filter');
-                if (dateInput) dateInput.value = "";
+                if (dateInput && (dropdown.id === 'range-dropdown' || dropdown.id === 'month-dropdown')) dateInput.value = "";
+                const myDateInput = document.getElementById('my-stats-date-filter');
+                if (myDateInput && (dropdown.id === 'my-range-dropdown' || dropdown.id === 'my-month-dropdown')) myDateInput.value = "";
+                const empDateInput = document.getElementById('emp-filter-date');
+                if (empDateInput && (dropdown.id === 'emp-preset-dropdown' || dropdown.id === 'emp-month-dropdown')) empDateInput.value = "";
 
                 // Trigger Logic
                 if (dropdown.id === 'range-dropdown') {
                     renderStats(value);
-                } else {
+                } else if (dropdown.id === 'month-dropdown') {
                     renderStats('month', value);
+                } else if (dropdown.id === 'my-range-dropdown') {
+                    renderMyMetrics(value);
+                } else if (dropdown.id === 'my-month-dropdown') {
+                    renderMyMetrics('month', value);
+                } else if (dropdown.id === 'emp-preset-dropdown' || dropdown.id === 'emp-month-dropdown') {
+                    renderActiveProfileMetrics();
                 }
 
                 dropdown.classList.remove('open');
@@ -2877,14 +2930,13 @@ function initCustomDropdowns() {
     });
 }
 
-// Specific Date Picker - Unified logic
+// Specific Date Picker - Unified logic Admin
 const dateFilter = document.getElementById('stats-date-filter');
 if (dateFilter) {
     dateFilter.addEventListener('change', (e) => {
         if (e.target.value !== "") {
-            // Limpiar dropdowns custom
-            document.querySelectorAll('.custom-dropdown li').forEach(li => li.classList.remove('active'));
-            document.querySelectorAll('.dropdown-trigger').forEach(tr => tr.classList.remove('active-trigger'));
+            document.querySelectorAll('#range-dropdown li, #month-dropdown li').forEach(li => li.classList.remove('active'));
+            document.querySelectorAll('#range-trigger, #month-trigger').forEach(tr => tr.classList.remove('active-trigger'));
             const rangeDisp = document.querySelector('#current-range');
             const monthDisp = document.querySelector('#current-month');
             if (rangeDisp) rangeDisp.textContent = "Rango...";
@@ -2895,22 +2947,55 @@ if (dateFilter) {
     });
 }
 
+// Specific Date Picker - Unified logic Mis Métricas
+const myDateFilter = document.getElementById('my-stats-date-filter');
+if (myDateFilter) {
+    myDateFilter.addEventListener('change', (e) => {
+        if (e.target.value !== "") {
+            document.querySelectorAll('#my-range-dropdown li, #my-month-dropdown li').forEach(li => li.classList.remove('active'));
+            document.querySelectorAll('#my-range-trigger, #my-month-trigger').forEach(tr => tr.classList.remove('active-trigger'));
+            const rangeDisp = document.querySelector('#my-current-range');
+            const monthDisp = document.querySelector('#my-current-month');
+            if (rangeDisp) rangeDisp.textContent = "Rango...";
+            if (monthDisp) monthDisp.textContent = "Meses...";
+
+            renderMyMetrics(null, null, e.target.value);
+        }
+    });
+}
+
+// Reset Button - Mis Métricas
+const myResetBtn = document.getElementById('my-reset-stats-btn');
+if (myResetBtn) {
+    myResetBtn.addEventListener('click', () => {
+        const dateInput = document.getElementById('my-stats-date-filter');
+        if (dateInput) dateInput.value = "";
+        document.querySelectorAll('#my-range-dropdown li, #my-month-dropdown li').forEach(li => li.classList.remove('active'));
+        const rangeToday = document.querySelector('#my-range-dropdown li[data-value="today"]');
+        if (rangeToday) rangeToday.classList.add('active');
+        const rangeDisp = document.querySelector('#my-current-range');
+        const monthDisp = document.querySelector('#my-current-month');
+        if (rangeDisp) rangeDisp.textContent = "Hoy";
+        if (monthDisp) monthDisp.textContent = "Meses...";
+        renderMyMetrics('today');
+    });
+}
+
 // Re-init dropdowns after content load or render
 initCustomDropdowns();
 
-
-
 window.addEventListener('storage', (e) => {
     if (e.key && e.key.startsWith('streetfeed_')) {
-        // Actualizar estadísticas si la pestaña está activa
         const statsTab = document.getElementById('stats-tab');
         if (statsTab && !statsTab.classList.contains('hidden')) {
-            const activeBtn = document.querySelector('.filter-btn.active');
-            const monthVal = document.getElementById('stats-month-filter') ? document.getElementById('stats-month-filter').value : "";
-            if (monthVal !== "") renderStats('month', monthVal);
-            else renderStats(activeBtn ? activeBtn.dataset.range : 'today');
+            if (typeof window.reRenderCurrentStats === 'function') window.reRenderCurrentStats();
         }
         
+        const myMetricsTab = document.getElementById('my-metrics-tab');
+        if (myMetricsTab && !myMetricsTab.classList.contains('hidden')) {
+            if (typeof window.reRenderCurrentMyMetrics === 'function') window.reRenderCurrentMyMetrics();
+        }
+
         // Actualizar la vista de pedidos en tiempo real
         if (typeof window.renderOrders === 'function') {
             window.renderOrders();
@@ -2940,10 +3025,20 @@ window.confirmAction = function(message, onConfirm, buttonText = "Confirmar", bu
     actionBtn.textContent = buttonText;
     actionBtn.style.background = buttonColor || 'var(--theme-accent)';
     
-    // Cambiar icono dinámicamente si es una acción de peligro
+    // Cambiar icono y sombra dinámicamente según el tipo de acción
+    const isDanger = buttonColor === '#d32f2f' || buttonColor === '#ef4444' || buttonText.toLowerCase().includes('eliminar') || buttonText.toLowerCase().includes('vaciar') || buttonText.toLowerCase().includes('todo');
+    
+    if (isDanger) {
+        actionBtn.style.boxShadow = '0 4px 16px rgba(239, 68, 68, 0.35)';
+    } else if (buttonColor === '#f59e0b') {
+        actionBtn.style.boxShadow = '0 4px 16px rgba(245, 158, 11, 0.35)';
+    } else if (buttonColor === '#3b82f6') {
+        actionBtn.style.boxShadow = '0 4px 16px rgba(59, 130, 246, 0.35)';
+    } else {
+        actionBtn.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.35)';
+    }
+
     if (iconContainer) {
-        const isDanger = buttonColor === '#d32f2f' || buttonText.toLowerCase().includes('eliminar') || buttonText.toLowerCase().includes('vaciar') || buttonText.toLowerCase().includes('todo');
-        
         if (isDanger) {
             iconContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ff5252" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
             iconContainer.style.background = 'rgba(255, 82, 82, 0.1)';
@@ -2978,22 +3073,450 @@ window.confirmAction = function(message, onConfirm, buttonText = "Confirmar", bu
     
 };
 
+function getCurrentActiveEmployeeName() {
+    try {
+        const empStr = localStorage.getItem('streetfeed_employee_user') || localStorage.getItem('streetfeed_employee') || localStorage.getItem('sf_current_emp');
+        if (empStr) {
+            const emp = JSON.parse(empStr);
+            if (emp && emp.name) return formatShortName(emp.name);
+        }
+    } catch(e) {}
+
+    const badgeName = document.getElementById('admin-name-display');
+    if (badgeName) {
+        const text = badgeName.textContent || '';
+        const clean = text.replace(/\s*\([^)]*\)/g, '').trim();
+        if (clean && clean !== 'Administrador' && clean !== 'Propietario') {
+            return clean;
+        }
+    }
+
+    return localStorage.getItem('sf_current_emp_name') || (typeof state !== 'undefined' && state.currentEmployee) || '';
+}
+
 let historyDateFilter = null;
 window.historySearchQuery = null;
+window.historyScope = 'all';
+
+window.setHistoryScope = function(scope) {
+    window.historyScope = scope;
+    const btnAll = document.getElementById('history-scope-all');
+    const btnMine = document.getElementById('history-scope-mine');
+    if (btnAll && btnMine) {
+        if (scope === 'all') {
+            btnAll.style.background = 'var(--theme-accent)';
+            btnAll.style.color = '#fff';
+            btnMine.style.background = 'transparent';
+            btnMine.style.color = 'var(--text-dim)';
+        } else {
+            btnMine.style.background = 'var(--theme-accent)';
+            btnMine.style.color = '#fff';
+            btnAll.style.background = 'transparent';
+            btnAll.style.color = 'var(--text-dim)';
+        }
+    }
+    window.renderOrders();
+};
+
+function renderMyMetrics(range = 'today', specificMonth = null, specificDate = null) {
+    const tabEl = document.getElementById('my-metrics-tab');
+    if (!tabEl) return;
+
+    const activeEmpName = getCurrentActiveEmployeeName() || 'Administrador';
+    const isLight = document.body.classList.contains('light-mode');
+    const chartText = isLight ? '#0f172a' : '#ffffff';
+    const chartGrid = isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.08)';
+
+    // Stats for Active Filter
+    const filterStats = getEmployeeStats(activeEmpName, {
+        preset: range,
+        month: specificMonth,
+        specificDate: specificDate
+    });
+
+    // Stats for Today
+    const todayStats = getEmployeeStats(activeEmpName, { preset: 'today' });
+
+    // Stats for Current Month
+    const now = new Date();
+    const monthStats = getEmployeeStats(activeEmpName, { month: now.getMonth().toString() });
+
+    const headerTitle = document.getElementById('my-metrics-header-title');
+    const headerSubtitle = document.getElementById('my-metrics-header-subtitle');
+
+    if (headerTitle) headerTitle.textContent = `Mis Métricas — ${activeEmpName}`;
+    if (headerSubtitle) headerSubtitle.textContent = `Resumen de ventas del día, ventas del mes y comisiones (${filterStats.commissionRate}%).`;
+
+    // 1. Update KPI Cards (Dinámico según el filtro seleccionado)
+    const salesEl = document.getElementById('my-stat-sales');
+    if (salesEl) salesEl.textContent = '$' + filterStats.totalSales.toLocaleString('es-CO');
+
+    const commRateEl = document.getElementById('my-stat-comm-rate');
+    if (commRateEl) commRateEl.textContent = `Comisión (${filterStats.commissionRate}%)`;
+
+    const commEl = document.getElementById('my-stat-commission');
+    if (commEl) commEl.textContent = '$' + filterStats.commission.toLocaleString('es-CO');
+
+    const ordersCountEl = document.getElementById('my-stat-orders-count');
+    if (ordersCountEl) ordersCountEl.textContent = filterStats.acceptedOrders;
+
+    const itemCounts = {};
+    (filterStats.recentOrders || []).forEach(o => {
+        if (o.status === 'accepted') {
+            (o.items || []).forEach(item => {
+                const name = item.name || 'Producto';
+                itemCounts[name] = (itemCounts[name] || 0) + (item.quantity || 1);
+            });
+        }
+    });
+    const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
+    const topDish = sortedItems[0]?.[0] || '---';
+
+    const topDishEl = document.getElementById('my-stat-top-dish');
+    if (topDishEl) topDishEl.textContent = topDish;
+
+    // Helper local date key (para evitar desfase UTC en Colombia UTC-5)
+    const toLocalKey = (dObj) => {
+        const y = dObj.getFullYear();
+        const m = String(dObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    // 2. Chart 1: Ventas & Comisiones del Día / Tendencia Diaria
+    const ctxTrend = document.getElementById('chart-my-sales-trend');
+    if (ctxTrend) {
+        const dateMap = {};
+
+        let daysToCover = 7;
+        if (range === 'today') daysToCover = 1;
+        else if (range === 'yesterday') daysToCover = 2;
+        else if (range === 'week') daysToCover = 7;
+        else if (range === 'fortnight') daysToCover = 15;
+        else if (range === 'month' || specificMonth !== null || range === 'all') daysToCover = 30;
+
+        for (let i = daysToCover - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            const key = toLocalKey(d);
+            dateMap[key] = { sales: 0, comm: 0, label: d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) };
+        }
+
+        (filterStats.recentOrders || []).forEach(o => {
+            if (o.status === 'accepted' && o.date) {
+                const dObj = new Date(o.date);
+                if (!isNaN(dObj.getTime())) {
+                    const dKey = toLocalKey(dObj);
+                    if (!dateMap[dKey]) {
+                        dateMap[dKey] = {
+                            sales: 0,
+                            comm: 0,
+                            label: dObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
+                        };
+                    }
+                    const total = o.total || 0;
+                    dateMap[dKey].sales += total;
+                    dateMap[dKey].comm += Math.round(total * (filterStats.commissionRate / 100));
+                }
+            }
+        });
+
+        const sortedDates = Object.keys(dateMap).sort();
+        const trendLabels = sortedDates.map(k => dateMap[k].label);
+        const trendSales = sortedDates.map(k => dateMap[k].sales);
+        const trendComms = sortedDates.map(k => dateMap[k].comm);
+
+        const maxSalesVal = Math.max(...trendSales, ...trendComms, 0);
+        const suggestedMaxTrend = maxSalesVal > 0 ? Math.ceil(maxSalesVal * 1.25) : 100000;
+
+        if (charts.mySalesTrend) charts.mySalesTrend.destroy();
+        charts.mySalesTrend = new Chart(ctxTrend.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Ventas ($)',
+                        data: trendSales,
+                        backgroundColor: 'rgba(76, 175, 80, 0.75)',
+                        borderColor: '#4caf50',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    },
+                    {
+                        type: 'line',
+                        label: `Comisión (${filterStats.commissionRate}%)`,
+                        data: trendComms,
+                        borderColor: '#ec4899',
+                        backgroundColor: 'rgba(236, 72, 153, 0.15)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#ec4899',
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: chartText, font: { weight: 'bold' } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': $' + Math.round(ctx.parsed.y).toLocaleString('es-CO');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: chartText, font: { weight: 'bold' } }, grid: { color: chartGrid } },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: suggestedMaxTrend,
+                        ticks: {
+                            color: chartText,
+                            font: { weight: 'bold' },
+                            callback: function(v) {
+                                if (v % 1 !== 0) return '';
+                                if (v >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+                                if (v >= 1000) return '$' + Math.round(v / 1000).toLocaleString('es-CO') + 'k';
+                                return '$' + Math.round(v).toLocaleString('es-CO');
+                            }
+                        },
+                        grid: { color: chartGrid }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Chart 2: Rendimiento de Ventas del Mes
+    const ctxMonth = document.getElementById('chart-my-monthly-revenue');
+    if (ctxMonth) {
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthlySales = Array(12).fill(0);
+        const monthlyComms = Array(12).fill(0);
+
+        const allEmpOrders = getEmployeeStats(activeEmpName, { preset: 'all' }).recentOrders || [];
+        allEmpOrders.forEach(o => {
+            if (o.status === 'accepted' && o.date) {
+                const d = new Date(o.date);
+                if (!isNaN(d.getTime()) && d.getFullYear() === now.getFullYear()) {
+                    const m = d.getMonth();
+                    const total = o.total || 0;
+                    monthlySales[m] += total;
+                    monthlyComms[m] += Math.round(total * (filterStats.commissionRate / 100));
+                }
+            }
+        });
+
+        const maxMonthVal = Math.max(...monthlySales, ...monthlyComms, 0);
+        const suggestedMaxMonth = maxMonthVal > 0 ? Math.ceil(maxMonthVal * 1.25) : 100000;
+
+        if (charts.myMonthlyRevenue) charts.myMonthlyRevenue.destroy();
+        charts.myMonthlyRevenue = new Chart(ctxMonth.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: monthNames,
+                datasets: [
+                    {
+                        label: 'Ventas Mensuales ($)',
+                        data: monthlySales,
+                        backgroundColor: 'rgba(33, 150, 243, 0.75)',
+                        borderColor: '#2196f3',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Comisiones ($)',
+                        data: monthlyComms,
+                        backgroundColor: 'rgba(171, 71, 188, 0.75)',
+                        borderColor: '#ab47bc',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: chartText, font: { weight: 'bold' } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': $' + Math.round(ctx.parsed.y).toLocaleString('es-CO');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: chartText, font: { weight: 'bold' } }, grid: { color: chartGrid } },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: suggestedMaxMonth,
+                        ticks: {
+                            color: chartText,
+                            font: { weight: 'bold' },
+                            callback: function(v) {
+                                if (v % 1 !== 0) return '';
+                                if (v >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+                                if (v >= 1000) return '$' + Math.round(v / 1000).toLocaleString('es-CO') + 'k';
+                                return '$' + Math.round(v).toLocaleString('es-CO');
+                            }
+                        },
+                        grid: { color: chartGrid }
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. Render History Table
+    const tbody = document.getElementById('my-metrics-table-body');
+    if (tbody) {
+        const acceptedList = (filterStats.recentOrders || []).filter(o => o.status === 'accepted');
+        if (acceptedList.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-dim); font-size: 0.9rem;">
+                        <i data-lucide="inbox" style="width: 32px; height: 32px; display: block; margin: 0 auto 0.5rem; opacity: 0.5;"></i>
+                        No tienes órdenes atendidas en este período de filtro.
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML = acceptedList.map(o => {
+                const total = o.total || 0;
+                const orderComm = Math.round(total * (filterStats.commissionRate / 100));
+                const dateStr = o.date ? new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Reciente';
+                const clientOrTable = escapeHtml(o.table ? `Mesa ${o.table}` : (o.customer?.name || 'Cliente'));
+                const payMethod = escapeHtml(o.paymentMethod || o.payment || 'Efectivo');
+                const isTransf = payMethod.toLowerCase().includes('transf') || payMethod.toLowerCase().includes('nequi');
+                const badgeBg = isTransf ? 'rgba(33, 150, 243, 0.15)' : 'rgba(76, 175, 80, 0.15)';
+                const badgeColor = isTransf ? '#2196f3' : '#4caf50';
+
+                return `
+                    <tr style="border-bottom: 1px solid var(--glass-border); transition: background 0.2s;">
+                        <td style="padding: 0.9rem 1rem; font-weight: 800; color: var(--text);">#ORD-${o.id}</td>
+                        <td style="padding: 0.9rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${dateStr}</td>
+                        <td style="padding: 0.9rem 1rem; font-weight: 700; color: var(--text);">${clientOrTable}</td>
+                        <td style="padding: 0.9rem 1rem;">
+                            <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 0.25rem 0.65rem; border-radius: 8px; font-weight: 800; font-size: 0.72rem; text-transform: uppercase;">
+                                ${payMethod}
+                            </span>
+                        </td>
+                        <td style="padding: 0.9rem 1rem; text-align: right; font-weight: 900; color: var(--text);">$${total.toLocaleString('es-CO')}</td>
+                        <td style="padding: 0.9rem 1rem; text-align: right; font-weight: 900; color: #ec4899;">+$${orderComm.toLocaleString('es-CO')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    if (window.lucide) lucide.createIcons();
+}
+window.renderMyMetrics = renderMyMetrics;
+
+window.reRenderCurrentMyMetrics = function() {
+    const activeRangeLi = document.querySelector('#my-range-dropdown li.active');
+    const activeMonthLi = document.querySelector('#my-month-dropdown li.active');
+    const dateInput = document.getElementById('my-stats-date-filter');
+
+    if (dateInput && dateInput.value) {
+        renderMyMetrics(null, null, dateInput.value);
+    } else if (activeMonthLi && activeMonthLi.dataset.value !== "") {
+        renderMyMetrics('month', activeMonthLi.dataset.value);
+    } else if (activeRangeLi && activeRangeLi.dataset.value) {
+        renderMyMetrics(activeRangeLi.dataset.value);
+    } else {
+        renderMyMetrics('today');
+    }
+};
+
+window.reRenderCurrentStats = function() {
+    const activeRangeLi = document.querySelector('#range-dropdown li.active');
+    const activeMonthLi = document.querySelector('#month-dropdown li.active');
+    const dateInput = document.getElementById('stats-date-filter');
+    const activeBtn = document.querySelector('.filter-btn.active');
+
+    if (dateInput && dateInput.value) {
+        renderStats(null, null, dateInput.value);
+    } else if (activeMonthLi && activeMonthLi.dataset.value !== "") {
+        renderStats('month', activeMonthLi.dataset.value);
+    } else if (activeRangeLi && activeRangeLi.dataset.value) {
+        renderStats(activeRangeLi.dataset.value);
+    } else if (activeBtn) {
+        renderStats(activeBtn.dataset.range);
+    } else {
+        renderStats('today');
+    }
+};
+
+window.openMyMetricsModal = function() {
+    const navBtn = document.getElementById('nav-btn-my-metrics');
+    if (navBtn) {
+        navBtn.click();
+    } else {
+        const targetTab = document.getElementById('my-metrics-tab');
+        if (targetTab) {
+            document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
+            targetTab.classList.remove('hidden');
+            if (typeof window.reRenderCurrentMyMetrics === 'function') {
+                window.reRenderCurrentMyMetrics();
+            } else {
+                renderMyMetrics('today');
+            }
+        }
+    }
+};
+
+window.closeMyMetricsModal = function() {
+    const modal = document.getElementById('employeeMetricsModal');
+    if (modal) modal.style.display = 'none';
+};
 
 window.renderOrders = function() {
     const orders = getOrders();
     const incomingList = document.getElementById('incoming-orders-list');
-    const pendingList = document.getElementById('pending-orders-list');
+    const preparingList = document.getElementById('preparing-orders-list');
+    const unpaidList = document.getElementById('unpaid-orders-list');
     const historyList = document.getElementById('history-list-content');
-    if (!incomingList || !pendingList || !historyList) return;
+    if (!incomingList || !preparingList || !unpaidList || !historyList) return;
 
-    // Filter by statuses
+    // Filter by 3 active statuses + history
     let incoming = orders.filter(o => o.status === 'pending' || !o.status).reverse();
-    let confirmed = orders.filter(o => o.status === 'confirmed').reverse();
+    let preparing = orders.filter(o => o.status === 'confirmed').reverse();
+    let unpaid = orders.filter(o => o.status === 'dispatched').reverse();
     let history = orders.filter(o => o.status === 'accepted' || o.status === 'cancelled').reverse();
 
-    // Filtro por Búsqueda principal (Pedidos: Entrantes y Pendientes)
+    if (window._prevIncomingCount !== undefined && incoming.length > window._prevIncomingCount) {
+        if (typeof window.playNewOrderChime === 'function') {
+            window.playNewOrderChime();
+        }
+    }
+    window._prevIncomingCount = incoming.length;
+
+    // Filter History by Scope (Todos vs Mis Pedidos)
+    if (window.historyScope === 'mine') {
+        const activeName = getCurrentActiveEmployeeName().toLowerCase().trim();
+        const firstName = activeName.split(' ')[0];
+        if (activeName) {
+            history = history.filter(o => {
+                const attended = (o.attendedBy || o.customer?.attendedBy || '').toLowerCase().trim();
+                if (!attended) return false;
+                if (activeName.includes('propietario') || activeName.includes('administrador')) {
+                    return attended.includes('propietario') || attended.includes('administrador') || (firstName && attended.includes(firstName));
+                }
+                return attended.includes(activeName) || (firstName && attended.includes(firstName));
+            });
+        }
+    }
+
+    // Filtro por Búsqueda principal (Pedidos: Entrantes, En Preparación y Por Cobrar)
     const mainSearchInput = document.getElementById('orders-search-input');
     if (mainSearchInput && mainSearchInput.value.trim() !== '') {
         const q = mainSearchInput.value.toLowerCase().trim();
@@ -3004,7 +3527,8 @@ window.renderOrders = function() {
             return nameMatch || phoneMatch || idMatch;
         };
         incoming = incoming.filter(filterFn);
-        confirmed = confirmed.filter(filterFn);
+        preparing = preparing.filter(filterFn);
+        unpaid = unpaid.filter(filterFn);
     }
 
     // Filtro por Búsqueda (Nombre o Teléfono) - Solo para historial
@@ -3017,29 +3541,33 @@ window.renderOrders = function() {
         });
     }
 
-    // Actualizar el Badge en el Sidebar y en las Pestañas
+    // Actualizar Badges de Pestañas y Sidebar
     const badge = document.getElementById('order-count-badge');
     const badgeInc = document.getElementById('badge-incoming');
-    const badgePen = document.getElementById('badge-pending');
+    const badgePrep = document.getElementById('badge-preparing');
+    const badgeUnp = document.getElementById('badge-unpaid');
 
     if (badgeInc) {
         badgeInc.textContent = incoming.length;
         badgeInc.style.display = incoming.length > 0 ? 'inline-block' : 'none';
     }
-    if (badgePen) {
-        badgePen.textContent = confirmed.length;
-        badgePen.style.display = confirmed.length > 0 ? 'inline-block' : 'none';
+    if (badgePrep) {
+        badgePrep.textContent = preparing.length;
+        badgePrep.style.display = preparing.length > 0 ? 'inline-block' : 'none';
+    }
+    if (badgeUnp) {
+        badgeUnp.textContent = unpaid.length;
+        badgeUnp.style.display = unpaid.length > 0 ? 'inline-block' : 'none';
     }
 
     if (badge) {
-        // Mostramos la suma de entrantes y pendientes en el badge lateral
-        const totalActive = incoming.length + confirmed.length;
+        const totalActive = incoming.length + preparing.length + unpaid.length;
         badge.textContent = totalActive;
         if (totalActive > 0) badge.classList.remove('hidden');
         else badge.classList.add('hidden');
     }
 
-    // Calcular Ventas Totales (Solo Aceptados)
+    // Calcular Ventas Totales (Solo Pedidos Cobrados / Aceptados)
     const totalAccepted = orders.filter(o => o.status === 'accepted').reduce((sum, o) => sum + (o.total || 0), 0);
     const histTotalEl = document.getElementById('hist-total-earnings');
     if (histTotalEl) histTotalEl.textContent = '$' + totalAccepted.toLocaleString();
@@ -3057,21 +3585,28 @@ window.renderOrders = function() {
     const histDayEl = document.getElementById('hist-day-earnings');
     if (histDayEl) histDayEl.textContent = '$' + filteredAccepted.toLocaleString();
 
-    // Render Incoming (Entrantes)
+    // Render 1. Entrantes
     if (incoming.length === 0) {
-        incomingList.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="coffee" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>No hay pedidos pendientes.</p></div>`;
+        incomingList.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="coffee" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>No hay pedidos entrantes.</p></div>`;
     } else {
         incomingList.innerHTML = incoming.map(o => createOrderCard(o)).join('');
     }
 
-    // Render Pending (Confirmados/En Preparación)
-    if (confirmed.length === 0) {
-        pendingList.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="timer" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>No hay pedidos en preparación.</p></div>`;
+    // Render 2. En Preparación
+    if (preparing.length === 0) {
+        preparingList.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="chef-hat" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>No hay pedidos en preparación.</p></div>`;
     } else {
-        pendingList.innerHTML = confirmed.map(o => createOrderCard(o)).join('');
+        preparingList.innerHTML = preparing.map(o => createOrderCard(o)).join('');
     }
 
-    // Render History
+    // Render 3. Por Cobrar
+    if (unpaid.length === 0) {
+        unpaidList.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="receipt" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>No hay pedidos pendientes de cobro.</p></div>`;
+    } else {
+        unpaidList.innerHTML = unpaid.map(o => createOrderCard(o)).join('');
+    }
+
+    // Render 4. Historial
     if (history.length === 0) {
         historyList.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="archive" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>${historyDateFilter ? 'No hay pedidos para esta fecha.' : 'El historial está vacío.'}</p></div>`;
     } else {
@@ -3081,9 +3616,15 @@ window.renderOrders = function() {
     if (window.lucide) lucide.createIcons();
 }
 
-// Estado global para modo limpieza
 window.isCleaningMode = false;
+
 window.toggleCleaningMode = function() {
+    requireSecurityAuth(() => {
+        _performToggleCleaningMode();
+    });
+};
+
+function _performToggleCleaningMode() {
     window.isCleaningMode = !window.isCleaningMode;
     
     const clearBtn = document.getElementById('clear-all-history');
@@ -3091,13 +3632,11 @@ window.toggleCleaningMode = function() {
 
     if (clearBtn && toolsContainer) {
         if (window.isCleaningMode) {
-            // Cambiar LIMPIAR por BORRAR TODO
             clearBtn.innerHTML = '<i data-lucide="trash-2"></i> TODO';
             clearBtn.style.background = '#d32f2f';
             clearBtn.style.color = '#fff';
             clearBtn.title = "Borrar todo el historial permanentemente";
             
-            // Añadir botón CANCELAR si no existe
             if (!document.getElementById('cancel-cleaning-btn')) {
                 const cancelBtn = document.createElement('button');
                 cancelBtn.id = 'cancel-cleaning-btn';
@@ -3108,12 +3647,10 @@ window.toggleCleaningMode = function() {
                 toolsContainer.appendChild(cancelBtn);
             }
         } else {
-            // Restaurar a LIMPIAR
             clearBtn.innerHTML = '<i data-lucide="trash-2"></i> LIMPIAR';
             clearBtn.style.background = '#d32f2f';
             clearBtn.title = "";
             
-            // Quitar botón CANCELAR
             const cancelBtn = document.getElementById('cancel-cleaning-btn');
             if (cancelBtn) cancelBtn.remove();
         }
@@ -3125,38 +3662,187 @@ window.toggleCleaningMode = function() {
 
 function createOrderCard(order) {
     const isIncoming = order.status === 'pending' || !order.status;
-    const isConfirmed = order.status === 'confirmed';
+    const isPreparing = order.status === 'confirmed';
+    const isUnpaid = order.status === 'dispatched';
     const isHistory = order.status === 'accepted' || order.status === 'cancelled';
     const statusClass = `status-${order.status || 'pending'}`;
     const date = new Date(order.date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+    const isCocina = currentEmployeeRole === 'cocina';
+    const isMesero = currentEmployeeRole === 'mesero';
 
-    // --- DISEÑO DIFERENCIADO: HISTORIAL vs ACTIVOS ---
-    let gridCols = isHistory 
-        ? 'auto 175px 190px 130px auto' 
+    const printBtn = `<button onclick="window.printThermalTicket('${order.id}')" style="width: ${isHistory ? '34px' : '44px'}; height: ${isHistory ? '34px' : '44px'}; border-radius: ${isHistory ? '8px' : '12px'}; background: rgba(var(--primary-rgb, 247, 147, 30), 0.08); border: 1px solid rgba(var(--primary-rgb, 247, 147, 30), 0.25); color: var(--theme-accent); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Imprimir Ticket Térmico POS"><i data-lucide="printer" style="width: ${isHistory ? '16px' : '20px'}; height: ${isHistory ? '16px' : '20px'};"></i></button>`;
+
+    let gridCols = isHistory
+        ? 'auto 175px 190px 130px auto'
         : '240px 175px 190px 130px auto';
 
-    // Ajuste especial para Pendientes para que quepan bien los 3 botones (Confirmar es ancho)
-    if (isConfirmed) {
+    if (isPreparing || isUnpaid) {
         gridCols = '240px 175px 190px 110px auto';
     }
 
+    const totalDisplay = isCocina
+        ? `<span style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(245,158,11,0.12); padding: 0.25rem 0.5rem; border-radius: 6px;">Comanda</span>`
+        : `<span style="font-size: 1.1rem; font-weight: 950; color: var(--text); letter-spacing: -0.5px;">$${order.total.toLocaleString()}</span>`;
+
+    let actionsHtml = '';
+    if (isMesero) {
+        if (isIncoming) {
+            actionsHtml = `
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                    <div style="padding: 0.35rem 0.75rem; border-radius: 8px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); text-align: center; white-space: nowrap;">
+                        <span style="font-size: 0.65rem; font-weight: 900; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px;">EN ESPERA</span>
+                    </div>
+                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                        <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>`;
+        } else if (isPreparing) {
+            actionsHtml = `
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                    <div style="padding: 0.35rem 0.75rem; border-radius: 8px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); text-align: center; white-space: nowrap;">
+                        <span style="font-size: 0.65rem; font-weight: 900; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">EN COCINA</span>
+                    </div>
+                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                        <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>`;
+        } else if (isUnpaid) {
+            actionsHtml = `
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                    <div style="padding: 0.35rem 0.75rem; border-radius: 8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); text-align: center; white-space: nowrap;">
+                        <span style="font-size: 0.65rem; font-weight: 900; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">POR COBRAR</span>
+                    </div>
+                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                        <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>`;
+        } else {
+            const statusLabel = order.status === 'accepted' ? 'COBRADO' : 'CANCELADO';
+            const statusBg    = order.status === 'accepted' ? '#4caf50' : '#d32f2f';
+            const statusShadow = order.status === 'accepted' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(211, 47, 47, 0.2)';
+            actionsHtml = `
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                    <div style="padding: 0.3rem 0.6rem; border-radius: 8px; background: ${statusBg}; box-shadow: 0 4px 10px ${statusShadow}; text-align: center; white-space: nowrap;">
+                        <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px;">${statusLabel}</span>
+                    </div>
+                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                        <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>`;
+        }
+    } else if (isCocina) {
+        if (isIncoming) {
+            actionsHtml = `
+                <button onclick="window.updateOrderStatus('${order.id}', 'confirmed')" style="padding: 0 1.2rem; height: 44px; border-radius: 12px; background: #4caf50; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.2);">
+                    ACEPTAR
+                </button>
+                <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                    <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                </button>`;
+        } else if (isPreparing) {
+            actionsHtml = `
+                <button onclick="window.updateOrderStatus('${order.id}', 'dispatched')" style="padding: 0 1.2rem; height: 44px; border-radius: 12px; background: #f59e0b; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);">
+                    DESPACHAR
+                </button>
+                <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                    <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                </button>`;
+        } else if (isUnpaid) {
+            actionsHtml = `
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                    <div style="padding: 0.35rem 0.75rem; border-radius: 8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); text-align: center; white-space: nowrap;">
+                        <span style="font-size: 0.65rem; font-weight: 900; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">POR COBRAR</span>
+                    </div>
+                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                        <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>`;
+        } else {
+            const statusLabel = order.status === 'accepted' ? 'COBRADO' : 'CANCELADO';
+            const statusBg    = order.status === 'accepted' ? '#4caf50' : '#d32f2f';
+            const statusShadow = order.status === 'accepted' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(211, 47, 47, 0.2)';
+            actionsHtml = `
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                    <div style="padding: 0.3rem 0.6rem; border-radius: 8px; background: ${statusBg}; box-shadow: 0 4px 10px ${statusShadow}; text-align: center; white-space: nowrap;">
+                        <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px;">${statusLabel}</span>
+                    </div>
+                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                        <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>`;
+        }
+    } else if (isIncoming) {
+        actionsHtml = `
+            <button onclick="window.updateOrderStatus('${order.id}', 'confirmed')" style="padding: 0 1.2rem; height: 44px; border-radius: 12px; background: #4caf50; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.2);">
+                ACEPTAR
+            </button>
+            <button onclick="window.updateOrderStatus('${order.id}', 'cancelled')" style="width: 44px; height: 44px; border-radius: 12px; background: #d32f2f; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.2);" title="Rechazar Pedido">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+            </button>`;
+    } else if (isPreparing) {
+        actionsHtml = `
+            <button onclick="window.updateOrderStatus('${order.id}', 'dispatched')" style="padding: 0 1.2rem; height: 44px; border-radius: 12px; background: #f59e0b; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);">
+                DESPACHAR
+            </button>
+            ${!isCocina ? `
+            <button onclick="window.updateOrderStatus('${order.id}', 'cancelled')" style="width: 44px; height: 44px; border-radius: 12px; background: #d32f2f; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.2);" title="Cancelar Pedido">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>` : ''}
+            <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+            </button>`;
+    } else if (isUnpaid) {
+        actionsHtml = `
+            <button onclick="window.updateOrderStatus('${order.id}', 'accepted')" style="padding: 0 1.2rem; height: 44px; border-radius: 12px; background: #10b981; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);">
+                COBRAR
+            </button>
+            <button onclick="window.updateOrderStatus('${order.id}', 'cancelled')" style="width: 44px; height: 44px; border-radius: 12px; background: #d32f2f; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.2);" title="Cancelar Pedido">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+            </button>`;
+    } else {
+        const statusLabel = order.status === 'accepted' ? 'COBRADO' : 'CANCELADO';
+        const statusBg    = order.status === 'accepted' ? '#4caf50' : '#d32f2f';
+        const statusShadow = order.status === 'accepted' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(211, 47, 47, 0.2)';
+        const deleteBtn = window.isCleaningMode ? `
+            <button onclick="window.deleteHistoryOrder('${order.id}')" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(211, 47, 47, 0.15); border: 1px solid rgba(211, 47, 47, 0.3); color: #ff5252; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Eliminar este pedido">
+                <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+            </button>` : '';
+        actionsHtml = `
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                <div style="padding: 0.3rem 0.6rem; border-radius: 8px; background: ${statusBg}; box-shadow: 0 4px 10px ${statusShadow}; text-align: center; white-space: nowrap;">
+                    <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px;">${statusLabel}</span>
+                </div>
+                <button onclick="window.showOrderDetails('${order.id}')" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
+                    <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                </button>
+                ${deleteBtn}
+            </div>`;
+    }
+
+    const paymentBadge = !isCocina ? `
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${order.customer?.payment === 'Efectivo' ? '#4caf50' : '#2563eb'}; box-shadow: 0 4px 10px ${order.customer?.payment === 'Efectivo' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(37, 99, 235, 0.2)'}; white-space: nowrap;">
+            <i data-lucide="${order.customer?.payment === 'Efectivo' ? 'banknote' : 'smartphone'}" style="width: 12px; color: #fff;"></i>
+            <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">${order.customer?.payment === 'Efectivo' ? 'EFECTIVO' : 'TRANSF.'}</span>
+        </div>` : '';
+
     return `
-        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 1rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); min-height: ${isHistory ? '55px' : '85px'}; overflow: hidden; padding-right: ${isHistory ? '0.8rem' : '1.2rem'};">
-            
+        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="position: relative; display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 1rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); min-height: ${isHistory ? '55px' : '85px'}; overflow: hidden; padding-right: ${isHistory ? '0.8rem' : '1.2rem'};">
+
             <!-- 1. Identidad -->
             <div style="padding: 0 0.4rem 0 1.5rem; display: flex; flex-direction: ${isHistory ? 'row' : 'column'}; align-items: ${isHistory ? 'center' : 'flex-start'}; justify-content: flex-start; gap: ${isHistory ? '1.2rem' : '0.2rem'}; height: 100%; min-width: ${isHistory ? '120px' : '220px'}; flex-shrink: 0;">
                 <div style="display: flex; align-items: center; gap: ${isHistory ? '0.6rem' : '0.8rem'}; overflow: hidden; width: ${isHistory ? 'auto' : '100%'}; flex-shrink: 0;">
                     <div style="width: 85px; flex-shrink: 0;">
                         <span style="font-size: 0.65rem; color: var(--text-dim); font-weight: 800; background: rgba(var(--text-rgb), 0.08); padding: 0.15rem 0.4rem; border-radius: 4px; display: inline-block; width: 100%; text-align: center;">#${order.id}</span>
                     </div>
-                    
-                    ${isHistory ? `
-                        <div style="width: 100px; overflow: hidden; flex-shrink: 0;">
-                            <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: var(--text); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${(order.customer?.name || 'Cliente').split(' ')[0]}</h4>
-                        </div>
-                    ` : `
-                        <h4 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${order.customer?.name || 'Cliente'}</h4>
-                    `}
+                    <div style="${isHistory ? 'width: 100px; overflow: hidden; flex-shrink: 0;' : 'flex: 1; overflow: hidden;'}">
+                        <h4 style="margin: 0; font-size: ${isHistory ? '0.85rem' : '1.1rem'}; font-weight: 800; color: var(--text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${isHistory ? (order.customer?.name || 'Cliente').split(' ')[0] : (order.customer?.name || 'Cliente')}</h4>
+                    </div>
                 </div>
                 ${isHistory ? `
                     <span class="history-time-cell" style="font-size: 0.95rem; color: var(--text); font-weight: 800; opacity: 1; white-space: nowrap; flex-shrink: 0;">${date}</span>
@@ -3167,8 +3853,6 @@ function createOrderCard(order) {
                     </div>
                 `}
             </div>
-
-
 
             <!-- 2. Ubicación -->
             <div class="order-location-cell" style="display: flex; align-items: center; gap: 0.6rem; border-left: 1px solid var(--glass-border); padding: 0 0.3rem 0 0.6rem; width: 175px; flex-shrink: 0; overflow: hidden;">
@@ -3182,63 +3866,19 @@ function createOrderCard(order) {
                     <i data-lucide="shopping-bag" style="width: 13px; color: var(--theme-accent);"></i>
                     <span style="font-weight: 800; font-size: 0.8rem; color: var(--text);">${order.items.length} Product.</span>
                 </div>
-                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${order.customer?.payment === 'Efectivo' ? '#4caf50' : '#2563eb'}; box-shadow: 0 4px 10px ${order.customer?.payment === 'Efectivo' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(37, 99, 235, 0.2)'}; white-space: nowrap;">
-                    <i data-lucide="${order.customer?.payment === 'Efectivo' ? 'banknote' : 'smartphone'}" style="width: 12px; color: #fff;"></i>
-                    <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">${order.customer?.payment === 'Efectivo' ? 'EFECTIVO' : 'TRANSF.'}</span>
-                </div>
+                ${paymentBadge}
             </div>
 
+            <!-- 4. Total -->
             <div class="order-total-cell" style="display: flex; align-items: center; justify-content: flex-start; border-left: ${isHistory ? '1px solid var(--glass-border)' : 'none'}; padding: 0 0.8rem; align-self: stretch; width: 130px; flex-shrink: 0;">
-                <span style="font-size: 1.1rem; font-weight: 950; color: var(--text); letter-spacing: -0.5px;">$${order.total.toLocaleString()}</span>
+                ${totalDisplay}
             </div>
 
             <!-- 5. Acciones -->
             <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0 0.5rem; justify-content: flex-end; width: auto; flex-shrink: 0;">
-                ${isIncoming ? `
-                    <button onclick="window.updateOrderStatus('${order.id}', 'confirmed')" style="padding: 0 1.2rem; height: 44px; border-radius: 12px; background: #4caf50; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.2);">
-                        ACEPTAR
-                    </button>
-                    <button onclick="window.updateOrderStatus('${order.id}', 'cancelled')" style="width: 44px; height: 44px; border-radius: 12px; background: #d32f2f; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.2);">
-                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
-                        <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
-                    </button>
-                ` : isConfirmed ? `
-                    <button onclick="window.updateOrderStatus('${order.id}', 'accepted')" style="padding: 0 1.2rem; height: 44px; border-radius: 12px; background: #4caf50; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.2);">
-                        CONFIRMAR
-                    </button>
-                    <button onclick="window.updateOrderStatus('${order.id}', 'cancelled')" style="width: 44px; height: 44px; border-radius: 12px; background: #d32f2f; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.2);">
-                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                    <button onclick="window.showOrderDetails('${order.id}')" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
-                        <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
-                    </button>
-                ` : `
-                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; transition: all 0.3s ease;">
-                        <!-- Columna Estado -->
-                        <div style="width: 105px; flex-shrink: 0; display: flex; justify-content: center;">
-                            <div style="padding: 0.3rem 0; border-radius: 8px; background: ${order.status === 'accepted' ? '#4caf50' : '#d32f2f'}; box-shadow: 0 4px 10px ${order.status === 'accepted' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(211, 47, 47, 0.2)'}; width: 100%; text-align: center;">
-                                <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px;">${order.status === 'accepted' ? 'ACEPTADO' : 'CANCELADO'}</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Botón Detalles -->
-                        <button onclick="window.showOrderDetails('${order.id}')" style="width: 50px; height: 34px; border-radius: 8px; background: rgba(var(--text-rgb), 0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle">
-                            <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
-                        </button>
-                        
-                        <!-- Botón Eliminar -->
-                        ${window.isCleaningMode ? `
-                            <div style="width: 50px; flex-shrink: 0;">
-                                <button onclick="window.deleteHistoryOrder('${order.id}')" style="width: 100%; height: 34px; border-radius: 8px; background: rgba(211, 47, 47, 0.15); border: 1px solid rgba(211, 47, 47, 0.3); color: #ff5252; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Eliminar este pedido">
-                                    <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `}
+                ${actionsHtml}
             </div>
+
         </div>
     `;
 }
@@ -3249,13 +3889,17 @@ window.updateOrderStatus = function(id, newStatus) {
     let confirmColor = '#4caf50';
 
     if (newStatus === 'confirmed') {
-        actionMsg = '¿Aceptar este pedido y pasarlo a preparación?';
-        confirmBtn = 'Pasar a Pendientes';
+        actionMsg = '¿Aceptar este pedido y pasarlo a preparación en cocina?';
+        confirmBtn = 'Pasar a Preparación';
         confirmColor = '#4caf50';
+    } else if (newStatus === 'dispatched') {
+        actionMsg = '¿Marcar este pedido como despachado por cocina y pasarlo a Por Cobrar?';
+        confirmBtn = 'Despachar Pedido';
+        confirmColor = '#f59e0b';
     } else if (newStatus === 'accepted') {
-        actionMsg = '¿Confirmar pedido finalizado y pasarlo al historial?';
-        confirmBtn = 'Confirmar Entrega';
-        confirmColor = '#4caf50';
+        actionMsg = '¿Registrar el cobro y finalizar la cuenta de este pedido?';
+        confirmBtn = 'Registrar Cobro';
+        confirmColor = '#10b981';
     } else if (newStatus === 'cancelled') {
         actionMsg = '¿Cancelar este pedido?';
         confirmBtn = 'Cancelar Pedido';
@@ -3277,20 +3921,216 @@ window.updateOrderStatus = function(id, newStatus) {
             localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
             
             let toastMsg = '✅ Pedido actualizado';
-            if (newStatus === 'accepted') toastMsg = '✅ Pedido finalizado';
+            if (newStatus === 'accepted') toastMsg = '💰 Cobro registrado y cuenta cerrada';
+            if (newStatus === 'dispatched') toastMsg = '🔔 Pedido despachado por cocina';
+            if (newStatus === 'confirmed') toastMsg = '🍳 Pedido en preparación';
             if (newStatus === 'cancelled') toastMsg = '⚠️ Pedido cancelado';
-            if (newStatus === 'confirmed') toastMsg = '🍳 En preparación';
             
             showToast(toastMsg);
             
-            // IMPORTANTE: Redibujar TODO para sincronizar UI y Badge
             window.renderOrders();
-            if (typeof renderStats === 'function') renderStats(); 
+            if (typeof renderStats === 'function') renderStats();
+
+            // Impresión automática al aceptar pedido para comanda de cocina
+            if (newStatus === 'confirmed' && typeof window.printThermalTicket === 'function') {
+                setTimeout(() => window.printThermalTicket(id), 200);
+            }
         },
         confirmBtn,
         confirmColor
     );
-}
+};
+
+// --- AUDIO NOTIFICATIONS & THERMAL POS TICKET PRINTING ---
+window.isSoundEnabled = function() {
+    const saved = localStorage.getItem('streetfeed_sound_enabled');
+    return saved === null ? true : saved === 'true';
+};
+
+window.playNewOrderChime = function() {
+    if (!window.isSoundEnabled()) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+        const now = ctx.currentTime;
+        [1046.50, 1567.98].forEach((freq, idx) => {
+            const startTime = now + (idx * 0.18);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+            gain.gain.setValueAtTime(0.3, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.8);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + 0.85);
+        });
+    } catch (e) {
+        console.warn("Audio chime error:", e);
+    }
+};
+
+window.printThermalTicket = function(id) {
+    const orders = getOrders();
+    const order = orders.find(o => String(o.id) === String(id));
+    if (!order) {
+        if (typeof showToast === 'function') showToast("Pedido no encontrado para imprimir", "error");
+        console.error("Order not found for printing:", id);
+        return;
+    }
+
+    const dateObj = order.date ? new Date(order.date) : new Date();
+    const formattedDate = dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+    const formattedTime = dateObj.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    const storeName = (typeof state !== 'undefined' && state.config && state.config.storeName) || 'STREETFEED';
+    const customerName = order.customer?.name || 'Cliente';
+    const locationStr = order.customer?.address || 'Mesa 1';
+    const paymentType = order.customer?.payment || 'Efectivo';
+    const attendedBy = order.attendedBy || order.customer?.attendedBy || (order.isManual ? 'Propietario / Admin' : 'Cliente (Menú Digital)');
+
+    let itemsTotal = 0;
+    const itemsHtml = (order.items || []).map(item => {
+        const qty = item.qty || item.quantity || 1;
+        const price = item.price || 0;
+        let extraSum = 0;
+        if (item.extras && item.extras.length > 0) {
+            extraSum = item.extras.reduce((acc, e) => acc + (e.price || 0), 0);
+        }
+        const totalItem = qty * (price + extraSum);
+        itemsTotal += totalItem;
+
+        let extrasStr = '';
+        if (item.extras && item.extras.length > 0) {
+            extrasStr = `<div style="font-size: 10px; font-style: italic; padding-left: 8px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
+        }
+        return `
+            <div style="display: flex; justify-content: space-between; margin-top: 4px; font-weight: bold; font-size: 12px;">
+                <span>${qty}x ${item.name}</span>
+                <span>$${totalItem.toLocaleString('es-CO')}</span>
+            </div>
+            ${extrasStr}
+        `;
+    }).join('');
+
+    const notesHtml = order.customer?.note ? `
+        <div style="margin-top: 6px; border-top: 1px dashed #000; padding-top: 4px; font-size: 11px;">
+            <strong>NOTAS:</strong> ${order.customer.note}
+        </div>
+    ` : '';
+
+    let deliveryFee = order.deliveryFee || 0;
+    if (!deliveryFee && (order.customer?.deliveryType === 'delivery' || order.customer?.address) && order.total > itemsTotal) {
+        deliveryFee = order.total - itemsTotal;
+    }
+
+    const subtotalDeliveryHtml = deliveryFee > 0 ? `
+        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px;">
+            <span>SUBTOTAL:</span>
+            <span>$${itemsTotal.toLocaleString('es-CO')}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; margin-bottom: 2px;">
+            <span>DOMICILIO:</span>
+            <span>$${deliveryFee.toLocaleString('es-CO')}</span>
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+    ` : '';
+
+    const ticketContent = `
+        <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 4px;">
+            ${storeName.toUpperCase()}
+        </div>
+        <div style="text-align: center; font-size: 11px; margin-bottom: 6px; letter-spacing: 1px;">
+            *** COMANDA DE COCINA ***
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+        <div style="display: flex; justify-content: space-between;">
+            <span><strong>PEDIDO:</strong> #${order.id}</span>
+            <span>${formattedTime}</span>
+        </div>
+        <div><strong>FECHA:</strong> ${formattedDate}</div>
+        <div><strong>UBICACIÓN:</strong> ${locationStr}</div>
+        <div><strong>CLIENTE:</strong> ${customerName}</div>
+        <div><strong>ATENDIDO:</strong> ${attendedBy}</div>
+        <div><strong>PAGO:</strong> ${paymentType}</div>
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+        <div><strong>PRODUCTOS:</strong></div>
+        ${itemsHtml}
+        ${notesHtml}
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+        ${subtotalDeliveryHtml}
+        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; margin-top: 4px;">
+            <span>TOTAL:</span>
+            <span>$${(order.total || 0).toLocaleString('es-CO')}</span>
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 8px 0 4px 0;"></div>
+        <div style="text-align: center; font-size: 10px; margin-bottom: 10px;">
+            ¡Gracias por su preferencia!
+        </div>
+    `;
+
+    // 1. Set fallback print area in DOM
+    const printArea = document.getElementById('thermal-ticket-print-area');
+    if (printArea) {
+        printArea.innerHTML = ticketContent;
+    }
+
+    // 2. Open clean print window for instant printing
+    const printDoc = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Ticket - ${order.id}</title>
+            <style>
+                @page { size: auto; margin: 0mm; }
+                body {
+                    margin: 0;
+                    padding: 8px;
+                    width: 78mm;
+                    font-family: 'Courier New', Courier, monospace, sans-serif;
+                    font-size: 12px;
+                    color: #000;
+                    background: #fff;
+                    box-sizing: border-box;
+                }
+            </style>
+        </head>
+        <body>
+            ${ticketContent}
+            <script>
+                window.onload = function() {
+                    window.focus();
+                    window.print();
+                    setTimeout(function() { window.close(); }, 600);
+                };
+            </script>
+        </body>
+        </html>
+    `;
+
+    try {
+        const printWin = window.open('', '_blank', 'width=420,height=600,scrollbars=yes');
+        if (printWin) {
+            printWin.document.open();
+            printWin.document.write(printDoc);
+            printWin.document.close();
+            return;
+        }
+    } catch(e) {
+        console.warn("Print window open blocked, using main window print fallback:", e);
+    }
+
+    // Fallback if popup blocked
+    setTimeout(() => {
+        window.print();
+    }, 150);
+};
 
 window.showOrderDetails = function(id) {
     const orders = getOrders();
@@ -3301,8 +4141,24 @@ window.showOrderDetails = function(id) {
     }
 
     document.getElementById('detail-order-id').textContent = `Pedido ${order.id}`;
-    document.getElementById('detail-order-date').textContent = new Date(order.date).toLocaleString();
-    document.getElementById('detail-customer-name').textContent = order.customer?.name || 'No especificado';
+    const rawName = order.customer?.name || 'No especificado';
+    const formattedName = rawName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    const custNameEl = document.getElementById('detail-customer-name');
+    if (custNameEl) custNameEl.textContent = formattedName;
+
+    const orderDateObj = order.date ? new Date(order.date) : new Date();
+    const formattedDateStr = !isNaN(orderDateObj.getTime())
+        ? orderDateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '---';
+    const formattedTimeStr = !isNaN(orderDateObj.getTime())
+        ? orderDateObj.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true })
+        : '';
+    const fullDateTimeStr = formattedTimeStr ? `${formattedDateStr} • ${formattedTimeStr}` : formattedDateStr;
+
+    const modalDateEl = document.getElementById('detail-order-date');
+    if (modalDateEl) {
+        modalDateEl.innerHTML = `<i data-lucide="calendar" style="width: 14px; height: 14px; color: var(--theme-accent); vertical-align: middle; margin-right: 4px;"></i><span>${fullDateTimeStr}</span>`;
+    }
     document.getElementById('detail-customer-phone').innerHTML = order.customer?.phone ? `<a href="https://wa.me/57${order.customer.phone.replace(/\D/g,'')}" target="_blank" style="color: #25d366; text-decoration: none; border-bottom: 1px dashed #25d366; padding-bottom: 1px;" title="Abrir WhatsApp">${order.customer.phone}</a>` : '---';
     document.getElementById('detail-customer-address').textContent = order.customer?.address || '---';
     const noteEl = document.getElementById('detail-customer-note');
@@ -3310,6 +4166,12 @@ window.showOrderDetails = function(id) {
     
     const paymentEl = document.getElementById('detail-customer-payment');
     if (paymentEl) paymentEl.textContent = order.customer?.payment || 'No especificado';
+
+    const waiterEl = document.getElementById('detail-customer-waiter');
+    if (waiterEl) {
+        const attendedBy = order.attendedBy || order.customer?.attendedBy || (order.isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)');
+        waiterEl.textContent = attendedBy;
+    }
     
     const delFeeEl = document.getElementById('detail-customer-delivery-fee');
     if (delFeeEl) {
@@ -3356,19 +4218,33 @@ window.showOrderDetails = function(id) {
         `;
     }).join('');
 
+    const printActionBtn = `
+        <button class="admin-btn-action" style="grid-column: span 2; height: 46px; border-radius: 12px; background: rgba(var(--primary-rgb, 247, 147, 30), 0.12); color: var(--theme-accent); border: 1px solid rgba(var(--primary-rgb, 247, 147, 30), 0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;" onclick="window.printThermalTicket('${order.id}')">
+            <i data-lucide="printer" style="width: 18px; height: 18px;"></i>
+            <span>IMPRIMIR TICKET DE COMANDA</span>
+        </button>
+    `;
+
     const footer = document.getElementById('order-action-footer');
-    if (order.status === 'pending' || !order.status) {
-        footer.innerHTML = `
+    if (currentEmployeeRole === 'mesero') {
+        footer.innerHTML = printActionBtn + `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
+    } else if (order.status === 'pending' || !order.status) {
+        footer.innerHTML = printActionBtn + `
             <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; border:1px solid #ff5252; color:#ff5252; background: transparent; font-weight: 800; cursor: pointer;" onclick="window.updateOrderStatus('${order.id}', 'cancelled'); document.getElementById('order-details-modal').classList.add('hidden');">CANCELAR</button>
             <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; background:#4caf50; color:white; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);" onclick="window.updateOrderStatus('${order.id}', 'confirmed'); document.getElementById('order-details-modal').classList.add('hidden');">ACEPTAR</button>
         `;
     } else if (order.status === 'confirmed') {
-        footer.innerHTML = `
-            <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; border:1px solid #ff5252; color:#ff5252; background: transparent; font-weight: 800; cursor: pointer;" onclick="window.updateOrderStatus('${order.id}', 'cancelled'); document.getElementById('order-details-modal').classList.add('hidden');">CANCELAR</button>
-            <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; background:#4caf50; color:white; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);" onclick="window.updateOrderStatus('${order.id}', 'accepted'); document.getElementById('order-details-modal').classList.add('hidden');">CONFIRMAR</button>
+        footer.innerHTML = printActionBtn + `
+            ${currentEmployeeRole !== 'cocina' ? `<button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; border:1px solid #ff5252; color:#ff5252; background: transparent; font-weight: 800; cursor: pointer;" onclick="window.updateOrderStatus('${order.id}', 'cancelled'); document.getElementById('order-details-modal').classList.add('hidden');">CANCELAR</button>` : ''}
+            <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; background:#f59e0b; color:white; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);" onclick="window.updateOrderStatus('${order.id}', 'dispatched'); document.getElementById('order-details-modal').classList.add('hidden');">DESPACHAR</button>
+        `;
+    } else if (order.status === 'dispatched') {
+        footer.innerHTML = printActionBtn + `
+            ${currentEmployeeRole !== 'cocina' ? `<button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; border:1px solid #ff5252; color:#ff5252; background: transparent; font-weight: 800; cursor: pointer;" onclick="window.updateOrderStatus('${order.id}', 'cancelled'); document.getElementById('order-details-modal').classList.add('hidden');">CANCELAR</button>` : ''}
+            <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; background:#10b981; color:white; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);" onclick="window.updateOrderStatus('${order.id}', 'accepted'); document.getElementById('order-details-modal').classList.add('hidden');">COBRAR</button>
         `;
     } else {
-        footer.innerHTML = `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
+        footer.innerHTML = printActionBtn + `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
     }
 
     document.getElementById('order-details-modal').classList.remove('hidden');
@@ -3379,46 +4255,74 @@ window.showOrderDetails = function(id) {
 
 // --- HISTORY ACTIONS & EXPORT ---
 window.deleteHistoryOrder = function(id) {
-    window.confirmAction(
-        `¿Eliminar el pedido #${id} del historial?`,
-        () => {
-            let orders = getOrders();
-            orders = orders.filter(o => String(o.id) !== String(id));
-            state.orders = orders;
-            localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
-            window.renderOrders();
-            if (typeof renderStats === 'function') renderStats();
-            showToast("Pedido eliminado 🗑️");
-        },
-        'Eliminar',
-        '#d32f2f'
-    );
-}
+    requireSecurityAuth(() => {
+        window.confirmAction(
+            `¿Eliminar el pedido #${id} del historial?`,
+            () => {
+                let orders = getOrders();
+                orders = orders.filter(o => String(o.id) !== String(id));
+                state.orders = orders;
+                localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+                window.renderOrders();
+                if (typeof renderStats === 'function') renderStats();
+                showToast("Pedido eliminado 🗑️");
+            },
+            'Eliminar',
+            '#d32f2f'
+        );
+    });
+};
 
 window.clearAllHistory = function() {
-    window.confirmAction(
-        "¿Estás seguro de que quieres BORRAR TODO el historial de pedidos?",
-        () => {
-            let orders = getOrders();
-            // Mantener solo los pendientes
-            orders = orders.filter(o => o.status === 'pending');
-            state.orders = orders;
-            localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
-            window.renderOrders();
-            if (typeof renderStats === 'function') renderStats();
-            showToast("Historial vaciado 🧹");
-        },
-        'Vaciar Ahora',
-        '#d32f2f',
-        '¡Cuidado!'
-    );
-}
+    requireSecurityAuth(() => {
+        window.confirmAction(
+            "¿Estás seguro de que quieres BORRAR TODO el historial de pedidos?",
+            () => {
+                let orders = getOrders();
+                // Mantener solo los pendientes
+                orders = orders.filter(o => o.status === 'pending');
+                state.orders = orders;
+                localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+                window.renderOrders();
+                if (typeof renderStats === 'function') renderStats();
+                showToast("Historial vaciado 🧹");
+            },
+            'Vaciar Ahora',
+            '#d32f2f',
+            '¡Cuidado!'
+        );
+    });
+};
+
+window.pdfScope = 'all';
+
+window.setPdfScope = function(scope) {
+    window.pdfScope = scope;
+    const btnAll = document.getElementById('pdf-scope-all');
+    const btnMine = document.getElementById('pdf-scope-mine');
+    if (btnAll && btnMine) {
+        if (scope === 'all') {
+            btnAll.style.background = 'var(--theme-accent)';
+            btnAll.style.color = '#fff';
+            btnMine.style.background = 'transparent';
+            btnMine.style.color = 'var(--text-dim)';
+        } else {
+            btnMine.style.background = 'var(--theme-accent)';
+            btnMine.style.color = '#fff';
+            btnAll.style.background = 'transparent';
+            btnAll.style.color = 'var(--text-dim)';
+        }
+    }
+};
 
 window.exportHistoryPDF = function() {
     const modal = document.getElementById('month-picker-modal');
-    const grid = modal.querySelector('.month-grid');
+    const grid = modal ? modal.querySelector('.month-grid') : null;
     const allBtn = document.getElementById('month-all-btn');
     if (!modal || !grid) return;
+
+    // Sync pdfScope with current historyScope
+    window.setPdfScope(window.historyScope || 'all');
 
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     const currentMonth = new Date().getMonth();
@@ -3437,18 +4341,38 @@ window.exportHistoryPDF = function() {
         btn.onclick = () => {
             const monthIdx = parseInt(btn.dataset.month);
             const monthName = monthNames[monthIdx];
+            const isMine = window.pdfScope === 'mine';
+            const activeEmpName = getCurrentActiveEmployeeName();
 
-            // Check if there are orders for this month before showing confirm
-            const ordersForMonth = getOrders().filter(o =>
+            let ordersForMonth = getOrders().filter(o =>
                 o.status !== 'pending' && new Date(o.date).getMonth() === monthIdx
             );
+
+            if (isMine && activeEmpName) {
+                const activeName = activeEmpName.toLowerCase().trim();
+                const firstName = activeName.split(' ')[0];
+                ordersForMonth = ordersForMonth.filter(o => {
+                    const attended = (o.attendedBy || o.customer?.attendedBy || '').toLowerCase().trim();
+                    if (!attended) return false;
+                    if (activeName.includes('propietario') || activeName.includes('administrador')) {
+                        return attended.includes('propietario') || attended.includes('administrador') || (firstName && attended.includes(firstName));
+                    }
+                    return attended.includes(activeName) || (firstName && attended.includes(firstName));
+                });
+            }
+
             if (ordersForMonth.length === 0) {
-                showToast(`No hay pedidos registrados para ${monthName}.`, 'error');
+                const targetText = isMine ? `de "Mis Ventas" (${activeEmpName})` : '';
+                showToast(`No hay ventas registradas ${targetText} para ${monthName}.`, 'error');
                 return;
             }
 
+            const promptMsg = isMine
+                ? `¿Deseas descargar el reporte PDF de "Mis Ventas" (${activeEmpName}) del mes de ${monthName}?`
+                : `¿Deseas descargar el reporte PDF General de todas las ventas del mes de ${monthName}?`;
+
             showConfirm(
-                `¿Deseas descargar el historial de ventas del mes de ${monthName}?`,
+                promptMsg,
                 () => {
                     generatePDF(monthIdx);
                     modal.classList.add('hidden');
@@ -3461,13 +4385,34 @@ window.exportHistoryPDF = function() {
     });
 
     allBtn.onclick = () => {
-        const allOrders = getOrders().filter(o => o.status !== 'pending');
+        const isMine = window.pdfScope === 'mine';
+        const activeEmpName = getCurrentActiveEmployeeName();
+
+        let allOrders = getOrders().filter(o => o.status !== 'pending');
+        if (isMine && activeEmpName) {
+            const activeName = activeEmpName.toLowerCase().trim();
+            const firstName = activeName.split(' ')[0];
+            allOrders = allOrders.filter(o => {
+                const attended = (o.attendedBy || o.customer?.attendedBy || '').toLowerCase().trim();
+                if (!attended) return false;
+                if (activeName.includes('propietario') || activeName.includes('administrador')) {
+                    return attended.includes('propietario') || attended.includes('administrador') || (firstName && attended.includes(firstName));
+                }
+                return attended.includes(activeName) || (firstName && attended.includes(firstName));
+            });
+        }
+
         if (allOrders.length === 0) {
-            showToast('No hay pedidos en el historial.', 'error');
+            showToast('No hay ventas registradas para descargar.', 'error');
             return;
         }
+
+        const promptMsg = isMine
+            ? `¿Deseas descargar el reporte completo de "Mis Ventas" (${activeEmpName})?`
+            : '¿Deseas descargar el reporte completo General de todas las ventas del negocio?';
+
         showConfirm(
-            '¿Deseas descargar el reporte completo con todo el historial de ventas?',
+            promptMsg,
             () => {
                 generatePDF(null);
                 modal.classList.add('hidden');
@@ -3484,8 +4429,24 @@ function generatePDF(monthIdx) {
     const doc = new jsPDF();
     let orders = getOrders().filter(o => o.status !== 'pending');
 
+    const isMine = window.pdfScope === 'mine';
+    const activeEmpName = getCurrentActiveEmployeeName();
+
+    if (isMine && activeEmpName) {
+        const activeName = activeEmpName.toLowerCase().trim();
+        const firstName = activeName.split(' ')[0];
+        orders = orders.filter(o => {
+            const attended = (o.attendedBy || o.customer?.attendedBy || '').toLowerCase().trim();
+            if (!attended) return false;
+            if (activeName.includes('propietario') || activeName.includes('administrador')) {
+                return attended.includes('propietario') || attended.includes('administrador') || (firstName && attended.includes(firstName));
+            }
+            return attended.includes(activeName) || (firstName && attended.includes(firstName));
+        });
+    }
+
     if (orders.length === 0) {
-        showToast('No hay pedidos en el historial.', 'error');
+        showToast('No hay pedidos que coincidan con el filtro seleccionado.', 'error');
         return;
     }
 
@@ -3504,22 +4465,25 @@ function generatePDF(monthIdx) {
     }
 
     const restName = (state.config.restaurantName || "STREETFEED").toUpperCase();
+    const scopeLabel = isMine ? `MIS VENTAS (${activeEmpName.toUpperCase()})` : 'GENERAL (TODAS LAS VENTAS)';
     const title = `REPORTE DE VENTAS - ${restName}`;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.setTextColor(40);
     doc.text(title, 105, 20, { align: 'center' });
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 30);
     doc.text(`Periodo: ${reportTitleMonth}`, 14, 35);
+    doc.text(`Alcance: ${scopeLabel}`, 14, 40);
     doc.text(`Establecimiento: ${state.config.restaurantName || "STREETFEED"}`, 14, 40);
 
     const tableData = orders.map(o => [
         o.id,
         new Date(o.date).toLocaleString([], {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}),
         o.customer?.name || '---',
+        o.attendedBy || o.customer?.attendedBy || (o.isManual ? 'Propietario' : 'Menú Digital'),
         o.customer?.payment?.toUpperCase() || '---',
         o.status === 'accepted' ? 'ACEPTADO' : 'CANCELADO',
         `$${o.total.toLocaleString()}`
@@ -3527,7 +4491,7 @@ function generatePDF(monthIdx) {
 
     doc.autoTable({
         startY: 45,
-        head: [['ID', 'Fecha/Hora', 'Cliente', 'Método Pago', 'Estado', 'Total']],
+        head: [['ID', 'Fecha/Hora', 'Cliente', 'Atendido Por', 'Método Pago', 'Estado', 'Total']],
         body: tableData,
         headStyles: { fillColor: [38, 50, 56], textColor: [255, 255, 255], fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [248, 249, 250] },
@@ -3607,33 +4571,83 @@ document.addEventListener('DOMContentLoaded', () => {
             exportPDF.addEventListener('click', window.exportHistoryPDF);
         }
 
-        // Logic for Theme Toggle (Night/Day Mode)
+        // Logic for Sound Notification Toggle (Icon Only)
+        const soundToggle = document.getElementById('sound-toggle');
+        const updateSoundUI = () => {
+            const enabled = window.isSoundEnabled ? window.isSoundEnabled() : true;
+            const iconContainer = document.getElementById('sound-icon-container');
+            const isLight = document.body.classList.contains('light-mode');
+
+            if (soundToggle) {
+                if (isLight) {
+                    soundToggle.style.setProperty('background', '#ffffff', 'important');
+                    soundToggle.style.setProperty('border', '1.5px solid rgba(255,255,255,0.8)', 'important');
+                    soundToggle.style.setProperty('box-shadow', '0 4px 12px rgba(0,0,0,0.12)', 'important');
+                } else {
+                    soundToggle.style.background = enabled ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 82, 82, 0.12)';
+                    soundToggle.style.border = enabled ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 82, 82, 0.3)';
+                    soundToggle.style.boxShadow = 'none';
+                }
+                soundToggle.title = enabled ? 'Alarma de Pedidos: ACTIVADA (Clic para silenciar)' : 'Alarma de Pedidos: SILENCIADA (Clic para activar)';
+            }
+
+            if (iconContainer) {
+                const iconName = enabled ? 'bell' : 'bell-off';
+                const iconColor = isLight
+                    ? (enabled ? '#059669' : '#dc2626')
+                    : (enabled ? '#10b981' : '#ff5252');
+                iconContainer.innerHTML = `<i data-lucide="${iconName}" id="sound-icon" style="color: ${iconColor} !important; width: 20px; height: 20px;"></i>`;
+            }
+            if (window.lucide) lucide.createIcons();
+        };
+
+        updateSoundUI();
+
+        if (soundToggle) {
+            soundToggle.addEventListener('click', () => {
+                const current = window.isSoundEnabled ? window.isSoundEnabled() : true;
+                localStorage.setItem('streetfeed_sound_enabled', (!current).toString());
+                updateSoundUI();
+                if (!current && typeof window.playNewOrderChime === 'function') {
+                    window.playNewOrderChime();
+                }
+            });
+        }
+
+        // Logic for Theme Toggle (Icon Only - Sun/Moon)
         const themeToggle = document.getElementById('theme-toggle');
-        const themeIcon = document.getElementById('theme-icon');
-        const themeText = document.getElementById('theme-text');
 
         const updateThemeUI = (isLight) => {
             const iconContainer = document.getElementById('theme-icon-container');
-            if (iconContainer) {
-                iconContainer.innerHTML = `<i data-lucide="${isLight ? 'sun' : 'moon'}" id="theme-icon"></i>`;
-            } else if (themeIcon) {
-                // Fallback: replace the icon itself with a new one
-                const newIcon = document.createElement('i');
-                newIcon.id = 'theme-icon';
-                newIcon.setAttribute('data-lucide', isLight ? 'sun' : 'moon');
-                themeIcon.replaceWith(newIcon);
-                // Re-find it for next time
-                themeIcon = document.getElementById('theme-icon');
+
+            if (themeToggle) {
+                if (isLight) {
+                    themeToggle.style.setProperty('background', '#ffffff', 'important');
+                    themeToggle.style.setProperty('border', '1.5px solid rgba(255,255,255,0.8)', 'important');
+                    themeToggle.style.setProperty('box-shadow', '0 4px 12px rgba(0,0,0,0.12)', 'important');
+                    themeToggle.title = 'Cambiar a Modo Noche';
+                } else {
+                    themeToggle.style.background = 'rgba(255, 255, 255, 0.08)';
+                    themeToggle.style.border = '1px solid var(--glass-border)';
+                    themeToggle.style.boxShadow = 'none';
+                    themeToggle.title = 'Cambiar a Modo Día';
+                }
             }
-            
-            if (themeText) themeText.textContent = isLight ? 'Modo Día' : 'Modo Noche';
+
+            if (iconContainer) {
+                const iconName = isLight ? 'sun' : 'moon';
+                const iconColor = isLight ? '#d97706' : '#ffffff';
+                iconContainer.innerHTML = `<i data-lucide="${iconName}" id="theme-icon" style="color: ${iconColor} !important; width: 20px; height: 20px;"></i>`;
+            }
             if (window.lucide) lucide.createIcons();
         };
 
         const savedTheme = localStorage.getItem('streetfeed_admin_theme') || 'dark';
         const isLightInitial = savedTheme === 'light';
         
-        // Initial apply to be sure
+        // Set color-scheme on html element immediately so OS uses correct I-beam cursor color
+        document.documentElement.style.colorScheme = isLightInitial ? 'light' : 'dark';
+        
         if (typeof applyTheme === 'function') {
             applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
         }
@@ -3647,20 +4661,106 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 localStorage.setItem('streetfeed_admin_theme', nextIsLight ? 'light' : 'dark');
                 
+                // Force color-scheme on html element so OS switches I-beam cursor color
+                document.documentElement.style.colorScheme = nextIsLight ? 'light' : 'dark';
+                
                 if (typeof applyTheme === 'function') {
                     applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
                 }
                 
                 updateThemeUI(nextIsLight);
+                updateSoundUI();
                 
-                if (typeof renderStats === 'function') {
-                    const activeBtn = document.querySelector('.filter-btn.active');
-                    renderStats(activeBtn ? activeBtn.dataset.range : 'today');
+                if (typeof window.reRenderCurrentStats === 'function') {
+                    window.reRenderCurrentStats();
+                }
+                if (typeof window.reRenderCurrentMyMetrics === 'function') {
+                    window.reRenderCurrentMyMetrics();
+                }
+                if (typeof renderExpenses === 'function') {
+                    renderExpenses();
                 }
             });
         }
     }
 });
+
+window.switchOrderSettingsTab = function(tab) {
+    const secDelivery = document.getElementById('modal-sec-delivery');
+    const secWa = document.getElementById('modal-sec-wa');
+    const btnDelivery = document.getElementById('modal-tab-btn-delivery');
+    const btnWa = document.getElementById('modal-tab-btn-wa');
+
+    if (tab === 'wa') {
+        if (secDelivery) secDelivery.classList.add('hidden');
+        if (secWa) secWa.classList.remove('hidden');
+        if (btnDelivery) {
+            btnDelivery.style.background = 'transparent';
+            btnDelivery.style.color = 'var(--text-dim)';
+            btnDelivery.style.border = '1px solid var(--glass-border)';
+        }
+        if (btnWa) {
+            btnWa.style.background = 'var(--theme-accent)';
+            btnWa.style.color = '#fff';
+            btnWa.style.border = 'none';
+        }
+        const textarea = document.getElementById('conf-wa-template');
+        if (textarea && typeof state !== 'undefined' && state.config) {
+            textarea.value = state.config.waTemplateOrder || `*NUEVO PEDIDO - {negocio}*
+--------------------------
+👤 *CLIENTE:* {cliente}
+📞 *TELÉFONO:* {telefono}
+🚚 *ENTREGA:* {entrega}
+📍 {detalles_entrega}
+💵 *PAGO:* {pago}
+📝 *NOTA:* {nota}
+--------------------------
+
+🛒 *RESUMEN DEL PEDIDO:*
+{resumen_pedido}
+
+--------------------------
+{precios}
+💵 *TOTAL A PAGAR: {total}*
+--------------------------
+
+🚀 _Enviado desde el Menú Digital_`;
+        }
+    } else {
+        if (secWa) secWa.classList.add('hidden');
+        if (secDelivery) secDelivery.classList.remove('hidden');
+        if (btnWa) {
+            btnWa.style.background = 'transparent';
+            btnWa.style.color = 'var(--text-dim)';
+            btnWa.style.border = '1px solid var(--glass-border)';
+        }
+        if (btnDelivery) {
+            btnDelivery.style.background = 'var(--theme-accent)';
+            btnDelivery.style.color = '#fff';
+            btnDelivery.style.border = 'none';
+        }
+    }
+};
+
+window.openOrderSettingsModal = function(initialTab = 'delivery') {
+    const modal = document.getElementById('order-settings-modal');
+    if (!modal) return;
+    const currentFee = (typeof state !== 'undefined' && state.config && state.config.deliveryFee !== undefined) ? state.config.deliveryFee : 5000;
+    const currentTables = (typeof state !== 'undefined' && state.config && state.config.tableCount !== undefined) ? state.config.tableCount : 10;
+    
+    const priceInput = document.getElementById('config-delivery-price');
+    const tableInput = document.getElementById('config-table-count');
+    
+    if (priceInput) priceInput.value = currentFee.toLocaleString('es-CO');
+    if (tableInput) tableInput.value = currentTables;
+
+    window.switchOrderSettingsTab(initialTab);
+    modal.classList.remove('hidden');
+};
+
+window.openWhatsAppTemplateModal = function() {
+    window.openOrderSettingsModal('wa');
+};
 
 // Order Settings Persistence
 document.addEventListener('click', (e) => {
@@ -3673,7 +4773,7 @@ document.addEventListener('click', (e) => {
         state.config.tableCount = tables;
         
         saveStateToLocal();
-        showToast('Configuración guardada');
+        showToast('Configuración de domicilio guardada');
         document.getElementById('order-settings-modal').classList.add('hidden');
     }
 
@@ -3743,14 +4843,49 @@ document.addEventListener('click', (e) => {
     // --- Categories dropdown ---
     function renderManualCategories() {
         const cats = (state.categories || []).filter(c => c.id !== 'todos');
-        const catFilter = document.getElementById('manual-order-cat-filter');
-        if (catFilter) {
-            catFilter.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            catFilter.addEventListener('change', () => renderManualProducts());
+        const catMenu = document.getElementById('manual-cat-menu');
+        const catCurrent = document.getElementById('manual-cat-current');
+        const hiddenInput = document.getElementById('manual-order-cat-filter');
+        const catDropdown = document.getElementById('manual-cat-dropdown');
+
+        if (cats.length > 0) {
+            const initialCat = cats[0];
+            if (catCurrent) catCurrent.textContent = initialCat.name;
+            if (hiddenInput) hiddenInput.value = initialCat.id;
+
+            if (catMenu) {
+                catMenu.innerHTML = cats.map((c, i) => `
+                    <li data-value="${c.id}" class="${i === 0 ? 'active' : ''}">${c.name}</li>
+                `).join('');
+
+                catMenu.querySelectorAll('li').forEach(li => {
+                    li.onclick = (e) => {
+                        e.stopPropagation();
+                        catMenu.querySelectorAll('li').forEach(l => l.classList.remove('active'));
+                        li.classList.add('active');
+                        if (catCurrent) catCurrent.textContent = li.textContent;
+                        if (hiddenInput) hiddenInput.value = li.dataset.value;
+                        if (catDropdown) catDropdown.classList.remove('open');
+                        renderManualProducts();
+                    };
+                });
+            }
         }
+
+        const trigger = document.getElementById('manual-cat-trigger');
+        if (trigger && catDropdown) {
+            trigger.onclick = (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.custom-dropdown').forEach(d => {
+                    if (d !== catDropdown) d.classList.remove('open');
+                });
+                catDropdown.classList.toggle('open');
+            };
+        }
+
         const searchEl = document.getElementById('manual-product-search');
         if (searchEl) {
-            searchEl.addEventListener('input', () => renderManualProducts());
+            searchEl.oninput = () => renderManualProducts();
         }
         renderManualProducts();
     }
@@ -3976,6 +5111,23 @@ document.addEventListener('click', (e) => {
         orderCounter++;
         localStorage.setItem('streetfeed_order_counter', orderCounter.toString());
 
+        const getAttendedByInfo = (isManual = false) => {
+            try {
+                const empStr = localStorage.getItem('streetfeed_employee_user');
+                if (empStr) {
+                    const emp = JSON.parse(empStr);
+                    if (emp && emp.name) {
+                        const roleTitle = emp.role === 'mesero' ? 'Mesero' : (emp.role === 'cajero' ? 'Cajero' : (emp.role === 'cocina' ? 'Cocina' : 'Administrador'));
+                        return `${formatShortName(emp.name)} (${roleTitle})`;
+                    }
+                }
+            } catch(e) {}
+            if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
+                return 'Propietario / Administrador';
+            }
+            return isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)';
+        };
+
         const orderData = {
             id: 'ORD-' + orderCounter,
             date: new Date().toISOString(),
@@ -3984,6 +5136,7 @@ document.addEventListener('click', (e) => {
             deliveryFee: delFee,
             total: baseTotal + delFee,
             isManual: true,
+            attendedBy: getAttendedByInfo(true),
             status: 'confirmed',   // Va directo a Pendientes (Preparación)
             customer: {
                 name, phone, address,
@@ -4005,7 +5158,10 @@ document.addEventListener('click', (e) => {
         closeManualModal();
         if (typeof window.renderOrders === 'function') window.renderOrders();
         if (typeof renderStats === 'function') renderStats();
-        showToast('✅ Pedido manual creado y agregado a Pendientes');
+        showToast('✅ Pedido manual creado y agregado a En Preparación');
+        if (typeof window.printThermalTicket === 'function') {
+            setTimeout(() => window.printThermalTicket(orderData.id), 200);
+        }
     });
 })();
 
@@ -4220,7 +5376,7 @@ function getExpenseIcon(cat) {
 }
 
 window.deleteExpense = function(id) {
-    if (confirm('¿Estás seguro de eliminar este registro de gasto?')) {
+    const doDelete = () => {
         let expenses = JSON.parse(localStorage.getItem('streetfeed_expenses')) || [];
         expenses = expenses.filter(e => e.id !== id);
         
@@ -4230,6 +5386,12 @@ window.deleteExpense = function(id) {
         
         showToast('Registro de gasto eliminado.', 'success');
         renderExpenses();
+    };
+
+    if (typeof showConfirm === 'function') {
+        showConfirm('¿Estás seguro de eliminar este registro de gasto?', doDelete, 'Eliminar', '#ef4444', 'Eliminar Gasto');
+    } else if (confirm('¿Estás seguro de eliminar este registro de gasto?')) {
+        doDelete();
     }
 };
 
@@ -4342,34 +5504,6 @@ window.resetStreetFeedWATemplate = function() {
     }
 };
 
-window.openWhatsAppTemplateModal = function() {
-    const modal = document.getElementById('wa-template-modal');
-    if (modal) {
-        const textarea = document.getElementById('conf-wa-template');
-        if (textarea && state.config) {
-            textarea.value = state.config.waTemplateOrder || `*NUEVO PEDIDO - {negocio}*
---------------------------
-👤 *CLIENTE:* {cliente}
-📞 *TELÉFONO:* {telefono}
-🚚 *ENTREGA:* {entrega}
-📍 {detalles_entrega}
-💵 *PAGO:* {pago}
-📝 *NOTA:* {nota}
---------------------------
-
-🛒 *RESUMEN DEL PEDIDO:*
-{resumen_pedido}
-
---------------------------
-{precios}
-💵 *TOTAL A PAGAR: {total}*
---------------------------
-
-🚀 _Enviado desde el Menú Digital_`;
-        }
-        modal.classList.remove('hidden');
-    }
-};
 
 window.initializeCustomAdminSelect = function(selectId) {
     const sel = document.getElementById(selectId);
@@ -4452,6 +5586,17 @@ window.initializeCustomAdminSelect = function(selectId) {
         if (iconSvg) iconSvg.style.transform = 'rotate(0deg)';
     });
 
+    // Sincronizar cambios programáticos del valor del select con el trigger personalizado
+    sel.addEventListener('change', () => {
+        const selectedOpt = Array.from(sel.options).find(o => o.value === sel.value);
+        if (selectedOpt) {
+            label.textContent = selectedOpt.text;
+            wrap.querySelectorAll('.admin-custom-select-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.value === sel.value);
+            });
+        }
+    });
+
     wrap.appendChild(trigger);
     wrap.appendChild(panel);
     sel.parentNode.insertBefore(wrap, sel.nextSibling);
@@ -4464,11 +5609,13 @@ window.initializeCustomAdminSelect = function(selectId) {
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.location.pathname.endsWith('admin.html')) return;
 
-    // Convertir los selectores nativos de gastos a selectores modernizados
+    // Convertir los selectores nativos de gastos y personal a selectores modernizados
     if (typeof window.initializeCustomAdminSelect === 'function') {
         window.initializeCustomAdminSelect('expense-month-filter');
         window.initializeCustomAdminSelect('expense-category');
         window.initializeCustomAdminSelect('stats-month-filter');
+        window.initializeCustomAdminSelect('emp-role');
+        window.initializeCustomAdminSelect('emp-gender');
     }
 
     const waTemplateForm = document.getElementById('wa-template-form');
@@ -4481,10 +5628,1580 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveStateToLocal();
                 if (typeof updateUIFromConfig === 'function') updateUIFromConfig();
                 showToast("Plantilla de WhatsApp guardada ✅");
-                document.getElementById('wa-template-modal').classList.add('hidden');
+                const modal = document.getElementById('order-settings-modal');
+                if (modal) modal.classList.add('hidden');
             }
         });
     }
+
+    // Inicializar listener de pestaña empleados y validación en tiempo real
+    const navEmpBtn = document.getElementById('nav-btn-employees');
+    if (navEmpBtn) {
+        navEmpBtn.addEventListener('click', () => {
+            loadEmployees();
+        });
+    }
+
+    const empUsernameInput = document.getElementById('emp-username');
+    const empPinInput = document.getElementById('emp-pin');
+    if (empUsernameInput) {
+        empUsernameInput.addEventListener('input', checkUsernameAvailability);
+    }
+    if (empPinInput) {
+        empPinInput.addEventListener('input', checkPinAvailability);
+    }
+
+    try {
+        const savedEmpRaw = localStorage.getItem('streetfeed_employee_user');
+        if (savedEmpRaw) {
+            const savedEmp = JSON.parse(savedEmpRaw);
+            if (savedEmp && savedEmp.role) {
+                applyRolePermissions(savedEmp.role, savedEmp.name);
+            } else {
+                applyRolePermissions('owner', 'Propietario');
+            }
+        } else {
+            applyRolePermissions('owner', 'Propietario');
+        }
+    } catch (e) {
+        applyRolePermissions('owner', 'Propietario');
+    }
 });
+
+/* =========================================
+   GUEST & EMPLOYEE ROLES SYSTEM (RBAC)
+   ========================================= */
+
+
+let currentEmployeeRole = 'admin'; // 'admin', 'mesero', 'cajero', 'cocina'
+let employeesList = [];
+
+// Helper para formatear nombre a Nombre + Primer Apellido (Máx 2 palabras)
+function formatShortName(fullName) {
+    if (!fullName || typeof fullName !== 'string') return '';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 2) return fullName.trim();
+    return `${parts[0]} ${parts[1]}`;
+}
+window.formatShortName = formatShortName;
+
+// Helper para obtener únicamente el primer nombre
+function formatFirstName(fullName) {
+    if (!fullName || typeof fullName !== 'string') return '';
+    const parts = fullName.trim().split(/\s+/);
+    return parts[0] || '';
+}
+window.formatFirstName = formatFirstName;
+
+// Función utilitaria para escapar HTML y evitar XSS
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+
+
+// Helper para obtener instanceId de la URL
+function getInstanceId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('instanceId') || '';
+}
+
+// Cargar empleados desde el servidor
+async function loadEmployees() {
+    const tbody = document.getElementById('employees-table-body');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">Cargando colaboradores...</td></tr>`;
+    }
+    try {
+        const instanceId = getInstanceId();
+        const token = localStorage.getItem('streetfeed_employee_token') || sessionStorage.getItem('clientSession');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const params = new URLSearchParams();
+        if (instanceId) params.append('instanceId', instanceId);
+
+        const res = await fetch(`/api/modules/streetfeed/employees?${params.toString()}`, { headers });
+        if (res.ok) {
+            const data = await res.json();
+            const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
+            let metaObj = {};
+            try { metaObj = JSON.parse(metaStr); } catch (e) {}
+
+            employeesList = (data.employees || []).map(emp => {
+                const meta = metaObj[emp.id] || metaObj[emp.username] || metaObj[(emp.name || '').toLowerCase()] || {};
+                return {
+                    ...emp,
+                    avatarUrl: emp.avatarUrl || emp.avatar || emp.avatar_url || meta.avatarUrl || '',
+                    commissionRate: (emp.commissionRate !== undefined && emp.commissionRate !== '') ? emp.commissionRate : (meta.commissionRate !== undefined ? meta.commissionRate : 10),
+                    gender: emp.gender || meta.gender || '',
+                    age: emp.age || meta.age || '',
+                    phone: emp.phone || meta.phone || '',
+                    address: emp.address || meta.address || '',
+                    neighborhood: emp.neighborhood || meta.neighborhood || ''
+                };
+            });
+            renderEmployeesTable();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            console.error('Error del servidor al cargar empleados:', err);
+            if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error al cargar personal: ${err.error || res.status}</td></tr>`;
+        }
+    } catch (err) {
+        console.error('Error cargando empleados:', err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error de conexión al cargar personal.</td></tr>`;
+    }
+}
+
+// Employee view state
+window._empView = localStorage.getItem('sf_emp_view') || 'grid';
+
+window.setEmployeeView = function(view) {
+    window._empView = view;
+    localStorage.setItem('sf_emp_view', view);
+    const gridBtn = document.getElementById('emp-view-grid-btn');
+    const tableBtn = document.getElementById('emp-view-table-btn');
+    const gridEl = document.getElementById('employees-grid');
+    const tableEl = document.getElementById('employees-table-wrapper');
+    if (!gridEl || !tableEl) return;
+    if (view === 'grid') {
+        gridEl.style.display = 'grid';
+        tableEl.style.display = 'none';
+        if (gridBtn) { gridBtn.style.background = 'var(--theme-accent)'; gridBtn.style.color = '#fff'; }
+        if (tableBtn) { tableBtn.style.background = 'transparent'; tableBtn.style.color = 'var(--text-dim)'; }
+    } else {
+        gridEl.style.display = 'none';
+        tableEl.style.display = 'block';
+        if (tableBtn) { tableBtn.style.background = 'var(--theme-accent)'; tableBtn.style.color = '#fff'; }
+        if (gridBtn) { gridBtn.style.background = 'transparent'; gridBtn.style.color = 'var(--text-dim)'; }
+    }
+    if (window.lucide) lucide.createIcons();
+};
+
+function getEmployeeStats(empName, filter = {}) {
+    const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
+    const cleanEmpName = (empName || '').toLowerCase().trim();
+
+    let empOrders = orders.filter(o => {
+        const attended = (o.attendedBy || '').toLowerCase().trim();
+        if (!attended) return false;
+        return attended.includes(cleanEmpName) || cleanEmpName.includes(attended);
+    });
+
+    const now = new Date();
+    const getLocalStr = (dObj) => {
+        const d = new Date(dObj);
+        if (isNaN(d.getTime())) return '';
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    if (filter.specificDate) {
+        empOrders = empOrders.filter(o => {
+            if (!o.date) return false;
+            return getLocalStr(o.date) === filter.specificDate;
+        });
+    } else if (filter.month !== undefined && filter.month !== null && filter.month !== '') {
+        const targetMonth = parseInt(filter.month, 10);
+        empOrders = empOrders.filter(o => {
+            if (!o.date) return false;
+            const d = new Date(o.date);
+            if (isNaN(d.getTime())) return false;
+            return d.getMonth() === targetMonth;
+        });
+    } else if (filter.preset && filter.preset !== 'all') {
+        if (filter.preset === 'today') {
+            const todayStr = getLocalStr(now);
+            empOrders = empOrders.filter(o => {
+                if (!o.date) return false;
+                return getLocalStr(o.date) === todayStr;
+            });
+        } else if (filter.preset === 'yesterday') {
+            const yest = new Date(now);
+            yest.setDate(now.getDate() - 1);
+            const yestStr = getLocalStr(yest);
+            empOrders = empOrders.filter(o => {
+                if (!o.date) return false;
+                return getLocalStr(o.date) === yestStr;
+            });
+        } else if (filter.preset === 'week') {
+            const startOfRange = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            startOfRange.setDate(startOfRange.getDate() - 6);
+            startOfRange.setHours(0, 0, 0, 0);
+            empOrders = empOrders.filter(o => {
+                if (!o.date) return false;
+                const d = new Date(o.date);
+                if (isNaN(d.getTime())) return false;
+                return d >= startOfRange;
+            });
+        } else if (filter.preset === 'fortnight') {
+            const startOfRange = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            startOfRange.setDate(startOfRange.getDate() - 14);
+            startOfRange.setHours(0, 0, 0, 0);
+            empOrders = empOrders.filter(o => {
+                if (!o.date) return false;
+                const d = new Date(o.date);
+                if (isNaN(d.getTime())) return false;
+                return d >= startOfRange;
+            });
+        } else if (filter.preset === 'month') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            empOrders = empOrders.filter(o => {
+                if (!o.date) return false;
+                const d = new Date(o.date);
+                if (isNaN(d.getTime())) return false;
+                return d >= startOfMonth;
+            });
+        }
+    }
+
+    const empObj = (employeesList || []).find(e => e.name && e.name.toLowerCase() === empName.toLowerCase());
+    const commRate = (empObj && empObj.commissionRate !== undefined && empObj.commissionRate !== '') ? parseFloat(empObj.commissionRate) : 10;
+
+    const acceptedOrders = empOrders.filter(o => o.status === 'accepted');
+    const totalSales = acceptedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const avgTicket = acceptedOrders.length > 0 ? Math.round(totalSales / acceptedOrders.length) : 0;
+    const commission = Math.round(totalSales * (commRate / 100));
+
+    let lastActivityStr = 'Sin actividad reciente';
+    if (empOrders.length > 0) {
+        const sorted = empOrders.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+        const lastDate = new Date(sorted[0].date);
+        if (!isNaN(lastDate.getTime())) {
+            lastActivityStr = lastDate.toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+    }
+
+    return {
+        totalOrders: empOrders.length,
+        acceptedOrders: acceptedOrders.length,
+        totalSales,
+        avgTicket,
+        commission,
+        commissionRate: commRate,
+        lastActivityStr,
+        recentOrders: empOrders.slice().reverse()
+    };
+}
+
+function renderEmployeesTable() {
+    const tbody = document.getElementById('employees-table-body');
+
+    let adminCount = 0, meseroCount = 0, cajeroCount = 0, cocinaCount = 0;
+
+    (employeesList || []).forEach(emp => {
+        if (emp.role === 'admin') adminCount++;
+        else if (emp.role === 'mesero') meseroCount++;
+        else if (emp.role === 'cajero') cajeroCount++;
+        else if (emp.role === 'cocina') cocinaCount++;
+    });
+
+    if (document.getElementById('count-role-admin')) document.getElementById('count-role-admin').textContent = adminCount;
+    if (document.getElementById('count-role-mesero')) document.getElementById('count-role-mesero').textContent = meseroCount;
+    if (document.getElementById('count-role-cajero')) document.getElementById('count-role-cajero').textContent = cajeroCount;
+    if (document.getElementById('count-role-cocina')) document.getElementById('count-role-cocina').textContent = cocinaCount;
+
+    const query = (document.getElementById('emp-search-input')?.value || '').toLowerCase().trim();
+    const roleFilter = window._empRoleFilter || 'all';
+
+    let filtered = (employeesList || []).filter(emp => {
+        if (roleFilter !== 'all' && emp.role !== roleFilter) return false;
+        if (query) {
+            const matchName = emp.name.toLowerCase().includes(query);
+            const matchUser = (emp.username || '').toLowerCase().includes(query);
+            const matchPin = (emp.pin || '').includes(query);
+            return matchName || matchUser || matchPin;
+        }
+        return true;
+    });
+
+    if (!tbody) return;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-dim);">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <i data-lucide="users" style="width: 32px; height: 32px; opacity: 0.4;"></i>
+                        <span>No se encontraron colaboradores que coincidan con la búsqueda.</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = filtered.map(emp => {
+            let roleBadge = '';
+            if (emp.role === 'owner' || emp.role === 'propietario') roleBadge = '<span style="background: rgba(245,158,11,0.18); color: #d97706; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Propietario</span>';
+            else if (emp.role === 'admin') roleBadge = '<span style="background: rgba(99,102,241,0.18); color: #4f46e5; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Administrador</span>';
+            else if (emp.role === 'mesero') roleBadge = '<span style="background: rgba(37,99,235,0.18); color: #2563eb; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Mesero / Pedidos</span>';
+            else if (emp.role === 'cajero') roleBadge = '<span style="background: rgba(16,185,129,0.18); color: #059669; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Cajero / Cierre</span>';
+            else if (emp.role === 'cocina') roleBadge = '<span style="background: rgba(217,119,6,0.18); color: #d97706; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Cocina / Comandas</span>';
+
+            const statusBadge = emp.status === 'active'
+                ? '<span style="color:#059669; font-weight:700; font-size:0.8rem;">● Activo</span>'
+                : '<span style="color:#dc2626; font-weight:700; font-size:0.8rem;">● Inactivo</span>';
+
+            const avatarImg = emp.avatarUrl
+                ? `<img src="${emp.avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                : emp.name.charAt(0).toUpperCase();
+
+            return `
+                <tr style="border-bottom: 1px solid var(--glass-border);">
+                    <td style="padding: 1rem; font-weight: 700; color: var(--text);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div onclick="viewEmployeeProfile('${emp.id}', true)" title="Ver Perfil Completo" style="width: 34px; height: 34px; border-radius: 50%; background: rgba(var(--text-rgb), 0.08); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--theme-accent); overflow: hidden; cursor: pointer;">
+                                ${avatarImg}
+                            </div>
+                            <span class="emp-name-btn" onclick="viewEmployeeProfile('${emp.id}', true)" title="Ver Perfil Completo">${escapeHtml(formatShortName(emp.name))}</span>
+                        </div>
+                    </td>
+                    <td style="padding: 1rem; color: var(--text-dim); font-family: monospace;"><span style="opacity: 0.35; font-weight: 700;">@</span>${escapeHtml(emp.username ? emp.username.replace(/^@/, '') : '')}</td>
+                    <td style="padding: 1rem; color: var(--text-dim); font-family: monospace;">${emp.pin ? '🔑 ' + '•'.repeat(String(emp.pin).length) : '—'}</td>
+                    <td style="padding: 1rem;">${roleBadge}</td>
+                    <td style="padding: 1rem;">${statusBadge}</td>
+                    <td style="padding: 1rem; text-align: right;">
+                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                            <button onclick="viewEmployeeProfile('${emp.id}', false)" class="emp-action-btn" title="Ver Detalles" style="background: rgba(var(--theme-accent-rgb,247,147,30),0.12); border-color: rgba(var(--theme-accent-rgb,247,147,30),0.3); color: var(--theme-accent);">
+                                <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
+                            </button>
+                            <button onclick="editEmployee('${emp.id}')" class="emp-action-btn" title="Editar">
+                                <i data-lucide="edit-2" style="width: 15px; height: 15px;"></i>
+                            </button>
+                            <button onclick="confirmDeleteEmployee('${emp.id}', '${escapeHtml(emp.name)}')" class="emp-action-btn delete-btn" title="Eliminar">
+                                <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    renderEmployeesGrid();
+    if (window.setEmployeeView) setEmployeeView(window._empView || 'grid');
+
+    if (window.lucide) lucide.createIcons();
+}
+
+window._empRoleFilter = 'all';
+
+window.setEmployeeRoleFilter = function(role) {
+    window._empRoleFilter = role;
+    const pills = document.querySelectorAll('.emp-pill-filter');
+    pills.forEach(p => {
+        if (p.getAttribute('data-role') === role) {
+            p.style.background = 'var(--theme-accent)';
+            p.style.color = '#fff';
+        } else {
+            p.style.background = 'rgba(255,255,255,0.04)';
+            p.style.color = 'var(--text-dim)';
+        }
+    });
+    renderEmployeesGrid();
+    renderEmployeesTable();
+};
+
+window.filterEmployeeList = function() {
+    renderEmployeesGrid();
+    renderEmployeesTable();
+};
+
+window.toggleEmployeeStatus = async function(empId) {
+    const emp = employeesList.find(e => String(e.id) === String(empId));
+    if (!emp) return;
+
+    const newStatus = emp.status === 'active' ? 'inactive' : 'active';
+    const instanceId = getInstanceId();
+    const token = localStorage.getItem('streetfeed_employee_token') || sessionStorage.getItem('clientSession');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    try {
+        const res = await fetch(`/api/modules/streetfeed/employees/${empId}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({
+                instanceId,
+                name: emp.name,
+                username: emp.username,
+                pin: emp.pin,
+                role: emp.role,
+                status: newStatus,
+                gender: emp.gender || '',
+                age: emp.age || '',
+                phone: emp.phone || '',
+                address: emp.address || '',
+                neighborhood: emp.neighborhood || ''
+            })
+        });
+
+        if (res.ok) {
+            emp.status = newStatus;
+            showToast(newStatus === 'active' ? `● ${emp.name} activado` : `● ${emp.name} desactivado`, 'success');
+            renderEmployeesGrid();
+            renderEmployeesTable();
+        } else {
+            showToast('Error al cambiar estado del colaborador', 'error');
+        }
+    } catch (err) {
+        console.error('Error cambiando estado:', err);
+        showToast('Error de conexión', 'error');
+    }
+};
+
+window.openExportPdfModal = function() {
+    const modal = document.getElementById('exportPdfModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
+window.closeExportPdfModal = function() {
+    const modal = document.getElementById('exportPdfModal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.confirmExportStaffPdf = function() {
+    closeExportPdfModal();
+    const month = document.getElementById('pdf-export-month')?.value || 'all';
+    const year = document.getElementById('pdf-export-year')?.value || '2026';
+    exportStaffPerformancePDF(month, year);
+};
+
+window.exportStaffPerformancePDF = function(selectedMonth = 'all', selectedYear = '2026') {
+    if (!employeesList || employeesList.length === 0) {
+        showToast('No hay colaboradores para exportar', 'warning');
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const nowStr = new Date().toLocaleString('es-CO');
+
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const periodText = selectedMonth === 'all'
+            ? `HISTÓRICO COMPLETO (${selectedYear})`
+            : `MES: ${monthNames[parseInt(selectedMonth, 10)]?.toUpperCase()} ${selectedYear}`;
+
+        // Header Banner
+        doc.setFillColor(247, 147, 30);
+        doc.rect(0, 0, 210, 24, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORTE DE RENDIMIENTO DE PERSONAL', 14, 15);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generado: ${nowStr}`, 145, 15);
+
+        // Subtitle & Period
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`PERÍODO: ${periodText}`, 14, 32);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Total Colaboradores: ${employeesList.length}`, 145, 32);
+
+        // Table
+        const headers = [['Colaborador', 'Usuario', 'Rol', 'PIN', 'Pedidos', 'Ventas Totales', 'Comisión (10%)', 'Estado']];
+        const roleLabels = { admin: 'Admin', mesero: 'Mesero', cajero: 'Cajero', cocina: 'Cocina' };
+
+        const body = employeesList.map(emp => {
+            const stats = getEmployeeStats(emp.name, { month: selectedMonth === 'all' ? '' : selectedMonth });
+            return [
+                emp.name,
+                '@' + (emp.username || '').replace(/^@/, ''),
+                roleLabels[emp.role] || emp.role,
+                emp.pin || '—',
+                stats.totalOrders,
+                '$' + stats.totalSales.toLocaleString('es-CO'),
+                '$' + stats.commission.toLocaleString('es-CO'),
+                emp.status === 'active' ? 'Activo' : 'Inactivo'
+            ];
+        });
+
+        doc.autoTable({
+            head: headers,
+            body: body,
+            startY: 38,
+            theme: 'grid',
+            headStyles: { fillStyle: 'F', fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            styles: { fontSize: 8.5, cellPadding: 3 }
+        });
+
+        const monthSlug = selectedMonth === 'all' ? 'Completo' : (monthNames[parseInt(selectedMonth, 10)] || 'Mes');
+        doc.save(`Reporte_Personal_${monthSlug}_${selectedYear}.pdf`);
+        showToast(`Reporte PDF (${periodText}) descargado exitosamente ✓`, 'success');
+    } catch (err) {
+        console.error('Error generando PDF:', err);
+        showToast('Error generando reporte PDF', 'error');
+    }
+};
+
+function renderEmployeesGrid() {
+    const grid = document.getElementById('employees-grid');
+    if (!grid) return;
+
+    const roleConfig = {
+        owner:   { label: 'Propietario',       color: '#d97706', bg: 'rgba(245,158,11,0.15)',   icon: 'crown' },
+        admin:   { label: 'Administrador',     color: '#6366f1', bg: 'rgba(99,102,241,0.15)',   icon: 'crown' },
+        mesero:  { label: 'Mesero / Pedidos',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)',   icon: 'clipboard-list' },
+        cajero:  { label: 'Cajero / Cierre',   color: '#10b981', bg: 'rgba(16,185,129,0.15)',   icon: 'calculator' },
+        cocina:  { label: 'Cocina / Comandas', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',   icon: 'chef-hat' }
+    };
+
+    if (!employeesList || employeesList.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 5rem 2rem; color: var(--text-dim);"><i data-lucide="users" style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 1rem; display: block; margin-left: auto; margin-right: auto;"></i><p style="font-size: 1.1rem;">Sin colaboradores aún. <br><small>Haz clic en "Nuevo Colaborador" para comenzar.</small></p></div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    const query = (document.getElementById('emp-search-input')?.value || '').toLowerCase().trim();
+    const roleFilter = window._empRoleFilter || 'all';
+
+    let filtered = employeesList.filter(emp => {
+        if (roleFilter !== 'all' && emp.role !== roleFilter) return false;
+        if (query) {
+            const matchName = emp.name.toLowerCase().includes(query);
+            const matchUser = (emp.username || '').toLowerCase().includes(query);
+            const matchPin = (emp.pin || '').includes(query);
+            return matchName || matchUser || matchPin;
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="search-x" style="width: 42px; height: 42px; opacity: 0.3; margin-bottom: 0.8rem; display: block; margin-left: auto; margin-right: auto;"></i><p style="font-size: 1rem; font-weight:600;">No se encontraron colaboradores que coincidan con la búsqueda.</p></div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    grid.innerHTML = filtered.map(emp => {
+        const cfg = roleConfig[emp.role] || roleConfig.mesero;
+        const isActive = emp.status === 'active';
+        const initials = emp.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const stats = getEmployeeStats(emp.name);
+        const avatarContent = emp.avatarUrl
+            ? `<img src="${emp.avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 16px;">`
+            : initials;
+
+        return `
+        <div class="emp-profile-card" style="background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 24px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: var(--shadow); ${isActive ? '' : 'opacity: 0.65;'}">
+            <!-- Card Top Bar -->
+            <div style="height: 5px; background: linear-gradient(90deg, ${cfg.color}, ${cfg.color}88);"></div>
+
+            <!-- Card Header -->
+            <div style="padding: 1.5rem 1.5rem 1rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;">
+                <!-- Avatar + Info -->
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div onclick="viewEmployeeProfile('${emp.id}', true)" title="Ver Perfil Completo" style="width: 64px; height: 64px; border-radius: 18px; background: ${cfg.bg}; border: 2px solid ${cfg.color}44; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 900; color: ${cfg.color}; flex-shrink: 0; position: relative; overflow: visible; cursor: pointer;">
+                        ${avatarContent}
+                        <div style="position: absolute; bottom: -3px; right: -3px; width: 14px; height: 14px; border-radius: 50%; background: ${isActive ? '#4caf50' : '#ef4444'}; border: 2px solid var(--surface-light); z-index: 2;"></div>
+                    </div>
+                    <div>
+                        <h4 class="emp-name-btn" onclick="viewEmployeeProfile('${emp.id}', true)" title="Ver Perfil Completo" style="margin: 0 0 0.2rem; font-size: 1.05rem; font-weight: 900; color: var(--text); line-height: 1.2;">${escapeHtml(formatShortName(emp.name))}</h4>
+                        <p style="margin: 0 0 0.4rem; font-family: monospace; font-size: 0.78rem; color: var(--text-dim);"><span style="opacity:0.5;">@</span>${escapeHtml((emp.username || '').replace(/^@/, ''))}</p>
+                        <span style="background: ${cfg.bg}; color: ${cfg.color}; padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: 0.7rem; letter-spacing: 0.3px;">${cfg.label}</span>
+                    </div>
+                </div>
+                <!-- Status Toggle Button -->
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; flex-shrink: 0;">
+                    <button onclick="toggleEmployeeStatus('${emp.id}')" title="Clic para activar/desactivar" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 700; color: ${isActive ? '#4caf50' : '#ef4444'}; background: ${isActive ? 'rgba(76,175,80,0.1)' : 'rgba(239,68,68,0.1)'}; padding: 4px 10px; border-radius: 20px; border: 1px solid ${isActive ? 'rgba(76,175,80,0.25)' : 'rgba(239,68,68,0.25)'}; white-space: nowrap; cursor: pointer; transition: all 0.2s;">
+                        <div style="width: 6px; height: 6px; border-radius: 50%; background: ${isActive ? '#4caf50' : '#ef4444'};"></div>
+                        ${isActive ? 'Activo' : 'Inactivo'}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Última actividad indicator -->
+            <div style="padding: 0 1.5rem 0.8rem; font-size: 0.72rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem;">
+                <i data-lucide="clock" style="width: 12px; height: 12px; opacity: 0.6;"></i>
+                <span>Última atención: <strong>${stats.lastActivityStr}</strong></span>
+            </div>
+
+            <!-- Divider -->
+            <div style="height: 1px; background: var(--glass-border); margin: 0 1.5rem;"></div>
+
+            <!-- KPIs Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; padding: 0;">
+                <div style="padding: 0.8rem 1rem; text-align: center; border-right: 1px solid var(--glass-border);">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">Pedidos</div>
+                    <div style="font-size: 1.3rem; font-weight: 900; color: var(--text);">${stats.totalOrders}</div>
+                </div>
+                <div style="padding: 0.8rem 1rem; text-align: center; border-right: 1px solid var(--glass-border);">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">Ventas</div>
+                    <div style="font-size: 1rem; font-weight: 900; color: #4caf50;">$${stats.totalSales.toLocaleString('es-CO')}</div>
+                </div>
+                <div style="padding: 0.8rem 1rem; text-align: center;">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">Comisión (${stats.commissionRate}%)</div>
+                    <div style="font-size: 1rem; font-weight: 900; color: #ec4899;">$${stats.commission.toLocaleString('es-CO')}</div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div style="height: 1px; background: var(--glass-border);"></div>
+
+            <!-- Actions Footer -->
+            <div style="padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;">
+                <button onclick="viewEmployeeProfile('${emp.id}', false)" style="flex: 1; padding: 0.65rem 1rem; border-radius: 12px; border: 1px solid ${cfg.color}44; background: ${cfg.bg}; color: ${cfg.color}; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; transition: all 0.2s;" title="Ver Detalles">
+                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                    Ver Detalles
+                </button>
+                <button onclick="editEmployee('${emp.id}')" style="width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Editar">
+                    <i data-lucide="edit-2" style="width: 15px; height: 15px;"></i>
+                </button>
+                <button onclick="confirmDeleteEmployee('${emp.id}', '${escapeHtml(emp.name)}')" style="width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.2); background: rgba(239,68,68,0.06); color: #ef4444; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Eliminar">
+                    <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+}
+
+window._activeProfileEmpId = null;
+
+window.onProfileDateChange = function() {
+    window._activeEmpPresetValue = 'all';
+    window._activeEmpMonthValue = '';
+    const presetDisp = document.querySelector('#emp-current-preset');
+    const monthDisp = document.querySelector('#emp-current-month');
+    if (presetDisp) presetDisp.textContent = "Todo el tiempo";
+    if (monthDisp) monthDisp.textContent = "Meses...";
+    document.querySelectorAll('#emp-preset-dropdown li, #emp-month-dropdown li').forEach(li => li.classList.remove('active'));
+    renderActiveProfileMetrics();
+};
+
+window.onProfilePresetChange = function() {
+    renderActiveProfileMetrics();
+};
+
+window.onProfileMonthChange = function() {
+    renderActiveProfileMetrics();
+};
+
+function renderActiveProfileMetrics() {
+    const empId = window._activeProfileEmpId;
+    if (!empId) return;
+    const emp = employeesList.find(e => String(e.id) === String(empId));
+    if (!emp) return;
+
+    const dateEl = document.getElementById('emp-filter-date');
+
+    const specificDate = dateEl ? dateEl.value : '';
+    const preset = window._activeEmpPresetValue || 'all';
+    const month = window._activeEmpMonthValue || '';
+
+    const stats = getEmployeeStats(emp.name, { specificDate, preset, month });
+
+    // KPIs
+    const ordersEl = document.getElementById('emp-profile-orders');
+    if (ordersEl) ordersEl.textContent = stats.totalOrders;
+    const salesEl = document.getElementById('emp-profile-sales');
+    if (salesEl) salesEl.textContent = '$' + stats.totalSales.toLocaleString('es-CO');
+    const avgEl = document.getElementById('emp-profile-avg');
+    if (avgEl) avgEl.textContent = '$' + stats.avgTicket.toLocaleString('es-CO');
+    const commEl = document.getElementById('emp-profile-commission');
+    if (commEl) commEl.textContent = '$' + stats.commission.toLocaleString('es-CO');
+
+    // Recent orders
+    const listEl = document.getElementById('emp-profile-orders-list');
+    if (listEl) {
+        if (stats.recentOrders.length === 0) {
+            listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--glass-border);">Sin pedidos registrados en este período.</div>`;
+        } else {
+            listEl.innerHTML = stats.recentOrders.map(o => {
+                const statusColor = o.status === 'accepted' ? '#4caf50' : (o.status === 'cancelled' ? '#ef4444' : '#f59e0b');
+                const statusLabel = o.status === 'accepted' ? 'Completado' : (o.status === 'cancelled' ? 'Cancelado' : 'En proceso');
+                const time = new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                return `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-dim); font-family: monospace; background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 5px; white-space: nowrap;">${o.id}</div>
+                        <div>
+                            <div style="font-size: 0.82rem; font-weight: 700; color: var(--text);">${o.customer?.name || 'Cliente'}</div>
+                            <div style="font-size: 0.72rem; color: var(--text-dim);">${time}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
+                        <span style="font-size: 0.9rem; font-weight: 900; color: var(--text);">$${(o.total || 0).toLocaleString('es-CO')}</span>
+                        <span style="font-size: 0.65rem; font-weight: 800; color: ${statusColor}; background: ${statusColor}22; padding: 2px 8px; border-radius: 5px; text-transform: uppercase;">${statusLabel}</span>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+    }
+}
+
+window.viewEmployeeProfile = function(empId, showPersonalInfo = false) {
+    const emp = employeesList.find(e => String(e.id) === String(empId));
+    if (!emp) return;
+
+    window._activeProfileEmpId = empId;
+
+    const roleConfig = {
+        admin:   { label: 'Administrador',     color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
+        mesero:  { label: 'Mesero / Pedidos',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+        cajero:  { label: 'Cajero / Cierre',   color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+        cocina:  { label: 'Cocina / Comandas', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' }
+    };
+    const cfg = roleConfig[emp.role] || roleConfig.mesero;
+    const isActive = emp.status === 'active';
+    const initials = emp.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+    // Reset filter elements to default ("all")
+    window._activeEmpPresetValue = 'all';
+    window._activeEmpMonthValue = '';
+    const dateEl = document.getElementById('emp-filter-date'); if (dateEl) dateEl.value = '';
+    const presetDisp = document.querySelector('#emp-current-preset'); if (presetDisp) presetDisp.textContent = "Todo el tiempo";
+    const monthDisp = document.querySelector('#emp-current-month'); if (monthDisp) monthDisp.textContent = "Meses...";
+    document.querySelectorAll('#emp-preset-dropdown li, #emp-month-dropdown li').forEach(li => li.classList.remove('active'));
+    const allLi = document.querySelector('#emp-preset-dropdown li[data-value="all"]'); if (allLi) allLi.classList.add('active');
+
+    // Hero
+    const avatarEl = document.getElementById('emp-profile-avatar');
+    if (avatarEl) {
+        if (emp.avatarUrl) {
+            avatarEl.innerHTML = `<img src="${emp.avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 17px;">`;
+        } else {
+            avatarEl.textContent = initials;
+            avatarEl.style.background = cfg.bg;
+            avatarEl.style.color = cfg.color;
+        }
+    }
+    const nameEl = document.getElementById('emp-profile-name');
+    if (nameEl) nameEl.textContent = formatShortName(emp.name);
+
+    const roleBadgeEl = document.getElementById('emp-profile-role-badge');
+    if (roleBadgeEl) {
+        roleBadgeEl.textContent = cfg.label;
+        roleBadgeEl.style.background = cfg.bg;
+        roleBadgeEl.style.color = cfg.color;
+    }
+    const statusEl = document.getElementById('emp-profile-status');
+    if (statusEl) {
+        statusEl.textContent = isActive ? '● Activo' : '● Inactivo';
+        statusEl.style.color = isActive ? '#4caf50' : '#ef4444';
+    }
+    const userEl = document.getElementById('emp-profile-username');
+    if (userEl) userEl.textContent = '@' + (emp.username || '').replace(/^@/, '');
+
+    // DOM Elements for Mode Toggling
+    const filterBarEl = document.getElementById('emp-profile-filter-bar');
+    const metricsGridEl = document.getElementById('emp-profile-metrics-grid');
+    const personalEl = document.getElementById('emp-profile-personal');
+    const historyEl = document.getElementById('emp-profile-history');
+    const footerEl = document.getElementById('emp-profile-footer');
+    const headerPdfBtn = document.getElementById('emp-profile-header-pdf-btn');
+
+    if (showPersonalInfo) {
+        // MODE A: PERFIL PERSONAL (Clicked Name / Avatar)
+        // Shows Hero + Personal Info + Footer (Editar, PDF, Eliminar)
+        if (filterBarEl) filterBarEl.style.display = 'none';
+        if (metricsGridEl) metricsGridEl.style.display = 'none';
+        if (historyEl) historyEl.style.display = 'none';
+        if (headerPdfBtn) headerPdfBtn.style.display = 'none';
+        if (footerEl) footerEl.style.display = 'flex';
+
+        const personalGridEl = document.getElementById('emp-profile-personal-grid');
+        if (personalEl && personalGridEl) {
+            const genderInfoMap = {
+                masculino: { icon: 'user', label: 'Masculino', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+                femenino:  { icon: 'user', label: 'Femenino',  color: '#ec4899', bg: 'rgba(236,72,153,0.15)' },
+                otro:      { icon: 'user', label: 'Otro',      color: '#a855f7', bg: 'rgba(168,85,247,0.15)' }
+            };
+            const gInfo = genderInfoMap[emp.gender] || { icon: 'user', label: emp.gender || '—', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' };
+
+            const items = [
+                emp.gender ? `
+                    <div class="emp-personal-tile" style="display: flex; align-items: center; gap: 0.9rem; padding: 0.9rem 1.1rem; border-radius: 16px; background: rgba(var(--text-rgb,255,255,255), 0.035); border: 1px solid var(--glass-border); transition: all 0.2s;">
+                        <div style="width: 42px; height: 42px; border-radius: 12px; background: ${gInfo.bg}; color: ${gInfo.color}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="${gInfo.icon}" style="width: 20px; height: 20px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.64rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px;">Sexo</div>
+                            <div style="font-size: 0.92rem; font-weight: 800; color: var(--text); margin-top: 2px;">${gInfo.label}</div>
+                        </div>
+                    </div>
+                ` : '',
+
+                emp.age ? `
+                    <div class="emp-personal-tile" style="display: flex; align-items: center; gap: 0.9rem; padding: 0.9rem 1.1rem; border-radius: 16px; background: rgba(var(--text-rgb,255,255,255), 0.035); border: 1px solid var(--glass-border); transition: all 0.2s;">
+                        <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(245,158,11,0.15); color: #f59e0b; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="cake" style="width: 20px; height: 20px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.64rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px;">Edad</div>
+                            <div style="font-size: 0.92rem; font-weight: 800; color: var(--text); margin-top: 2px;">${emp.age} años</div>
+                        </div>
+                    </div>
+                ` : '',
+
+                emp.phone ? `
+                    <div class="emp-personal-tile" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.85rem 1rem; border-radius: 16px; background: rgba(var(--text-rgb,255,255,255), 0.035); border: 1px solid var(--glass-border); transition: all 0.2s;">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #10b981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="phone" style="width: 19px; height: 19px;"></i>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 0.62rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Contacto</div>
+                            <div style="font-size: 0.88rem; font-weight: 800; color: var(--text); margin-top: 2px; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${emp.phone}</div>
+                        </div>
+                    </div>
+                ` : '',
+
+                emp.address ? `
+                    <div class="emp-personal-tile" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.85rem 1rem; border-radius: 16px; background: rgba(var(--text-rgb,255,255,255), 0.035); border: 1px solid var(--glass-border); transition: all 0.2s;">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(247,147,30,0.15); color: var(--theme-accent, #f7931e); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="map-pin" style="width: 19px; height: 19px;"></i>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 0.62rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Dirección</div>
+                            <div style="font-size: 0.82rem; font-weight: 700; color: var(--text); margin-top: 2px; line-height: 1.2;">
+                                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${emp.address}">${emp.address}</div>
+                                ${emp.neighborhood ? `<div style="font-size: 0.68rem; color: var(--text-dim); font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Barrio ${emp.neighborhood}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''
+            ].filter(Boolean);
+
+            personalEl.style.display = 'block';
+            if (items.length > 0) {
+                personalGridEl.innerHTML = items.join('');
+            } else {
+                personalGridEl.innerHTML = `<div style="grid-column: 1/-1; color: var(--text-dim); font-size: 0.85rem; font-style: italic; padding: 0.5rem 0;">No hay datos personales adicionales registrados para este colaborador.</div>`;
+            }
+        }
+    } else {
+        // MODE B: VER DETALLES (Clicked "Ver Detalles" button)
+        // Shows Filter Bar (with PDF button on top right), Metrics & Recent Orders. Hides Personal Info & Bottom Footer!
+        if (filterBarEl) filterBarEl.style.display = 'flex';
+        if (metricsGridEl) metricsGridEl.style.display = 'grid';
+        if (historyEl) historyEl.style.display = 'block';
+        if (headerPdfBtn) headerPdfBtn.style.display = 'inline-flex';
+
+        if (personalEl) personalEl.style.display = 'none';
+        if (footerEl) footerEl.style.display = 'none';
+
+        // Render Metrics & Orders with initial filter
+        renderActiveProfileMetrics();
+    }
+
+    // Wire up footer buttons
+    const editBtn = document.getElementById('emp-profile-edit-btn');
+    if (editBtn) editBtn.onclick = () => { document.getElementById('employee-profile-modal').classList.add('hidden'); editEmployee(emp.id); };
+    const deleteBtn = document.getElementById('emp-profile-delete-btn');
+    if (deleteBtn) deleteBtn.onclick = () => { document.getElementById('employee-profile-modal').classList.add('hidden'); confirmDeleteEmployee(emp.id, emp.name); };
+
+    // Show
+    const modal = document.getElementById('employee-profile-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
+window.exportSingleEmployeePDF = function() {
+    const empId = window._activeProfileEmpId;
+    if (!empId) {
+        showToast('No se encontró el colaborador activo', 'error');
+        return;
+    }
+    const emp = (employeesList || []).find(e => String(e.id) === String(empId));
+    if (!emp) {
+        showToast('Colaborador no encontrado', 'error');
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const nowStr = new Date().toLocaleString('es-CO');
+
+        // Current filter values
+        const dateEl = document.getElementById('emp-filter-date');
+        const specificDate = dateEl ? dateEl.value : '';
+        const preset = window._activeEmpPresetValue || 'all';
+        const month = window._activeEmpMonthValue || '';
+
+        const presetLabels = { all: 'Todo el tiempo', today: 'Hoy', yesterday: 'Ayer', week: 'Esta semana', month: 'Este mes' };
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        let filterText = 'Todo el tiempo';
+        if (specificDate) filterText = `Fecha: ${specificDate}`;
+        else if (month !== '') filterText = `Mes: ${monthNames[parseInt(month, 10)]}`;
+        else if (preset) filterText = presetLabels[preset] || 'Todo el tiempo';
+
+        const stats = getEmployeeStats(emp.name, { specificDate, preset, month });
+
+        // Header Banner (Orange accent)
+        doc.setFillColor(247, 147, 30);
+        doc.rect(0, 0, 210, 26, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORTE FICHA DE COLABORADOR', 14, 16);
+
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generado: ${nowStr}`, 140, 16);
+
+        // Employee Info Box
+        doc.setFillColor(245, 247, 250);
+        doc.roundedRect(14, 32, 182, 28, 3, 3, 'F');
+
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(emp.name.toUpperCase(), 20, 42);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Usuario: @${(emp.username || '').replace(/^@/, '')}`, 20, 49);
+        doc.text(`Rol: ${emp.role.toUpperCase()}  |  Estado: ${emp.status === 'active' ? 'ACTIVO' : 'INACTIVO'}`, 20, 55);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Filtro: ${filterText}`, 120, 42);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Última atención: ${stats.lastActivityStr}`, 120, 49);
+
+        // KPI Summary Box
+        doc.setFillColor(238, 242, 255);
+        doc.roundedRect(14, 64, 182, 22, 3, 3, 'F');
+
+        doc.setFontSize(9);
+        doc.setTextColor(79, 70, 229);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PEDIDOS', 22, 72);
+        doc.text('VENTAS ATENDIDAS', 65, 72);
+        doc.text('TICKET PROMEDIO', 115, 72);
+        doc.text(`COMISIÓN (${stats.commissionRate}%)`, 160, 72);
+
+        doc.setFontSize(11);
+        doc.setTextColor(30, 41, 59);
+        doc.text(`${stats.totalOrders}`, 22, 80);
+        doc.text(`$${stats.totalSales.toLocaleString('es-CO')}`, 65, 80);
+        doc.text(`$${stats.avgTicket.toLocaleString('es-CO')}`, 115, 80);
+        doc.text(`$${stats.commission.toLocaleString('es-CO')}`, 160, 80);
+
+        // Table Header & Orders
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('DETALLE DE REGISTRO DE ATENCIONES', 14, 95);
+
+        const tableHeaders = [['# Pedido', 'Cliente', 'Fecha / Hora', 'Total ($)', 'Estado']];
+        const tableBody = stats.recentOrders.map(o => {
+            const statusMap = { accepted: 'Completado', cancelled: 'Cancelado', confirmed: 'En cocina', pending: 'En espera' };
+            const time = new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return [
+                o.id,
+                o.customer?.name || 'Cliente',
+                time,
+                '$' + (o.total || 0).toLocaleString('es-CO'),
+                statusMap[o.status] || o.status
+            ];
+        });
+
+        doc.autoTable({
+            head: tableHeaders,
+            body: tableBody.length > 0 ? tableBody : [['—', 'Sin atenciones en este período', '—', '—', '—']],
+            startY: 99,
+            theme: 'grid',
+            headStyles: { fillStyle: 'F', fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            styles: { fontSize: 8.5, cellPadding: 3.5 }
+        });
+
+        const safeName = emp.name.replace(/[^a-zA-Z0-9]/g, '_');
+        doc.save(`Ficha_${safeName}.pdf`);
+        showToast('Ficha de colaborador exportada en PDF ✓', 'success');
+
+    } catch (err) {
+        console.error('Error generando PDF de ficha de colaborador:', err);
+        showToast('Error al descargar el PDF de la ficha', 'error');
+    }
+};
+
+function clearEmployeeValidationFeedback() {
+    const uInput = document.getElementById('emp-username');
+    const pInput = document.getElementById('emp-pin');
+    const uFb = document.getElementById('emp-username-feedback');
+    const pFb = document.getElementById('emp-pin-feedback');
+
+    if (uInput) uInput.style.borderColor = 'var(--glass-border)';
+    if (pInput) pInput.style.borderColor = 'var(--glass-border)';
+    if (uFb) uFb.innerHTML = '';
+    if (pFb) pFb.innerHTML = '';
+}
+
+function checkUsernameAvailability() {
+    const input = document.getElementById('emp-username');
+    const feedback = document.getElementById('emp-username-feedback');
+    const currentId = document.getElementById('emp-id-input')?.value;
+
+    if (!input || !feedback) return true;
+
+    const val = input.value.trim().toLowerCase();
+    if (!val) {
+        feedback.innerHTML = '';
+        input.style.borderColor = 'var(--glass-border)';
+        return true;
+    }
+
+    const existing = employeesList.find(e => 
+        e.username && e.username.toLowerCase() === val && e.id !== currentId
+    );
+
+    if (existing) {
+        feedback.style.color = '#ef4444';
+        feedback.innerHTML = `<i data-lucide="x-circle" style="width:13px;height:13px;display:inline-block;"></i> En uso por ${escapeHtml(existing.name)}`;
+        input.style.borderColor = '#ef4444';
+        if (window.lucide) lucide.createIcons({ node: feedback });
+        return false;
+    } else {
+        feedback.style.color = '#10b981';
+        feedback.innerHTML = `<i data-lucide="check-circle" style="width:13px;height:13px;display:inline-block;"></i> Disponible`;
+        input.style.borderColor = '#10b981';
+        if (window.lucide) lucide.createIcons({ node: feedback });
+        return true;
+    }
+}
+
+function checkPinAvailability() {
+    const input = document.getElementById('emp-pin');
+    const feedback = document.getElementById('emp-pin-feedback');
+    const currentId = document.getElementById('emp-id-input')?.value;
+
+    if (!input || !feedback) return true;
+
+    const val = input.value.trim();
+    if (!val) {
+        feedback.innerHTML = '';
+        input.style.borderColor = 'var(--glass-border)';
+        return true;
+    }
+
+    const existing = employeesList.find(e => 
+        e.pin && e.pin.toString() === val && e.id !== currentId
+    );
+
+    if (existing) {
+        feedback.style.color = '#ef4444';
+        feedback.innerHTML = `<i data-lucide="x-circle" style="width:13px;height:13px;display:inline-block;"></i> PIN en uso por ${escapeHtml(existing.name)}`;
+        input.style.borderColor = '#ef4444';
+        if (window.lucide) lucide.createIcons({ node: feedback });
+        return false;
+    } else {
+        feedback.style.color = '#10b981';
+        feedback.innerHTML = `<i data-lucide="check-circle" style="width:13px;height:13px;display:inline-block;"></i> PIN disponible`;
+        input.style.borderColor = '#10b981';
+        if (window.lucide) lucide.createIcons({ node: feedback });
+        return true;
+    }
+}
+
+window.handleEmpAvatarUpload = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const url = evt.target.result;
+        const preview = document.getElementById('emp-avatar-preview');
+        const hiddenInput = document.getElementById('emp-avatar-url');
+        if (hiddenInput) hiddenInput.value = url;
+        if (preview) {
+            preview.style.backgroundImage = `url('${url}')`;
+            preview.style.backgroundSize = 'cover';
+            preview.style.backgroundPosition = 'center';
+            preview.innerHTML = '';
+        }
+    };
+    reader.readAsDataURL(file);
+};
+
+function openNewEmployeeModal() {
+    requireSecurityAuth(() => {
+        _performOpenNewEmployeeModal();
+    }, true);
+}
+
+function _performOpenNewEmployeeModal() {
+    clearEmployeeValidationFeedback();
+    document.getElementById('emp-id-input').value = '';
+    document.getElementById('emp-name').value = '';
+    document.getElementById('emp-username').value = '';
+    document.getElementById('emp-pin').value = '';
+    const avatarPreview = document.getElementById('emp-avatar-preview');
+    if (avatarPreview) {
+        avatarPreview.style.backgroundImage = 'none';
+        avatarPreview.innerHTML = '<i data-lucide="camera" style="width: 22px; height: 22px; color: var(--theme-accent);"></i><span style="font-size: 0.62rem; font-weight: 700; color: var(--theme-accent); margin-top: 2px;">Foto</span>';
+    }
+    const avatarUrlEl = document.getElementById('emp-avatar-url'); if (avatarUrlEl) avatarUrlEl.value = '';
+    const commRateEl = document.getElementById('emp-commission-rate'); if (commRateEl) commRateEl.value = '10';
+
+    const genderEl = document.getElementById('emp-gender');
+    if (genderEl) {
+        genderEl.value = '';
+        genderEl.dispatchEvent(new Event('change'));
+    }
+    const ageEl = document.getElementById('emp-age'); if (ageEl) ageEl.value = '';
+    const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = '';
+    const addressEl = document.getElementById('emp-address'); if (addressEl) addressEl.value = '';
+    const neighEl = document.getElementById('emp-neighborhood'); if (neighEl) neighEl.value = '';
+    const roleEl = document.getElementById('emp-role');
+    if (roleEl) {
+        roleEl.value = 'mesero';
+        roleEl.dispatchEvent(new Event('change'));
+    }
+    document.getElementById('emp-status-check').checked = true;
+    document.getElementById('employee-modal-title').innerHTML = '<i data-lucide="user-plus" style="color: var(--theme-accent); width: 26px; height: 26px;"></i> Nuevo Colaborador';
+    
+    const modal = document.getElementById('newEmployeeModal');
+    if (modal) modal.style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeEmployeeModal() {
+    const modal = document.getElementById('newEmployeeModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function handleSaveEmployee(e) {
+    e.preventDefault();
+
+    if (!checkUsernameAvailability()) {
+        showToast('El usuario de acceso ya está siendo utilizado por otro colaborador.', 'error');
+        return;
+    }
+    if (!checkPinAvailability()) {
+        showToast('El PIN ingresado ya está siendo utilizado por otro colaborador.', 'error');
+        return;
+    }
+
+    const id = document.getElementById('emp-id-input').value;
+    const name = document.getElementById('emp-name').value.trim();
+    const username = document.getElementById('emp-username').value.trim();
+    const pin = document.getElementById('emp-pin').value.trim();
+    const role = document.getElementById('emp-role').value;
+    const status = document.getElementById('emp-status-check').checked ? 'active' : 'inactive';
+    const avatarUrl = (document.getElementById('emp-avatar-url') || {}).value || '';
+    const commissionRate = (document.getElementById('emp-commission-rate') || {}).value || '10';
+    const gender = (document.getElementById('emp-gender') || {}).value || '';
+    const age = (document.getElementById('emp-age') || {}).value || '';
+    const phone = (document.getElementById('emp-phone') || {}).value || '';
+    const address = (document.getElementById('emp-address') || {}).value || '';
+    const neighborhood = (document.getElementById('emp-neighborhood') || {}).value || '';
+
+    const instanceId = getInstanceId();
+
+    const token = localStorage.getItem('streetfeed_employee_token') || sessionStorage.getItem('clientSession');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    try {
+        let res;
+        if (id) {
+            // Update
+            res = await fetch(`/api/modules/streetfeed/employees/${id}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({ instanceId, name, username, pin, role, status, avatarUrl, commissionRate, gender, age, phone, address, neighborhood })
+            });
+        } else {
+            // Create
+            res = await fetch('/api/modules/streetfeed/employees', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ instanceId, name, username, pin, role, avatarUrl, commissionRate, gender, age, phone, address, neighborhood })
+            });
+        }
+
+        if (res.ok) {
+            const resData = await res.json().catch(() => ({}));
+            const targetId = id || (resData.employee && resData.employee.id) || username || name.toLowerCase();
+
+            const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
+            let metaObj = {};
+            try { metaObj = JSON.parse(metaStr); } catch (e) {}
+
+            metaObj[targetId] = { avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
+            if (username) metaObj[username] = metaObj[targetId];
+            if (name) metaObj[name.toLowerCase()] = metaObj[targetId];
+
+            localStorage.setItem('streetfeed_employees_meta', JSON.stringify(metaObj));
+
+            showToast(id ? 'Colaborador actualizado' : 'Colaborador creado exitosamente', 'success');
+            closeEmployeeModal();
+            loadEmployees();
+        } else {
+            const data = await res.json();
+            showToast(data.error || 'Error al guardar colaborador', 'error');
+        }
+    } catch (err) {
+        console.error('Error guardando empleado:', err);
+        showToast('Error de red al guardar colaborador', 'error');
+    }
+}
+
+window._pendingSecurityAction = null;
+
+window.requireSecurityAuth = function(actionCallback, forcePrompt = false) {
+    let isWorkerSession = false;
+    try {
+        const empUserStr = localStorage.getItem('streetfeed_employee_user') || localStorage.getItem('streetfeed_employee');
+        if (empUserStr) {
+            const parsed = JSON.parse(empUserStr);
+            if (parsed && parsed.role && parsed.role !== 'admin' && parsed.role !== 'owner' && parsed.role !== 'propietario') {
+                isWorkerSession = true;
+            }
+        }
+    } catch(e) {}
+
+    if (typeof currentEmployeeRole !== 'undefined' && (currentEmployeeRole === 'mesero' || currentEmployeeRole === 'cajero' || currentEmployeeRole === 'cocina')) {
+        isWorkerSession = true;
+    }
+
+    if (!isWorkerSession && !forcePrompt) {
+        if (typeof actionCallback === 'function') actionCallback();
+        return;
+    }
+
+    // Prompt worker for Super Admin Master Password
+    window._pendingSecurityAction = actionCallback;
+    const modal = document.getElementById('securityAuthModal');
+    const passInput = document.getElementById('security-auth-password');
+    if (passInput) passInput.value = '';
+    if (modal) {
+        modal.style.display = 'flex';
+        if (passInput) passInput.focus();
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
+window.closeSecurityAuthModal = function() {
+    const modal = document.getElementById('securityAuthModal');
+    if (modal) modal.style.display = 'none';
+    window._pendingSecurityAction = null;
+};
+
+window.handleSecurityAuthSubmit = function(e) {
+    e.preventDefault();
+    const enteredPass = (document.getElementById('security-auth-password')?.value || '').trim();
+
+    // 1. Master Propietario Password from state.auth
+    const masterPass = (typeof state !== 'undefined' && state.auth && state.auth.pass) ? state.auth.pass : '';
+    const expensePass = (typeof state !== 'undefined' && state.auth && state.auth.expensePass) ? state.auth.expensePass : '';
+
+    // 2. Master Dashboard Owner Password from mod_creds
+    const instanceId = getInstanceId();
+    const clientCredsStr = localStorage.getItem(`mod_creds_${instanceId}`) || localStorage.getItem('mod_creds_streetfeed') || '{}';
+    let clientPass = '';
+    try {
+        const parsed = JSON.parse(clientCredsStr);
+        clientPass = parsed.pass || parsed.password || '';
+    } catch(err) {}
+
+    let isValid = false;
+
+    // Check against Super Admin / Propietario credentials ONLY
+    if (masterPass && enteredPass === masterPass) isValid = true;
+    else if (expensePass && enteredPass === expensePass) isValid = true;
+    else if (clientPass && enteredPass === clientPass) isValid = true;
+    else if (!masterPass && !expensePass && !clientPass) {
+        // Default fallback if no master password configured yet
+        isValid = (enteredPass === 'admin' || enteredPass === '123456' || enteredPass.length >= 4);
+    }
+
+    if (isValid) {
+        showToast('Verificación de Super Administrador confirmada ✓', 'success');
+        const callback = window._pendingSecurityAction;
+        closeSecurityAuthModal();
+        if (typeof callback === 'function') callback();
+    } else {
+        showToast('⚠️ Solo la clave del Propietario / Super Admin puede autorizar esta acción.', 'error');
+        const input = document.getElementById('security-auth-password');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+    }
+};
+
+function editEmployee(id) {
+    requireSecurityAuth(() => {
+        _performEditEmployee(id);
+    }, true);
+}
+
+function _performEditEmployee(id) {
+    const emp = employeesList.find(e => e.id === id);
+    if (!emp) return;
+
+    clearEmployeeValidationFeedback();
+    document.getElementById('emp-id-input').value = emp.id;
+    document.getElementById('emp-name').value = emp.name;
+    document.getElementById('emp-username').value = emp.username;
+    document.getElementById('emp-pin').value = emp.pin || '';
+
+    const avatarPreview = document.getElementById('emp-avatar-preview');
+    const avatarUrlEl = document.getElementById('emp-avatar-url');
+    if (emp.avatarUrl) {
+        if (avatarUrlEl) avatarUrlEl.value = emp.avatarUrl;
+        if (avatarPreview) {
+            avatarPreview.style.backgroundImage = `url('${emp.avatarUrl}')`;
+            avatarPreview.style.backgroundSize = 'cover';
+            avatarPreview.style.backgroundPosition = 'center';
+            avatarPreview.innerHTML = '';
+        }
+    } else {
+        if (avatarUrlEl) avatarUrlEl.value = '';
+        if (avatarPreview) {
+            avatarPreview.style.backgroundImage = 'none';
+            avatarPreview.innerHTML = '<i data-lucide="camera" style="width: 22px; height: 22px; color: var(--theme-accent);"></i><span style="font-size: 0.62rem; font-weight: 700; color: var(--theme-accent); margin-top: 2px;">Foto</span>';
+        }
+    }
+
+    const commRateEl = document.getElementById('emp-commission-rate');
+    if (commRateEl) commRateEl.value = (emp.commissionRate !== undefined && emp.commissionRate !== '') ? emp.commissionRate : '10';
+
+    const genderEl = document.getElementById('emp-gender');
+    if (genderEl) {
+        genderEl.value = emp.gender || '';
+        genderEl.dispatchEvent(new Event('change'));
+    }
+    const ageEl = document.getElementById('emp-age'); if (ageEl) ageEl.value = emp.age || '';
+    const phoneEl = document.getElementById('emp-phone'); if (phoneEl) phoneEl.value = emp.phone || '';
+    const addressEl = document.getElementById('emp-address'); if (addressEl) addressEl.value = emp.address || '';
+    const neighEl = document.getElementById('emp-neighborhood'); if (neighEl) neighEl.value = emp.neighborhood || '';
+    const roleEl = document.getElementById('emp-role');
+    if (roleEl) {
+        roleEl.value = emp.role || 'mesero';
+        roleEl.dispatchEvent(new Event('change'));
+    }
+    document.getElementById('emp-status-check').checked = emp.status === 'active';
+    document.getElementById('employee-modal-title').innerHTML = '<i data-lucide="user-check" style="color: var(--theme-accent); width: 26px; height: 26px;"></i> Editar Colaborador';
+
+    checkUsernameAvailability();
+    checkPinAvailability();
+
+    const modal = document.getElementById('newEmployeeModal');
+    if (modal) modal.style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+}
+
+function confirmDeleteEmployee(id, name) {
+    requireSecurityAuth(() => {
+        _performConfirmDeleteEmployee(id, name);
+    }, true);
+}
+
+function _performConfirmDeleteEmployee(id, name) {
+    const deleteAction = async () => {
+        const instanceId = getInstanceId();
+        const token = localStorage.getItem('streetfeed_employee_token') || sessionStorage.getItem('clientSession');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        try {
+            const res = await fetch(`/api/modules/streetfeed/employees/${id}?instanceId=${encodeURIComponent(instanceId)}`, {
+                method: 'DELETE',
+                headers
+            });
+            if (res.ok) {
+                const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
+                let metaObj = {};
+                try { metaObj = JSON.parse(metaStr); } catch (e) {}
+                delete metaObj[id];
+                if (name) delete metaObj[name.toLowerCase()];
+                localStorage.setItem('streetfeed_employees_meta', JSON.stringify(metaObj));
+
+                showToast('Colaborador eliminado correctamente', 'success');
+                loadEmployees();
+            } else {
+                showToast('Error al eliminar colaborador', 'error');
+            }
+        } catch (err) {
+            console.error('Error eliminando empleado:', err);
+            showToast('Error de red', 'error');
+        }
+    };
+
+    if (typeof showConfirm === 'function') {
+        showConfirm(
+            `¿Estás seguro de que deseas eliminar la cuenta de "${name}"?`,
+            deleteAction,
+            'Eliminar',
+            '#ef4444',
+            'Eliminar Colaborador'
+        );
+    } else if (confirm(`¿Estás seguro de que deseas eliminar la cuenta de ${name}?`)) {
+        deleteAction();
+    }
+}
+
+function applyRolePermissions(role = 'owner', name = 'Propietario') {
+    currentEmployeeRole = role;
+
+    const badgeName = document.getElementById('admin-name-display');
+    if (badgeName) {
+        let roleTitle = 'Propietario';
+        if (role === 'owner' || role === 'propietario') roleTitle = 'Propietario';
+        else if (role === 'admin') roleTitle = 'Administrador';
+        else if (role === 'mesero') roleTitle = 'Mesero';
+        else if (role === 'cajero') roleTitle = 'Cajero';
+        else if (role === 'cocina') roleTitle = 'Cocina';
+        
+        const displayName = (name === 'Administrador' || !name) ? 'Propietario' : name;
+        const firstName = formatFirstName(displayName);
+
+        if (firstName.toLowerCase() === roleTitle.toLowerCase()) {
+            badgeName.innerHTML = `${escapeHtml(firstName)}`;
+        } else {
+            badgeName.innerHTML = `${escapeHtml(firstName)} <small style="opacity:0.75; font-size:0.75rem;">(${roleTitle})</small>`;
+        }
+    }
+
+    const navEmployees = document.getElementById('nav-btn-employees');
+    const navConfig = document.querySelector('.sidebar-btn[data-tab="config-tab"]');
+    const navExpenses = document.querySelector('.sidebar-btn[data-tab="expenses-tab"]');
+    const navStats = document.querySelector('.sidebar-btn[data-tab="stats-tab"]');
+    const navItems = document.querySelector('.sidebar-btn[data-tab="items-tab"]');
+    const navCombos = document.querySelector('.sidebar-btn[data-tab="combos-tab"]');
+    const navMyMetrics = document.getElementById('nav-btn-my-metrics');
+
+    const btnNewOrder = document.getElementById('btn-new-manual-order');
+    const orderSettingsBtn = document.querySelector('.order-settings-btn');
+
+    if (role === 'mesero') {
+        if (navItems) navItems.style.display = 'none';
+        if (navCombos) navCombos.style.display = 'none';
+        if (navEmployees) navEmployees.style.display = 'none';
+        if (navConfig) navConfig.style.display = 'none';
+        if (navExpenses) navExpenses.style.display = 'none';
+        if (navStats) navStats.style.display = 'none';
+        if (navMyMetrics) navMyMetrics.style.display = 'flex';
+        if (btnNewOrder) btnNewOrder.style.display = 'flex';
+        document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
+
+        document.querySelectorAll('.btn-delete-item, .btn-delete-cat, .btn-add-category').forEach(el => el.style.display = 'none');
+    } else if (role === 'cajero') {
+        if (navItems) navItems.style.display = 'none';
+        if (navCombos) navCombos.style.display = 'none';
+        if (navEmployees) navEmployees.style.display = 'none';
+        if (navConfig) navConfig.style.display = 'none';
+        if (navExpenses) navExpenses.style.display = 'flex';
+        if (navStats) navStats.style.display = 'flex';
+        if (navMyMetrics) navMyMetrics.style.display = 'none';
+        if (btnNewOrder) btnNewOrder.style.display = 'flex';
+        document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
+    } else if (role === 'cocina') {
+        if (navItems) navItems.style.display = 'none';
+        if (navCombos) navCombos.style.display = 'none';
+        if (navEmployees) navEmployees.style.display = 'none';
+        if (navConfig) navConfig.style.display = 'none';
+        if (navExpenses) navExpenses.style.display = 'none';
+        if (navStats) navStats.style.display = 'none';
+        if (navMyMetrics) navMyMetrics.style.display = 'none';
+        if (btnNewOrder) btnNewOrder.style.display = 'none';
+        document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
+    } else {
+        if (navItems) navItems.style.display = 'flex';
+        if (navCombos) navCombos.style.display = 'flex';
+        if (navEmployees) navEmployees.style.display = 'flex';
+        if (navConfig) navConfig.style.display = 'flex';
+        if (navExpenses) navExpenses.style.display = 'flex';
+        if (navStats) navStats.style.display = 'flex';
+        if (navMyMetrics) navMyMetrics.style.display = 'none';
+        if (btnNewOrder) btnNewOrder.style.display = 'flex';
+        document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'flex');
+    }
+
+    // Filtros de Alcance ("Mis Ventas") y Sub-Pestañas para Cocina
+    const historyScopeContainer = document.getElementById('history-scope-container');
+    const historyScopeMine = document.getElementById('history-scope-mine');
+    const pdfScopeMine = document.getElementById('pdf-scope-mine');
+    const subtabUnpaidBtn = document.getElementById('subtab-unpaid-btn');
+
+    if (role === 'cocina') {
+        if (historyScopeContainer) historyScopeContainer.style.display = 'none';
+        if (historyScopeMine) historyScopeMine.style.display = 'none';
+        if (pdfScopeMine) pdfScopeMine.style.display = 'none';
+        if (subtabUnpaidBtn) subtabUnpaidBtn.style.display = 'none';
+
+        // Si estaba seleccionado el subtab "unpaid", cambiar a "incoming"
+        const activeSubTab = document.querySelector('.sub-tab-btn.active');
+        if (activeSubTab && activeSubTab.dataset.subtab === 'unpaid') {
+            const incomingSubTabBtn = document.querySelector('.sub-tab-btn[data-subtab="incoming"]');
+            if (incomingSubTabBtn) incomingSubTabBtn.click();
+        }
+
+        if (typeof window.setHistoryScope === 'function') {
+            window.setHistoryScope('all');
+        }
+    } else {
+        if (historyScopeContainer) historyScopeContainer.style.display = 'flex';
+        if (historyScopeMine) historyScopeMine.style.display = 'inline-flex';
+        if (pdfScopeMine) pdfScopeMine.style.display = 'flex';
+        if (subtabUnpaidBtn) subtabUnpaidBtn.style.display = 'flex';
+    }
+
+    // --- CORRECCIÓN DE BUG DE NAVEGACIÓN POR ROL ---
+    // Si la pestaña actualmente visible/activa no está permitida para este rol, cambiar automáticamente a "orders-tab" (Pedidos)
+    const forbiddenTabIds = [];
+    if (role === 'mesero') {
+        forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab');
+    } else if (role === 'cocina') {
+        forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab', 'my-metrics-tab');
+    } else if (role === 'cajero') {
+        // Cajero tiene acceso a Métricas Globales (Ventas del día, Efectivo vs Transferencias) para Arqueo de Caja
+        forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'my-metrics-tab');
+    } else {
+        // Admin / Owner no necesita "Mis Métricas" (ya tiene "Métricas" globales del negocio)
+        forbiddenTabIds.push('my-metrics-tab');
+    }
+
+    const activeSidebarBtn = document.querySelector('.sidebar-btn.active');
+    const activeTabId = activeSidebarBtn?.dataset?.tab;
+
+    if (!activeTabId || forbiddenTabIds.includes(activeTabId) || (activeSidebarBtn && activeSidebarBtn.style.display === 'none')) {
+        const defaultVisibleBtn = document.querySelector('.sidebar-btn[data-tab="orders-tab"]') || 
+                                 document.querySelector('.sidebar-btn:not([style*="display: none"])');
+        if (defaultVisibleBtn) {
+            defaultVisibleBtn.click();
+        }
+    }
+
+    // Re-renderizar las órdenes inmediatamente con los permisos del nuevo rol activo
+    if (typeof window.renderOrders === 'function') {
+        window.renderOrders();
+    }
+}
+
+// Exportar globalmente
+window.openNewEmployeeModal = openNewEmployeeModal;
+window.closeEmployeeModal = closeEmployeeModal;
+window.handleSaveEmployee = handleSaveEmployee;
+window.editEmployee = editEmployee;
+window.confirmDeleteEmployee = confirmDeleteEmployee;
+window.applyRolePermissions = applyRolePermissions;
+
 
 

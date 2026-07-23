@@ -2,6 +2,14 @@
    ADMIN DASHBOARD SPECIFIC STYLES
    ========================================= */
 
+html[data-theme="light"] {
+    color-scheme: light !important;
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark !important;
+}
+
 :root {
     /* DEFAULT DARK MODE COLORS */
     --admin-bg: #060813;
@@ -30,6 +38,8 @@
 }
 
 body.light-mode {
+    color-scheme: light !important;
+    cursor: auto;
     --admin-bg: #f1f5f9; /* Slate 100 - Fondo principal */
     --admin-bg-rgb: 241, 245, 249;
     --admin-surface: #f8fafc; /* Slate 50 - Sidebar */
@@ -51,6 +61,10 @@ body.light-mode {
     --glass-border: var(--admin-border);
     --text-rgb: var(--admin-text-rgb);
     --shadow: var(--admin-shadow);
+}
+
+body:not(.light-mode) {
+    color-scheme: dark !important;
 }
 
 body {
@@ -955,10 +969,15 @@ input:checked + .slider:before {
 }
 
 .dropdown-trigger.active-trigger {
-    background: var(--theme-accent);
-    color: #000;
-    box-shadow: 0 4px 15px var(--primary-glow);
-    border-color: transparent;
+    background: var(--theme-accent) !important;
+    color: #ffffff !important;
+    border-color: var(--theme-accent) !important;
+    box-shadow: 0 4px 14px rgba(247, 147, 30, 0.35) !important;
+}
+
+.dropdown-trigger.active-trigger span,
+.dropdown-trigger.active-trigger i {
+    color: #ffffff !important;
 }
 
 .dropdown-trigger i {
@@ -2400,7 +2419,53 @@ body.light-mode input[type="date"]::-webkit-calendar-picker-indicator {
 
 .sub-tab-btn.active {
     background: var(--theme-accent) !important;
-    color: #000 !important;
+    color: #fff !important;
+}
+
+/* Base Subtab Badge Pill */
+.sub-tab-btn span {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 20px !important;
+    height: 20px !important;
+    padding: 0 7px !important;
+    border-radius: 20px !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Inactive Subtab Badge Colors */
+#badge-incoming {
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: #10b981 !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+#badge-preparing {
+    background: rgba(245, 158, 11, 0.18) !important;
+    color: #f59e0b !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+#badge-unpaid {
+    background: rgba(59, 130, 246, 0.18) !important;
+    color: #60a5fa !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+/* Active Subtab Badge (White pill with dark text on top of orange button) */
+.sub-tab-btn.active #badge-incoming,
+.sub-tab-btn.active #badge-preparing,
+.sub-tab-btn.active #badge-unpaid,
+.sub-tab-btn.active span {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: none !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+    font-weight: 900 !important;
 }
 
 .order-settings-btn {
@@ -2470,20 +2535,29 @@ body.light-mode .order-settings-btn:hover {
     transform: scale(1.01) translateX(5px);
 }
 
-/* Indicador de estado lateral */
+/* Indicador de estado lateral (Borde izquierdo de color) */
+.order-card-pro {
+    position: relative;
+}
+
 .order-card-pro::before {
     content: '';
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 4px;
+    width: 6px;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
     transition: all 0.3s;
+    z-index: 2;
 }
 
-.order-card-pro.status-pending::before { background: #f7931e; box-shadow: 0 0 15px rgba(247, 147, 30, 0.4); }
-.order-card-pro.status-accepted::before { background: #4caf50; box-shadow: 0 0 15px rgba(76, 175, 80, 0.4); }
-.order-card-pro.status-cancelled::before { background: #ff5252; box-shadow: 0 0 15px rgba(255, 82, 82, 0.4); }
+.order-card-pro.status-pending::before { background: #4caf50; box-shadow: 0 0 12px rgba(76, 175, 80, 0.5); }
+.order-card-pro.status-confirmed::before { background: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
+.order-card-pro.status-dispatched::before { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
+.order-card-pro.status-accepted::before { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
+.order-card-pro.status-cancelled::before { background: #ff5252; box-shadow: 0 0 12px rgba(255, 82, 82, 0.5); }
 
 /* Nuevo Badge en Sidebar */
 .sidebar-btn {
@@ -2806,38 +2880,161 @@ body.light-mode .modal-content {
     box-shadow: 0 30px 100px rgba(0,0,0,0.15) !important;
 }
 
+/* Universal Light Mode Input & Form Control Fix */
+/* Excludes checkboxes, radios, and file inputs to avoid breaking toggle switches */
+body.light-mode input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+body.light-mode select,
+body.light-mode textarea,
+body.light-mode input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+body.light-mode select:focus,
+body.light-mode textarea:focus,
+body.light-mode .form-group input:not([type="checkbox"]):not([type="radio"]),
+body.light-mode .admin-form input:not([type="checkbox"]):not([type="radio"]),
+body.light-mode .modal-content input:not([type="checkbox"]):not([type="radio"]),
+body.light-mode .modal-content select,
+body.light-mode .modal-content textarea {
+    color-scheme: light !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    caret-color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+}
+
+/* Dark I-beam cursor for text inputs in Light Mode (bypasses Windows cursor color settings) */
+body.light-mode input[type="text"],
+body.light-mode input[type="number"],
+body.light-mode input[type="tel"],
+body.light-mode input[type="email"],
+body.light-mode input[type="password"],
+body.light-mode input[type="search"],
+body.light-mode input:not([type]),
+body.light-mode textarea {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='18'%3E%3Crect x='1' y='0' width='6' height='2' rx='1' fill='%230f172a'/%3E%3Crect x='3.25' y='2' width='1.5' height='14' fill='%230f172a'/%3E%3Crect x='1' y='16' width='6' height='2' rx='1' fill='%230f172a'/%3E%3C/svg%3E") 4 9, text !important;
+}
+
+body.light-mode input:-webkit-autofill,
+body.light-mode input:-webkit-autofill:hover,
+body.light-mode input:-webkit-autofill:focus,
+body.light-mode textarea:-webkit-autofill,
+body.light-mode textarea:-webkit-autofill:hover,
+body.light-mode textarea:-webkit-autofill:focus,
+body.light-mode select:-webkit-autofill,
+body.light-mode select:-webkit-autofill:hover,
+body.light-mode select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a !important;
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    caret-color: #0f172a !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+}
+
+body.light-mode input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+body.light-mode select:focus,
+body.light-mode textarea:focus,
+body.light-mode .input-focus-accent:focus-within {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    border-color: var(--theme-accent, #f7931e) !important;
+    box-shadow: 0 0 0 3px rgba(247, 147, 30, 0.25) !important;
+    outline: none !important;
+}
+
+body.light-mode input::placeholder,
+body.light-mode textarea::placeholder,
+body.light-mode input::-webkit-input-placeholder,
+body.light-mode textarea::-webkit-input-placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
+}
+
 /* Dynamic Colored Header for Light Mode Only */
 body.light-mode .admin-header-main {
     background: var(--theme-accent) !important;
     border-bottom: none !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12) !important;
 }
 
 body.light-mode .admin-header-main h2,
 body.light-mode .admin-header-main h2 .accent {
     color: #ffffff !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
 }
 
-body.light-mode .admin-header-main .theme-toggle-btn,
+body.light-mode .admin-header-main .header-action-btn,
+body.light-mode .admin-header-main .theme-toggle-btn {
+    background: #ffffff !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+}
+
 body.light-mode .admin-header-main .admin-user-badge {
-    background: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.28) !important;
     color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    box-shadow: none !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08) !important;
 }
 
-body.light-mode .admin-header-main .theme-toggle-btn i,
-body.light-mode .admin-header-main .admin-user-badge i,
-body.light-mode .admin-header-main .theme-toggle-btn svg,
-body.light-mode .admin-header-main .admin-user-badge svg,
-body.light-mode .admin-header-main .theme-toggle-btn span,
-body.light-mode .admin-header-main .admin-user-badge span {
+body.light-mode .admin-header-main .admin-user-badge * {
     color: #ffffff !important;
+    font-weight: 800 !important;
 }
 
+body.light-mode .admin-header-main .header-action-btn:hover,
 body.light-mode .admin-header-main .theme-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.3) !important;
+    background: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18) !important;
+}
+
+/* Light mode Glass Cards & Contrast Polish */
+body.light-mode .glass,
+body.light-mode .chart-card,
+body.light-mode .metric-card,
+body.light-mode .order-card-pro {
+    background: #ffffff !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+}
+
+body.light-mode .metric-label,
+body.light-mode .chart-card h3,
+body.light-mode .chart-card h4,
+body.light-mode .tab-header-pro h2,
+body.light-mode .tab-header-pro h3 {
+    color: #0f172a !important;
+}
+
+body.light-mode .chart-card p,
+body.light-mode .tab-header-pro p,
+body.light-mode .metric-label {
+    color: #475569 !important;
+}
+
+body.light-mode #orders-search-input,
+body.light-mode #history-search-input,
+body.light-mode #expense-search-input,
+body.light-mode #expense-month-filter {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode #orders-search-input::placeholder,
+body.light-mode #history-search-input::placeholder,
+body.light-mode #expense-search-input::placeholder {
+    color: #94a3b8 !important;
+}
+
+body.light-mode #expense-month-filter option {
+    background: #ffffff !important;
+    color: #0f172a !important;
 }
 
 /* Force white text on solid primary buttons globally */
@@ -3072,8 +3269,175 @@ body.light-mode .detail-total span:first-child {
 #close-delete-range {
     background: #37474f !important; /* Blue Grey */
     color: #ffffff !important;
-    border-radius: 12px !important;
-    padding: 1rem !important;
+}
+
+/* Light Mode Modals Polish - Order Settings & Order Details */
+
+/* 1. Order Settings Modal in Light Mode */
+body.light-mode #order-settings-modal .modal-content {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.15) !important;
+}
+
+body.light-mode #order-settings-modal h3,
+body.light-mode #order-settings-modal p {
+    color: #0f172a !important;
+}
+
+body.light-mode #order-settings-modal button[style*="transparent"] {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .badge-tag {
+    background: #f8fafc !important;
+    color: #d97706 !important;
+    border: 1px solid #cbd5e1 !important;
+    font-weight: 800 !important;
+}
+
+body.light-mode .badge-tag:hover {
+    background: #fff7ed !important;
+    border-color: #f97316 !important;
+}
+
+body.light-mode #conf-wa-template {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1.5px solid #cbd5e1 !important;
+}
+
+body.light-mode button[onclick*="resetStreetFeedWATemplate"] {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    border: 1.5px solid #cbd5e1 !important;
+    font-weight: 800 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+}
+
+body.light-mode button[onclick*="resetStreetFeedWATemplate"] i,
+body.light-mode button[onclick*="resetStreetFeedWATemplate"] * {
+    color: #334155 !important;
+}
+
+body.light-mode button[onclick*="resetStreetFeedWATemplate"]:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode #close-order-settings,
+body.light-mode #detail-close-btn,
+body.light-mode #close-order-details {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+/* 2. Order Details Modal in Light Mode */
+body.light-mode #order-details-modal .modal-content {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.15) !important;
+}
+
+body.light-mode #order-details-modal h3,
+body.light-mode #order-details-modal #detail-order-id {
+    color: #0f172a !important;
+}
+
+body.light-mode #order-details-modal #detail-order-date {
+    color: #64748b !important;
+    font-weight: 700 !important;
+}
+
+body.light-mode #order-details-modal button[onclick*="printThermalTicket"],
+body.light-mode #order-details-modal button[title*="Ticket Térmico POS"] {
+    background: #fff7ed !important;
+    border: 1.5px solid #f97316 !important;
+    color: #ea580c !important;
+    font-weight: 900 !important;
+    box-shadow: 0 4px 12px rgba(247, 147, 30, 0.15) !important;
+}
+
+body.light-mode #order-details-modal button[onclick*="printThermalTicket"] *,
+body.light-mode #order-details-modal button[title*="Ticket Térmico POS"] * {
+    color: #ea580c !important;
+    font-weight: 900 !important;
+}
+
+body.light-mode #order-details-modal button[onclick*="updateOrderStatus"][style*="ff5252"],
+body.light-mode #order-details-modal button[onclick*="updateOrderStatus"][style*="d32f2f"],
+body.light-mode #order-details-modal button[onclick*="updateOrderStatus"][style*="255, 82"] {
+    background: #fef2f2 !important;
+    border: 1.5px solid #ef4444 !important;
+    color: #dc2626 !important;
+    font-weight: 900 !important;
+}
+
+body.light-mode #order-details-modal button[onclick*="updateOrderStatus"][style*="ff5252"] *,
+body.light-mode #order-details-modal button[onclick*="updateOrderStatus"][style*="d32f2f"] * {
+    color: #dc2626 !important;
+    font-weight: 900 !important;
+}
+
+body.light-mode #order-details-modal button[onclick*="updateOrderStatus"][style*="4caf50"],
+body.light-mode #order-details-modal button[onclick*="updateOrderStatus"][style*="10b981"] {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    box-shadow: 0 4px 15px rgba(16,185,129,0.3) !important;
+}
+
+/* 3. Employee Profile Modal Footer in Light Mode */
+body.light-mode #employee-profile-modal [style*="background: rgba(0,0,0,0.15)"] {
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .emp-personal-tile {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+}
+
+body.light-mode #emp-profile-edit-btn {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+}
+
+body.light-mode #emp-profile-edit-btn:hover {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+}
+
+body.light-mode button[onclick*="exportSingleEmployeePDF"] {
+    background: #fff7ed !important;
+    border: 1.5px solid #f97316 !important;
+    color: #ea580c !important;
+    font-weight: 900 !important;
+    box-shadow: 0 4px 12px rgba(247,147,30,0.15) !important;
+}
+
+body.light-mode button[onclick*="exportSingleEmployeePDF"] * {
+    color: #ea580c !important;
+    font-weight: 900 !important;
+}
+
+body.light-mode #emp-profile-delete-btn {
+    background: #fef2f2 !important;
+    border: 1.5px solid #ef4444 !important;
+    color: #dc2626 !important;
+    font-weight: 900 !important;
+    box-shadow: 0 4px 12px rgba(239,68,68,0.12) !important;
+}
+
+body.light-mode #emp-profile-delete-btn * {
+    color: #dc2626 !important;
 }
 
 /* Dashboard History & Tools Light Mode Fixes */
@@ -3331,6 +3695,7 @@ body.light-mode .combo-admin-card {
    LIGHT MODE FIXES FOR MANUAL ORDER MODAL
    ====================================================== */
 body.light-mode #manual-order-cat-filter,
+body.light-mode #manual-cat-trigger,
 body.light-mode #manual-product-search,
 body.light-mode #manual-cust-name,
 body.light-mode #manual-cust-phone,
@@ -3699,7 +4064,7 @@ body.light-mode #manual-order-products-container::-webkit-scrollbar-thumb {
     align-items: center;
     cursor: pointer;
     width: 100%;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-main, #ffffff);
 }
@@ -3711,28 +4076,29 @@ body.light-mode .admin-custom-select-trigger {
 .admin-custom-select-panel {
     display: none;
     position: absolute;
-    top: calc(100% + 8px);
-    left: -12px;
-    right: -12px;
-    background: #1e293b; /* Fondo oscuro elegante */
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-    max-height: 250px;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    max-height: 200px;
     overflow-y: auto;
     z-index: 1000;
-    padding: 4px;
+    padding: 3px;
 }
 
 body.light-mode .admin-custom-select-panel {
     background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+    border: 1.5px solid #cbd5e1 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12) !important;
 }
 
 /* Scrollbar para el panel */
 .admin-custom-select-panel::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
 }
 .admin-custom-select-panel::-webkit-scrollbar-track {
     background: transparent;
@@ -3746,12 +4112,16 @@ body.light-mode .admin-custom-select-panel::-webkit-scrollbar-thumb {
 }
 
 .admin-custom-select-item {
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 5px 8px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 600;
     color: #cbd5e1;
-    transition: all 0.2s;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body.light-mode .admin-custom-select-item {
@@ -3759,17 +4129,154 @@ body.light-mode .admin-custom-select-item {
 }
 
 .admin-custom-select-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+    background: #0f172a !important;
+    color: #ffffff !important;
 }
 
 body.light-mode .admin-custom-select-item:hover {
-    background: #f1f5f9 !important;
-    color: #0f172a !important;
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
 }
 
 .admin-custom-select-item.selected {
     background: var(--theme-accent, #f7931e) !important;
     color: #ffffff !important;
+    font-weight: 800 !important;
 }
+
+/* ======================================================
+   EMPLOYEE ACTION BUTTONS & MODAL STYLING
+   ====================================================== */
+.emp-name-btn {
+    cursor: pointer;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.emp-name-btn:hover {
+    color: var(--theme-accent, #f7931e) !important;
+    text-decoration: underline;
+}
+
+.emp-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+    background: rgba(var(--text-rgb, 255, 255, 255), 0.06);
+    color: var(--text, #ffffff);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
+    outline: none;
+}
+
+.emp-action-btn:hover {
+    background: rgba(var(--primary-rgb, 247, 147, 30), 0.18);
+    border-color: var(--theme-accent, #f7931e);
+    color: var(--theme-accent, #f7931e);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.emp-action-btn.delete-btn {
+    color: #ef4444;
+}
+
+.emp-action-btn.delete-btn:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+body.light-mode .emp-action-btn {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+body.light-mode .emp-action-btn:hover {
+    background: rgba(var(--primary-rgb, 247, 147, 30), 0.12);
+    border-color: var(--theme-accent, #f7931e);
+    color: var(--theme-accent, #f7931e);
+    box-shadow: 0 4px 12px rgba(247, 147, 30, 0.15);
+}
+
+body.light-mode .emp-action-btn.delete-btn {
+    color: #dc2626;
+}
+
+body.light-mode .emp-action-btn.delete-btn:hover {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: #fca5a5;
+    color: #dc2626;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+/* Enhancements for custom select trigger padding & border (matches inputs) */
+.admin-custom-select-trigger {
+    padding: 0.45rem 0.65rem !important;
+    border-radius: 8px !important;
+    font-size: 0.8rem !important;
+    min-height: 35px !important;
+    border: 1px solid var(--glass-border, rgba(255,255,255,0.1)) !important;
+    background: var(--surface, rgba(255,255,255,0.03)) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+.admin-custom-select-trigger:hover {
+    border-color: var(--theme-accent, #f7931e) !important;
+}
+
+body.light-mode .admin-custom-select-trigger {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode .admin-custom-select-trigger:hover {
+    border-color: var(--theme-accent, #f7931e) !important;
+}
+
+/* =========================================
+   POS THERMAL TICKET PRINT STYLES (58mm / 80mm)
+   ========================================= */
+.thermal-print-area {
+    display: none;
+}
+
+@media print {
+    body > *:not(#thermal-ticket-print-area) {
+        display: none !important;
+    }
+    
+    #thermal-ticket-print-area {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 78mm !important;
+        max-width: 100% !important;
+        padding: 4mm !important;
+        margin: 0 auto !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Courier New', Courier, monospace, sans-serif !important;
+        font-size: 12px !important;
+        line-height: 1.35 !important;
+        box-sizing: border-box !important;
+    }
+
+    @page {
+        size: auto;
+        margin: 0mm;
+    }
+}
+
 

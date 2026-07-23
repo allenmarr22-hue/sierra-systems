@@ -332,6 +332,21 @@ async function initializeDatabase() {
             )
         `);
 
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS streetfeed_employees (
+                id VARCHAR(50) PRIMARY KEY,
+                business_id BIGINT NOT NULL,
+                name VARCHAR(150) NOT NULL,
+                username VARCHAR(100) NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                pin VARCHAR(10) NULL,
+                role VARCHAR(50) NOT NULL DEFAULT 'mesero',
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+            )
+        `);
+
 
 
         // Insertar configuración inicial si no existe
@@ -1375,6 +1390,90 @@ async function incrementUserSessionVersion(username) {
     await pool.query('UPDATE users SET session_version = session_version + 1 WHERE user = ?', [username]);
 }
 
+// --- GESTIÓN DE EMPLEADOS STREETFEED ---
+async function getEmployeesByBusinessId(businessId) {
+    try {
+        const [rows] = await pool.query(
+            'SELECT id, business_id, name, username, pin, role, status, created_at FROM streetfeed_employees WHERE business_id = ? ORDER BY name ASC',
+            [businessId]
+        );
+        return rows;
+    } catch (e) {
+        console.error('[DB] Error obteniendo empleados:', e.message);
+        return [];
+    }
+}
+
+async function findEmployeeByCredentials(businessId, usernameOrPin, password = null) {
+    if (!usernameOrPin) return null;
+    const rawTerm = usernameOrPin.trim();
+    const cleanUser = rawTerm.replace(/^@/, '').toLowerCase();
+
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM streetfeed_employees WHERE business_id = ? AND (LOWER(username) = ? OR username = ? OR pin = ?)',
+            [businessId, cleanUser, rawTerm, rawTerm]
+        );
+        if (rows.length === 0) return null;
+        const emp = rows[0];
+        if (emp.status !== 'active') return null;
+
+        // 1. Si ingresó por PIN en el campo principal (ej: '1234')
+        if (emp.pin && emp.pin.toString() === rawTerm) {
+            return emp;
+        }
+
+        // 2. Si ingresó por Usuario, verificar si la clave ingresada coincide con su PIN o su contraseña
+        if (password) {
+            const cleanPass = password.toString().trim();
+            if (emp.pin && emp.pin.toString() === cleanPass) {
+                return emp;
+            }
+            if (verifyPassword(cleanPass, emp.password)) {
+                return emp;
+            }
+        }
+
+        return null;
+    } catch (e) {
+        console.error('[DB] Error buscando empleado:', e.message);
+        return null;
+    }
+}
+
+async function createEmployee({ businessId, name, username, password, pin = null, role = 'mesero' }) {
+    const id = `emp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const effectivePassword = password || pin || '123456';
+    const hashedPassword = hashPassword(effectivePassword);
+    await pool.query(
+        'INSERT INTO streetfeed_employees (id, business_id, name, username, password, pin, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, businessId, name, username, hashedPassword, pin || null, role, 'active']
+    );
+    return { id, business_id: businessId, name, username, pin, role, status: 'active' };
+}
+
+async function updateEmployee(id, businessId, { name, username, password, pin, role, status }) {
+    const updates = [];
+    const params = [];
+    if (name !== undefined) { updates.push('name = ?'); params.push(name); }
+    if (username !== undefined) { updates.push('username = ?'); params.push(username); }
+    if (password) { updates.push('password = ?'); params.push(hashPassword(password)); }
+    if (pin !== undefined) { updates.push('pin = ?'); params.push(pin || null); }
+    if (role !== undefined) { updates.push('role = ?'); params.push(role); }
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+
+    if (updates.length === 0) return true;
+
+    params.push(id, businessId);
+    await pool.query(`UPDATE streetfeed_employees SET ${updates.join(', ')} WHERE id = ? AND business_id = ?`, params);
+    return true;
+}
+
+async function deleteEmployee(id, businessId) {
+    await pool.query('DELETE FROM streetfeed_employees WHERE id = ? AND business_id = ?', [id, businessId]);
+    return true;
+}
+
 // --- EXPORTAR ---
 module.exports = {
     pool,
@@ -1424,6 +1523,14 @@ module.exports = {
     // Sesiones Admin
     findUserByUsername,
     incrementAdminSessionVersion,
-    incrementUserSessionVersion
+    incrementUserSessionVersion,
+
+    // Empleados StreetFeed
+    getEmployeesByBusinessId,
+    findEmployeeByCredentials,
+    createEmployee,
+    updateEmployee,
+    deleteEmployee
 };
+
 

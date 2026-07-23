@@ -70,15 +70,40 @@ let state = {
         { id: 'bebidas', name: 'Bebidas', icon: 'coffee' }
     ],
     auth: (() => {
-        let parsed = JSON.parse(localStorage.getItem('streetfeed_auth'));
-        if (!parsed) {
-            parsed = {
-                user: 'admin',
-                pass: '123456'
-            };
+        let parsed = null;
+        try {
+            parsed = JSON.parse(localStorage.getItem('streetfeed_auth'));
+        } catch (e) {}
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const instanceId = urlParams.get('instanceId') || '';
+
+        let tempCreds = null;
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('mod_creds_')) {
+                    if (!instanceId || k.endsWith(instanceId) || k.includes(instanceId)) {
+                        const data = JSON.parse(localStorage.getItem(k));
+                        if (data && data.tempUser && data.tempPass) {
+                            tempCreds = { user: data.tempUser, pass: data.tempPass };
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+
+        if (!parsed || (parsed.user === 'admin' && parsed.pass === '123456' && tempCreds)) {
+            if (tempCreds) {
+                parsed = { ...tempCreds, expensePass: parsed?.expensePass || '' };
+                try { localStorage.setItem('streetfeed_auth', JSON.stringify(parsed)); } catch (e) {}
+            } else if (!parsed) {
+                parsed = { user: 'admin', pass: '123456', expensePass: '' };
+            }
         } else if (parsed.pass === '123456789') {
             parsed.pass = '123456';
-            localStorage.setItem('streetfeed_auth', JSON.stringify(parsed));
+            try { localStorage.setItem('streetfeed_auth', JSON.stringify(parsed)); } catch (e) {}
         }
         if (parsed.expensePass === undefined) parsed.expensePass = '';
         return parsed;
@@ -2101,21 +2126,89 @@ function setupEventListeners() {
                 console.error('Error fetching settings config:', err);
             }
 
+            const urlParams = new URLSearchParams(window.location.search);
+            const instanceId = urlParams.get('instanceId') || '';
+            let tempAuthMatch = false;
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('mod_creds_')) {
+                        if (!instanceId || k.endsWith(instanceId) || k.includes(instanceId)) {
+                            const data = JSON.parse(localStorage.getItem(k));
+                            if (data && data.tempUser === u && data.tempPass === p) {
+                                tempAuthMatch = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+
             if ((u === state.auth.user && p === state.auth.pass) || 
                 (u === 'admin' && p === '123456') ||
-                (u === dynamicDemoUser && p === dynamicDemoPass)) {
+                (u === dynamicDemoUser && p === dynamicDemoPass) ||
+                tempAuthMatch) {
+
+                if (tempAuthMatch || (u !== state.auth.user || p !== state.auth.pass)) {
+                    state.auth.user = u;
+                    state.auth.pass = p;
+                    localStorage.setItem('streetfeed_auth', JSON.stringify(state.auth));
+                }
+
                 state.isLoggedIn = true;
                 localStorage.setItem('streetfeed_isLoggedIn', 'true');
+                if (typeof window.applyRolePermissions === 'function') {
+                    window.applyRolePermissions('admin', 'Propietario');
+                }
                 switchView('admin');
             } else {
-                showToast('Credenciales incorrectas', 'error');
+                // Intentar autenticación como colaborador / empleado por Usuario o PIN
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const instanceId = urlParams.get('instanceId') || '';
+
+                    const empRes = await fetch('/api/modules/streetfeed/login-employee', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ instanceId, usernameOrPin: u, password: p })
+                    });
+
+                    if (empRes.ok) {
+                        const empData = await empRes.json();
+                        if (empData.success && empData.employee) {
+                            state.isLoggedIn = true;
+                            localStorage.setItem('streetfeed_isLoggedIn', 'true');
+                            localStorage.setItem('streetfeed_employee_token', empData.token);
+                            localStorage.setItem('streetfeed_employee_user', JSON.stringify(empData.employee));
+
+                            if (typeof window.applyRolePermissions === 'function') {
+                                window.applyRolePermissions(empData.employee.role, empData.employee.name);
+                            }
+
+                            switchView('admin');
+                            showToast(`¡Bienvenido ${empData.employee.name}! 👋`, 'success');
+                            return;
+                        }
+                    }
+                } catch (empErr) {
+                    console.error('Error al intentar login de empleado:', empErr);
+                }
+
+                showToast('Credenciales o PIN incorrectos', 'error');
             }
         };
     }
 
+
+
     const logoutAction = () => {
         state.isLoggedIn = false;
         localStorage.setItem('streetfeed_isLoggedIn', 'false');
+        localStorage.removeItem('streetfeed_employee_token');
+        localStorage.removeItem('streetfeed_employee_user');
+        if (typeof window.applyRolePermissions === 'function') {
+            window.applyRolePermissions('admin', 'Propietario');
+        }
         // Clear credentials on logout for security
         const userInp = document.getElementById('login-user');
         const passInp = document.getElementById('login-pass');
@@ -2484,6 +2577,23 @@ function initCheckout() {
         const baseTotal = calculateTotal();
         const delFee = (customer.deliveryType === 'delivery') ? (state.config.deliveryFee || 0) : 0;
 
+        const getAttendedByInfo = () => {
+            try {
+                const empStr = localStorage.getItem('streetfeed_employee_user');
+                if (empStr) {
+                    const emp = JSON.parse(empStr);
+                    if (emp && emp.name) {
+                        const roleTitle = emp.role === 'mesero' ? 'Mesero' : (emp.role === 'cajero' ? 'Cajero' : (emp.role === 'cocina' ? 'Cocina' : 'Administrador'));
+                        return `${emp.name} (${roleTitle})`;
+                    }
+                }
+            } catch(e) {}
+            if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
+                return 'Propietario / Administrador';
+            }
+            return 'Cliente (Menú Digital)';
+        };
+
         const orderData = {
             id: orderId,
             date: new Date().toISOString(),
@@ -2492,6 +2602,7 @@ function initCheckout() {
             deliveryFee: delFee,
             total: baseTotal + delFee,
             customer: customer,
+            attendedBy: getAttendedByInfo(),
             status: 'pending' // Importante para el BI y el Dashboard
         };
 

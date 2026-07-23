@@ -2356,6 +2356,23 @@ function initCheckout() {
         const baseTotal = calculateTotal();
         const delFee = (customer.deliveryType === 'delivery') ? (state.config.deliveryFee || 0) : 0;
 
+        const getAttendedByInfo = () => {
+            try {
+                const empStr = localStorage.getItem('streetfeed_employee_user');
+                if (empStr) {
+                    const emp = JSON.parse(empStr);
+                    if (emp && emp.name) {
+                        const roleTitle = emp.role === 'mesero' ? 'Mesero' : (emp.role === 'cajero' ? 'Cajero' : (emp.role === 'cocina' ? 'Cocina' : 'Administrador'));
+                        return `${emp.name} (${roleTitle})`;
+                    }
+                }
+            } catch(e) {}
+            if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
+                return 'Propietario / Administrador';
+            }
+            return 'Cliente (Menú Digital)';
+        };
+
         const orderData = {
             id: orderId,
             date: new Date().toISOString(),
@@ -2364,6 +2381,7 @@ function initCheckout() {
             deliveryFee: delFee,
             total: baseTotal + delFee,
             customer: customer,
+            attendedBy: getAttendedByInfo(),
             status: 'pending' // Importante para el BI y el Dashboard
         };
 

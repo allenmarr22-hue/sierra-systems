@@ -373,7 +373,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=2.1">
-    <link rel="stylesheet" href="css/admin.css?v=4.29">
+    <link rel="stylesheet" href="css/admin.css?v=4.30">
 
     <!-- Disable public logo shimmer on admin panel -->
     <style>
@@ -395,6 +395,18 @@
             background-clip: unset !important;
             -webkit-text-fill-color: var(--primary) !important;
             animation: none !important;
+        }
+
+        /* Modern Select & Option Dropdowns Styling */
+        select option {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+            padding: 12px 16px !important;
+            font-size: 0.88rem !important;
+        }
+        select option:hover, select option:focus, select option:checked {
+            background-color: var(--theme-accent) !important;
+            color: #ffffff !important;
         }
     </style>
     <!-- Chart.js for Pro Graphics -->
@@ -529,10 +541,19 @@
                             <i data-lucide="clock"></i>
                             <span>Historial</span>
                         </button>
+                        <button class="sidebar-btn" data-tab="employees-tab" id="nav-btn-employees" title="Gestión de Personal & Roles">
+                            <i data-lucide="users"></i>
+                            <span>Personal</span>
+                        </button>
+                        <button class="sidebar-btn" id="nav-btn-my-metrics" data-tab="my-metrics-tab" title="Mis Métricas y Ventas" style="display: none;">
+                            <i data-lucide="line-chart"></i>
+                            <span>Mis Métricas</span>
+                        </button>
                         <button class="sidebar-btn" data-tab="config-tab" title="Configuración">
                             <i data-lucide="settings"></i>
                             <span>Ajustes</span>
                         </button>
+
                     </nav>
                     <div class="sidebar-bottom">
                         <button id="admin-logout" class="sidebar-btn" title="Salir al Menú">
@@ -546,18 +567,24 @@
                     <div class="admin-header-main">
                         <h2 class="font-serif" style="margin: 0; font-size: 1.6rem;">Panel de <span class="accent">Control</span></h2>
                         
-                        <div style="display: flex; gap: 1rem; align-items: center;">
-                            <!-- Theme Toggle -->
-                            <button id="theme-toggle" class="theme-toggle-btn" title="Cambiar modo claro/oscuro">
-                                <span id="theme-icon-container">
-                                    <i data-lucide="moon" id="theme-icon"></i>
+                        <div style="display: flex; gap: 0.6rem; align-items: center;">
+                            <!-- Sound Notification Toggle (Icon Only) -->
+                            <button id="sound-toggle" class="header-action-btn" title="Activar/Silenciar alarma de pedidos" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
+                                <span id="sound-icon-container" style="display: flex; align-items: center; justify-content: center;">
+                                    <i data-lucide="bell" id="sound-icon" style="width: 20px; height: 20px; color: #10b981;"></i>
                                 </span>
-                                <span id="theme-text">Modo Noche</span>
+                            </button>
+
+                            <!-- Theme Toggle (Icon Only) -->
+                            <button id="theme-toggle" class="header-action-btn" title="Cambiar Modo Día / Noche" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
+                                <span id="theme-icon-container" style="display: flex; align-items: center; justify-content: center;">
+                                    <i data-lucide="moon" id="theme-icon" style="width: 20px; height: 20px;"></i>
+                                </span>
                             </button>
 
                             <div class="admin-user-badge">
                                 <i data-lucide="user-circle" style="width: 20px; height: 20px; color: var(--theme-accent);"></i>
-                                <span id="admin-name-display">Administrador</span>
+                                <span id="admin-name-display">Propietario</span>
                             </div>
 
                             <!-- Mobile Landscape Logout Button -->
@@ -758,6 +785,137 @@
                         </div>
                     </div>
 
+                    <!-- Tab: Mis Métricas para Empleado / Mesero -->
+                    <div id="my-metrics-tab" class="admin-tab-content hidden">
+                        <div class="stats-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <div>
+                                <h2 class="font-serif" id="my-metrics-header-title">Mis Métricas & Rendimiento</h2>
+                                <p style="color: var(--text-dim);" id="my-metrics-header-subtitle">Análisis personal de ventas, comisiones y atención de pedidos.</p>
+                            </div>
+                            <div class="stats-filters-wrapper">
+                                <div class="stats-filters glass">
+                                    <!-- Reset Button -->
+                                    <button id="my-reset-stats-btn" class="btn-reset-stats" title="Limpiar datos">
+                                        <i data-lucide="refresh-cw"></i> <span>Reset</span>
+                                    </button>
+
+                                    <!-- Specific Date Picker -->
+                                    <div id="my-stats-date-wrapper" class="date-picker-mini" title="Buscar día específico">
+                                        <i data-lucide="calendar"></i>
+                                        <input type="date" id="my-stats-date-filter">
+                                    </div>
+
+                                    <!-- Custom Range Dropdown -->
+                                    <div class="custom-dropdown" id="my-range-dropdown">
+                                        <div class="dropdown-trigger" id="my-range-trigger">
+                                            <span id="my-current-range">Hoy</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="today" class="active">Hoy</li>
+                                            <li data-value="yesterday">Ayer</li>
+                                            <li data-value="week">7 Días</li>
+                                            <li data-value="fortnight">15 Días</li>
+                                            <li data-value="month">Este Mes</li>
+                                            <li data-value="all">Todo</li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Custom Month Dropdown -->
+                                    <div class="custom-dropdown" id="my-month-dropdown">
+                                        <div class="dropdown-trigger" id="my-month-trigger">
+                                            <span id="my-current-month">Meses...</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="">Meses...</li>
+                                            <li data-value="0">Enero</li>
+                                            <li data-value="1">Febrero</li>
+                                            <li data-value="2">Marzo</li>
+                                            <li data-value="3">Abril</li>
+                                            <li data-value="4">Mayo</li>
+                                            <li data-value="5">Junio</li>
+                                            <li data-value="6">Julio</li>
+                                            <li data-value="7">Agosto</li>
+                                            <li data-value="8">Septiembre</li>
+                                            <li data-value="9">Octubre</li>
+                                            <li data-value="10">Noviembre</li>
+                                            <li data-value="11">Diciembre</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Cards Grid (Dinamico segun filtro activo - 4 tarjetas en 1 Fila) -->
+                        <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2.2rem;">
+                            <!-- Ventas Atendidas -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(76, 175, 80, 0.12); color: #4caf50;">
+                                    <i data-lucide="dollar-sign"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label" id="my-stat-sales-label">Ventas Atendidas</span>
+                                    <span class="metric-value" id="my-stat-sales" style="color: #4caf50;">$0</span>
+                                </div>
+                            </div>
+
+                            <!-- Comisión Ganada -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(236, 72, 153, 0.12); color: #ec4899;">
+                                    <i data-lucide="percent"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label" id="my-stat-comm-rate">Comisión (10%)</span>
+                                    <span class="metric-value" id="my-stat-commission" style="color: #ec4899;">$0</span>
+                                </div>
+                            </div>
+
+                            <!-- Pedidos Atendidos -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(247, 147, 30, 0.12); color: var(--theme-accent);">
+                                    <i data-lucide="shopping-bag"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Pedidos Atendidos</span>
+                                    <span class="metric-value" id="my-stat-orders-count">0</span>
+                                </div>
+                            </div>
+
+                            <!-- Producto Estrella -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(217, 119, 6, 0.15); color: #d97706;">
+                                    <i data-lucide="award"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Tu Producto Estrella</span>
+                                    <span class="metric-value" id="my-stat-top-dish" style="font-size: 1.05rem; margin-top: 0.2rem; color: #d97706;">---</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Grid (Ventas Diarias y Ventas del Mes) -->
+                        <div class="charts-container-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <!-- Ventas & Comisiones Diarias -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="trending-up" style="color: #ec4899; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ventas & Comisiones del Día</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Comportamiento de tus ventas e ingresos por comisión día a día.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-my-sales-trend"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Ventas del Mes -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="bar-chart-3" style="color: #2196f3; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Rendimiento de Ventas del Mes</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Comparativa de tus ventas y comisiones alcanzadas en el mes.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-my-monthly-revenue"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Tab: Libreta de Gastos -->
                     <div id="expenses-tab" class="admin-tab-content hidden">
                         <!-- Lock Screen (Frosted Glass) -->
@@ -877,17 +1035,21 @@
                         <div class="tab-header-pro" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
                             <h2 class="font-serif">Gestión de Pedidos</h2>
                             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                                <!-- Sub-tabs: only Entrantes and Pendientes -->
+                                <!-- Sub-tabs: Entrantes, En Preparación, Por Cobrar -->
                                 <div class="order-sub-tabs glass" style="display: flex; padding: 0.3rem; border-radius: 12px; gap: 0.3rem;">
-                                    <button class="sub-tab-btn active" data-subtab="incoming" style="padding: 0.6rem 1rem; border: 1px solid transparent; border-radius: 8px; background: var(--theme-accent); color: #fff; font-weight: 700; cursor: pointer; transition: all 0.2s; flex: 1; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                                        Entrantes
-                                        <span id="badge-incoming" style="background: #4caf50; color: #fff; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 900; display: none;">0</span>
+                                    <button class="sub-tab-btn active" data-subtab="incoming" style="padding: 0.6rem 0.95rem; border: 1px solid transparent; border-radius: 8px; background: var(--theme-accent); color: #fff; font-weight: 700; cursor: pointer; transition: all 0.2s; flex: 1; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap;">
+                                        📥 Entrantes
+                                        <span id="badge-incoming" style="padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 900; display: none;">0</span>
                                     </button>
-                                    <button class="sub-tab-btn" data-subtab="pending" style="padding: 0.6rem 1rem; border: 1px solid var(--glass-border); border-radius: 8px; background: transparent; color: var(--text-dim); font-weight: 700; cursor: pointer; transition: all 0.2s; flex: 1; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                                        Pendientes
-                                        <span id="badge-pending" style="background: #4caf50; color: #fff; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 900; display: none;">0</span>
+                                    <button class="sub-tab-btn" data-subtab="preparing" style="padding: 0.6rem 0.95rem; border: 1px solid var(--glass-border); border-radius: 8px; background: transparent; color: var(--text-dim); font-weight: 700; cursor: pointer; transition: all 0.2s; flex: 1; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap;">
+                                        👨‍🍳 En Preparación
+                                        <span id="badge-preparing" style="padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 900; display: none;">0</span>
                                     </button>
-                                    <button onclick="window.openWhatsAppTemplateModal()" class="order-settings-btn" title="Configurar plantilla de WhatsApp">
+                                    <button class="sub-tab-btn" id="subtab-unpaid-btn" data-subtab="unpaid" style="padding: 0.6rem 0.95rem; border: 1px solid var(--glass-border); border-radius: 8px; background: transparent; color: var(--text-dim); font-weight: 700; cursor: pointer; transition: all 0.2s; flex: 1; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap;">
+                                        💰 Por Cobrar
+                                        <span id="badge-unpaid" style="padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 900; display: none;">0</span>
+                                    </button>
+                                    <button onclick="window.openOrderSettingsModal('delivery')" class="order-settings-btn" title="Configurar Pedidos, Domicilio y WhatsApp">
                                         <i data-lucide="wrench" style="width: 16px; height: 16px;"></i>
                                     </button>
                                 </div>
@@ -915,90 +1077,100 @@
                             </div>
                         </div>
 
-                        <!-- Pending (Confirmed) Orders List -->
-                        <div id="pending-orders-list" class="orders-container-pro hidden">
+                        <!-- Preparing Orders List -->
+                        <div id="preparing-orders-list" class="orders-container-pro hidden">
                             <div class="empty-state-orders" style="text-align: center; padding: 6rem 2rem; color: var(--text-dim);">
-                                <i data-lucide="timer" style="width: 64px; height: 64px; margin-bottom: 1.5rem; opacity: 0.2;"></i>
+                                <i data-lucide="chef-hat" style="width: 64px; height: 64px; margin-bottom: 1.5rem; opacity: 0.2;"></i>
                                 <p style="font-size: 1.1rem; font-weight: 500;">No hay pedidos en preparación.</p>
                             </div>
                         </div>
 
-                        <!-- Order Settings Modal (Ventana Flotante) -->
+                        <!-- Unpaid (Dispatched) Orders List -->
+                        <div id="unpaid-orders-list" class="orders-container-pro hidden">
+                            <div class="empty-state-orders" style="text-align: center; padding: 6rem 2rem; color: var(--text-dim);">
+                                <i data-lucide="receipt" style="width: 64px; height: 64px; margin-bottom: 1.5rem; opacity: 0.2;"></i>
+                                <p style="font-size: 1.1rem; font-weight: 500;">No hay pedidos pendientes de cobro.</p>
+                            </div>
+                        </div>
+
+                        <!-- Unified Order Settings Modal -->
                         <div id="order-settings-modal" class="modal hidden" style="z-index: 100010;">
-                            <div class="modal-content glass" style="max-width: 450px; padding: 2.5rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8);">
+                            <div class="modal-content glass" style="max-width: 620px; padding: 2.2rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8);">
                                 <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, var(--theme-accent) 0%, transparent 70%); opacity: 0.1; pointer-events: none;"></div>
 
                                 <button id="close-order-settings" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.05); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10;">
                                     <i data-lucide="x" style="width: 18px;"></i>
                                 </button>
 
-                                <h3 class="font-serif" style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.8rem; font-size: 1.6rem;">
-                                    <i data-lucide="settings-2" style="color: var(--theme-accent); width: 28px; height: 28px;"></i> Configuración
+                                <h3 class="font-serif" style="margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.8rem; font-size: 1.5rem;">
+                                    <i data-lucide="settings-2" style="color: var(--theme-accent); width: 26px; height: 26px;"></i> Configuración de Pedidos
                                 </h3>
-                                
-                                <div style="display: flex; flex-direction: column; gap: 1.8rem;">
-                                    <div class="form-group">
-                                        <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; font-size: 0.95rem; color: var(--text-dim);">Precio del Domicilio</label>
-                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
-                                            <span style="font-weight: 800; color: var(--theme-accent); font-size: 1.2rem;">$</span>
-                                            <input type="text" id="config-delivery-price" placeholder="5.000" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
-                                        </div>
-                                    </div>
 
-                                    <div class="form-group">
-                                        <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; font-size: 0.95rem; color: var(--text-dim);">Cantidad de Mesas</label>
-                                        <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); transition: border-color 0.3s;" class="input-focus-accent">
-                                            <i data-lucide="utensils" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
-                                            <input type="number" id="config-table-count" placeholder="10" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
-                                        </div>
-                                    </div>
+                                <!-- Modal Tabs Navigation -->
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.8rem;">
+                                    <button type="button" id="modal-tab-btn-delivery" onclick="switchOrderSettingsTab('delivery')" style="padding: 0.55rem 1rem; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; border: none; background: var(--theme-accent); color: #fff; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
+                                        <i data-lucide="truck" style="width: 16px; height: 16px;"></i> Domicilio y Mesas
+                                    </button>
+                                    <button type="button" id="modal-tab-btn-wa" onclick="switchOrderSettingsTab('wa')" style="padding: 0.55rem 1rem; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
+                                        <i data-lucide="message-square" style="width: 16px; height: 16px;"></i> Plantilla WhatsApp
+                                    </button>
                                 </div>
 
-                                <button id="save-order-settings" style="margin-top: 2.5rem; width: 100%; padding: 1.2rem; background: var(--theme-accent); border: none; border-radius: 18px; color: #fff; font-weight: 900; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.8rem; transition: all 0.3s; box-shadow: 0 8px 25px rgba(255, 107, 0, 0.2);">
-                                    <i data-lucide="save"></i> Guardar Cambios
-                                </button>
-                            </div>
-                        </div>
+                                <!-- Section 1: Delivery & Tables -->
+                                <div id="modal-sec-delivery" class="modal-settings-sec">
+                                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Precio del Domicilio</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);" class="input-focus-accent">
+                                                <span style="font-weight: 800; color: var(--theme-accent); font-size: 1.2rem;">$</span>
+                                                <input type="text" id="config-delivery-price" placeholder="5.000" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
+                                            </div>
+                                        </div>
 
-                        <!-- WhatsApp Template Modal (Ventana Flotante en Medio) -->
-                        <div id="wa-template-modal" class="modal hidden" style="z-index: 100015;">
-                            <div class="modal-content glass" style="max-width: 600px; padding: 2.5rem; border-radius: 24px; position: relative;">
-                                <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, var(--theme-accent) 0%, transparent 70%); opacity: 0.1; pointer-events: none;"></div>
-
-                                <button type="button" onclick="document.getElementById('wa-template-modal').classList.add('hidden')" style="position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,255,255,0.05); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10;">
-                                    <i data-lucide="x" style="width: 18px;"></i>
-                                </button>
-
-                                <h3 class="font-serif" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.8rem; font-size: 1.5rem;">
-                                    <i data-lucide="message-square" style="color: var(--theme-accent); width: 24px; height: 24px;"></i> Plantilla de WhatsApp
-                                </h3>
-                                <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1.5rem;">Personaliza el mensaje que envían los clientes por WhatsApp cuando realizan un pedido. Haz clic en las etiquetas para insertarlas:</p>
-                                
-                                <form id="wa-template-form">
-                                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.2rem; background: rgba(255,255,255,0.02); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--glass-border);">
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{negocio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{negocio}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{cliente}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{cliente}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{telefono}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{telefono}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{entrega}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{detalles_entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{detalles_entrega}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{pago}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{pago}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{nota}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{nota}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{resumen_pedido}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{resumen_pedido}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{precios}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{precios}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{total}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{total}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_inicio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{emojis_inicio}</span>
-                                        <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_fin}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">{emojis_fin}</span>
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Cantidad de Mesas</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);" class="input-focus-accent">
+                                                <i data-lucide="utensils" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
+                                                <input type="number" id="config-table-count" placeholder="10" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
+                                            </div>
+                                        </div>
                                     </div>
+
+                                    <button id="save-order-settings" style="margin-top: 2rem; width: 100%; padding: 1rem; background: var(--theme-accent); border: none; border-radius: 16px; color: #fff; font-weight: 900; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.6rem; transition: all 0.3s; box-shadow: 0 8px 25px rgba(255, 107, 0, 0.2);">
+                                        <i data-lucide="save"></i> Guardar Cambios
+                                    </button>
+                                </div>
+
+                                <!-- Section 2: WhatsApp Template -->
+                                <div id="modal-sec-wa" class="modal-settings-sec hidden">
+                                    <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.2rem;">Personaliza el mensaje que envían los clientes por WhatsApp cuando realizan un pedido. Haz clic en las etiquetas para insertarlas:</p>
                                     
-                                    <div class="form-group">
-                                        <textarea id="conf-wa-template" rows="12" style="width: 100%; font-family: monospace; font-size: 0.9rem; padding: 0.8rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff; resize: vertical;"></textarea>
-                                    </div>
-                                    
-                                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
-                                        <button type="button" class="save-config-btn" onclick="resetStreetFeedWATemplate()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); width: auto;"><i data-lucide="rotate-ccw"></i> Restablecer</button>
-                                        <button type="submit" class="save-config-btn" style="width: auto; margin-left: auto; background: var(--theme-accent); border: none; color: #fff; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.2);"><i data-lucide="save"></i> Guardar Cambios</button>
-                                    </div>
-                                </form>
+                                    <form id="wa-template-form">
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; background: rgba(255,255,255,0.02); padding: 0.7rem; border-radius: 10px; border: 1px solid var(--glass-border);">
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{negocio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{negocio}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{cliente}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{cliente}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{telefono}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{telefono}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{entrega}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{detalles_entrega}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{detalles_entrega}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{pago}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{pago}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{nota}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{nota}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{resumen_pedido}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{resumen_pedido}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{precios}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{precios}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{total}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{total}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_inicio}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{emojis_inicio}</span>
+                                            <span class="badge-tag" onclick="insertTag('conf-wa-template', '{emojis_fin}')" style="background: rgba(255,255,255,0.08); color: var(--theme-accent, #f7931e); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); font-weight: 700;">{emojis_fin}</span>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <textarea id="conf-wa-template" rows="8" style="width: 100%; font-family: monospace; font-size: 0.85rem; padding: 0.8rem; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff; resize: vertical; box-sizing: border-box;"></textarea>
+                                        </div>
+                                        
+                                        <div style="display: flex; gap: 1rem; margin-top: 1.2rem; flex-wrap: wrap;">
+                                            <button type="button" class="save-config-btn" onclick="resetStreetFeedWATemplate()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); width: auto; padding: 0.7rem 1.2rem;"><i data-lucide="rotate-ccw"></i> Restablecer</button>
+                                            <button type="submit" class="save-config-btn" style="width: auto; margin-left: auto; background: var(--theme-accent); border: none; color: #fff; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.2); padding: 0.7rem 1.2rem;"><i data-lucide="save"></i> Guardar Plantilla</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
 
@@ -1013,13 +1185,23 @@
 
                         <!-- Barra de Herramientas -->
                         <div class="history-tools glass" style="margin-bottom: 1.5rem; padding: 1rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: nowrap;">
+                            <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+                                <!-- Scope Selector: Todos vs Mis Pedidos -->
+                                <div id="history-scope-container" style="display: flex; height: 42px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 12px; padding: 3px; gap: 3px; box-sizing: border-box;">
+                                    <button type="button" id="history-scope-all" onclick="setHistoryScope('all')" class="history-scope-btn active" style="height: 34px; padding: 0 0.95rem; border: none; border-radius: 9px; font-weight: 800; font-size: 0.78rem; cursor: pointer; background: var(--theme-accent); color: #fff; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
+                                        <i data-lucide="globe" style="width: 14px;"></i> General
+                                    </button>
+                                    <button type="button" id="history-scope-mine" onclick="setHistoryScope('mine')" class="history-scope-btn" style="height: 34px; padding: 0 0.95rem; border: none; border-radius: 9px; font-weight: 800; font-size: 0.78rem; cursor: pointer; background: transparent; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
+                                        <i data-lucide="user" style="width: 14px;"></i> Mis Ventas
+                                    </button>
+                                </div>
+
                                 <div style="position: relative; height: 42px; cursor: pointer; flex-shrink: 0;" onclick="document.getElementById('history-date-filter').showPicker()">
                                     <input type="date" id="history-date-filter" class="admin-input" style="height: 42px; padding: 0 1rem 0 2.5rem; border-radius: 10px; font-weight: 700; color: var(--text); cursor: pointer; margin-bottom: 0; width: 160px;">
                                     <i data-lucide="calendar" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 16px; color: var(--theme-accent); pointer-events: none;"></i>
                                 </div>
                                 <button id="clear-history-filter" class="admin-btn-secondary" style="height: 42px; padding: 0 1rem; border-radius: 10px; font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; margin-bottom: 0; width: fit-content; white-space: nowrap; flex-shrink: 0;" title="Ver Todo">VER TODO</button>
-                                <div style="position: relative; height: 42px; flex-grow: 1; max-width: 250px;">
+                                <div style="position: relative; height: 42px; flex-grow: 1; max-width: 220px;">
                                     <input type="text" id="history-search-filter" class="admin-input" placeholder="Nombre o Teléfono..." style="height: 42px; padding: 0 1rem 0 2.5rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0; width: 100%;">
                                     <i data-lucide="search" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 16px; color: var(--theme-accent); pointer-events: none;"></i>
                                 </div>
@@ -1420,10 +1602,252 @@
 
                                 </div>
                             </div>
-                        </form>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab: Personal & Roles (StreetFeed Employees) -->
+                    <div id="employees-tab" class="admin-tab-content hidden">
+                        <!-- Header -->
+                        <div class="header-with-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <h3 class="font-serif" style="margin: 0 0 0.4rem 0; font-size: 1.6rem; color: var(--text);">👥 Gestión de Personal &amp; Roles</h3>
+                                <p style="color: var(--text-dim); margin: 0; font-size: 0.9rem;">Crea usuarios para tus trabajadores (meseros, cajeros, cocina) y asigna sus permisos de acceso.</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+                                <!-- View Toggle -->
+                                <div style="display: flex; height: 42px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 14px; overflow: hidden; padding: 3px; gap: 3px; box-sizing: border-box;">
+                                    <button id="emp-view-grid-btn" onclick="setEmployeeView('grid')" style="height: 100%; padding: 0 1.1rem; border: none; border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 700; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; background: var(--theme-accent); color: #fff;">
+                                        <i data-lucide="layout-grid" style="width:15px; height:15px;"></i> Cards
+                                    </button>
+                                    <button id="emp-view-table-btn" onclick="setEmployeeView('table')" style="height: 100%; padding: 0 1.1rem; border: none; border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 700; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-dim);">
+                                        <i data-lucide="list" style="width:15px; height:15px;"></i> Tabla
+                                    </button>
+                                </div>
+                                <!-- Export PDF Button -->
+                                <button onclick="openExportPdfModal()" style="height: 42px; padding: 0 1.2rem; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; transition: all 0.2s;">
+                                    <i data-lucide="file-text" style="color: var(--theme-accent); width: 16px; height: 16px;"></i> Exportar PDF
+                                </button>
+                                <!-- Nuevo Colaborador Button -->
+                                <button onclick="openNewEmployeeModal()" style="height: 42px; padding: 0 1.4rem; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; border-radius: 14px; background: var(--theme-accent); border: none; color: #fff; cursor: pointer; transition: all 0.2s;">
+                                    <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i> Nuevo Colaborador
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Grid de Resumen de Roles -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; margin-bottom: 2rem;">
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 18px; padding: 1.2rem; display: flex; align-items: center; gap: 1rem; position: relative; overflow: hidden;">
+                                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #6366f1;"></div>
+                                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(99,102,241,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 4px;">
+                                    <i data-lucide="crown" style="width: 22px; height: 22px; color: #6366f1;"></i>
+                                </div>
+                                <div>
+                                    <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Administradores</span>
+                                    <h4 id="count-role-admin" style="font-size: 1.6rem; margin: 0.2rem 0 0 0; color: var(--text); font-weight: 900; line-height: 1;">0</h4>
+                                </div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 18px; padding: 1.2rem; display: flex; align-items: center; gap: 1rem; position: relative; overflow: hidden;">
+                                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #3b82f6;"></div>
+                                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 4px;">
+                                    <i data-lucide="clipboard-list" style="width: 22px; height: 22px; color: #3b82f6;"></i>
+                                </div>
+                                <div>
+                                    <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Meseros / Pedidos</span>
+                                    <h4 id="count-role-mesero" style="font-size: 1.6rem; margin: 0.2rem 0 0 0; color: var(--text); font-weight: 900; line-height: 1;">0</h4>
+                                </div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 18px; padding: 1.2rem; display: flex; align-items: center; gap: 1rem; position: relative; overflow: hidden;">
+                                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #10b981;"></div>
+                                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 4px;">
+                                    <i data-lucide="calculator" style="width: 22px; height: 22px; color: #10b981;"></i>
+                                </div>
+                                <div>
+                                    <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Cajeros / Cierre</span>
+                                    <h4 id="count-role-cajero" style="font-size: 1.6rem; margin: 0.2rem 0 0 0; color: var(--text); font-weight: 900; line-height: 1;">0</h4>
+                                </div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 18px; padding: 1.2rem; display: flex; align-items: center; gap: 1rem; position: relative; overflow: hidden;">
+                                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #f59e0b;"></div>
+                                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(245,158,11,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 4px;">
+                                    <i data-lucide="chef-hat" style="width: 22px; height: 22px; color: #f59e0b;"></i>
+                                </div>
+                                <div>
+                                    <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Cocina / Comandas</span>
+                                    <h4 id="count-role-cocina" style="font-size: 1.6rem; margin: 0.2rem 0 0 0; color: var(--text); font-weight: 900; line-height: 1;">0</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search & Role Filter Toolbar -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                            <!-- Buscador -->
+                            <div style="position: relative; flex: 1; min-width: 240px; max-width: 400px;">
+                                <input type="text" id="emp-search-input" oninput="filterEmployeeList()" placeholder="Buscar por nombre o @usuario..." style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); font-size: 0.85rem; outline: none;">
+                                <i data-lucide="search" style="position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-dim); pointer-events: none;"></i>
+                            </div>
+                            <!-- Role Filter Pills -->
+                            <div id="emp-role-filter-pills" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button onclick="setEmployeeRoleFilter('all')" class="emp-pill-filter active" data-role="all" style="padding: 0.55rem 1rem; border-radius: 50px; border: 1px solid var(--glass-border); background: var(--theme-accent); color: #fff; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">Todos</button>
+                                <button onclick="setEmployeeRoleFilter('mesero')" class="emp-pill-filter" data-role="mesero" style="padding: 0.55rem 1rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--text-dim); font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">Meseros</button>
+                                <button onclick="setEmployeeRoleFilter('cajero')" class="emp-pill-filter" data-role="cajero" style="padding: 0.55rem 1rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--text-dim); font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">Cajeros</button>
+                                <button onclick="setEmployeeRoleFilter('cocina')" class="emp-pill-filter" data-role="cocina" style="padding: 0.55rem 1rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--text-dim); font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">Cocina</button>
+                                <button onclick="setEmployeeRoleFilter('admin')" class="emp-pill-filter" data-role="admin" style="padding: 0.55rem 1rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--text-dim); font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">Admins</button>
+                            </div>
+                        </div>
+
+                        <!-- Vista Cards Grid -->
+                        <div id="employees-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                            <!-- Cards dinámicas -->
+                        </div>
+
+                        <!-- Vista Tabla (oculta por defecto) -->
+                        <div id="employees-table-wrapper" class="glass-card" style="padding: 1.5rem; border-radius: 20px; overflow-x: auto; display: none;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.92rem;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                        <th style="padding: 1rem;">Colaborador</th>
+                                        <th style="padding: 1rem;">Usuario</th>
+                                        <th style="padding: 1rem;">PIN Acceso</th>
+                                        <th style="padding: 1rem;">Rol / Permiso</th>
+                                        <th style="padding: 1rem;">Estado</th>
+                                        <th style="padding: 1rem; text-align: right;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employees-table-body">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-dim);">
+                                            Cargando personal registrado...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </main>
             </section>
+
+            <!-- Employee Profile Modal -->
+            <div id="employee-profile-modal" class="modal hidden" style="z-index: 100010;">
+                <div class="modal-content glass" style="max-width: 620px; padding: 0; overflow: hidden; border-radius: 28px;">
+                    <!-- Header / Hero -->
+                    <div id="emp-profile-hero" style="padding: 2.2rem 2.2rem 1.8rem; background: linear-gradient(135deg, rgba(var(--theme-accent-rgb,247,147,30),0.12) 0%, rgba(99,102,241,0.08) 100%); border-bottom: 1px solid var(--glass-border); position: relative;">
+                        <button onclick="document.getElementById('employee-profile-modal').classList.add('hidden')" style="position: absolute; top: 1.2rem; right: 1.2rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255,255,255,0.08); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Cerrar">
+                            <i data-lucide="x" style="width: 16px;"></i>
+                        </button>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                                <div id="emp-profile-avatar" style="width: 76px; height: 76px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; flex-shrink: 0; border: 3px solid rgba(255,255,255,0.15);"></div>
+                                <div>
+                                    <h2 id="emp-profile-name" style="font-size: 1.5rem; font-weight: 900; margin: 0 0 0.3rem;"></h2>
+                                    <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+                                        <span id="emp-profile-role-badge" style="padding: 4px 12px; border-radius: 8px; font-weight: 700; font-size: 0.78rem;"></span>
+                                        <span id="emp-profile-status" style="font-size: 0.82rem; font-weight: 700;"></span>
+                                    </div>
+                                    <p id="emp-profile-username" style="margin: 0.5rem 0 0; font-family: monospace; font-size: 0.9rem; color: var(--text-dim);"></p>
+                                </div>
+                            </div>
+                            <!-- Exportar PDF Button (Visible in Ver Detalles mode) -->
+                            <button id="emp-profile-header-pdf-btn" onclick="window.exportSingleEmployeePDF()" title="Descargar Reporte en PDF" style="padding: 0.65rem 1.2rem; border-radius: 50px; border: 1px solid rgba(var(--theme-accent-rgb,247,147,30),0.3); background: rgba(var(--theme-accent-rgb,247,147,30),0.12); color: var(--theme-accent); font-weight: 800; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; transition: all 0.2s; white-space: nowrap;">
+                                <i data-lucide="file-text" style="width: 14px; height: 14px;"></i> Exportar PDF
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Body -->
+                    <div style="padding: 2rem; max-height: 60vh; overflow-y: auto;">
+                        <!-- Filter Bar (Pills: Fecha específica, Presets [Hoy, Ayer...], Meses) -->
+                        <div id="emp-profile-filter-bar" style="display: flex; gap: 0.6rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                            <!-- Fecha Específica -->
+                            <div style="position: relative; flex: 1.2; min-width: 140px;">
+                                <input type="date" id="emp-filter-date" onchange="window.onProfileDateChange()" style="width: 100%; padding: 0.6rem 0.9rem 0.6rem 2.3rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); font-size: 0.82rem; font-weight: 600; outline: none; cursor: pointer;">
+                                <i data-lucide="calendar" style="position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-dim); pointer-events: none;"></i>
+                            </div>
+
+                            <!-- Presets (Hoy, Ayer, Esta Semana, Este Mes, Todo) -->
+                            <div class="custom-dropdown" id="emp-preset-dropdown" style="flex: 1; min-width: 130px;">
+                                <div class="dropdown-trigger" id="emp-preset-trigger" style="padding: 0.6rem 1rem; border-radius: 50px;">
+                                    <span id="emp-current-preset" style="font-size: 0.82rem; font-weight: 700;">Todo el tiempo</span>
+                                    <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                                </div>
+                                <ul class="dropdown-menu">
+                                    <li data-value="all" class="active">Todo el tiempo</li>
+                                    <li data-value="today">Hoy</li>
+                                    <li data-value="yesterday">Ayer</li>
+                                    <li data-value="week">Esta semana</li>
+                                    <li data-value="month">Este mes</li>
+                                </ul>
+                            </div>
+
+                            <!-- Selector por Meses -->
+                            <div class="custom-dropdown" id="emp-month-dropdown" style="flex: 1; min-width: 130px;">
+                                <div class="dropdown-trigger" id="emp-month-trigger" style="padding: 0.6rem 1rem; border-radius: 50px;">
+                                    <span id="emp-current-month" style="font-size: 0.82rem; font-weight: 700;">Meses...</span>
+                                    <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                                </div>
+                                <ul class="dropdown-menu">
+                                    <li data-value="" class="active">Meses...</li>
+                                    <li data-value="0">Enero</li>
+                                    <li data-value="1">Febrero</li>
+                                    <li data-value="2">Marzo</li>
+                                    <li data-value="3">Abril</li>
+                                    <li data-value="4">Mayo</li>
+                                    <li data-value="5">Junio</li>
+                                    <li data-value="6">Julio</li>
+                                    <li data-value="7">Agosto</li>
+                                    <li data-value="8">Septiembre</li>
+                                    <li data-value="9">Octubre</li>
+                                    <li data-value="10">Noviembre</li>
+                                    <li data-value="11">Diciembre</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- KPIs (4 columnas) -->
+                        <div id="emp-profile-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.8rem; margin-bottom: 1.8rem;">
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                                <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">Pedidos</div>
+                                <div id="emp-profile-orders" style="font-size: 1.6rem; font-weight: 900; color: var(--theme-accent);">0</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                                <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">Ventas</div>
+                                <div id="emp-profile-sales" style="font-size: 1.25rem; font-weight: 900; color: #4caf50;">$0</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                                <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">Ticket Prom.</div>
+                                <div id="emp-profile-avg" style="font-size: 1.25rem; font-weight: 900; color: #3b82f6;">$0</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                                <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">Comisión (10%)</div>
+                                <div id="emp-profile-commission" style="font-size: 1.25rem; font-weight: 900; color: #ec4899;">$0</div>
+                            </div>
+                        </div>
+                        <!-- Datos Personales -->
+                        <div id="emp-profile-personal" style="display: none; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0 0 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); display: flex; align-items: center; gap: 0.5rem;">
+                                <i data-lucide="user-check" style="width: 16px; height: 16px; color: var(--theme-accent);"></i>
+                                Información Personal
+                            </h4>
+                            <div id="emp-profile-personal-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem;">
+                                <!-- populated by JS -->
+                            </div>
+                        </div>
+                        <!-- Recent Orders -->
+                        <div id="emp-profile-history">
+                            <h4 style="margin: 0 0 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);">📋 Últimas Atenciones</h4>
+                            <div id="emp-profile-orders-list" style="display: flex; flex-direction: column; gap: 0.6rem;"></div>
+                        </div>
+                    </div>
+                    <!-- Footer (Perfil Personal mode) -->
+                    <div id="emp-profile-footer" style="padding: 1.5rem 2rem; border-top: 1px solid var(--glass-border); display: flex; gap: 0.8rem; background: rgba(0,0,0,0.15); align-items: center;">
+                        <button id="emp-profile-edit-btn" style="flex: 1; padding: 0.9rem; border-radius: 14px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;">
+                            <i data-lucide="edit-2" style="width: 16px;"></i> Editar Perfil
+                        </button>
+                        <button id="emp-profile-delete-btn" style="padding: 0.9rem 1.2rem; border-radius: 14px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); color: #ef4444; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;" title="Eliminar Colaborador">
+                            <i data-lucide="trash-2" style="width: 16px;"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Add Category Modal -->
             <div id="cat-modal" class="modal hidden">
@@ -1462,10 +1886,6 @@
                     </div>
                 </div>
             </div>
-
-        </main>
-
-
 
         <!-- Admin Form Modal -->
         <div id="admin-modal" class="modal hidden">
@@ -1513,16 +1933,16 @@
         </div>
 
         <!-- Custom Confirm Modal (Modern Replace for window.confirm) -->
-        <div id="confirm-modal" class="modal hidden" style="z-index: 200000;">
-            <div class="modal-content glass" style="max-width: 400px; text-align: center; padding: 2.5rem;">
-                <div id="confirm-icon-circle" class="confirm-icon" style="width: 80px; height: 80px; background: rgba(76, 175, 80, 0.1); color: #4caf50; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; border: 2px solid rgba(76, 175, 80, 0.25); animation: pulse-alert 2s infinite; position: relative; font-size: 3rem; font-weight: 900; line-height: 1;">
-                    ?
+        <div id="confirm-modal" class="modal hidden" style="z-index: 200000; backdrop-filter: blur(8px); background: rgba(0,0,0,0.6);">
+            <div class="modal-content glass" style="max-width: 420px; text-align: center; padding: 2.5rem; border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: 0 25px 80px rgba(0,0,0,0.6);">
+                <div id="confirm-icon-circle" class="confirm-icon" style="width: 72px; height: 72px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.4rem; border: 2px solid rgba(239, 68, 68, 0.25);">
+                    <i data-lucide="trash-2" style="width: 32px; height: 32px;"></i>
                 </div>
-                <h3 class="font-serif" id="confirm-title" style="margin-bottom: 0.8rem; font-size: 1.4rem;">¿Estás seguro?</h3>
-                <p id="confirm-msg" style="color: var(--text-dim); margin-bottom: 2rem; line-height: 1.5;">Esta acción no se puede deshacer.</p>
+                <h3 class="font-serif" id="confirm-title" style="margin-bottom: 0.6rem; font-size: 1.45rem; color: var(--text);">¿Estás seguro?</h3>
+                <p id="confirm-msg" style="color: var(--text-dim); margin-bottom: 2rem; line-height: 1.5; font-size: 0.95rem;">Esta acción no se puede deshacer.</p>
                 <div style="display: flex; gap: 1rem;">
-                    <button id="confirm-cancel-btn" class="btn-secondary w-full" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);">Cancelar</button>
-                    <button id="confirm-ok-btn" class="btn-primary w-full" style="background: #4caf50; border: none; color: #fff;">Aceptar</button>
+                    <button id="confirm-cancel-btn" class="btn-secondary w-full" style="padding: 0.8rem; border-radius: 12px; background: rgba(var(--text-rgb), 0.08); border: 1px solid var(--glass-border); color: var(--text); font-weight: 600; cursor: pointer;">Cancelar</button>
+                    <button id="confirm-ok-btn" class="btn-primary w-full" style="padding: 0.8rem; border-radius: 12px; background: #ef4444; border: none; color: #ffffff; font-weight: 700; cursor: pointer; box-shadow: none;">Eliminar</button>
                 </div>
             </div>
         </div>
@@ -1531,12 +1951,22 @@
         <div id="month-picker-modal" class="modal hidden" style="z-index: 100000;">
             <div class="modal-content glass" style="max-width: 500px; padding: 2rem; border-radius: 30px; position: relative;">
                 <button class="modal-close" onclick="document.getElementById('month-picker-modal').classList.add('hidden')" style="position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; color: var(--text-dim); cursor: pointer;"><i data-lucide="x"></i></button>
-                <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
                     <div style="width: 60px; height: 60px; background: rgba(var(--primary-rgb, 247, 147, 30), 0.1); color: var(--theme-accent); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
                         <i data-lucide="calendar-range" style="width: 30px; height: 30px;"></i>
                     </div>
-                    <h3 class="font-serif" style="font-size: 1.5rem; color: var(--text); margin-bottom: 0.5rem;">Reporte de Ventas</h3>
-                    <p style="color: var(--text-dim); font-size: 0.9rem;">Selecciona el mes que deseas descargar o elige el historial completo.</p>
+                    <h3 class="font-serif" style="font-size: 1.5rem; color: var(--text); margin-bottom: 0.5rem;">Reporte de Ventas PDF</h3>
+                    <p style="color: var(--text-dim); font-size: 0.88rem; margin-bottom: 1.2rem;">Elige el alcance de las ventas y selecciona el mes que deseas descargar.</p>
+
+                    <!-- Scope Selector para el Reporte PDF -->
+                    <div style="display: flex; height: 44px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 14px; padding: 4px; gap: 4px; box-sizing: border-box; margin-bottom: 0.5rem;">
+                        <button type="button" id="pdf-scope-all" onclick="setPdfScope('all')" class="pdf-scope-btn active" style="flex: 1; border: none; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; background: var(--theme-accent); color: #fff; display: flex; align-items: center; justify-content: center; gap: 0.4rem; transition: all 0.2s;">
+                            <i data-lucide="globe" style="width: 15px;"></i> General (Todas)
+                        </button>
+                        <button type="button" id="pdf-scope-mine" onclick="setPdfScope('mine')" class="pdf-scope-btn" style="flex: 1; border: none; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; background: transparent; color: var(--text-dim); display: flex; align-items: center; justify-content: center; gap: 0.4rem; transition: all 0.2s;">
+                            <i data-lucide="user" style="width: 15px;"></i> Mis Ventas
+                        </button>
+                    </div>
                 </div>
 
                 <div class="month-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
@@ -1721,9 +2151,18 @@
                 </div>
                 <div class="modal-body-pro" style="padding: 2rem; max-height: 60vh; overflow-y: auto;">
                     <div class="detail-section">
-                        <h4 style="color: var(--theme-accent); margin-bottom: 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800;">Información del Cliente</h4>
-                        <div class="detail-info-card" style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
-                            <p style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.8rem;" id="detail-customer-name">---</p>
+                        <h4 style="color: var(--theme-accent); margin-bottom: 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800;">Información del Cliente</h4>
+                        <div class="detail-info-card" style="background: rgba(255,255,255,0.03); padding: 1.4rem; border-radius: 18px; margin-bottom: 1.8rem; border: 1px solid var(--glass-border);">
+                            <!-- Header del Cliente con Icono y Nombre -->
+                            <div style="display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--glass-border);">
+                                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(var(--theme-accent-rgb,247,147,30),0.14); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; color: var(--theme-accent); flex-shrink: 0;">
+                                    <i data-lucide="user" style="width: 22px; height: 22px;"></i>
+                                </div>
+                                <div>
+                                    <span style="font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Cliente</span>
+                                    <h3 id="detail-customer-name" style="margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--text); line-height: 1.2;">---</h3>
+                                </div>
+                            </div>
                             <div style="display: grid; gap: 0.6rem;">
                                 <div style="display: grid; grid-template-columns: 1fr 140px; align-items: center; color: var(--text-dim); font-size: 0.9rem; gap: 1rem;">
                                     <p style="display: flex; align-items: center; gap: 0.7rem; margin: 0;">
@@ -1743,6 +2182,9 @@
                                 </div>
                                 <p id="detail-customer-note-row" style="display: flex; align-items: flex-start; gap: 0.7rem; color: var(--text-dim); font-size: 0.9rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom: 0;">
                                     <i data-lucide="message-square" style="width: 16px; color: var(--theme-accent); margin-top: 2px;"></i> <span id="detail-customer-note">---</span>
+                                </p>
+                                <p id="detail-customer-waiter-row" style="display: flex; align-items: center; gap: 0.7rem; color: var(--text-dim); font-size: 0.9rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom: 0;">
+                                    <i data-lucide="user-check" style="width: 16px; color: var(--theme-accent);"></i> <span>Atendido por: <strong id="detail-customer-waiter" style="color: var(--text); font-weight: 800;">---</strong></span>
                                 </p>
                             </div>
                         </div>
@@ -1775,9 +2217,16 @@
                 </div>
 
                 <!-- Product Search Row -->
-                <div style="padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--glass-border); display: flex; gap: 0.6rem; flex-shrink: 0; background: rgba(0,0,0,0.1);">
-                    <select id="manual-order-cat-filter" style="padding: 0.55rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(20,20,40,0.95); color: inherit; font-size: 0.85rem; min-width: 140px;">
-                    </select>
+                <div style="padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--glass-border); display: flex; gap: 0.6rem; flex-shrink: 0; background: rgba(0,0,0,0.1); align-items: center;">
+                    <div class="custom-dropdown" id="manual-cat-dropdown" style="min-width: 160px; position: relative;">
+                        <div class="dropdown-trigger" id="manual-cat-trigger" style="padding: 0.5rem 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; height: 38px; min-width: 160px; justify-content: space-between; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04);">
+                            <span id="manual-cat-current">Cargando...</span>
+                            <i data-lucide="chevron-down" style="width: 15px; height: 15px; color: var(--theme-accent); margin-left: 6px;"></i>
+                        </div>
+                        <ul class="dropdown-menu" id="manual-cat-menu" style="max-height: 220px; overflow-y: auto; z-index: 100010;">
+                        </ul>
+                        <input type="hidden" id="manual-order-cat-filter" value="">
+                    </div>
                     <div style="position: relative; flex: 1;">
                         <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 14px; color: var(--text-dim); pointer-events: none;"></i>
                         <input type="text" id="manual-product-search" placeholder="Buscar producto..." style="width: 100%; padding: 0.55rem 0.8rem 0.55rem 2.2rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: inherit; font-size: 0.85rem; box-sizing: border-box;">
@@ -1864,7 +2313,252 @@
         </div>
 
 
-    <!-- Expense Creation Modal (Ventana Flotante, reubicada fuera de pestañas para evitar ocultamiento heredado) -->
+
+    <!-- Employee Creation/Edit Modal -->
+    <div id="newEmployeeModal" class="modal" style="z-index: 100015; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);">
+        <div class="modal-content glass" style="max-width: 520px; width: 92%; max-height: 90vh; display: flex; flex-direction: column; padding: 2rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8); border: 1px solid var(--glass-border);">
+            <button onclick="closeEmployeeModal()" style="position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(var(--text-rgb), 0.08); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.2s;">
+                <i data-lucide="x" style="width: 18px; color: var(--text);"></i>
+            </button>
+
+            <h3 id="employee-modal-title" class="font-serif" style="margin: 0 0 1.2rem 0; display: flex; align-items: center; gap: 0.8rem; font-size: 1.4rem; color: var(--text); flex-shrink: 0;">
+                <i data-lucide="user-plus" style="color: var(--theme-accent); width: 24px; height: 24px;"></i> Nuevo Colaborador
+            </h3>
+            
+            <form id="form-employee-save" onsubmit="handleSaveEmployee(event)" style="display: flex; flex-direction: column; overflow-y: auto; padding-right: 4px; gap: 1rem;">
+                <input type="hidden" id="emp-id-input" value="">
+                
+                <!-- Avatar Uploader & General Info -->
+                <div style="display: flex; gap: 1rem; align-items: center; background: rgba(255,255,255,0.025); border: 1px solid var(--glass-border); border-radius: 16px; padding: 0.85rem 1rem;">
+                    <!-- Avatar Preview & Picker -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem; flex-shrink: 0;">
+                        <div id="emp-avatar-preview" onclick="document.getElementById('emp-avatar-input').click()" style="width: 70px; height: 70px; border-radius: 18px; background: rgba(var(--theme-accent-rgb,247,147,30),0.12); border: 2px dashed var(--theme-accent); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; transition: all 0.2s;" title="Clic para subir o cambiar foto">
+                            <i data-lucide="camera" style="width: 20px; height: 20px; color: var(--theme-accent);"></i>
+                            <span style="font-size: 0.6rem; font-weight: 700; color: var(--theme-accent); margin-top: 2px;">Foto</span>
+                        </div>
+                        <input type="file" id="emp-avatar-input" accept="image/*" onchange="window.handleEmpAvatarUpload(event)" style="display: none;">
+                        <input type="hidden" id="emp-avatar-url" value="">
+                    </div>
+
+                    <!-- Nombre Completo & % Comisión -->
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 0.6rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.75rem; color: var(--text-dim);">Nombre Completo</label>
+                            <input type="text" id="emp-name" placeholder="Ej. Carlos Pérez" required style="width: 100%; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.85rem;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.72rem; color: var(--text-dim);">% Comisión</label>
+                                <div style="position: relative;">
+                                    <input type="number" id="emp-commission-rate" min="0" max="100" step="0.5" placeholder="10" value="10" style="width: 100%; padding: 0.6rem 1.6rem 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.82rem; font-weight: 700;">
+                                    <span style="position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); font-weight: 700; font-size: 0.78rem; color: var(--theme-accent); pointer-events: none;">%</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                                <button type="button" onclick="document.getElementById('emp-avatar-input').click()" style="padding: 0.6rem 0.5rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); font-size: 0.73rem; font-weight: 700; cursor: pointer; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+                                    <i data-lucide="upload" style="width: 13px;"></i> Subir Foto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Credenciales Acceso -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="display: block; margin-bottom: 0.3rem; font-weight: 600; font-size: 0.78rem; color: var(--text-dim);">Usuario de Acceso</label>
+                        <input type="text" id="emp-username" placeholder="ej. mesero1" required style="width: 100%; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.85rem;">
+                        <div id="emp-username-feedback" style="font-size: 0.72rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.3rem; font-weight: 600; min-height: 16px;"></div>
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                        <label style="display: block; margin-bottom: 0.3rem; font-weight: 600; font-size: 0.78rem; color: var(--text-dim);">PIN (4 dígitos)</label>
+                        <input type="text" id="emp-pin" maxlength="6" placeholder="Ej. 1234" style="width: 100%; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.85rem;">
+                        <div id="emp-pin-feedback" style="font-size: 0.72rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.3rem; font-weight: 600; min-height: 16px;"></div>
+                    </div>
+                </div>
+
+                <!-- Rol + Estado en una misma fila -->
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.8rem; align-items: end;">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="display: block; margin-bottom: 0.3rem; font-weight: 600; font-size: 0.78rem; color: var(--text-dim);">Rol / Nivel de Permisos</label>
+                        <select id="emp-role" style="width: 100%; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; cursor: pointer; font-size: 0.85rem;">
+                            <option value="mesero">🧾 Mesero / Toma de Pedidos</option>
+                            <option value="cajero">💰 Cajero / Cierre de Caja</option>
+                            <option value="cocina">👨‍🍳 Cocina / Comandas</option>
+                            <option value="admin">⚙️ Administrador / Gestión</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding-bottom: 2px;">
+                        <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-dim); white-space: nowrap;">Activo</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="emp-status-check" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Datos Personales Compactos -->
+                <div style="background: rgba(255,255,255,0.025); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.75rem 0.9rem;">
+                    <p style="font-size: 0.68rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin: 0 0 0.5rem;">Datos Personales</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.72rem; color: var(--text-dim);">Sexo</label>
+                            <select id="emp-gender" style="width: 100%; padding: 0.5rem 0.6rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.8rem; cursor: pointer;">
+                                <option value="">—</option>
+                                <option value="masculino">Masculino</option>
+                                <option value="femenino">Femenino</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.72rem; color: var(--text-dim);">Edad</label>
+                            <input type="number" id="emp-age" min="15" max="80" placeholder="28" style="width: 100%; padding: 0.5rem 0.6rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.8rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.72rem; color: var(--text-dim);">Teléfono</label>
+                            <input type="tel" id="emp-phone" placeholder="3001234567" style="width: 100%; padding: 0.5rem 0.6rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.8rem;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.6rem; margin-top: 0.5rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.72rem; color: var(--text-dim);">Dirección</label>
+                            <input type="text" id="emp-address" placeholder="Ej. Calle 10 #5-32" style="width: 100%; padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.8rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.72rem; color: var(--text-dim);">Barrio</label>
+                            <input type="text" id="emp-neighborhood" placeholder="Ej. Centro" style="width: 100%; padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.8rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" style="margin-top: 0.5rem; width: 100%; padding: 0.85rem; background: var(--theme-accent); border: none; border-radius: 14px; color: #fff; font-weight: 900; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; flex-shrink: 0; box-shadow: 0 4px 15px rgba(247,147,30,0.3);">
+                    <i data-lucide="check" style="width: 18px; height: 18px;"></i> Guardar Colaborador
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Export PDF Month Selector Modal -->
+    <div id="exportPdfModal" class="modal" style="z-index: 100015; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
+        <div class="modal-content glass" style="max-width: 440px; width: 90%; padding: 2.2rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8); border: 1px solid var(--glass-border);">
+            <button onclick="closeExportPdfModal()" style="position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(255,255,255,0.08); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">
+                <i data-lucide="x" style="width: 16px; color: var(--text);"></i>
+            </button>
+            
+            <h3 class="font-serif" style="margin: 0 0 0.4rem 0; font-size: 1.4rem; color: var(--text); display: flex; align-items: center; gap: 0.6rem;">
+                <i data-lucide="file-text" style="color: var(--theme-accent); width: 24px; height: 24px;"></i> Exportar Reporte PDF
+            </h3>
+            <p style="color: var(--text-dim); margin: 0 0 1.5rem 0; font-size: 0.85rem; line-height: 1.4;">Selecciona el mes o período del año que deseas descargar en el informe de rendimiento.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.4rem; font-weight: 700; font-size: 0.8rem; color: var(--text-dim);">Mes del Reporte</label>
+                    <select id="pdf-export-month" style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.88rem; cursor: pointer; font-weight: 600;">
+                        <option value="all" style="background:#1e293b;">📅 Todos los Meses (Histórico Completo)</option>
+                        <option value="0" style="background:#1e293b;">Enero</option>
+                        <option value="1" style="background:#1e293b;">Febrero</option>
+                        <option value="2" style="background:#1e293b;">Marzo</option>
+                        <option value="3" style="background:#1e293b;">Abril</option>
+                        <option value="4" style="background:#1e293b;">Mayo</option>
+                        <option value="5" style="background:#1e293b;">Junio</option>
+                        <option value="6" style="background:#1e293b;">Julio</option>
+                        <option value="7" style="background:#1e293b;">Agosto</option>
+                        <option value="8" style="background:#1e293b;">Septiembre</option>
+                        <option value="9" style="background:#1e293b;">Octubre</option>
+                        <option value="10" style="background:#1e293b;">Noviembre</option>
+                        <option value="11" style="background:#1e293b;">Diciembre</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.4rem; font-weight: 700; font-size: 0.8rem; color: var(--text-dim);">Año</label>
+                    <select id="pdf-export-year" style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.88rem; cursor: pointer; font-weight: 600;">
+                        <option value="2026" style="background:#1e293b;">2026</option>
+                        <option value="2025" style="background:#1e293b;">2025</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="confirmExportStaffPdf()" style="margin-top: 1.6rem; width: 100%; padding: 0.95rem; background: var(--theme-accent); border: none; border-radius: 14px; color: #fff; font-weight: 800; font-size: 0.92rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.6rem; transition: all 0.2s;">
+                <i data-lucide="download" style="width: 18px; height: 18px;"></i> Generar y Descargar PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Security Auth Verification Modal -->
+    <div id="securityAuthModal" class="modal" style="z-index: 100020; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);">
+        <div class="modal-content glass" style="max-width: 420px; width: 90%; padding: 2.2rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8); border: 1px solid var(--glass-border);">
+            <button onclick="closeSecurityAuthModal()" style="position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(255,255,255,0.08); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="x" style="width: 16px; color: var(--text);"></i>
+            </button>
+            
+            <div style="width: 52px; height: 52px; border-radius: 16px; background: rgba(247,147,30,0.15); border: 1px solid rgba(247,147,30,0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                <i data-lucide="lock" style="width: 26px; height: 26px; color: var(--theme-accent);"></i>
+            </div>
+
+            <h3 class="font-serif" style="margin: 0 0 0.4rem 0; font-size: 1.4rem; color: var(--text);">Verificación de Seguridad</h3>
+            <p style="color: var(--text-dim); margin: 0 0 1.5rem 0; font-size: 0.85rem; line-height: 1.4;">Ingresa tu contraseña de inicio de sesión de administrador para confirmar esta acción.</p>
+            
+            <form id="form-security-auth" onsubmit="handleSecurityAuthSubmit(event)">
+                <div class="form-group" style="margin-bottom: 1.4rem;">
+                    <label style="display: block; margin-bottom: 0.4rem; font-weight: 700; font-size: 0.8rem; color: var(--text-dim);">Contraseña de Administrador</label>
+                    <input type="password" id="security-auth-password" placeholder="••••••••" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); outline: none; font-size: 0.95rem;">
+                </div>
+
+                <div style="display: flex; gap: 0.8rem;">
+                    <button type="button" onclick="closeSecurityAuthModal()" style="flex: 1; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); font-weight: 700; font-size: 0.88rem; cursor: pointer;">
+                        Cancelar
+                    </button>
+                    <button type="submit" style="flex: 1.2; padding: 0.8rem; border-radius: 12px; border: none; background: var(--theme-accent); color: #fff; font-weight: 800; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                        <i data-lucide="shield-check" style="width: 16px;"></i> Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Mis Métricas para Empleado -->
+    <div id="employeeMetricsModal" class="modal" style="z-index: 100025; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);">
+        <div class="modal-content glass" style="max-width: 580px; width: 92%; max-height: 88vh; overflow-y: auto; padding: 2rem; border-radius: 24px; position: relative; border: 1px solid var(--glass-border); box-shadow: 0 25px 80px rgba(0,0,0,0.8);">
+            <button onclick="closeMyMetricsModal()" style="position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(255,255,255,0.08); border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="x" style="width: 16px; color: var(--text);"></i>
+            </button>
+
+            <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem;">
+                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(247,147,30,0.15); border: 1px solid rgba(247,147,30,0.3); display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="line-chart" style="width: 24px; height: 24px; color: var(--theme-accent);"></i>
+                </div>
+                <div>
+                    <h3 id="my-metrics-title" class="font-serif" style="margin: 0; font-size: 1.4rem; color: var(--text);">Mis Métricas de Rendimiento</h3>
+                    <p id="my-metrics-subtitle" style="margin: 2px 0 0 0; font-size: 0.8rem; color: var(--text-dim);">Resumen personal de pedidos y comisiones</p>
+                </div>
+            </div>
+
+            <!-- Grid de KPIs -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin-bottom: 1.5rem;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 14px; text-align: center;">
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Pedidos</div>
+                    <div id="my-metric-orders" style="font-size: 1.6rem; font-weight: 900; color: var(--text); margin-top: 4px;">0</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 14px; text-align: center;">
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Ventas Totales</div>
+                    <div id="my-metric-sales" style="font-size: 1.4rem; font-weight: 900; color: #4caf50; margin-top: 4px;">$0</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 14px; text-align: center;">
+                    <div id="my-metric-comm-label" style="font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Comisión</div>
+                    <div id="my-metric-comm" style="font-size: 1.4rem; font-weight: 900; color: #ec4899; margin-top: 4px;">$0</div>
+                </div>
+            </div>
+
+            <h4 style="font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--theme-accent); margin-bottom: 0.8rem;">Historial Reciente Atendido</h4>
+            <div id="my-metrics-orders-list" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 250px; overflow-y: auto;">
+                <!-- Inyectado por JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Creation Modal -->
     <div id="newExpenseModal" class="modal" style="z-index: 100012; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
         <div class="modal-content glass" style="max-width: 480px; width: 90%; padding: 2.5rem; border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.8); border: 1px solid var(--glass-border);">
             <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, var(--theme-accent) 0%, transparent 70%); opacity: 0.15; pointer-events: none;"></div>
@@ -2003,7 +2697,10 @@
         </div>
     </div>
 
-    <script src="js/script_v9.js?v=20260612.4"></script>
-    <script src="js/admin.js?v=4.30"></script>
+    <!-- Printable Thermal Ticket Container (Hidden except during printing) -->
+    <div id="thermal-ticket-print-area" class="thermal-print-area"></div>
+
+    <script src="js/script_v9.js?v=20260721.3"></script>
+    <script src="js/admin.js?v=4.90"></script>
 </body>
 </html>

@@ -70,15 +70,40 @@ let state = {
         { id: 'bebidas', name: 'Bebidas', icon: 'coffee' }
     ],
     auth: (() => {
-        let parsed = JSON.parse(localStorage.getItem('streetfeed_auth'));
-        if (!parsed) {
-            parsed = {
-                user: 'admin',
-                pass: '123456'
-            };
+        let parsed = null;
+        try {
+            parsed = JSON.parse(localStorage.getItem('streetfeed_auth'));
+        } catch (e) {}
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const instanceId = urlParams.get('instanceId') || '';
+
+        let tempCreds = null;
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('mod_creds_')) {
+                    if (!instanceId || k.endsWith(instanceId) || k.includes(instanceId)) {
+                        const data = JSON.parse(localStorage.getItem(k));
+                        if (data && data.tempUser && data.tempPass) {
+                            tempCreds = { user: data.tempUser, pass: data.tempPass };
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+
+        if (!parsed || (parsed.user === 'admin' && parsed.pass === '123456' && tempCreds)) {
+            if (tempCreds) {
+                parsed = { ...tempCreds, expensePass: parsed?.expensePass || '' };
+                try { localStorage.setItem('streetfeed_auth', JSON.stringify(parsed)); } catch (e) {}
+            } else if (!parsed) {
+                parsed = { user: 'admin', pass: '123456', expensePass: '' };
+            }
         } else if (parsed.pass === '123456789') {
             parsed.pass = '123456';
-            localStorage.setItem('streetfeed_auth', JSON.stringify(parsed));
+            try { localStorage.setItem('streetfeed_auth', JSON.stringify(parsed)); } catch (e) {}
         }
         if (parsed.expensePass === undefined) parsed.expensePass = '';
         return parsed;
@@ -2001,7 +2026,30 @@ function setupEventListeners() {
             e.preventDefault();
             const u = document.getElementById('login-user').value;
             const p = document.getElementById('login-pass').value;
-            if ((u === state.auth.user && p === state.auth.pass) || (u === 'admin' && p === '123456')) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const instanceId = urlParams.get('instanceId') || '';
+            let tempAuthMatch = false;
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('mod_creds_')) {
+                        if (!instanceId || k.endsWith(instanceId) || k.includes(instanceId)) {
+                            const data = JSON.parse(localStorage.getItem(k));
+                            if (data && data.tempUser === u && data.tempPass === p) {
+                                tempAuthMatch = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            if ((u === state.auth.user && p === state.auth.pass) || (u === 'admin' && p === '123456') || tempAuthMatch) {
+                if (tempAuthMatch || (u !== state.auth.user || p !== state.auth.pass)) {
+                    state.auth.user = u;
+                    state.auth.pass = p;
+                    localStorage.setItem('streetfeed_auth', JSON.stringify(state.auth));
+                }
                 state.isLoggedIn = true;
                 localStorage.setItem('streetfeed_isLoggedIn', 'true');
                 switchView('admin');
@@ -2382,6 +2430,23 @@ function initCheckout() {
         const baseTotal = calculateTotal();
         const delFee = (customer.deliveryType === 'delivery') ? (state.config.deliveryFee || 0) : 0;
 
+        const getAttendedByInfo = () => {
+            try {
+                const empStr = localStorage.getItem('streetfeed_employee_user');
+                if (empStr) {
+                    const emp = JSON.parse(empStr);
+                    if (emp && emp.name) {
+                        const roleTitle = emp.role === 'mesero' ? 'Mesero' : (emp.role === 'cajero' ? 'Cajero' : (emp.role === 'cocina' ? 'Cocina' : 'Administrador'));
+                        return `${emp.name} (${roleTitle})`;
+                    }
+                }
+            } catch(e) {}
+            if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
+                return 'Propietario / Administrador';
+            }
+            return 'Cliente (Menú Digital)';
+        };
+
         const orderData = {
             id: orderId,
             date: new Date().toISOString(),
@@ -2390,6 +2455,7 @@ function initCheckout() {
             deliveryFee: delFee,
             total: baseTotal + delFee,
             customer: customer,
+            attendedBy: getAttendedByInfo(),
             status: 'pending' // Importante para el BI y el Dashboard
         };
 

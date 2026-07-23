@@ -2537,6 +2537,178 @@ app.post('/api/client/pay-pending-balance', paymentLimiter, async (req, res) => 
 });
 
 // ============================================================
+// GESTIÓN DE EMPLEADOS Y ROLES (STREETFEED)
+// ============================================================
+
+async function resolveBusinessId(rawBusinessId, instanceId, session) {
+    if (rawBusinessId) return rawBusinessId;
+    if (session && (session.clientId || session.businessId)) return session.clientId || session.businessId;
+    if (instanceId) {
+        try {
+            const dbState = await readDb();
+            const allBiz = (dbState && dbState.businesses) || [];
+            const foundBiz = allBiz.find(b =>
+                Array.isArray(b.moduleInstances) &&
+                b.moduleInstances.some(inst => inst.instanceId === instanceId)
+            );
+            if (foundBiz) return foundBiz.id;
+        } catch (e) {
+            console.error('Error resolviendo businessId desde instanceId:', e);
+        }
+    }
+    return null;
+}
+
+app.post('/api/modules/streetfeed/login-employee', async (req, res) => {
+    const { businessId: rawBusinessId, instanceId, usernameOrPin, password } = req.body;
+    if (!usernameOrPin) {
+        return res.status(400).json({ error: 'usuario/PIN son requeridos.' });
+    }
+
+    const businessId = await resolveBusinessId(rawBusinessId, instanceId, null);
+    if (!businessId) {
+        return res.status(400).json({ error: 'businessId o instanceId es requerido.' });
+    }
+
+    try {
+        const emp = await db.findEmployeeByCredentials(businessId, usernameOrPin, password);
+        if (!emp) {
+            return res.status(401).json({ error: 'Credenciales inválidas o cuenta de empleado inactiva.' });
+        }
+
+        const employeeSession = generateSignedToken({
+            employeeId: emp.id,
+            businessId: emp.business_id,
+            name: emp.name,
+            role: emp.role,
+            type: 'employee'
+        });
+
+        res.json({
+            success: true,
+            token: employeeSession,
+            employee: {
+                id: emp.id,
+                businessId: emp.business_id,
+                name: emp.name,
+                username: emp.username,
+                role: emp.role
+            }
+        });
+    } catch (err) {
+        console.error('[EmployeeLogin] Error:', err);
+        res.status(500).json({ error: 'Error al iniciar sesión de empleado.' });
+    }
+});
+
+app.get('/api/modules/streetfeed/employees', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = token ? verifySignedToken(token) : null;
+
+    const businessId = await resolveBusinessId(req.query.businessId, req.query.instanceId, session);
+    if (!businessId) return res.status(400).json({ error: 'businessId o instanceId requerido.' });
+
+    try {
+        const employees = await db.getEmployeesByBusinessId(businessId);
+        res.json({ success: true, employees });
+    } catch (err) {
+        console.error('[GetEmployees] Error:', err);
+        res.status(500).json({ error: 'Error obteniendo lista de empleados.' });
+    }
+});
+
+app.post('/api/modules/streetfeed/employees', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = token ? verifySignedToken(token) : null;
+
+    const businessId = await resolveBusinessId(req.body.businessId, req.body.instanceId, session);
+    const { name, username, password, pin, role } = req.body;
+
+    if (!businessId || !name || !username) {
+        return res.status(400).json({ error: 'Campos requeridos: businessId (o instanceId), name, username.' });
+    }
+
+    try {
+        const existingList = await db.getEmployeesByBusinessId(businessId);
+        const lowerUsername = username.trim().toLowerCase();
+        const userExists = existingList.find(e => e.username && e.username.toLowerCase() === lowerUsername);
+        if (userExists) {
+            return res.status(400).json({ error: `El usuario "@${username}" ya está siendo utilizado por ${userExists.name}.` });
+        }
+        if (pin && pin.toString().trim()) {
+            const trimmedPin = pin.toString().trim();
+            const pinExists = existingList.find(e => e.pin && e.pin.toString() === trimmedPin);
+            if (pinExists) {
+                return res.status(400).json({ error: `El PIN "${trimmedPin}" ya está siendo utilizado por ${pinExists.name}.` });
+            }
+        }
+
+        const newEmp = await db.createEmployee({
+            businessId,
+            name,
+            username,
+            password: password || '123456',
+            pin: pin || null,
+            role: role || 'mesero'
+        });
+        res.json({ success: true, employee: newEmp });
+    } catch (err) {
+        console.error('[CreateEmployee] Error:', err);
+        res.status(500).json({ error: 'Error creando empleado.' });
+    }
+});
+
+app.put('/api/modules/streetfeed/employees/:id', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = token ? verifySignedToken(token) : null;
+
+    const { id } = req.params;
+    const businessId = await resolveBusinessId(req.body.businessId, req.body.instanceId, session);
+    const { name, username, password, pin, role, status } = req.body;
+
+    try {
+        const existingList = await db.getEmployeesByBusinessId(businessId);
+        if (username) {
+            const lowerUsername = username.trim().toLowerCase();
+            const userExists = existingList.find(e => e.id !== id && e.username && e.username.toLowerCase() === lowerUsername);
+            if (userExists) {
+                return res.status(400).json({ error: `El usuario "@${username}" ya está siendo utilizado por ${userExists.name}.` });
+            }
+        }
+        if (pin && pin.toString().trim()) {
+            const trimmedPin = pin.toString().trim();
+            const pinExists = existingList.find(e => e.id !== id && e.pin && e.pin.toString() === trimmedPin);
+            if (pinExists) {
+                return res.status(400).json({ error: `El PIN "${trimmedPin}" ya está siendo utilizado por ${pinExists.name}.` });
+            }
+        }
+
+        await db.updateEmployee(id, businessId, { name, username, password, pin, role, status });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[UpdateEmployee] Error:', err);
+        res.status(500).json({ error: 'Error actualizando empleado.' });
+    }
+});
+
+app.delete('/api/modules/streetfeed/employees/:id', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const session = token ? verifySignedToken(token) : null;
+
+    const { id } = req.params;
+    const businessId = await resolveBusinessId(req.query.businessId, req.query.instanceId, session);
+
+    try {
+        await db.deleteEmployee(id, businessId);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[DeleteEmployee] Error:', err);
+        res.status(500).json({ error: 'Error eliminando empleado.' });
+    }
+});
+
+
+// ============================================================
 // MÓDULOS ESTÁTICOS Y FRONTEND (Rutas Genéricas Pro)
 // ============================================================
 app.use('/modules/order-system', express.static(path.join(__dirname, 'modulos', 'menu_comida')));
