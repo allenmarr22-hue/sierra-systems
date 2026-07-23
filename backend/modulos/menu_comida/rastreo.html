@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STREETFEED - Rastreo de Pedido 🛵</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --surface: #151c2c;
+            --surface-card: #1e293b;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --brand: #f7931e;
+            --brand-light: rgba(247, 147, 30, 0.15);
+            --success: #10b981;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-logo {
+            font-weight: 900;
+            font-size: 1.2rem;
+            color: var(--brand);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        main {
+            flex: 1;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* Stepper */
+        .stepper-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stepper-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        .step-item {
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--border);
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .step-item.active .step-icon {
+            background: var(--brand-light);
+            border-color: var(--brand);
+            color: var(--brand);
+            box-shadow: 0 0 15px rgba(247, 147, 30, 0.3);
+        }
+
+        .step-item.completed .step-icon {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .step-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-dim);
+        }
+
+        .step-item.active .step-label {
+            color: var(--brand);
+        }
+
+        .step-item.completed .step-label {
+            color: var(--success);
+        }
+
+        /* Map Container */
+        #map-wrapper {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            height: 380px;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .live-tag {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            padding: 0.4rem 0.85rem;
+            border-radius: 50px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Order Details Card */
+        .order-details-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .items-list {
+            margin: 1rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .total-row {
+            border-top: 1px dashed var(--border);
+            padding-top: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--brand);
+        }
+
+        /* Custom Leaflet Driver Icon */
+        .leaflet-driver-marker {
+            background: var(--brand);
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-logo">
+            <i data-lucide="flame" style="width: 22px; height: 22px;"></i>
+            STREETFEED
+        </div>
+        <div id="order-badge" style="font-size: 0.85rem; font-weight: 800; color: var(--text-dim);">
+            Cargando pedido...
+        </div>
+    </header>
+
+    <main>
+        <!-- Stepper -->
+        <div class="stepper-box">
+            <div class="stepper-grid">
+                <div id="step-1" class="step-item completed">
+                    <div class="step-icon"><i data-lucide="clipboard-check" style="width: 20px;"></i></div>
+                    <div class="step-label">Recibido</div>
+                </div>
+                <div id="step-2" class="step-item active">
+                    <div class="step-icon"><i data-lucide="flame" style="width: 20px;"></i></div>
+                    <div class="step-label">En Cocina</div>
+                </div>
+                <div id="step-3" class="step-item">
+                    <div class="step-icon"><i data-lucide="bike" style="width: 20px;"></i></div>
+                    <div class="step-label">En Camino</div>
+                </div>
+                <div id="step-4" class="step-item">
+                    <div class="step-icon"><i data-lucide="check-circle" style="width: 20px;"></i></div>
+                    <div class="step-label">Entregado</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map-wrapper">
+            <div class="live-tag">
+                <span class="live-dot"></span>
+                <span>GPS EN VIVO</span>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Order Summary Card -->
+        <div class="order-details-card">
+            <h3 style="font-size: 1.1rem; font-weight: 900; margin-bottom: 0.8rem;">📋 Resumen de tu Pedido</h3>
+            <div id="customer-info" style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.8rem;"></div>
+
+            <div id="items-list" class="items-list">
+                <!-- Dynamic items -->
+            </div>
+
+            <div id="total-row" class="total-row">
+                <span>Total Pedido</span>
+                <span id="total-val">$0</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let map = null;
+        let driverMarker = null;
+        let destMarker = null;
+        let targetOrder = null;
+        let locationPollTimer = null;
+
+        // Default store location coordinates (Calle 15, Barranquilla / default location)
+        const DEFAULT_STORE_LAT = 10.9685;
+        const DEFAULT_STORE_LNG = -74.7813;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+            initMap();
+            loadOrderData();
+        });
+
+        function initMap() {
+            // Initialize Leaflet map centered at default store location
+            map = L.map('map').setView([DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], 14);
+
+            // Add OpenStreetMap tiles (Free & High Quality)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            // Add Store Marker
+            const storeIcon = L.divIcon({
+                className: 'custom-store-pin',
+                html: `<div style="background:#f7931e; border:2px solid #fff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.4);"><i data-lucide="store" style="width:18px;"></i></div>`,
+                iconSize: [34, 34],
+                iconAnchor: [17, 17]
+            });
+            destMarker = L.marker([DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], { icon: storeIcon }).addTo(map)
+                .bindPopup('<b>STREETFEED</b><br>Restaurante');
+        }
+
+        function loadOrderData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('order') || urlParams.get('id');
+
+            const allOrders = JSON.parse(localStorage.getItem('restaurant_orders') || '[]');
+            targetOrder = allOrders.find(o => String(o.id) === String(orderId)) || allOrders[allOrders.length - 1];
+
+            if (!targetOrder) {
+                document.getElementById('order-badge').textContent = "Pedido no encontrado";
+                return;
+            }
+
+            document.getElementById('order-badge').textContent = `Pedido #${targetOrder.id}`;
+            document.getElementById('customer-info').innerHTML = `
+                <div><strong>Cliente:</strong> ${targetOrder.customer?.name || 'Cliente'}</div>
+                <div><strong>Dirección:</strong> ${targetOrder.customer?.address || 'Domicilio'} ${targetOrder.customer?.neighborhood ? ' (Barrio ' + targetOrder.customer.neighborhood + ')' : ''}</div>
+                <div><strong>Pago:</strong> ${targetOrder.customer?.payment || 'Efectivo'}</div>
+            `;
+
+            // Populate items list
+            const itemsListEl = document.getElementById('items-list');
+            itemsListEl.innerHTML = (targetOrder.items || []).map(it => `
+                <div class="item-row">
+                    <span>${it.qty || 1}x ${it.name}</span>
+                    <span>$${((it.qty || 1) * (it.price || 0)).toLocaleString('es-CO')}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('total-val').textContent = `$${(targetOrder.total || 0).toLocaleString('es-CO')}`;
+
+            // Update stepper status
+            updateStepper(targetOrder.status || 'in-progress');
+
+            // Start live GPS polling
+            pollDriverLocation(targetOrder.id);
+            locationPollTimer = setInterval(() => pollDriverLocation(targetOrder.id), 4000);
+        }
+
+        function updateStepper(status) {
+            document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active', 'completed'));
+
+            const s1 = document.getElementById('step-1');
+            const s2 = document.getElementById('step-2');
+            const s3 = document.getElementById('step-3');
+            const s4 = document.getElementById('step-4');
+
+            if (status === 'delivered') {
+                s1.classList.add('completed');
+                s2.classList.add('completed');
+                s3.classList.add('completed');
+                s4.classList.add('completed');
+            } else if (status === 'on-the-way' || status === 'delivering') {
+                s1.classList.add('completed');
+                s2.classList.add('completed');
+                s3.classList.add('active');
+            } else if (status === 'cooking' || status === 'preparing') {
+                s1.classList.add('completed');
+                s2.classList.add('active');
+            } else {
+                s1.classList.add('active');
+            }
+        }
+
+        function pollDriverLocation(orderId) {
+            fetch(`/api/driver/location/${orderId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && data.location) {
+                        const { lat, lng, driverName } = data.location;
+                        updateDriverMapMarker(lat, lng, driverName);
+                    }
+                })
+                .catch(err => console.warn("GPS poll error:", err));
+        }
+
+        function updateDriverMapMarker(lat, lng, driverName) {
+            if (!map) return;
+
+            const bikeIcon = L.divIcon({
+                className: 'custom-bike-pin',
+                html: `<div style="background:#10b981; border:3px solid #fff; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; box-shadow:0 6px 15px rgba(16,185,129,0.5);"><i data-lucide="bike" style="width:22px;"></i></div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+
+            if (!driverMarker) {
+                driverMarker = L.marker([lat, lng], { icon: bikeIcon }).addTo(map)
+                    .bindPopup(`<b>🛵 ${driverName || 'Repartidor'}</b><br>¡En camino con tu pedido!`).openPopup();
+            } else {
+                driverMarker.setLatLng([lat, lng]);
+            }
+
+            // Fit map bounds to show driver and store
+            const bounds = L.latLngBounds([[DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], [lat, lng]]);
+            map.fitBounds(bounds, { padding: [50, 50] });
+
+            // Mark step 3 as active
+            updateStepper('on-the-way');
+            if (window.lucide) lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

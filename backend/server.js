@@ -3858,6 +3858,34 @@ app.listen(PORT, async () => {
         console.error('[AS Sierra] ⚠️ Error creando tablas de soporte:', err.message);
     }
 
+// Live GPS tracking store for delivery drivers
+const liveDriverLocations = {};
+
+app.post('/api/driver/location', express.json(), (req, res) => {
+    const { orderId, driverId, driverName, lat, lng } = req.body || {};
+    if (!orderId || lat === undefined || lng === undefined) {
+        return res.status(400).json({ error: 'Faltan parámetros requeridos (orderId, lat, lng)' });
+    }
+    liveDriverLocations[String(orderId)] = {
+        orderId: String(orderId),
+        driverId: driverId || 'default',
+        driverName: driverName || 'Repartidor',
+        lat: Number(lat),
+        lng: Number(lng),
+        updatedAt: Date.now()
+    };
+    return res.json({ success: true, location: liveDriverLocations[String(orderId)] });
+});
+
+app.get('/api/driver/location/:orderId', (req, res) => {
+    const orderId = String(req.params.orderId);
+    const loc = liveDriverLocations[orderId];
+    if (!loc) {
+        return res.json({ success: true, location: null });
+    }
+    return res.json({ success: true, location: loc });
+});
+
     console.log(`====================================================`);
     console.log(`[AS Sierra Systems] Servidor unificado en línea`);
     console.log(`====================================================`);

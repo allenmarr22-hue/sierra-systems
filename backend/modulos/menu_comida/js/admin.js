@@ -4184,6 +4184,13 @@ window.showOrderDetails = function(id) {
             delFeeEl.style.setProperty('color', '#4caf50', 'important');
         }
     }
+
+    const trackBtn = document.getElementById('detail-customer-tracking-btn');
+    if (trackBtn) {
+        trackBtn.href = `rastreo.html?order=${order.id}`;
+        trackBtn.style.display = (order.customer?.deliveryType === 'delivery' || order.deliveryFee > 0 || order.customer?.address) ? 'inline-flex' : 'none';
+    }
+
     document.getElementById('detail-total-price').textContent = '$' + order.total.toLocaleString();
 
     const list = document.getElementById('detail-items-list');
@@ -5943,6 +5950,7 @@ function renderEmployeesTable() {
             else if (emp.role === 'mesero') roleBadge = '<span style="background: rgba(37,99,235,0.18); color: #2563eb; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Mesero / Pedidos</span>';
             else if (emp.role === 'cajero') roleBadge = '<span style="background: rgba(16,185,129,0.18); color: #059669; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Cajero / Cierre</span>';
             else if (emp.role === 'cocina') roleBadge = '<span style="background: rgba(217,119,6,0.18); color: #d97706; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Cocina / Comandas</span>';
+            else if (emp.role === 'domiciliario') roleBadge = '<span style="background: rgba(16,185,129,0.18); color: #059669; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">🛵 Domiciliario</span>';
 
             const statusBadge = emp.status === 'active'
                 ? '<span style="color:#059669; font-weight:700; font-size:0.8rem;">● Activo</span>'
@@ -6158,9 +6166,10 @@ function renderEmployeesGrid() {
     const roleConfig = {
         owner:   { label: 'Propietario',       color: '#d97706', bg: 'rgba(245,158,11,0.15)',   icon: 'crown' },
         admin:   { label: 'Administrador',     color: '#6366f1', bg: 'rgba(99,102,241,0.15)',   icon: 'crown' },
-        mesero:  { label: 'Mesero / Pedidos',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)',   icon: 'clipboard-list' },
-        cajero:  { label: 'Cajero / Cierre',   color: '#10b981', bg: 'rgba(16,185,129,0.15)',   icon: 'calculator' },
-        cocina:  { label: 'Cocina / Comandas', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',   icon: 'chef-hat' }
+        mesero:        { label: 'Mesero / Pedidos',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)',   icon: 'clipboard-list' },
+        cajero:        { label: 'Cajero / Cierre',   color: '#10b981', bg: 'rgba(16,185,129,0.15)',   icon: 'calculator' },
+        cocina:        { label: 'Cocina / Comandas', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',   icon: 'chef-hat' },
+        domiciliario:  { label: '🛵 Domiciliario',   color: '#10b981', bg: 'rgba(16,185,129,0.15)',   icon: 'bike' }
     };
 
     if (!employeesList || employeesList.length === 0) {
@@ -6356,10 +6365,11 @@ window.viewEmployeeProfile = function(empId, showPersonalInfo = false) {
     window._activeProfileEmpId = empId;
 
     const roleConfig = {
-        admin:   { label: 'Administrador',     color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
-        mesero:  { label: 'Mesero / Pedidos',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
-        cajero:  { label: 'Cajero / Cierre',   color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
-        cocina:  { label: 'Cocina / Comandas', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' }
+        admin:         { label: 'Administrador',     color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
+        mesero:        { label: 'Mesero / Pedidos',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+        cajero:        { label: 'Cajero / Cierre',   color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+        cocina:        { label: 'Cocina / Comandas', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+        domiciliario:  { label: '🛵 Domiciliario',   color: '#10b981', bg: 'rgba(16,185,129,0.15)' }
     };
     const cfg = roleConfig[emp.role] || roleConfig.mesero;
     const isActive = emp.status === 'active';

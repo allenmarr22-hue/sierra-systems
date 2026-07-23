@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STREETFEED - Panel Repartidores 🛵</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --surface: #151c2c;
+            --surface-card: #1e293b;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --brand: #f7931e;
+            --brand-light: rgba(247, 147, 30, 0.15);
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.15);
+            --border: rgba(255, 255, 255, 0.08);
+            --radius: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 2rem;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(12px);
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            background: var(--brand-light);
+            border: 1px solid rgba(247, 147, 30, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand);
+        }
+
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            letter-spacing: -0.3px;
+        }
+
+        .driver-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.35rem 0.75rem;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        /* Main Container */
+        main {
+            flex: 1;
+            padding: 1.2rem;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Order Cards */
+        .order-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.2rem;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .order-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 0.9rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.9rem;
+        }
+
+        .order-id {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--brand);
+        }
+
+        .order-pay-tag {
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 0.3rem 0.7rem;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        .info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .info-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand);
+            flex-shrink: 0;
+        }
+
+        .info-content label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 0.5px;
+        }
+
+        .info-content val {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-top: 1px;
+        }
+
+        /* Buttons */
+        .btn-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 0.9rem;
+            border-radius: 14px;
+            border: none;
+            font-weight: 800;
+            font-size: 0.92rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s active;
+        }
+
+        .btn-gps {
+            background: var(--brand);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(247, 147, 30, 0.3);
+        }
+
+        .btn-maps {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-deliver {
+            background: var(--success-light);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-call {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .gps-transmitting-banner {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            padding: 0.65rem 0.9rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Empty state */
+        .empty-box {
+            text-align: center;
+            padding: 4rem 1.5rem;
+            color: var(--text-dim);
+            background: var(--surface-card);
+            border-radius: var(--radius);
+            border: 1px dashed var(--border);
+        }
+
+        /* Login Overlay */
+        #login-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 15, 25, 0.95);
+            backdrop-filter: blur(15px);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+            font-size: 0.95rem;
+            margin-top: 0.4rem;
+            margin-bottom: 1.2rem;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: var(--brand);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand-box">
+            <div class="brand-logo">
+                <i data-lucide="bike" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div class="brand-title">STREETFEED <span style="font-size: 0.75rem; color: var(--brand); font-weight: 800; text-transform: uppercase;">Repartidor</span></div>
+        </div>
+        <div id="active-driver-name" class="driver-badge">
+            <span class="status-dot"></span>
+            <span id="driver-label">Conectado</span>
+        </div>
+    </header>
+
+    <!-- Main View -->
+    <main>
+        <div class="section-title">
+            <span>🛵 Mis Entregas Pendientes</span>
+            <button onclick="loadAssignedOrders()" style="background: none; border: none; color: var(--brand); font-weight: 800; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;">
+                <i data-lucide="rotate-cw" style="width: 14px; height: 14px;"></i> Actualizar
+            </button>
+        </div>
+
+        <div id="orders-container">
+            <!-- Dynamic order cards populated by JS -->
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="login-modal" style="display: none;">
+        <div class="login-card">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="width: 60px; height: 60px; border-radius: 20px; background: var(--brand-light); border: 1px solid rgba(247,147,30,0.3); color: var(--brand); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.8rem;">
+                    <i data-lucide="bike" style="width: 30px; height: 30px;"></i>
+                </div>
+                <h3 style="font-size: 1.4rem; font-weight: 900;">Acceso Repartidores</h3>
+                <p style="font-size: 0.82rem; color: var(--text-dim); margin-top: 0.2rem;">Ingresa tus credenciales de colaborador</p>
+            </div>
+
+            <form onsubmit="handleDriverLogin(event)">
+                <label style="font-size: 0.75rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Usuario</label>
+                <input type="text" id="driver-username" class="input-field" placeholder="ej: @pedro_delivery" required>
+
+                <label style="font-size: 0.75rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Contraseña</label>
+                <input type="password" id="driver-password" class="input-field" placeholder="••••••••" required>
+
+                <button type="submit" class="btn-action btn-gps" style="margin-top: 0.5rem;">
+                    <i data-lucide="log-in" style="width: 18px;"></i> Iniciar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentDriver = null;
+        let activeWatchId = null;
+        let activeTrackingOrderId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+            checkSession();
+        });
+
+        function checkSession() {
+            const stored = localStorage.getItem('streetfeed_driver_session');
+            if (stored) {
+                try {
+                    currentDriver = JSON.parse(stored);
+                    document.getElementById('driver-label').textContent = currentDriver.name || 'Repartidor';
+                    document.getElementById('login-modal').style.display = 'none';
+                    loadAssignedOrders();
+                    return;
+                } catch(e) {}
+            }
+            document.getElementById('login-modal').style.display = 'flex';
+        }
+
+        function handleDriverLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('driver-username').value.trim();
+
+            // Check against stored employees
+            const employees = JSON.parse(localStorage.getItem('restaurant_employees') || '[]');
+            const found = employees.find(emp => (emp.username === user || emp.name.toLowerCase() === user.toLowerCase()) && emp.status === 'active');
+
+            if (found) {
+                currentDriver = found;
+                localStorage.setItem('streetfeed_driver_session', JSON.stringify(found));
+                document.getElementById('driver-label').textContent = found.name;
+                document.getElementById('login-modal').style.display = 'none';
+                loadAssignedOrders();
+            } else {
+                // Allow fallback login with driver name
+                currentDriver = { id: 'driver_' + Date.now(), name: user, username: user };
+                localStorage.setItem('streetfeed_driver_session', JSON.stringify(currentDriver));
+                document.getElementById('driver-label').textContent = user;
+                document.getElementById('login-modal').style.display = 'none';
+                loadAssignedOrders();
+            }
+        }
+
+        function loadAssignedOrders() {
+            const container = document.getElementById('orders-container');
+            const allOrders = JSON.parse(localStorage.getItem('restaurant_orders') || '[]');
+            
+            // Filter delivery orders assigned to this driver or active delivery orders
+            const pendingDeliveries = allOrders.filter(o => {
+                const isDelivery = o.customer?.deliveryType === 'delivery' || o.deliveryFee > 0 || (o.customer?.address && o.customer.address !== 'Mesa 1');
+                const isPending = o.status !== 'delivered' && o.status !== 'cancelled';
+                return isDelivery && isPending;
+            });
+
+            if (pendingDeliveries.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-box">
+                        <i data-lucide="check-circle" style="width: 44px; height: 44px; opacity: 0.3; margin-bottom: 0.8rem;"></i>
+                        <h4 style="font-size: 1.1rem; color: var(--text);">¡Sin entregas pendientes!</h4>
+                        <p style="font-size: 0.82rem; margin-top: 0.3rem;">Estás al día. Te notificaremos cuando haya nuevos domicilios.</p>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = pendingDeliveries.map(ord => {
+                const address = ord.customer?.address || 'Dirección no especificada';
+                const neighborhood = ord.customer?.neighborhood ? ` (Barrio ${ord.customer.neighborhood})` : '';
+                const fullAddress = address + neighborhood;
+                const phone = ord.customer?.phone || '';
+                const payMethod = ord.customer?.payment || 'Efectivo';
+                const total = (ord.total || 0).toLocaleString('es-CO');
+                const isTransmitting = activeTrackingOrderId === ord.id;
+
+                return `
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div>
+                                <span class="order-id">#${ord.id}</span>
+                                <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">${ord.time || ''}</div>
+                            </div>
+                            <span class="order-pay-tag">💵 ${payMethod}</span>
+                        </div>
+
+                        ${isTransmitting ? `
+                            <div class="gps-transmitting-banner">
+                                <i data-lucide="radio" style="width: 16px;"></i> Transmitiendo GPS en vivo al cliente...
+                            </div>
+                        ` : ''}
+
+                        <div class="info-grid">
+                            <div class="info-row">
+                                <div class="info-icon"><i data-lucide="user" style="width: 16px;"></i></div>
+                                <div class="info-content">
+                                    <label>Cliente</label>
+                                    <val>${ord.customer?.name || 'Cliente'}</val>
+                                </div>
+                            </div>
+
+                            <div class="info-row">
+                                <div class="info-icon"><i data-lucide="map-pin" style="width: 16px;"></i></div>
+                                <div class="info-content">
+                                    <label>Dirección de Entrega</label>
+                                    <val>${fullAddress}</val>
+                                </div>
+                            </div>
+
+                            <div class="info-row">
+                                <div class="info-icon" style="color: #10b981;"><i data-lucide="dollar-sign" style="width: 16px;"></i></div>
+                                <div class="info-content">
+                                    <label>Valor a Cobrar</label>
+                                    <val style="font-size: 1.15rem; color: #10b981;">$${total}</val>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="btn-stack">
+                            ${!isTransmitting ? `
+                                <button class="btn-action btn-gps" onclick="startGPSTracking('${ord.id}')">
+                                    <i data-lucide="navigation" style="width: 18px;"></i> 🚀 Iniciar Entrega (Activar GPS)
+                                </button>
+                            ` : `
+                                <button class="btn-action btn-maps" onclick="openExternalMaps('${encodeURIComponent(fullAddress)}')">
+                                    <i data-lucide="map" style="width: 18px;"></i> 🗺️ Abrir en Google Maps / Waze
+                                </button>
+                                <button class="btn-action btn-deliver" onclick="markOrderDelivered('${ord.id}')">
+                                    <i data-lucide="check-circle" style="width: 18px;"></i> ✅ Pedido Entregado
+                                </button>
+                            `}
+
+                            ${phone ? `
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.2rem;">
+                                    <a href="tel:${phone}" class="btn-action btn-call" style="text-decoration: none; flex: 1;">
+                                        <i data-lucide="phone" style="width: 16px;"></i> Llamar
+                                    </a>
+                                    <a href="https://wa.me/57${phone.replace(/\D/g,'')}" target="_blank" class="btn-action btn-call" style="text-decoration: none; flex: 1; background: rgba(16,185,129,0.1); color: #10b981; border-color: rgba(16,185,129,0.25);">
+                                        <i data-lucide="message-circle" style="width: 16px;"></i> WhatsApp
+                                    </a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function startGPSTracking(orderId) {
+            if (!navigator.geolocation) {
+                alert("Tu dispositivo no soporta geolocalización GPS.");
+                return;
+            }
+
+            activeTrackingOrderId = orderId;
+
+            // Watch position updates
+            activeWatchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    
+                    // Post to backend GPS endpoint
+                    fetch('/api/driver/location', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            orderId: orderId,
+                            driverId: currentDriver ? currentDriver.id : 'driver',
+                            driverName: currentDriver ? currentDriver.name : 'Repartidor',
+                            lat: lat,
+                            lng: lng
+                        })
+                    }).catch(err => console.warn("GPS update fetch error:", err));
+                },
+                (err) => {
+                    console.warn("GPS Watch Error:", err);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+
+            loadAssignedOrders();
+        }
+
+        function openExternalMaps(addressQuery) {
+            const url = `https://www.google.com/maps/search/?api=1&query=${addressQuery}`;
+            window.open(url, '_blank');
+        }
+
+        function markOrderDelivered(orderId) {
+            if (!confirm(`¿Confirmas que el pedido #${orderId} fue entregado con éxito?`)) return;
+
+            if (activeWatchId !== null) {
+                navigator.geolocation.clearWatch(activeWatchId);
+                activeWatchId = null;
+            }
+            activeTrackingOrderId = null;
+
+            // Update order status in local storage & notify system
+            const orders = JSON.parse(localStorage.getItem('restaurant_orders') || '[]');
+            const idx = orders.findIndex(o => String(o.id) === String(orderId));
+            if (idx !== -1) {
+                orders[idx].status = 'delivered';
+                localStorage.setItem('restaurant_orders', JSON.stringify(orders));
+            }
+
+            loadAssignedOrders();
+        }
+    </script>
+</body>
+</html>
