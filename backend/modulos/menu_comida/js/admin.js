@@ -3804,11 +3804,16 @@ window.closeMyMetricsModal = function() {
 };
 
 // ====== DOMICILIOS BADGE (always in-sync, called by renderOrders) ======
+// Only counts delivery orders that have been DISPATCHED by the owner.
+// Orders in Entrantes (pending) or En Preparación (confirmed) are NOT shown
+// because the domiciliario should only see orders ready to pick up.
 function updateDomiciliosBadge() {
     const badge = document.getElementById('domicilios-count-badge');
     if (!badge) return;
     const allOrders = getOrders();
     const count = allOrders.filter(o => {
+        // Only dispatched orders go to the Domicilios section
+        if (o.status !== 'dispatched') return false;
         const isDeliv = (
             o.deliveryType === 'delivery' ||
             o.type === 'domicilio' ||
@@ -3816,8 +3821,7 @@ function updateDomiciliosBadge() {
             (o.deliveryFee && o.deliveryFee > 0) ||
             (o.address && typeof o.address === 'string' && o.address.trim().length > 2)
         );
-        const isActive = (o.status !== 'completed' && o.status !== 'accepted' && o.status !== 'cancelled' && o.status !== 'rejected');
-        return isDeliv && isActive;
+        return isDeliv;
     }).length;
     badge.textContent = count;
     if (count > 0) {
@@ -8030,10 +8034,18 @@ function renderDriverDeliveriesSection() {
     }
 
     const allOrders = getOrders();
+    // Only show delivery orders that have been DISPATCHED by the owner.
+    // Pending/confirmed orders stay in Pedidos tab until the owner dispatches them.
     const deliveryOrders = allOrders.filter(o => {
-        const isDeliv = (o.deliveryType === 'delivery' || o.type === 'domicilio' || o.customer?.deliveryType === 'delivery' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
-        const isActive = (o.status !== 'completed' && o.status !== 'accepted' && o.status !== 'cancelled' && o.status !== 'rejected');
-        return isDeliv && isActive;
+        if (o.status !== 'dispatched') return false;
+        const isDeliv = (
+            o.deliveryType === 'delivery' ||
+            o.type === 'domicilio' ||
+            o.customer?.deliveryType === 'delivery' ||
+            (o.deliveryFee && o.deliveryFee > 0) ||
+            (o.address && typeof o.address === 'string' && o.address.trim().length > 2)
+        );
+        return isDeliv;
     });
 
     // Use centralized badge updater so it's always consistent with renderOrders
