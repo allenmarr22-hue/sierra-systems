@@ -7864,63 +7864,64 @@ window.openAssignDriverModal = async function(orderId) {
     const initials = (name) => name.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || 'DR';
 
     modal.innerHTML = `
-        <div class="glass" style="background:var(--surface-light, #1e293b);border:1px solid var(--glass-border);border-radius:26px;width:100%;max-width:460px;padding:2rem;box-shadow:0 25px 60px rgba(0,0,0,0.65);display:flex;flex-direction:column;gap:1.3rem;animation:slideDown 0.25s ease;">
+        <style>
+            #assign-driver-modal .drv-card { transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s; }
+            #assign-driver-modal .drv-card:hover { background: rgba(99,102,241,0.12) !important; border-color: rgba(99,102,241,0.5) !important; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(99,102,241,0.18); }
+            #assign-driver-modal .drv-card:hover .drv-assign-btn { background: linear-gradient(135deg,#818cf8,#6366f1) !important; box-shadow: 0 4px 16px rgba(99,102,241,0.45) !important; }
+            #assign-driver-modal ::-webkit-scrollbar { width: 4px; }
+            #assign-driver-modal ::-webkit-scrollbar-track { background: transparent; }
+            #assign-driver-modal ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 4px; }
+        </style>
+        <div style="background:linear-gradient(160deg, #0f172a 0%, #131c35 100%);border:1px solid rgba(99,102,241,0.2);border-radius:28px;width:100%;max-width:450px;padding:2rem;box-shadow:0 30px 70px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:1.25rem;animation:slideDown 0.22s ease;">
             
             <!-- Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div style="display:flex;align-items:center;gap:0.85rem;">
-                    <div style="width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.22));border:1px solid rgba(16,185,129,0.45);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 14px rgba(16,185,129,0.25);">📦</div>
+                <div style="display:flex;align-items:center;gap:0.9rem;">
+                    <div style="width:50px;height:50px;border-radius:16px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 6px 20px rgba(99,102,241,0.45);">🏍️</div>
                     <div>
-                        <h3 style="margin:0;font-size:1.2rem;font-weight:900;color:var(--text);">Asignar Domiciliario</h3>
-                        <p style="margin:2px 0 0;font-size:0.82rem;color:var(--text-dim);">Pedido <strong style="color:#10b981;">#${escapeHtml(orderId)}</strong></p>
+                        <h3 style="margin:0;font-size:1.18rem;font-weight:900;color:#f8fafc;letter-spacing:-0.3px;">Asignar Domiciliario</h3>
+                        <p style="margin:3px 0 0;font-size:0.8rem;color:#94a3b8;">Pedido <strong style="color:#818cf8;font-family:monospace;">#${escapeHtml(orderId)}</strong></p>
                     </div>
                 </div>
-                <button onclick="document.getElementById('assign-driver-modal').remove()" style="background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text-dim);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.2s;" onmouseover="this.style.color='var(--text)';this.style.background='rgba(255,255,255,0.12)';" onmouseout="this.style.color='var(--text-dim)';this.style.background='rgba(255,255,255,0.06)';">&times;</button>
+                <button onclick="document.getElementById('assign-driver-modal').remove()"
+                    style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#64748b;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.25rem;line-height:1;transition:all 0.2s;"
+                    onmouseover="this.style.color='#f8fafc';this.style.borderColor='rgba(99,102,241,0.5)';this.style.background='rgba(99,102,241,0.15)';"
+                    onmouseout="this.style.color='#64748b';this.style.borderColor='rgba(255,255,255,0.1)';this.style.background='rgba(255,255,255,0.05)';">&times;</button>
             </div>
 
+            <!-- Divider -->
+            <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(99,102,241,0.3),transparent);"></div>
+
             <!-- Driver List -->
-            <div style="display:flex;flex-direction:column;gap:0.65rem;max-height:300px;overflow-y:auto;padding-right:4px;">
-                ${drivers.map(d => `
-                    <div onclick="selectDriverForOrder('${escapeHtml(orderId)}', '${escapeHtml(d.name)}', '${escapeHtml(d.id)}')"
-                        style="padding:0.95rem 1.1rem;border-radius:16px;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.2s ease;"
-                        onmouseover="this.style.background='rgba(16,185,129,0.1)';this.style.borderColor='rgba(16,185,129,0.4)';this.style.transform='translateY(-2px)';"
-                        onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='var(--glass-border)';this.style.transform='none';">
+            <div style="display:flex;flex-direction:column;gap:0.6rem;max-height:320px;overflow-y:auto;padding-right:2px;">
+                ${drivers.length > 0 ? drivers.map(d => `
+                    <div class="drv-card" onclick="selectDriverForOrder('${escapeHtml(orderId)}', '${escapeHtml(d.name)}', '${escapeHtml(d.id)}')"
+                        style="padding:0.9rem 1rem;border-radius:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
                         <div style="display:flex;align-items:center;gap:0.85rem;">
-                            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.9rem;box-shadow:0 3px 10px rgba(16,185,129,0.3);position:relative;">
+                            <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.92rem;box-shadow:0 4px 14px rgba(99,102,241,0.4);position:relative;flex-shrink:0;">
                                 ${initials(d.name)}
-                                <span style="position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid var(--surface-light, #1e293b);"></span>
+                                <span style="position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:${d.activeCount > 0 ? '#f59e0b' : '#10b981'};border:2px solid #0f172a;"></span>
                             </div>
                             <div>
-                                <div style="font-weight:900;font-size:0.98rem;color:var(--text);">${escapeHtml(d.name)}</div>
-                                <div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px;">
-                                    ${d.activeCount > 0 
-                                        ? `<span style="color:#f59e0b;font-weight:800;">🛵 ${d.activeCount} domicilio${d.activeCount > 1 ? 's' : ''} en curso</span>` 
-                                        : `<span style="color:#10b981;font-weight:700;">✅ Disponible ahora</span>`}
+                                <div style="font-weight:800;font-size:0.97rem;color:#f1f5f9;">${escapeHtml(d.name)}</div>
+                                <div style="font-size:0.74rem;margin-top:3px;">
+                                    ${d.activeCount > 0
+                                        ? `<span style="color:#fbbf24;font-weight:700;">🛵 ${d.activeCount} en curso</span>`
+                                        : `<span style="color:#34d399;font-weight:700;">✅ Disponible</span>`}
                                 </div>
                             </div>
                         </div>
-                        <button style="padding:0.5rem 0.95rem;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;font-weight:800;font-size:0.8rem;cursor:pointer;box-shadow:0 3px 10px rgba(16,185,129,0.3);pointer-events:none;">
+                        <button class="drv-assign-btn" style="padding:0.48rem 1rem;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;font-weight:800;font-size:0.8rem;cursor:pointer;box-shadow:0 3px 12px rgba(99,102,241,0.35);pointer-events:none;transition:all 0.2s;white-space:nowrap;">
                             Asignar →
                         </button>
                     </div>
-                `).join('')}
-            </div>
-
-            <!-- Quick Add Section -->
-            <div style="border-top:1px dashed var(--glass-border);padding-top:1.1rem;display:flex;flex-direction:column;gap:0.65rem;">
-                <button onclick="toggleQuickAddDriverForm()" id="quick-add-toggle-btn"
-                    style="background:transparent;border:none;color:var(--theme-accent, #f59e0b);font-size:0.85rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:0.4rem;padding:0;text-align:left;">
-                    <span>➕ Agregar Nuevo Domiciliario al Equipo</span>
-                </button>
-
-                <div id="quick-add-driver-box" style="display:none;flex-direction:column;gap:0.6rem;margin-top:0.3rem;animation:fadeIn 0.2s ease;">
-                    <div style="display:flex;gap:0.5rem;">
-                        <input type="text" id="manual-driver-name" placeholder="Nombre del nuevo domiciliario..." style="flex:1;padding:0.75rem 1rem;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:var(--text);font-size:0.9rem;font-weight:700;outline:none;" onkeypress="if(event.key==='Enter') submitManualDriver('${escapeHtml(orderId)}')">
-                        <button onclick="submitManualDriver('${escapeHtml(orderId)}')" style="padding:0.75rem 1.3rem;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-weight:800;font-size:0.88rem;cursor:pointer;white-space:nowrap;box-shadow:0 4px 12px rgba(245,158,11,0.35);">
-                            Guardar & Asignar
-                        </button>
+                `).join('') : `
+                    <div style="padding:2rem;text-align:center;color:#64748b;font-size:0.88rem;">
+                        <div style="font-size:2rem;margin-bottom:0.5rem;">🛵</div>
+                        <div style="font-weight:700;">No hay domiciliarios disponibles</div>
+                        <div style="font-size:0.78rem;margin-top:0.3rem;">Registra domiciliarios en Personal para verlos aquí</div>
                     </div>
-                </div>
+                `}
             </div>
         </div>
     `;
