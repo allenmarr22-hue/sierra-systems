@@ -7946,13 +7946,13 @@ window.selectDriverForOrder = function(orderId, name, id) {
 
     if (typeof showConfirm === 'function') {
         showConfirm(
-            `¿Estás seguro de asignar el Pedido #${orderId} a ${name}?`,
+            `¿Asignar Pedido #${orderId} a ${name}?`,
             doAssign,
-            '🛵 Asignar Domiciliario',
+            'Aceptar',
             '#10b981',
             'Confirmar Asignación'
         );
-    } else if (confirm(`¿Asignar el Pedido #${orderId} a ${name}?`)) {
+    } else if (confirm(`¿Asignar #${orderId} a ${name}?`)) {
         doAssign();
     }
 };
