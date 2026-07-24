@@ -7549,7 +7549,7 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
     `;
 }
 
-let currentDeliveryFilterTab = 'all'; // 'mine', 'available', 'all'
+let currentDeliveryFilterTab = 'available'; // 'available', 'mine'
 
 function setDeliveryFilterTab(tab) {
     currentDeliveryFilterTab = tab;
@@ -7612,31 +7612,26 @@ function renderDriverDeliveriesSection() {
         return a && a.driverId === driver.id;
     });
     const unassigned = deliveryOrders.filter(o => !assignments[o.id || o.orderId]);
-    const others = deliveryOrders.filter(o => {
-        const a = assignments[o.id || o.orderId];
-        return a && a.driverId !== driver.id;
-    });
 
-    // Top Filter Bar HTML
+    // Ensure valid active tab
+    if (currentDeliveryFilterTab !== 'mine' && currentDeliveryFilterTab !== 'available') {
+        currentDeliveryFilterTab = mine.length > 0 ? 'mine' : 'available';
+    }
     const activeTab = currentDeliveryFilterTab;
+
+    // Top Filter Bar HTML (Only Entrantes and Mis Domicilios)
     const filterBarHtml = `
         <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:0.6rem; margin-bottom:1.5rem; flex-wrap:wrap; background:rgba(0,0,0,0.15); padding:0.4rem; border-radius:16px; border:1px solid var(--glass-border);">
             <button onclick="setDeliveryFilterTab('mine')"
-                style="flex:1; min-width:140px; padding:0.65rem 1rem; border-radius:12px; font-weight:800; font-size:0.85rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text-dim);'}">
-                <i data-lucide="package-check" style="width:16px;height:16px;"></i>
-                Mis Domicilios <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:1px 7px; border-radius:10px; font-size:0.75rem;">${mine.length}</span>
+                style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                <i data-lucide="package-check" style="width:17px;height:17px;"></i>
+                Mis Domicilios <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${mine.length}</span>
             </button>
 
             <button onclick="setDeliveryFilterTab('available')"
-                style="flex:1; min-width:140px; padding:0.65rem 1rem; border-radius:12px; font-weight:800; font-size:0.85rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s; ${activeTab === 'available' ? 'background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.35);' : 'background:transparent; color:var(--text-dim);'}">
-                <i data-lucide="bell" style="width:16px;height:16px;"></i>
-                Entrantes <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)'}; color:${activeTab === 'available' ? '#fff' : '#f59e0b'}; padding:1px 7px; border-radius:10px; font-size:0.75rem;">${unassigned.length}</span>
-            </button>
-
-            <button onclick="setDeliveryFilterTab('all')"
-                style="flex:1; min-width:120px; padding:0.65rem 1rem; border-radius:12px; font-weight:800; font-size:0.85rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s; ${activeTab === 'all' ? 'background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; box-shadow:0 4px 14px rgba(59,130,246,0.35);' : 'background:transparent; color:var(--text-dim);'}">
-                <i data-lucide="layers" style="width:16px;height:16px;"></i>
-                Todos <span style="background:${activeTab === 'all' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)'}; color:${activeTab === 'all' ? '#fff' : '#3b82f6'}; padding:1px 7px; border-radius:10px; font-size:0.75rem;">${deliveryOrders.length}</span>
+                style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'available' ? 'background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                <i data-lucide="bell" style="width:17px;height:17px;"></i>
+                Entrantes <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)'}; color:${activeTab === 'available' ? '#fff' : '#f59e0b'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${unassigned.length}</span>
             </button>
         </div>
     `;
@@ -7655,7 +7650,8 @@ function renderDriverDeliveriesSection() {
         } else {
             contentHtml = mine.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
         }
-    } else if (activeTab === 'available') {
+    } else {
+        // Tab 'available' (Entrantes)
         if (unassigned.length === 0) {
             contentHtml = `
                 <div style="grid-column:1/-1;text-align:center;padding:3rem 1.5rem;background:var(--surface-light);border-radius:20px;border:1px dashed var(--glass-border);">
@@ -7667,59 +7663,6 @@ function renderDriverDeliveriesSection() {
         } else {
             contentHtml = unassigned.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
         }
-    } else {
-        // Tab 'all'
-        let sections = '';
-
-        if (mine.length > 0) {
-            sections += `
-                <div style="grid-column:1/-1;">
-                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-                        <div style="height:2px;flex:1;background:linear-gradient(90deg,#10b981,transparent);"></div>
-                        <span style="background:rgba(16,185,129,0.15);color:#10b981;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
-                            <i data-lucide="package-check" style="width:15px;height:15px;"></i>
-                            Mis Domicilios (${mine.length})
-                        </span>
-                        <div style="height:2px;flex:1;background:linear-gradient(270deg,#10b981,transparent);"></div>
-                    </div>
-                </div>
-                ${mine.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('')}
-            `;
-        }
-
-        if (unassigned.length > 0) {
-            sections += `
-                <div style="grid-column:1/-1;">
-                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;${mine.length > 0 ? 'margin-top:1.5rem;' : ''}">
-                        <div style="height:2px;flex:1;background:linear-gradient(90deg,#f59e0b,transparent);"></div>
-                        <span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
-                            <i data-lucide="bell" style="width:15px;height:15px;"></i>
-                            Entrantes / Disponibles (${unassigned.length})
-                        </span>
-                        <div style="height:2px;flex:1;background:linear-gradient(270deg,#f59e0b,transparent);"></div>
-                    </div>
-                </div>
-                ${unassigned.map((o, i) => buildDeliveryCard(o, mine.length + i, isDriver, assignments)).join('')}
-            `;
-        }
-
-        if (others.length > 0) {
-            sections += `
-                <div style="grid-column:1/-1;">
-                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;margin-top:1.5rem;">
-                        <div style="height:2px;flex:1;background:linear-gradient(90deg,#ef4444,transparent);"></div>
-                        <span style="background:rgba(239,68,68,0.12);color:#ef4444;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
-                            <i data-lucide="lock" style="width:15px;height:15px;"></i>
-                            Tomados por otros (${others.length})
-                        </span>
-                        <div style="height:2px;flex:1;background:linear-gradient(270deg,#ef4444,transparent);"></div>
-                    </div>
-                </div>
-                ${others.map((o, i) => buildDeliveryCard(o, mine.length + unassigned.length + i, isDriver, assignments)).join('')}
-            `;
-        }
-
-        contentHtml = sections;
     }
 
     container.innerHTML = filterBarHtml + contentHtml;
