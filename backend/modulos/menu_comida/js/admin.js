@@ -367,12 +367,12 @@ function prefillConfigForm() {
 const BIZ_TYPES = [
     { id: 'burgers',    label: 'Hamburguesas', emoji: String.fromCodePoint(0x1F354), emojis: `${String.fromCodePoint(0x1F354)} ${String.fromCodePoint(0x1F35F)}`, tagline: 'Las mejores hamburguesas de la ciudad' },
     { id: 'icecream',   label: 'Heladería',    emoji: String.fromCodePoint(0x1F366), emojis: `${String.fromCodePoint(0x1F366)} ${String.fromCodePoint(0x1F368)}`, tagline: 'El sabor más frío y delicioso' },
-    { id: 'pizza',      label: 'Pizzería',     emoji: String.fromCodePoint(0x1F355), emojis: `${String.fromCodePoint(0x1F355)} ${String.fromCodePoint(0x1F3C7)}`, tagline: 'Pizza artesanal hecha con amor' },
+    { id: 'pizza',      label: 'Pizzería',     emoji: String.fromCodePoint(0x1F355), emojis: `${String.fromCodePoint(0x1F355)} ${String.fromCodePoint(0x1FAD5)}`, tagline: 'Pizza artesanal hecha con amor' },
     { id: 'coffee',     label: 'Cafetería',    emoji: String.fromCodePoint(0x2615), emojis: `${String.fromCodePoint(0x2615)} ${String.fromCodePoint(0x1F950)}`, tagline: 'El mejor café de tu día' },
     { id: 'bakery',     label: 'Panadería',    emoji: String.fromCodePoint(0x1F956), emojis: `${String.fromCodePoint(0x1F956)} ${String.fromCodePoint(0x1F9C1)}`, tagline: 'Recién horneado cada mañana' },
     { id: 'sushi',      label: 'Sushi',        emoji: String.fromCodePoint(0x1F363), emojis: `${String.fromCodePoint(0x1F363)} ${String.fromCodePoint(0x1F371)}`, tagline: 'Sushi fresco y auténtico' },
     { id: 'seafood',    label: 'Mariscos',     emoji: String.fromCodePoint(0x1F99E), emojis: `${String.fromCodePoint(0x1F99E)} ${String.fromCodePoint(0x1F41F)}`, tagline: 'Lo mejor del mar en tu mesa' },
-    { id: 'chicken',    label: 'Pollo',        emoji: String.fromCodePoint(0x1F357), emojis: `${String.fromCodePoint(0x1F357)} ${String.fromCodePoint(0x1F336)}`, tagline: 'Crujiente por fuera, jugoso por dentro' },
+    { id: 'chicken',    label: 'Pollo',        emoji: String.fromCodePoint(0x1F357), emojis: `${String.fromCodePoint(0x1F357)} ${String.fromCodePoint(0x1F969)}`, tagline: 'Crujiente por fuera, jugoso por dentro' },
     { id: 'tacos',      label: 'Tacos / Mex',  emoji: String.fromCodePoint(0x1F32E), emojis: `${String.fromCodePoint(0x1F32E)} ${String.fromCodePoint(0x1F32F)}`, tagline: 'Sabores auténticos de México' },
     { id: 'desserts',   label: 'Postres',      emoji: String.fromCodePoint(0x1F382), emojis: `${String.fromCodePoint(0x1F382)} ${String.fromCodePoint(0x1F370)}`, tagline: 'El dulce final perfecto' },
     { id: 'healthy',    label: 'Saludable',    emoji: String.fromCodePoint(0x1F957), emojis: `${String.fromCodePoint(0x1F957)} ${String.fromCodePoint(0x1F966)}`, tagline: 'Come bien, vive mejor' },
@@ -3523,13 +3523,15 @@ function renderDriverMetrics(range = 'today', specificMonth = null, specificDate
 
     // Filter: completed deliveries by this driver
     let deliveries = allOrders.filter(o => {
-        const isDelivery = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
+        const isDelivery = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0) || (o.customer?.deliveryType === 'delivery'));
         const isCompleted = (o.status === 'completed' || o.status === 'accepted');
         // Check attendedBy or deliveredBy matching driver name
-        const attended = (o.attendedBy || o.deliveredBy || '').toLowerCase().trim();
+        const attended = (o.attendedBy || o.deliveredBy || o.customer?.attendedBy || '').toLowerCase().trim();
         const cleanDriver = driverName.toLowerCase().trim();
-        const byDriver = !cleanDriver || attended.includes(cleanDriver) || cleanDriver.includes(attended);
-        return isDelivery && isCompleted;
+        const firstName = cleanDriver.split(' ')[0];
+        // Bug fix: byDriver was declared but never applied — now actually filtering by driver
+        const byDriver = !cleanDriver || attended.includes(cleanDriver) || (firstName && attended.includes(firstName));
+        return isDelivery && isCompleted && byDriver;
     });
 
     // Apply time filter
