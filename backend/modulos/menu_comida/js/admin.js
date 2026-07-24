@@ -292,6 +292,10 @@ function renderAdmin(openCatIds = null) {
 function prefillConfigForm() {
     if (!state.config) return;
 
+    if (state.config.waTemplateOrder && !state.config.waTemplateOrder.includes('{emojis_inicio}')) {
+        state.config.waTemplateOrder = state.config.waTemplateOrder.replace('*NUEVO PEDIDO - {negocio}*', '{emojis_inicio} *NUEVO PEDIDO - {negocio}* {emojis_fin}');
+    }
+
     const fields = {
         'conf-name': state.config.restaurantName,
         'conf-whatsapp': state.config.whatsappNumber,
@@ -5831,6 +5835,9 @@ window.resetStreetFeedWATemplate = function() {
 --------------------------
 
 🚀 _Enviado desde el Menú Digital_`;
+        if (typeof state !== 'undefined' && state.config) {
+            state.config.waTemplateOrder = el.value;
+        }
         showToast("Plantilla restablecida por defecto.");
     }
 };
