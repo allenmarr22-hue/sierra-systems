@@ -2747,6 +2747,36 @@ function showConfirm(msg, onConfirm, okText = 'Eliminar', okColor = '#ff5252', t
         okBtn.style.background = okColor;
     }
 
+    // Dynamic icon & container styling based on action type (success, warning, danger)
+    const iconContainer = document.getElementById('confirm-icon-circle') || modal.querySelector('.confirm-icon') || modal.querySelector('.modal-content > div:first-child');
+    if (iconContainer) {
+        const textCheck = (title + ' ' + okText + ' ' + msg).toLowerCase();
+        const colorCheck = String(okColor || '').toLowerCase();
+
+        const isSuccess = colorCheck.includes('10b981') || colorCheck.includes('059669') || colorCheck.includes('4caf50') || colorCheck.includes('22c55e') || textCheck.includes('entregad') || textCheck.includes('llevo') || textCheck.includes('éxito') || textCheck.includes('confirmar entrega');
+        const isWarning = colorCheck.includes('f59e0b') || colorCheck.includes('d97706') || (!colorCheck.includes('ef4444') && !colorCheck.includes('ff5252') && (textCheck.includes('liberar') || textCheck.includes('reasignar')));
+
+        if (isSuccess) {
+            iconContainer.style.background = 'rgba(16, 185, 129, 0.15)';
+            iconContainer.style.color = '#10b981';
+            iconContainer.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            iconContainer.innerHTML = '<i data-lucide="check-circle-2" style="width: 36px; height: 36px; color: #10b981;"></i>';
+            if (okBtn) okBtn.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.35)';
+        } else if (isWarning) {
+            iconContainer.style.background = 'rgba(245, 158, 11, 0.15)';
+            iconContainer.style.color = '#f59e0b';
+            iconContainer.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+            iconContainer.innerHTML = '<i data-lucide="refresh-cw" style="width: 34px; height: 34px; color: #f59e0b;"></i>';
+            if (okBtn) okBtn.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.35)';
+        } else {
+            iconContainer.style.background = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            iconContainer.innerHTML = '<i data-lucide="trash-2" style="width: 34px; height: 34px; color: #ef4444;"></i>';
+            if (okBtn) okBtn.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.35)';
+        }
+    }
+
     modal.classList.remove('hidden');
     document.body.classList.add('scroll-lock');
     if (window.lucide) lucide.createIcons();
