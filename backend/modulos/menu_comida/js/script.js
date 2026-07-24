@@ -2514,8 +2514,12 @@ function sendOrderToWhatsApp(order) {
         truck: '\uD83D\uDE9A'   // 🚚
     };
 
-    const orderEmojis = config.orderEmojis || "";
-    let message = `${orderEmojis} *NUEVO PEDIDO - ${storeName.toUpperCase()}* ${orderEmojis}\n`;
+    const rawEmojis = config.orderEmojis || config.waCustomEmojis || '🍔 🍟';
+    const emojiParts = rawEmojis.trim().split(/\s+/).filter(e => e.trim() !== '');
+    const eStart = emojiParts[0] || '🍔';
+    const eEnd = emojiParts[1] || eStart || '🍟';
+
+    let message = `${eStart} *NUEVO PEDIDO - ${storeName.toUpperCase()}* ${eEnd}\n`;
     message += `--------------------------\n`;
     message += `${e.user} *CLIENTE:* ${order.customer.name}\n`;
     message += `${e.phone} *TELÉFONO:* ${order.customer.phone}\n`;
@@ -2533,19 +2537,21 @@ function sendOrderToWhatsApp(order) {
     if (order.customer.note) message += `${e.note} *NOTA:* ${order.customer.note}\n`;
     message += `--------------------------\n\n`;
     
-    message += `${e.cart} *RESUMEN DEL PEDIDO:*\n`;
+    const deliveryTypeLabel = delLabels[order.customer.deliveryType];
+    const deliveryDetail = order.customer.deliveryType === 'delivery' ? `*DIRECCIÓN:* ${order.customer.address}` : `*DETALLES:* ${order.customer.address}`;
+
+    let itemsSummary = '';
     order.items.forEach(item => {
         const extrasPrice = (item.extras || []).reduce((s, ex) => s + ex.price, 0);
         const itemTotal = (item.price + extrasPrice) * item.qty;
-        message += `  • *${item.qty}x* ${item.name} ($${itemTotal.toLocaleString()})\n`;
+        itemsSummary += `  • *${item.qty}x* ${item.name} ($${itemTotal.toLocaleString()})\n`;
         if (item.extras && item.extras.length > 0) {
-            message += `    _Extras: ${item.extras.map(ex => ex.name).join(', ')}_\n`;
+            itemsSummary += `    _Extras: ${item.extras.map(ex => ex.name).join(', ')}_\n`;
         }
     });
-    
-    message += `\n--------------------------\n`;
+
+    let prices = '';
     if (order.deliveryFee > 0) {
-        message += `Subtotal: $${order.baseTotal.toLocaleString()}\n`;
         message += `Domicilio: $${order.deliveryFee.toLocaleString()}\n`;
     }
     message += `${e.cash} *TOTAL A PAGAR: $${order.total.toLocaleString()}*\n`;

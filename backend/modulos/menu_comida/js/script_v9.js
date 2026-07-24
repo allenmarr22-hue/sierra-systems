@@ -2638,7 +2638,7 @@ function sendOrderToWhatsApp(order) {
     
     const storeName = config.restaurantName || 'STREETFEED';
     
-    const defaultStreetFeedTemplate = `*NUEVO PEDIDO - {negocio}*
+    const defaultStreetFeedTemplate = `{emojis_inicio} *NUEVO PEDIDO - {negocio}* {emojis_fin}
 --------------------------
 👤 *CLIENTE:* {cliente}
 📞 *TELÉFONO:* {telefono}
@@ -2660,23 +2660,16 @@ function sendOrderToWhatsApp(order) {
 
     let template = config.waTemplateOrder || defaultStreetFeedTemplate;
 
-    // Emojis generados dinamicamente para evitar corrupcion de cache/codificacion
-    const e = {
-        user: String.fromCodePoint(0x1F464),
-        phone: String.fromCodePoint(0x1F4DE),
-        pin: String.fromCodePoint(0x1F4CD),
-        money: String.fromCodePoint(0x1F4B0),
-        note: String.fromCodePoint(0x1F4DD),
-        cart: String.fromCodePoint(0x1F6D2),
-        cash: String.fromCodePoint(0x1F4B5),
-        rocket: String.fromCodePoint(0x1F680),
-        truck: String.fromCodePoint(0x1F69A)
-    };
+    // Emojis generados dinamicamente según el Tipo de Negocio seleccionado
+    const rawEmojis = config.orderEmojis || config.waCustomEmojis || '🍔 🍟';
+    const emojiParts = rawEmojis.trim().split(/\s+/).filter(e => e.trim() !== '');
+    const eStart = emojiParts[0] || '🍔';
+    const eEnd = emojiParts[1] || eStart || '🍟';
 
-    const orderEmojis = config.orderEmojis || "";
-    const emojiParts = orderEmojis.split(' ').filter(e => e.trim() !== '');
-    const eStart = emojiParts[0] || '';
-    const eEnd = emojiParts[1] || eStart;
+    // Auto-inject {emojis_inicio} and {emojis_fin} if missing from order header
+    if (!template.includes('{emojis_inicio}') && template.includes('*NUEVO PEDIDO - {negocio}*')) {
+        template = template.replace('*NUEVO PEDIDO - {negocio}*', '{emojis_inicio} *NUEVO PEDIDO - {negocio}* {emojis_fin}');
+    }
 
     const delLabels = { 'dine-in': 'En Mesa', 'takeout': 'Para Llevar', 'delivery': 'Domicilio' };
     const entregaVal = delLabels[order.customer.deliveryType] || '';

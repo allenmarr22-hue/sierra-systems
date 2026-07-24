@@ -310,7 +310,7 @@ function prefillConfigForm() {
         'conf-closed-from': state.config.storeClosedFrom,
         'conf-closed-until': state.config.storeClosedUntil,
         'conf-closed-msg': state.config.storeClosedMsg,
-        'conf-wa-template': state.config.waTemplateOrder || `*NUEVO PEDIDO - {negocio}*
+        'conf-wa-template': state.config.waTemplateOrder || `{emojis_inicio} *NUEVO PEDIDO - {negocio}* {emojis_fin}
 --------------------------
 👤 *CLIENTE:* {cliente}
 📞 *TELÉFONO:* {telefono}
@@ -5038,7 +5038,7 @@ window.switchOrderSettingsTab = function(tab) {
         }
         const textarea = document.getElementById('conf-wa-template');
         if (textarea && typeof state !== 'undefined' && state.config) {
-            textarea.value = state.config.waTemplateOrder || `*NUEVO PEDIDO - {negocio}*
+            textarea.value = state.config.waTemplateOrder || `{emojis_inicio} *NUEVO PEDIDO - {negocio}* {emojis_fin}
 --------------------------
 👤 *CLIENTE:* {cliente}
 📞 *TELÉFONO:* {telefono}
@@ -5812,7 +5812,7 @@ window.insertTag = function(textareaId, tag) {
 window.resetStreetFeedWATemplate = function() {
     const el = document.getElementById('conf-wa-template');
     if (el) {
-        el.value = `*NUEVO PEDIDO - {negocio}*
+        el.value = `{emojis_inicio} *NUEVO PEDIDO - {negocio}* {emojis_fin}
 --------------------------
 👤 *CLIENTE:* {cliente}
 📞 *TELÉFONO:* {telefono}
