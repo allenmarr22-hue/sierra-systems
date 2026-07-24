@@ -7282,8 +7282,10 @@ function renderDriverDeliveriesSection() {
         return;
     }
 
-    container.innerHTML = deliveryOrders.map(order => {
+    container.innerHTML = deliveryOrders.map((order, idx) => {
         const orderId = order.id || order.orderId || 'ORD-0';
+        const accentColors = ['#10b981','#f59e0b','#3b82f6','#a855f7','#ef4444','#06b6d4'];
+        const accentColor = accentColors[idx % accentColors.length];
 
         // Robust string extractions to prevent [object Object]
         let customerName = 'Cliente';
@@ -7314,84 +7316,117 @@ function renderDriverDeliveriesSection() {
         const wazeUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddrStr)}`;
         const waUrl = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : '#';
 
+        const payIconMap = { 'efectivo': '💵', 'transferencia': '📲', 'tarjeta': '💳', 'nequi': '📱', 'daviplata': '📱' };
+        const payIcon = payIconMap[(payMethod || '').toLowerCase()] || '💳';
+        const initials = customerName.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || 'CL';
+
         return `
-            <div class="glass-card" style="padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--surface-light); display: flex; flex-direction: column; justify-content: space-between; gap: 1.2rem; position: relative;">
-                <div>
-                    <!-- Order Header -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; border-bottom: 1px dashed var(--glass-border); padding-bottom: 0.8rem;">
-                        <div>
-                            <span style="background: rgba(16,185,129,0.15); color: #10b981; padding: 4px 10px; border-radius: 8px; font-weight: 900; font-size: 0.8rem; font-family: monospace;">#${escapeHtml(orderId)}</span>
-                            <h4 style="margin: 0.4rem 0 0; font-size: 1.1rem; font-weight: 900; color: var(--text);">${escapeHtml(customerName)}</h4>
+            <div style="border-radius: 22px; overflow: hidden; border: 1px solid var(--glass-border); background: var(--surface-light); display: flex; flex-direction: column; box-shadow: 0 4px 24px rgba(0,0,0,0.18); transition: transform 0.2s, box-shadow 0.2s;"
+                 onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 32px rgba(0,0,0,0.28)';"
+                 onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 24px rgba(0,0,0,0.18)';">
+
+                <!-- Colored top accent bar -->
+                <div style="height: 5px; background: linear-gradient(90deg, ${accentColor}, ${accentColor}88);"></div>
+
+                <!-- Card Body -->
+                <div style="padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; flex: 1;">
+
+                    <!-- Avatar + Name + Order ID + Amount -->
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="width: 52px; height: 52px; border-radius: 16px; background: ${accentColor}22; border: 2px solid ${accentColor}44; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 900; color: ${accentColor}; flex-shrink: 0; letter-spacing: -1px;">
+                            ${initials}
                         </div>
-                        <div style="text-align: right;">
-                            <span style="font-size: 1.15rem; font-weight: 900; color: #10b981;">$${total.toLocaleString('es-CO')}</span>
-                            <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">${escapeHtml(payMethod)}</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.18rem;">
+                                <span style="background: ${accentColor}22; color: ${accentColor}; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 0.71rem; font-family: monospace;">#${escapeHtml(orderId)}</span>
+                                ${isTransmitting ? `<span style="background: rgba(239,68,68,0.15); color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.7rem; animation: none;">📡 GPS Activo</span>` : ''}
+                            </div>
+                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(customerName)}</h4>
+                        </div>
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <div style="font-size: 1.18rem; font-weight: 900; color: #10b981;">$${total.toLocaleString('es-CO')}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-dim); font-weight: 700; display: flex; align-items: center; gap: 0.22rem; justify-content: flex-end; margin-top: 2px;">
+                                <span>${payIcon}</span><span>${escapeHtml(payMethod)}</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Address & Contact -->
-                    <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem; margin-bottom: 0.8rem;">
-                        <div style="display: flex; align-items: flex-start; gap: 0.6rem; color: var(--text);">
-                            <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #ef4444; flex-shrink: 0; margin-top: 2px;"></i>
-                            <div>
-                                <strong style="display: block;">${escapeHtml(address)}</strong>
-                                ${barrio ? `<span style="font-size: 0.8rem; color: var(--text-dim);">Barrio: ${escapeHtml(barrio)}</span>` : ''}
-                            </div>
+                    <!-- Divider -->
+                    <div style="height: 1px; background: var(--glass-border);"></div>
+
+                    <!-- Address Block -->
+                    <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.8rem; background: rgba(239,68,68,0.06); border-radius: 12px; border: 1px solid rgba(239,68,68,0.14);">
+                        <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(239,68,68,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #ef4444;"></i>
                         </div>
-
-                        ${phone ? `
-                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.15); padding: 0.5rem 0.8rem; border-radius: 10px;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
-                                    <i data-lucide="phone" style="width: 16px; height: 16px; color: #10b981;"></i>
-                                    <span>${escapeHtml(phone)}</span>
-                                </div>
-                                <a href="${waUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 6px; background: rgba(37,211,102,0.15); color: #25D366; border: 1px solid rgba(37,211,102,0.3); text-decoration: none; font-weight: 800;">WhatsApp</a>
-                            </div>
-                        ` : ''}
-
-                        ${notes ? `
-                            <div style="font-size: 0.8rem; color: var(--text-dim); background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); padding: 0.5rem; border-radius: 8px;">
-                                ⚠️ <strong>Nota:</strong> ${escapeHtml(notes)}
-                            </div>
-                        ` : ''}
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #ef4444; letter-spacing: 0.5px; margin-bottom: 0.22rem;">Dirección de entrega</div>
+                            <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.4;">${escapeHtml(address)}</div>
+                            ${barrio ? `<div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 0.2rem;"><strong>Barrio:</strong> ${escapeHtml(barrio)}</div>` : ''}
+                        </div>
                     </div>
+
+                    <!-- Phone block -->
+                    ${phone ? `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; background: rgba(16,185,129,0.06); border-radius: 12px; border: 1px solid rgba(16,185,129,0.16);">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <div style="width: 30px; height: 30px; border-radius: 8px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i data-lucide="phone" style="width: 15px; height: 15px; color: #10b981;"></i>
+                            </div>
+                            <span style="font-size: 0.88rem; font-weight: 700; color: var(--text);">${escapeHtml(phone)}</span>
+                        </div>
+                        <a href="${waUrl}" target="_blank" style="padding: 5px 12px; border-radius: 8px; background: rgba(37,211,102,0.14); color: #25D366; border: 1px solid rgba(37,211,102,0.3); text-decoration: none; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem;">
+                            💬 WhatsApp
+                        </a>
+                    </div>
+                    ` : ''}
+
+                    <!-- Notes block -->
+                    ${notes ? `
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(245,158,11,0.08); border-radius: 10px; border: 1px solid rgba(245,158,11,0.22); font-size: 0.82rem; color: var(--text-dim); display: flex; align-items: flex-start; gap: 0.5rem;">
+                        <span style="flex-shrink: 0;">⚠️</span>
+                        <div><strong style="color: #f59e0b;">Nota:</strong> ${escapeHtml(notes)}</div>
+                    </div>
+                    ` : ''}
                 </div>
 
-                <!-- Action Buttons: Driver vs Owner -->
-                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                <!-- Footer Buttons -->
+                <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.5rem;">
                     ${isDriver ? `
-                        <!-- GPS Toggle Button for Driver -->
-                        <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')" class="btn-primary" style="width: 100%; padding: 0.75rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: ${isTransmitting ? '#ef4444' : 'linear-gradient(135deg, #10b981, #059669)'}; border: none; cursor: pointer;">
+                        <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')"
+                            style="width: 100%; padding: 0.82rem 1rem; border-radius: 12px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; background: ${isTransmitting ? 'linear-gradient(135deg,#ef4444,#dc2626)' : 'linear-gradient(135deg,#10b981,#059669)'}; color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 14px ${isTransmitting ? 'rgba(239,68,68,0.35)' : 'rgba(16,185,129,0.35)'}; transition: filter 0.2s;"
+                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
                             <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width: 18px; height: 18px;"></i>
-                            <span>${isTransmitting ? '📡 Transmitiendo GPS (Toca para detener)' : '🚀 Iniciar Entrega (Activar GPS)'}</span>
+                            ${isTransmitting ? '📡 Transmitiendo GPS — Toca para detener' : '🚀 Iniciar Entrega (Activar GPS)'}
                         </button>
-
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                            <a href="${wazeUrl}" target="_blank" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; text-align: center; background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3);">
-                                <i data-lucide="map" style="width: 16px; height: 16px;"></i>
-                                <span>Abrir Mapa</span>
+                            <a href="${wazeUrl}" target="_blank"
+                                style="padding: 0.65rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.28); transition: background 0.2s;"
+                                onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
+                                <i data-lucide="navigation-2" style="width: 15px; height: 15px;"></i> Navegar
                             </a>
-
-                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}', '${escapeHtml(customerName)}', '${escapeHtml(address)}')" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); cursor: pointer;">
-                                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-                                <span>Ver Rastreo</span>
+                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
+                                style="padding: 0.65rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(168,85,247,0.12); color: #a855f7; border: 1px solid rgba(168,85,247,0.28); cursor: pointer; transition: background 0.2s;"
+                                onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'">
+                                <i data-lucide="eye" style="width: 15px; height: 15px;"></i> Ver en Mapa
                             </button>
                         </div>
-
-                        <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')" class="btn-secondary" style="width: 100%; padding: 0.6rem; border-radius: 10px; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.25); cursor: pointer; margin-top: 0.2rem;">
-                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
-                            <span>✅ Pedido Entregado</span>
+                        <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')"
+                            style="width: 100%; padding: 0.7rem; border-radius: 10px; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.28); cursor: pointer; transition: background 0.2s;"
+                            onmouseover="this.style.background='rgba(16,185,129,0.2)'" onmouseout="this.style.background='rgba(16,185,129,0.1)'">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> ✅ Pedido Entregado
                         </button>
                     ` : `
-                        <!-- Propietario / Admin Live Monitor Buttons -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}', '${escapeHtml(customerName)}', '${escapeHtml(address)}')" class="btn-primary" style="padding: 0.75rem; border-radius: 12px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #10b981, #059669); border: none; cursor: pointer;">
-                                <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
-                                <span>📍 Ver Rastreo GPS</span>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;">
+                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
+                                style="padding: 0.78rem; border-radius: 12px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg,#10b981,#059669); color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: filter 0.2s;"
+                                onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                                <i data-lucide="map-pin" style="width: 17px; height: 17px;"></i> Rastreo GPS
                             </button>
-                            <a href="${wazeUrl}" target="_blank" class="btn-secondary" style="padding: 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; text-align: center; background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3);">
-                                <i data-lucide="map" style="width: 18px; height: 18px;"></i>
-                                <span>Abrir Mapa</span>
+                            <a href="${wazeUrl}" target="_blank"
+                                style="padding: 0.78rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.28); transition: background 0.2s;"
+                                onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
+                                <i data-lucide="map" style="width: 17px; height: 17px;"></i> Abrir Mapa
                             </a>
                         </div>
                     `}
