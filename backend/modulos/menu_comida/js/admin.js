@@ -7236,9 +7236,26 @@ function renderDriverDeliveriesSection() {
     const container = document.getElementById('driver-deliveries-list');
     if (!container) return;
 
+    const isDriver = (typeof currentEmployeeRole !== 'undefined' && currentEmployeeRole === 'domiciliario');
+
+    const statusPill = document.getElementById('driver-gps-status-pill');
+    const statusText = document.getElementById('driver-gps-status-text');
+    if (statusPill && statusText) {
+        if (isDriver) {
+            statusPill.style.background = activeGpsOrderId ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.1)';
+            statusPill.style.color = '#10b981';
+            statusText.textContent = activeGpsOrderId ? '📡 Transmitiendo GPS en Vivo' : 'Listo para Entregas';
+        } else {
+            statusPill.style.background = 'rgba(59, 130, 246, 0.15)';
+            statusPill.style.color = '#3b82f6';
+            statusPill.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+            statusText.textContent = '📊 Supervisión de Domicilios';
+        }
+    }
+
     const allOrders = getOrders();
     const deliveryOrders = allOrders.filter(o => {
-        const isDeliv = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
+        const isDeliv = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
         const isActive = (o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'rejected');
         return isDeliv && isActive;
     });
@@ -7267,11 +7284,28 @@ function renderDriverDeliveriesSection() {
 
     container.innerHTML = deliveryOrders.map(order => {
         const orderId = order.id || order.orderId || 'ORD-0';
-        const customerName = order.customerName || order.customer || 'Cliente';
-        const phone = order.customerPhone || order.phone || '';
-        const address = order.customerAddress || order.address || 'Dirección no especificada';
-        const barrio = order.barrio || order.neighborhood || '';
-        const notes = order.notes || order.observations || '';
+
+        // Robust string extractions to prevent [object Object]
+        let customerName = 'Cliente';
+        if (typeof order.customerName === 'string' && order.customerName.trim()) customerName = order.customerName;
+        else if (typeof order.customer === 'string' && order.customer.trim()) customerName = order.customer;
+        else if (order.customerName && typeof order.customerName === 'object' && order.customerName.name) customerName = order.customerName.name;
+        else if (order.customer && typeof order.customer === 'object' && order.customer.name) customerName = order.customer.name;
+
+        let address = 'Dirección no especificada';
+        if (typeof order.customerAddress === 'string' && order.customerAddress.trim()) address = order.customerAddress;
+        else if (typeof order.address === 'string' && order.address.trim()) address = order.address;
+        else if (order.address && typeof order.address === 'object' && order.address.street) address = order.address.street;
+        else if (order.customerAddress && typeof order.customerAddress === 'object' && order.customerAddress.street) address = order.customerAddress.street;
+
+        let phone = '';
+        if (typeof order.customerPhone === 'string' && order.customerPhone.trim()) phone = order.customerPhone;
+        else if (typeof order.phone === 'string' && order.phone.trim()) phone = order.phone;
+        else if (order.phone && typeof order.phone === 'object' && order.phone.number) phone = order.phone.number;
+        else if (order.customerPhone && typeof order.customerPhone === 'object' && order.customerPhone.number) phone = order.customerPhone.number;
+
+        const barrio = (typeof order.barrio === 'string') ? order.barrio : ((typeof order.neighborhood === 'string') ? order.neighborhood : '');
+        const notes = (typeof order.notes === 'string') ? order.notes : ((typeof order.observations === 'string') ? order.observations : '');
         const total = order.total || 0;
         const payMethod = order.paymentMethod || order.payMethod || 'Efectivo';
         const isTransmitting = (activeGpsOrderId === orderId);
@@ -7323,30 +7357,44 @@ function renderDriverDeliveriesSection() {
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
+                <!-- Action Buttons: Driver vs Owner -->
                 <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                    <!-- GPS Toggle Button -->
-                    <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')" class="btn-primary" style="width: 100%; padding: 0.75rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: ${isTransmitting ? '#ef4444' : 'linear-gradient(135deg, #10b981, #059669)'}; border: none; cursor: pointer;">
-                        <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width: 18px; height: 18px;"></i>
-                        <span>${isTransmitting ? '📡 Transmitiendo GPS (Toca para detener)' : '🚀 Iniciar Entrega (Activar GPS)'}</span>
-                    </button>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                        <a href="${wazeUrl}" target="_blank" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; text-align: center; background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3);">
-                            <i data-lucide="map" style="width: 16px; height: 16px;"></i>
-                            <span>Abrir Mapa</span>
-                        </a>
-
-                        <button onclick="openDriverMapModal('${escapeHtml(orderId)}', '${escapeHtml(customerName)}', '${escapeHtml(address)}')" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); cursor: pointer;">
-                            <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-                            <span>Ver Rastreo</span>
+                    ${isDriver ? `
+                        <!-- GPS Toggle Button for Driver -->
+                        <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')" class="btn-primary" style="width: 100%; padding: 0.75rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: ${isTransmitting ? '#ef4444' : 'linear-gradient(135deg, #10b981, #059669)'}; border: none; cursor: pointer;">
+                            <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width: 18px; height: 18px;"></i>
+                            <span>${isTransmitting ? '📡 Transmitiendo GPS (Toca para detener)' : '🚀 Iniciar Entrega (Activar GPS)'}</span>
                         </button>
-                    </div>
 
-                    <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')" class="btn-secondary" style="width: 100%; padding: 0.6rem; border-radius: 10px; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.25); cursor: pointer; margin-top: 0.2rem;">
-                        <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
-                        <span>✅ Pedido Entregado</span>
-                    </button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <a href="${wazeUrl}" target="_blank" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; text-align: center; background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3);">
+                                <i data-lucide="map" style="width: 16px; height: 16px;"></i>
+                                <span>Abrir Mapa</span>
+                            </a>
+
+                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}', '${escapeHtml(customerName)}', '${escapeHtml(address)}')" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); cursor: pointer;">
+                                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                                <span>Ver Rastreo</span>
+                            </button>
+                        </div>
+
+                        <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')" class="btn-secondary" style="width: 100%; padding: 0.6rem; border-radius: 10px; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.25); cursor: pointer; margin-top: 0.2rem;">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                            <span>✅ Pedido Entregado</span>
+                        </button>
+                    ` : `
+                        <!-- Propietario / Admin Live Monitor Buttons -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}', '${escapeHtml(customerName)}', '${escapeHtml(address)}')" class="btn-primary" style="padding: 0.75rem; border-radius: 12px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #10b981, #059669); border: none; cursor: pointer;">
+                                <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                <span>📍 Ver Rastreo GPS</span>
+                            </button>
+                            <a href="${wazeUrl}" target="_blank" class="btn-secondary" style="padding: 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; text-align: center; background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3);">
+                                <i data-lucide="map" style="width: 18px; height: 18px;"></i>
+                                <span>Abrir Mapa</span>
+                            </a>
+                        </div>
+                    `}
                 </div>
             </div>
         `;
