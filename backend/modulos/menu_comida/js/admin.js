@@ -7430,6 +7430,28 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     const btnNewOrder = document.getElementById('btn-new-manual-order');
     const orderSettingsBtn = document.querySelector('.order-settings-btn');
 
+    // Restore default DOM order for sidebar buttons before applying role visibility
+    const sidebar = document.querySelector('.sidebar-nav');
+    if (sidebar) {
+        const defaultOrder = [
+            'orders-tab',
+            'items-tab',
+            'combos-tab',
+            'stats-tab',
+            'expenses-tab',
+            'history-tab',
+            'employees-tab',
+            'domicilios-tab',
+            'my-metrics-tab',
+            'driver-metrics-tab',
+            'config-tab'
+        ];
+        defaultOrder.forEach(tabId => {
+            const btn = sidebar.querySelector(`.sidebar-btn[data-tab="${tabId}"]`);
+            if (btn) sidebar.appendChild(btn);
+        });
+    }
+
     if (role === 'domiciliario') {
         if (navOrders) navOrders.style.display = 'none';
         if (navHistory) navHistory.style.display = 'flex';
@@ -7445,12 +7467,11 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (btnNewOrder) btnNewOrder.style.display = 'none';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
 
-        // Force correct sidebar order: Domicilios, Historial, Métricas
-        const sidebar = document.querySelector('.sidebar-nav');
+        // Order sidebar buttons for driver: Domicilios -> Historial -> Métricas
         if (sidebar && navDomiciliarios && navHistory && navDriverMetrics) {
-            sidebar.insertBefore(navDomiciliarios, sidebar.firstChild);
-            navDomiciliarios.after(navHistory);
-            navHistory.after(navDriverMetrics);
+            sidebar.appendChild(navDomiciliarios);
+            sidebar.appendChild(navHistory);
+            sidebar.appendChild(navDriverMetrics);
         }
 
         // Automatically open Domicilios tab for driver
@@ -7515,6 +7536,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
         if (btnNewOrder) btnNewOrder.style.display = 'flex';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'flex');
+        document.querySelectorAll('.btn-delete-item, .btn-delete-cat, .btn-add-category').forEach(el => el.style.display = '');
     }
 
     // Filtros de Alcance ("Mis Ventas") y Sub-Pestañas para Cocina
