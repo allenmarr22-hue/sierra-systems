@@ -3803,6 +3803,31 @@ window.closeMyMetricsModal = function() {
     if (modal) modal.style.display = 'none';
 };
 
+// ====== DOMICILIOS BADGE (always in-sync, called by renderOrders) ======
+function updateDomiciliosBadge() {
+    const badge = document.getElementById('domicilios-count-badge');
+    if (!badge) return;
+    const allOrders = getOrders();
+    const count = allOrders.filter(o => {
+        const isDeliv = (
+            o.deliveryType === 'delivery' ||
+            o.type === 'domicilio' ||
+            o.customer?.deliveryType === 'delivery' ||
+            (o.deliveryFee && o.deliveryFee > 0) ||
+            (o.address && typeof o.address === 'string' && o.address.trim().length > 2)
+        );
+        const isActive = (o.status !== 'completed' && o.status !== 'accepted' && o.status !== 'cancelled' && o.status !== 'rejected');
+        return isDeliv && isActive;
+    }).length;
+    badge.textContent = count;
+    if (count > 0) {
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+window.updateDomiciliosBadge = updateDomiciliosBadge;
+
 window.renderOrders = function() {
     const orders = getOrders();
     const incomingList = document.getElementById('incoming-orders-list');
@@ -3951,6 +3976,9 @@ window.renderOrders = function() {
     }
     
     if (window.lucide) lucide.createIcons();
+
+    // Always keep the Domicilios sidebar badge in sync
+    updateDomiciliosBadge();
 }
 
 window.isCleaningMode = false;
@@ -8003,16 +8031,13 @@ function renderDriverDeliveriesSection() {
 
     const allOrders = getOrders();
     const deliveryOrders = allOrders.filter(o => {
-        const isDeliv = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
-        const isActive = (o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'rejected');
+        const isDeliv = (o.deliveryType === 'delivery' || o.type === 'domicilio' || o.customer?.deliveryType === 'delivery' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
+        const isActive = (o.status !== 'completed' && o.status !== 'accepted' && o.status !== 'cancelled' && o.status !== 'rejected');
         return isDeliv && isActive;
     });
 
-    const badge = document.getElementById('domicilios-count-badge');
-    if (badge) {
-        badge.textContent = deliveryOrders.length;
-        deliveryOrders.length > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
-    }
+    // Use centralized badge updater so it's always consistent with renderOrders
+    updateDomiciliosBadge();
 
     if (deliveryOrders.length === 0) {
         container.innerHTML = `
