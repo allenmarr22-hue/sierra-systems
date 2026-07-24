@@ -7768,14 +7768,13 @@ function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = n
 function getAvailableDrivers() {
     const driversMap = new Map();
 
-    // 1. From API employeesList
+    // 1. From API employeesList — only domiciliarios/repartidores, never meseros/cajeros/etc.
     if (Array.isArray(employeesList)) {
         employeesList.forEach(e => {
             const role = (e.role || '').toLowerCase();
-            if (role === 'domiciliario' || role === 'repartidor' || role === 'delivery' || role === 'driver' || e.status === 'active') {
-                if (e.name) {
-                    driversMap.set(e.name.toLowerCase().trim(), { id: e.id || e.name, name: e.name });
-                }
+            const isDriver = role === 'domiciliario' || role === 'repartidor' || role === 'delivery' || role === 'driver';
+            if (isDriver && e.name) {
+                driversMap.set(e.name.toLowerCase().trim(), { id: e.id || e.name, name: e.name });
             }
         });
     }
@@ -7852,10 +7851,10 @@ window.openAssignDriverModal = async function(orderId) {
             <!-- Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div style="display:flex;align-items:center;gap:0.85rem;">
-                    <div style="width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.2));border:1px solid rgba(245,158,11,0.4);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 14px rgba(245,158,11,0.2);">🛵</div>
+                    <div style="width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.22));border:1px solid rgba(16,185,129,0.45);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 14px rgba(16,185,129,0.25);">📦</div>
                     <div>
                         <h3 style="margin:0;font-size:1.2rem;font-weight:900;color:var(--text);">Asignar Domiciliario</h3>
-                        <p style="margin:2px 0 0;font-size:0.82rem;color:var(--text-dim);">Selecciona el repartidor para el Pedido <strong style="color:var(--theme-accent, #f59e0b);">#ORD-${escapeHtml(orderId)}</strong></p>
+                        <p style="margin:2px 0 0;font-size:0.82rem;color:var(--text-dim);">Pedido <strong style="color:#10b981;">#${escapeHtml(orderId)}</strong></p>
                     </div>
                 </div>
                 <button onclick="document.getElementById('assign-driver-modal').remove()" style="background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text-dim);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.2s;" onmouseover="this.style.color='var(--text)';this.style.background='rgba(255,255,255,0.12)';" onmouseout="this.style.color='var(--text-dim)';this.style.background='rgba(255,255,255,0.06)';">&times;</button>
