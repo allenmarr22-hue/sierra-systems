@@ -7087,6 +7087,8 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         }
     }
 
+    const navOrders = document.querySelector('.sidebar-btn[data-tab="orders-tab"]');
+    const navHistory = document.querySelector('.sidebar-btn[data-tab="history-tab"]');
     const navEmployees = document.getElementById('nav-btn-employees');
     const navConfig = document.querySelector('.sidebar-btn[data-tab="config-tab"]');
     const navExpenses = document.querySelector('.sidebar-btn[data-tab="expenses-tab"]');
@@ -7100,6 +7102,8 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     const orderSettingsBtn = document.querySelector('.order-settings-btn');
 
     if (role === 'domiciliario') {
+        if (navOrders) navOrders.style.display = 'none';
+        if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'none';
         if (navCombos) navCombos.style.display = 'none';
         if (navEmployees) navEmployees.style.display = 'none';
@@ -7110,7 +7114,14 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
         if (btnNewOrder) btnNewOrder.style.display = 'none';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
+
+        // Automatically open Domicilios tab for driver
+        setTimeout(() => {
+            if (navDomiciliarios) navDomiciliarios.click();
+        }, 60);
     } else if (role === 'mesero') {
+        if (navOrders) navOrders.style.display = 'flex';
+        if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'none';
         if (navCombos) navCombos.style.display = 'none';
         if (navEmployees) navEmployees.style.display = 'none';
@@ -7124,6 +7135,8 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
 
         document.querySelectorAll('.btn-delete-item, .btn-delete-cat, .btn-add-category').forEach(el => el.style.display = 'none');
     } else if (role === 'cajero') {
+        if (navOrders) navOrders.style.display = 'flex';
+        if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'none';
         if (navCombos) navCombos.style.display = 'none';
         if (navEmployees) navEmployees.style.display = 'none';
@@ -7135,6 +7148,8 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (btnNewOrder) btnNewOrder.style.display = 'flex';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
     } else if (role === 'cocina') {
+        if (navOrders) navOrders.style.display = 'flex';
+        if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'none';
         if (navCombos) navCombos.style.display = 'none';
         if (navEmployees) navEmployees.style.display = 'none';
@@ -7146,6 +7161,8 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (btnNewOrder) btnNewOrder.style.display = 'none';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
     } else {
+        if (navOrders) navOrders.style.display = 'flex';
+        if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'flex';
         if (navCombos) navCombos.style.display = 'flex';
         if (navEmployees) navEmployees.style.display = 'flex';
