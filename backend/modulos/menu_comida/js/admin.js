@@ -801,6 +801,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'employees-tab') {
                 if (typeof loadEmployees === 'function') loadEmployees();
             }
+            if (tabId === 'domicilios-tab') {
+                if (typeof renderDriverDeliveriesSection === 'function') renderDriverDeliveriesSection();
+            }
         });
     });
 
@@ -5659,23 +5662,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('logout') === 'true') {
-            localStorage.removeItem('streetfeed_employee_user');
-            localStorage.removeItem('streetfeed_driver_user');
-            applyRolePermissions('owner', 'Propietario');
-        } else {
-            const savedEmpRaw = localStorage.getItem('streetfeed_employee_user');
-            if (savedEmpRaw) {
-                const savedEmp = JSON.parse(savedEmpRaw);
-                if (savedEmp && savedEmp.role) {
-                    applyRolePermissions(savedEmp.role, savedEmp.name);
-                } else {
-                    applyRolePermissions('owner', 'Propietario');
-                }
+        const savedEmpRaw = localStorage.getItem('streetfeed_employee_user');
+        if (savedEmpRaw) {
+            const savedEmp = JSON.parse(savedEmpRaw);
+            if (savedEmp && savedEmp.role) {
+                applyRolePermissions(savedEmp.role, savedEmp.name);
             } else {
                 applyRolePermissions('owner', 'Propietario');
             }
+        } else {
+            applyRolePermissions('owner', 'Propietario');
         }
     } catch (e) {
         applyRolePermissions('owner', 'Propietario');
@@ -6893,7 +6889,7 @@ window.requireSecurityAuth = function(actionCallback, forcePrompt = false) {
         }
     } catch(e) {}
 
-    if (typeof currentEmployeeRole !== 'undefined' && (currentEmployeeRole === 'mesero' || currentEmployeeRole === 'cajero' || currentEmployeeRole === 'cocina' || currentEmployeeRole === 'domiciliario')) {
+    if (typeof currentEmployeeRole !== 'undefined' && (currentEmployeeRole === 'mesero' || currentEmployeeRole === 'cajero' || currentEmployeeRole === 'cocina')) {
         isWorkerSession = true;
     }
 
@@ -7085,7 +7081,6 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         else if (role === 'mesero') roleTitle = 'Mesero';
         else if (role === 'cajero') roleTitle = 'Cajero';
         else if (role === 'cocina') roleTitle = 'Cocina';
-        else if (role === 'domiciliario') roleTitle = 'Domiciliario';
         
         const displayName = (name === 'Administrador' || !name) ? 'Propietario' : name;
         const firstName = formatFirstName(displayName);
@@ -7097,13 +7092,6 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         }
     }
 
-    if (role === 'domiciliario') {
-        const instanceId = new URLSearchParams(window.location.search).get('instanceId');
-        const redirectUrl = `repartidor.html${instanceId ? `?instanceId=${instanceId}` : ''}`;
-        window.location.href = redirectUrl;
-        return;
-    }
-
     const navEmployees = document.getElementById('nav-btn-employees');
     const navConfig = document.querySelector('.sidebar-btn[data-tab="config-tab"]');
     const navExpenses = document.querySelector('.sidebar-btn[data-tab="expenses-tab"]');
@@ -7111,11 +7099,23 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     const navItems = document.querySelector('.sidebar-btn[data-tab="items-tab"]');
     const navCombos = document.querySelector('.sidebar-btn[data-tab="combos-tab"]');
     const navMyMetrics = document.getElementById('nav-btn-my-metrics');
+    const navDomiciliarios = document.getElementById('nav-btn-domiciliarios');
 
     const btnNewOrder = document.getElementById('btn-new-manual-order');
     const orderSettingsBtn = document.querySelector('.order-settings-btn');
 
-    if (role === 'mesero') {
+    if (role === 'domiciliario') {
+        if (navItems) navItems.style.display = 'none';
+        if (navCombos) navCombos.style.display = 'none';
+        if (navEmployees) navEmployees.style.display = 'none';
+        if (navConfig) navConfig.style.display = 'none';
+        if (navExpenses) navExpenses.style.display = 'none';
+        if (navStats) navStats.style.display = 'none';
+        if (navMyMetrics) navMyMetrics.style.display = 'none';
+        if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
+        if (btnNewOrder) btnNewOrder.style.display = 'none';
+        document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
+    } else if (role === 'mesero') {
         if (navItems) navItems.style.display = 'none';
         if (navCombos) navCombos.style.display = 'none';
         if (navEmployees) navEmployees.style.display = 'none';
@@ -7123,6 +7123,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navExpenses) navExpenses.style.display = 'none';
         if (navStats) navStats.style.display = 'none';
         if (navMyMetrics) navMyMetrics.style.display = 'flex';
+        if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
         if (btnNewOrder) btnNewOrder.style.display = 'flex';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
 
@@ -7135,6 +7136,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navExpenses) navExpenses.style.display = 'flex';
         if (navStats) navStats.style.display = 'flex';
         if (navMyMetrics) navMyMetrics.style.display = 'none';
+        if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
         if (btnNewOrder) btnNewOrder.style.display = 'flex';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
     } else if (role === 'cocina') {
@@ -7145,6 +7147,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navExpenses) navExpenses.style.display = 'none';
         if (navStats) navStats.style.display = 'none';
         if (navMyMetrics) navMyMetrics.style.display = 'none';
+        if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
         if (btnNewOrder) btnNewOrder.style.display = 'none';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
     } else {
@@ -7155,6 +7158,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navExpenses) navExpenses.style.display = 'flex';
         if (navStats) navStats.style.display = 'flex';
         if (navMyMetrics) navMyMetrics.style.display = 'none';
+        if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
         if (btnNewOrder) btnNewOrder.style.display = 'flex';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'flex');
     }
@@ -7189,17 +7193,16 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     }
 
     // --- CORRECCIÓN DE BUG DE NAVEGACIÓN POR ROL ---
-    // Si la pestaña actualmente visible/activa no está permitida para este rol, cambiar automáticamente a "orders-tab" (Pedidos)
     const forbiddenTabIds = [];
-    if (role === 'mesero') {
+    if (role === 'domiciliario') {
+        forbiddenTabIds.push('orders-tab', 'items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab', 'my-metrics-tab', 'history-tab');
+    } else if (role === 'mesero') {
         forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab');
     } else if (role === 'cocina') {
         forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab', 'my-metrics-tab');
     } else if (role === 'cajero') {
-        // Cajero tiene acceso a Métricas Globales (Ventas del día, Efectivo vs Transferencias) para Arqueo de Caja
         forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'my-metrics-tab');
     } else {
-        // Admin / Owner no necesita "Mis Métricas" (ya tiene "Métricas" globales del negocio)
         forbiddenTabIds.push('my-metrics-tab');
     }
 
@@ -7207,16 +7210,283 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     const activeTabId = activeSidebarBtn?.dataset?.tab;
 
     if (!activeTabId || forbiddenTabIds.includes(activeTabId) || (activeSidebarBtn && activeSidebarBtn.style.display === 'none')) {
-        const defaultVisibleBtn = document.querySelector('.sidebar-btn[data-tab="orders-tab"]') || 
+        const defaultVisibleBtn = (role === 'domiciliario' ? document.querySelector('.sidebar-btn[data-tab="domicilios-tab"]') : null) ||
+                                 document.querySelector('.sidebar-btn[data-tab="orders-tab"]') || 
                                  document.querySelector('.sidebar-btn:not([style*="display: none"])');
         if (defaultVisibleBtn) {
             defaultVisibleBtn.click();
         }
     }
 
-    // Re-renderizar las órdenes inmediatamente con los permisos del nuevo rol activo
-    if (typeof window.renderOrders === 'function') {
+    if (role === 'domiciliario') {
+        renderDriverDeliveriesSection();
+    } else if (typeof window.renderOrders === 'function') {
         window.renderOrders();
+    }
+}
+
+// ====== GESTIÓN DE DOMICILIOS & RASTREO GPS INTEGRADO ======
+let activeWatchPositionId = null;
+let activeGpsOrderId = null;
+let adminDriverMapInstance = null;
+let adminDriverMapMarker = null;
+let adminDriverMapInterval = null;
+
+function renderDriverDeliveriesSection() {
+    const container = document.getElementById('driver-deliveries-list');
+    if (!container) return;
+
+    const allOrders = getOrders();
+    const deliveryOrders = allOrders.filter(o => {
+        const isDeliv = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
+        const isActive = (o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'rejected');
+        return isDeliv && isActive;
+    });
+
+    const badge = document.getElementById('domicilios-count-badge');
+    if (badge) {
+        if (deliveryOrders.length > 0) {
+            badge.textContent = deliveryOrders.length;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    if (deliveryOrders.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--surface-light); border-radius: 24px; border: 1px dashed var(--glass-border);">
+                <i data-lucide="check-circle-2" style="width: 48px; height: 48px; color: #10b981; margin-bottom: 1rem; opacity: 0.7; display: block; margin-left: auto; margin-right: auto;"></i>
+                <h4 style="margin: 0 0 0.4rem; font-size: 1.2rem; font-weight: 800; color: var(--text);">¡No hay domicilios pendientes!</h4>
+                <p style="margin: 0; font-size: 0.88rem; color: var(--text-dim);">Todos los domicilios han sido entregados o no hay pedidos activos a domicilio.</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = deliveryOrders.map(order => {
+        const orderId = order.id || order.orderId || 'ORD-0';
+        const customerName = order.customerName || order.customer || 'Cliente';
+        const phone = order.customerPhone || order.phone || '';
+        const address = order.customerAddress || order.address || 'Dirección no especificada';
+        const barrio = order.barrio || order.neighborhood || '';
+        const notes = order.notes || order.observations || '';
+        const total = order.total || 0;
+        const payMethod = order.paymentMethod || order.payMethod || 'Efectivo';
+        const isTransmitting = (activeGpsOrderId === orderId);
+
+        const fullAddrStr = barrio ? `${address} - B/ ${barrio}` : address;
+        const wazeUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddrStr)}`;
+        const waUrl = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : '#';
+
+        return `
+            <div class="glass-card" style="padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--surface-light); display: flex; flex-direction: column; justify-content: space-between; gap: 1.2rem; position: relative;">
+                <div>
+                    <!-- Order Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; border-bottom: 1px dashed var(--glass-border); padding-bottom: 0.8rem;">
+                        <div>
+                            <span style="background: rgba(16,185,129,0.15); color: #10b981; padding: 4px 10px; border-radius: 8px; font-weight: 900; font-size: 0.8rem; font-family: monospace;">#${escapeHtml(orderId)}</span>
+                            <h4 style="margin: 0.4rem 0 0; font-size: 1.1rem; font-weight: 900; color: var(--text);">${escapeHtml(customerName)}</h4>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 1.15rem; font-weight: 900; color: #10b981;">$${total.toLocaleString('es-CO')}</span>
+                            <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">${escapeHtml(payMethod)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Address & Contact -->
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem; margin-bottom: 0.8rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 0.6rem; color: var(--text);">
+                            <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #ef4444; flex-shrink: 0; margin-top: 2px;"></i>
+                            <div>
+                                <strong style="display: block;">${escapeHtml(address)}</strong>
+                                ${barrio ? `<span style="font-size: 0.8rem; color: var(--text-dim);">Barrio: ${escapeHtml(barrio)}</span>` : ''}
+                            </div>
+                        </div>
+
+                        ${phone ? `
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.15); padding: 0.5rem 0.8rem; border-radius: 10px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
+                                    <i data-lucide="phone" style="width: 16px; height: 16px; color: #10b981;"></i>
+                                    <span>${escapeHtml(phone)}</span>
+                                </div>
+                                <a href="${waUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 6px; background: rgba(37,211,102,0.15); color: #25D366; border: 1px solid rgba(37,211,102,0.3); text-decoration: none; font-weight: 800;">WhatsApp</a>
+                            </div>
+                        ` : ''}
+
+                        ${notes ? `
+                            <div style="font-size: 0.8rem; color: var(--text-dim); background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); padding: 0.5rem; border-radius: 8px;">
+                                ⚠️ <strong>Nota:</strong> ${escapeHtml(notes)}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                    <!-- GPS Toggle Button -->
+                    <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')" class="btn-primary" style="width: 100%; padding: 0.75rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: ${isTransmitting ? '#ef4444' : 'linear-gradient(135deg, #10b981, #059669)'}; border: none; cursor: pointer;">
+                        <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width: 18px; height: 18px;"></i>
+                        <span>${isTransmitting ? '📡 Transmitiendo GPS (Toca para detener)' : '🚀 Iniciar Entrega (Activar GPS)'}</span>
+                    </button>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <a href="${wazeUrl}" target="_blank" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; text-align: center; background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3);">
+                            <i data-lucide="map" style="width: 16px; height: 16px;"></i>
+                            <span>Abrir Mapa</span>
+                        </a>
+
+                        <button onclick="openDriverMapModal('${escapeHtml(orderId)}', '${escapeHtml(customerName)}', '${escapeHtml(address)}')" class="btn-secondary" style="padding: 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); cursor: pointer;">
+                            <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                            <span>Ver Rastreo</span>
+                        </button>
+                    </div>
+
+                    <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')" class="btn-secondary" style="width: 100%; padding: 0.6rem; border-radius: 10px; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.25); cursor: pointer; margin-top: 0.2rem;">
+                        <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                        <span>✅ Pedido Entregado</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+}
+
+function toggleDriverGPS(orderId) {
+    if (activeGpsOrderId === orderId) {
+        if (activeWatchPositionId !== null) {
+            navigator.geolocation.clearWatch(activeWatchPositionId);
+            activeWatchPositionId = null;
+        }
+        activeGpsOrderId = null;
+        updateGpsStatusPill(false);
+        if (typeof showAdminNotification === 'function') showAdminNotification('📡 Transmisión de GPS detenida', 'info');
+        renderDriverDeliveriesSection();
+        return;
+    }
+
+    if (!navigator.geolocation) {
+        if (typeof showAdminNotification === 'function') showAdminNotification('❌ Tu navegador o dispositivo no soporta localización GPS', 'error');
+        return;
+    }
+
+    if (typeof showAdminNotification === 'function') showAdminNotification('🚀 GPS Activado. Transmitiendo ubicación...', 'success');
+    activeGpsOrderId = orderId;
+    updateGpsStatusPill(true);
+
+    activeWatchPositionId = navigator.geolocation.watchPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            fetch('/api/driver/location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, lat, lng })
+            }).catch(e => console.log('Location update error', e));
+        },
+        (err) => {
+            console.warn('GPS position error:', err);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+
+    renderDriverDeliveriesSection();
+}
+
+function updateGpsStatusPill(isActive) {
+    const pill = document.getElementById('driver-gps-status-pill');
+    const text = document.getElementById('driver-gps-status-text');
+    if (!pill || !text) return;
+    if (isActive) {
+        pill.style.background = 'rgba(16, 185, 129, 0.25)';
+        pill.style.color = '#10b981';
+        pill.style.borderColor = '#10b981';
+        text.textContent = '📡 Transmitiendo GPS en Vivo';
+    } else {
+        pill.style.background = 'rgba(16, 185, 129, 0.1)';
+        pill.style.color = '#10b981';
+        pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        text.textContent = 'Listo para Entregas';
+    }
+}
+
+function completeDriverDelivery(orderId) {
+    if (!confirm(`¿Confirmar que el pedido #${orderId} fue entregado con éxito?`)) return;
+    if (activeGpsOrderId === orderId && activeWatchPositionId !== null) {
+        navigator.geolocation.clearWatch(activeWatchPositionId);
+        activeWatchPositionId = null;
+        activeGpsOrderId = null;
+        updateGpsStatusPill(false);
+    }
+    const allOrders = getOrders();
+    const idx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
+    if (idx !== -1) {
+        allOrders[idx].status = 'completed';
+        localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+    }
+    if (typeof showAdminNotification === 'function') showAdminNotification(`✅ Pedido #${orderId} marcado como Entregado`, 'success');
+    renderDriverDeliveriesSection();
+    if (typeof window.renderOrders === 'function') window.renderOrders();
+}
+
+function openDriverMapModal(orderId, customerName, address) {
+    const modal = document.getElementById('driver-map-modal');
+    const title = document.getElementById('driver-map-title');
+    const subtitle = document.getElementById('driver-map-subtitle');
+    if (!modal) return;
+
+    if (title) title.textContent = `Rastreo GPS en Vivo - #${orderId}`;
+    if (subtitle) subtitle.textContent = `Entrega a ${customerName} (${address})`;
+    modal.classList.remove('hidden');
+
+    if (window.lucide) lucide.createIcons();
+
+    setTimeout(() => {
+        if (!adminDriverMapInstance) {
+            adminDriverMapInstance = L.map('admin-driver-map').setView([10.4631, -73.2532], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(adminDriverMapInstance);
+        } else {
+            adminDriverMapInstance.invalidateSize();
+        }
+
+        const scooterHtml = `<div style="background:#10b981; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; box-shadow:0 4px 15px rgba(16,185,129,0.5); border:3px solid #fff;">🛵</div>`;
+        const scooterIcon = L.divIcon({ html: scooterHtml, className: 'scooter-marker-icon', iconSize: [44, 44], iconAnchor: [22, 22] });
+
+        const fetchLoc = () => {
+            fetch(`/api/driver/location/${orderId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.lat && data.lng) {
+                        const pos = [data.lat, data.lng];
+                        if (!adminDriverMapMarker) {
+                            adminDriverMapMarker = L.marker(pos, { icon: scooterIcon }).addTo(adminDriverMapInstance);
+                            adminDriverMapInstance.setView(pos, 15);
+                        } else {
+                            adminDriverMapMarker.setLatLng(pos);
+                        }
+                    }
+                })
+                .catch(e => console.log(e));
+        };
+
+        fetchLoc();
+        if (adminDriverMapInterval) clearInterval(adminDriverMapInterval);
+        adminDriverMapInterval = setInterval(fetchLoc, 4000);
+    }, 200);
+}
+
+function closeDriverMapModal() {
+    const modal = document.getElementById('driver-map-modal');
+    if (modal) modal.classList.add('hidden');
+    if (adminDriverMapInterval) {
+        clearInterval(adminDriverMapInterval);
+        adminDriverMapInterval = null;
     }
 }
 
@@ -7227,6 +7497,11 @@ window.handleSaveEmployee = handleSaveEmployee;
 window.editEmployee = editEmployee;
 window.confirmDeleteEmployee = confirmDeleteEmployee;
 window.applyRolePermissions = applyRolePermissions;
+window.renderDriverDeliveriesSection = renderDriverDeliveriesSection;
+window.toggleDriverGPS = toggleDriverGPS;
+window.completeDriverDelivery = completeDriverDelivery;
+window.openDriverMapModal = openDriverMapModal;
+window.closeDriverMapModal = closeDriverMapModal;
 
 
 

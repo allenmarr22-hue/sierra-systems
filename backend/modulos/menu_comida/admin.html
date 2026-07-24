@@ -411,6 +411,9 @@
     </style>
     <!-- Chart.js for Pro Graphics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet.js for Live GPS Tracking -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
@@ -544,6 +547,11 @@
                         <button class="sidebar-btn" data-tab="employees-tab" id="nav-btn-employees" title="Gestión de Personal & Roles">
                             <i data-lucide="users"></i>
                             <span>Personal</span>
+                        </button>
+                        <button class="sidebar-btn" id="nav-btn-domiciliarios" data-tab="domicilios-tab" title="Entregas & Rastreo GPS">
+                            <i data-lucide="bike"></i>
+                            <span>Domicilios</span>
+                            <span id="domicilios-count-badge" class="order-badge-sidebar hidden">0</span>
                         </button>
                         <button class="sidebar-btn" id="nav-btn-my-metrics" data-tab="my-metrics-tab" title="Mis Métricas y Ventas" style="display: none;">
                             <i data-lucide="line-chart"></i>
@@ -1220,6 +1228,30 @@
                         <div id="history-orders-list" class="orders-container-pro">
                             <!-- Tarjetas de historial inyectadas por JS -->
                             <div id="history-list-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Domicilios & Rastreo GPS Tab -->
+                    <div id="domicilios-tab" class="admin-tab-content hidden">
+                        <div class="glass-card" style="padding: 1.5rem; margin-bottom: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--surface-light);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0 0 0.4rem; font-size: 1.3rem; font-weight: 900; color: var(--text); display: flex; align-items: center; gap: 0.6rem;">
+                                        <i data-lucide="bike" style="color: #10b981; width: 26px; height: 26px;"></i>
+                                        Entregas & Rastreo GPS en Tiempo Real
+                                    </h3>
+                                    <p style="margin: 0; font-size: 0.88rem; color: var(--text-dim);">Gestiona tus entregas a domicilio, activa la transmisión de GPS en vivo y da seguimiento a tus pedidos.</p>
+                                </div>
+                                <div id="driver-gps-status-pill" style="padding: 6px 14px; border-radius: 999px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; font-weight: 800; font-size: 0.82rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div>
+                                    <span id="driver-gps-status-text">Listo para Entregas</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Active Delivery Cards Grid -->
+                        <div id="driver-deliveries-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.2rem;">
+                            <!-- Injected via JS -->
                         </div>
                     </div>
 
@@ -2700,6 +2732,34 @@
                    onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 24px rgba(255, 107, 0, 0.3)';">
                     Ir a Facturación
                 </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Driver Tracking Map Modal -->
+    <div id="driver-map-modal" class="modal-backdrop hidden" style="z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);">
+        <div class="glass-card" style="width: 95%; max-width: 850px; border-radius: 24px; overflow: hidden; padding: 0; background: var(--surface-light); border: 1px solid var(--glass-border); max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2);">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #10b981; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="map-pin" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div>
+                        <h3 id="driver-map-title" style="margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--text);">Mapa de Rastreo GPS en Vivo</h3>
+                        <p id="driver-map-subtitle" style="margin: 0; font-size: 0.78rem; color: var(--text-dim);">Ubicación en tiempo real de la entrega</p>
+                    </div>
+                </div>
+                <button onclick="closeDriverMapModal()" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: rgba(255,255,255,0.1); color: var(--text); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+            </div>
+            <div style="position: relative; width: 100%; height: 480px;">
+                <div id="admin-driver-map" style="width: 100%; height: 100%; z-index: 1;"></div>
+            </div>
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.1); font-size: 0.82rem; color: var(--text-dim);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981; font-weight: 700;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div>
+                    <span>Actualizando GPS cada 4 segundos</span>
+                </div>
+                <button onclick="closeDriverMapModal()" class="btn-secondary" style="padding: 0.5rem 1.2rem; border-radius: 10px; font-weight: 700; cursor: pointer;">Cerrar Mapa</button>
             </div>
         </div>
     </div>
