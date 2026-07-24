@@ -7765,8 +7765,63 @@ function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = n
     if (typeof window.renderOrders === 'function') window.renderOrders();
 }
 
+function getAvailableDrivers() {
+    const driversMap = new Map();
+
+    // 1. From API employeesList
+    if (Array.isArray(employeesList)) {
+        employeesList.forEach(e => {
+            const role = (e.role || '').toLowerCase();
+            if (role === 'domiciliario' || role === 'repartidor' || role === 'delivery' || role === 'driver' || e.status === 'active') {
+                if (e.name) {
+                    driversMap.set(e.name.toLowerCase().trim(), { id: e.id || e.name, name: e.name });
+                }
+            }
+        });
+    }
+
+    // 2. From saved drivers team in localStorage
+    try {
+        const savedTeam = JSON.parse(localStorage.getItem('streetfeed_drivers_team') || '[]');
+        savedTeam.forEach(name => {
+            if (name && !driversMap.has(name.toLowerCase().trim())) {
+                driversMap.set(name.toLowerCase().trim(), { id: 'team_' + name, name: name });
+            }
+        });
+    } catch(e) {}
+
+    // 3. From order assignments
+    const assignments = getOrderAssignments();
+    Object.values(assignments).forEach(a => {
+        if (a && a.driverName && !driversMap.has(a.driverName.toLowerCase().trim())) {
+            driversMap.set(a.driverName.toLowerCase().trim(), { id: a.driverId || a.driverName, name: a.driverName });
+        }
+    });
+
+    // 4. From history of orders
+    const allOrders = getOrders();
+    allOrders.forEach(o => {
+        const dName = (o.deliveredBy || o.attendedBy || '').trim();
+        if (dName && !dName.toLowerCase().includes('propietario') && !dName.toLowerCase().includes('admin') && !driversMap.has(dName.toLowerCase())) {
+            driversMap.set(dName.toLowerCase(), { id: 'hist_' + dName, name: dName });
+        }
+    });
+
+    // 5. Default fallback if empty
+    if (driversMap.size === 0) {
+        driversMap.set('evelio', { id: 'drv_evelio', name: 'Evelio' });
+    }
+
+    // Calculate active workload per driver
+    const activeAssignments = Object.values(assignments);
+    return Array.from(driversMap.values()).map(d => {
+        const activeCount = activeAssignments.filter(a => a && (a.driverName || '').toLowerCase().trim() === d.name.toLowerCase().trim()).length;
+        return { ...d, activeCount };
+    });
+}
+
 window.openAssignDriverModal = async function(orderId) {
-    // 1. Fetch employees list if empty
+    // Attempt fetch from API if employeesList is empty
     if (!employeesList || employeesList.length === 0) {
         try {
             const instanceId = (typeof getUrlParam === 'function' ? getUrlParam('instanceId') : null) || localStorage.getItem('streetfeed_active_instance') || 'inst_default';
@@ -7779,54 +7834,89 @@ window.openAssignDriverModal = async function(orderId) {
         } catch(e) {}
     }
 
-    const drivers = (employeesList || []).filter(e => e.role === 'domiciliario' || e.role === 'repartidor' || e.status === 'active');
+    const drivers = getAvailableDrivers();
 
-    // Create modal element
     let modal = document.getElementById('assign-driver-modal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'assign-driver-modal';
-        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;';
         document.body.appendChild(modal);
     }
 
+    const initials = (name) => name.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || 'DR';
+
     modal.innerHTML = `
-        <div style="background:var(--surface-light, #1e293b);border:1px solid var(--glass-border);border-radius:24px;width:100%;max-width:440px;padding:2rem;box-shadow:0 25px 60px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:1.2rem;animation:fadeIn 0.25s ease;">
+        <div class="glass" style="background:var(--surface-light, #1e293b);border:1px solid var(--glass-border);border-radius:26px;width:100%;max-width:460px;padding:2rem;box-shadow:0 25px 60px rgba(0,0,0,0.65);display:flex;flex-direction:column;gap:1.3rem;animation:slideDown 0.25s ease;">
+            
+            <!-- Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <div style="width:44px;height:44px;border-radius:14px;background:rgba(245,158,11,0.15);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🛵</div>
+                <div style="display:flex;align-items:center;gap:0.85rem;">
+                    <div style="width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.2));border:1px solid rgba(245,158,11,0.4);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 14px rgba(245,158,11,0.2);">🛵</div>
                     <div>
-                        <h3 style="margin:0;font-size:1.15rem;font-weight:900;color:var(--text);">Asignar Domiciliario</h3>
-                        <p style="margin:0;font-size:0.8rem;color:var(--text-dim);">Pedido #${escapeHtml(orderId)}</p>
+                        <h3 style="margin:0;font-size:1.2rem;font-weight:900;color:var(--text);">Asignar Domiciliario</h3>
+                        <p style="margin:2px 0 0;font-size:0.82rem;color:var(--text-dim);">Selecciona el repartidor para el Pedido <strong style="color:var(--theme-accent, #f59e0b);">#ORD-${escapeHtml(orderId)}</strong></p>
                     </div>
                 </div>
-                <button onclick="document.getElementById('assign-driver-modal').remove()" style="background:none;border:none;color:var(--text-dim);font-size:1.6rem;cursor:pointer;line-height:1;padding:0.2rem;">&times;</button>
+                <button onclick="document.getElementById('assign-driver-modal').remove()" style="background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text-dim);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.2s;" onmouseover="this.style.color='var(--text)';this.style.background='rgba(255,255,255,0.12)';" onmouseout="this.style.color='var(--text-dim)';this.style.background='rgba(255,255,255,0.06)';">&times;</button>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:0.55rem;max-height:260px;overflow-y:auto;padding-right:4px;">
-                ${drivers.length > 0 ? drivers.map(d => `
-                    <button onclick="selectDriverForOrder('${escapeHtml(orderId)}', '${escapeHtml(d.name)}', '${escapeHtml(d.id || d.name)}')"
-                        style="width:100%;padding:0.85rem 1.1rem;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);color:var(--text);font-weight:800;font-size:0.92rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.2s;"
-                        onmouseover="this.style.background='rgba(245,158,11,0.15)';this.style.borderColor='rgba(245,158,11,0.4)';"
-                        onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='var(--glass-border)';">
-                        <div style="display:flex;align-items:center;gap:0.75rem;">
-                            <div style="width:36px;height:36px;border-radius:50%;background:rgba(16,185,129,0.15);color:#10b981;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;">🛵</div>
-                            <span style="font-weight:800;">${escapeHtml(d.name)}</span>
+            <!-- Driver List -->
+            <div style="display:flex;flex-direction:column;gap:0.65rem;max-height:300px;overflow-y:auto;padding-right:4px;">
+                ${drivers.map(d => `
+                    <div onclick="selectDriverForOrder('${escapeHtml(orderId)}', '${escapeHtml(d.name)}', '${escapeHtml(d.id)}')"
+                        style="padding:0.95rem 1.1rem;border-radius:16px;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.2s ease;"
+                        onmouseover="this.style.background='rgba(16,185,129,0.1)';this.style.borderColor='rgba(16,185,129,0.4)';this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='var(--glass-border)';this.style.transform='none';">
+                        <div style="display:flex;align-items:center;gap:0.85rem;">
+                            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.9rem;box-shadow:0 3px 10px rgba(16,185,129,0.3);position:relative;">
+                                ${initials(d.name)}
+                                <span style="position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid var(--surface-light, #1e293b);"></span>
+                            </div>
+                            <div>
+                                <div style="font-weight:900;font-size:0.98rem;color:var(--text);">${escapeHtml(d.name)}</div>
+                                <div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px;">
+                                    ${d.activeCount > 0 
+                                        ? `<span style="color:#f59e0b;font-weight:800;">🛵 ${d.activeCount} domicilio${d.activeCount > 1 ? 's' : ''} en curso</span>` 
+                                        : `<span style="color:#10b981;font-weight:700;">✨ Disponible ahora</span>`}
+                                </div>
+                            </div>
                         </div>
-                        <span style="font-size:0.75rem;color:#10b981;background:rgba(16,185,129,0.12);padding:4px 10px;border-radius:8px;font-weight:800;">Asignar</span>
-                    </button>
-                `).join('') : '<p style="color:var(--text-dim);font-size:0.85rem;text-align:center;margin:0.5rem 0;">Escribe el nombre del domiciliario a continuación:</p>'}
+                        <button style="padding:0.5rem 0.95rem;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;font-weight:800;font-size:0.8rem;cursor:pointer;box-shadow:0 3px 10px rgba(16,185,129,0.3);pointer-events:none;">
+                            Asignar →
+                        </button>
+                    </div>
+                `).join('')}
             </div>
 
-            <div style="border-top:1px dashed var(--glass-border);padding-top:1rem;display:flex;flex-direction:column;gap:0.6rem;">
-                <label style="font-size:0.72rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Escribir Nombre Manualmente</label>
-                <div style="display:flex;gap:0.5rem;">
-                    <input type="text" id="manual-driver-name" placeholder="Ej: Carlos Ramírez" style="flex:1;padding:0.75rem;border-radius:10px;background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);color:var(--text);font-size:0.9rem;font-weight:700;">
-                    <button onclick="submitManualDriver('${escapeHtml(orderId)}')" style="padding:0.75rem 1.2rem;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-weight:800;cursor:pointer;white-space:nowrap;">Asignar</button>
+            <!-- Quick Add Section -->
+            <div style="border-top:1px dashed var(--glass-border);padding-top:1.1rem;display:flex;flex-direction:column;gap:0.65rem;">
+                <button onclick="toggleQuickAddDriverForm()" id="quick-add-toggle-btn"
+                    style="background:transparent;border:none;color:var(--theme-accent, #f59e0b);font-size:0.85rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:0.4rem;padding:0;text-align:left;">
+                    <span>➕ Agregar Nuevo Domiciliario al Equipo</span>
+                </button>
+
+                <div id="quick-add-driver-box" style="display:none;flex-direction:column;gap:0.6rem;margin-top:0.3rem;animation:fadeIn 0.2s ease;">
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="text" id="manual-driver-name" placeholder="Nombre del nuevo domiciliario..." style="flex:1;padding:0.75rem 1rem;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);color:var(--text);font-size:0.9rem;font-weight:700;outline:none;" onkeypress="if(event.key==='Enter') submitManualDriver('${escapeHtml(orderId)}')">
+                        <button onclick="submitManualDriver('${escapeHtml(orderId)}')" style="padding:0.75rem 1.3rem;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-weight:800;font-size:0.88rem;cursor:pointer;white-space:nowrap;box-shadow:0 4px 12px rgba(245,158,11,0.35);">
+                            Guardar & Asignar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     `;
+};
+
+window.toggleQuickAddDriverForm = function() {
+    const box = document.getElementById('quick-add-driver-box');
+    const input = document.getElementById('manual-driver-name');
+    if (box) {
+        const isHidden = box.style.display === 'none';
+        box.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden && input) input.focus();
+    }
 };
 
 window.selectDriverForOrder = function(orderId, name, id) {
@@ -7842,9 +7932,19 @@ window.submitManualDriver = function(orderId) {
         if (typeof showToast === 'function') showToast('Escribe el nombre del domiciliario', 'warning');
         return;
     }
+
+    // Save to team list in localStorage
+    try {
+        const savedTeam = JSON.parse(localStorage.getItem('streetfeed_drivers_team') || '[]');
+        if (!savedTeam.includes(name)) {
+            savedTeam.push(name);
+            localStorage.setItem('streetfeed_drivers_team', JSON.stringify(savedTeam));
+        }
+    } catch(e) {}
+
     const modal = document.getElementById('assign-driver-modal');
     if (modal) modal.remove();
-    claimDeliveryOrder(orderId, name, 'manual_' + Date.now());
+    claimDeliveryOrder(orderId, name, 'driver_' + name.toLowerCase().replace(/\s+/g, '_'));
 };
 
 function releaseDeliveryOrder(orderId) {
