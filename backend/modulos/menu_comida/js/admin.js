@@ -7438,12 +7438,12 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
             'items-tab',
             'combos-tab',
             'stats-tab',
-            'expenses-tab',
-            'history-tab',
-            'employees-tab',
             'domicilios-tab',
+            'expenses-tab',
+            'employees-tab',
             'my-metrics-tab',
             'driver-metrics-tab',
+            'history-tab',
             'config-tab'
         ];
         defaultOrder.forEach(tabId => {
