@@ -7865,8 +7865,8 @@ window.openAssignDriverModal = async function(orderId) {
 
     modal.innerHTML = `
         <style>
-            #assign-driver-modal .drv-card { transition: background 0.18s, border-color 0.18s, box-shadow 0.18s; }
-            #assign-driver-modal .drv-card:hover { background: rgba(16,185,129,0.08) !important; border-color: #10b981 !important; box-shadow: 0 4px 20px rgba(16,185,129,0.18); }
+            #assign-driver-modal .drv-card { transition: background 0.18s, border-color 0.18s, box-shadow 0.18s; overflow: hidden; border-radius: 16px; }
+            #assign-driver-modal .drv-card:hover { background: rgba(16,185,129,0.08) !important; border-color: #10b981 !important; box-shadow: 0 2px 12px rgba(16,185,129,0.18); }
             #assign-driver-modal .drv-card:hover .drv-assign-btn { background: linear-gradient(135deg,#059669,#047857) !important; box-shadow: 0 4px 16px rgba(16,185,129,0.45) !important; }
             #assign-driver-modal ::-webkit-scrollbar { width: 4px; }
             #assign-driver-modal ::-webkit-scrollbar-track { background: transparent; }
