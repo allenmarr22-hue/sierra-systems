@@ -3834,6 +3834,19 @@ window.renderOrders = function() {
         }
     }
 
+    // For domiciliario role: only show delivery-type orders in history
+    if (window.driverDeliveryOnlyHistory) {
+        history = history.filter(o => {
+            return (
+                o.deliveryType === 'delivery' ||
+                o.type === 'domicilio' ||
+                (o.address && typeof o.address === 'string' && o.address.trim().length > 2) ||
+                (o.deliveryFee && o.deliveryFee > 0) ||
+                (o.customer && o.customer.address && typeof o.customer.address === 'string' && o.customer.address.trim().length > 2)
+            );
+        });
+    }
+
     // Filtro por Búsqueda principal (Pedidos: Entrantes, En Preparación y Por Cobrar)
     const mainSearchInput = document.getElementById('orders-search-input');
     if (mainSearchInput && mainSearchInput.value.trim() !== '') {
@@ -7526,7 +7539,36 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (typeof window.setHistoryScope === 'function') {
             window.setHistoryScope('all');
         }
+    } else if (role === 'domiciliario') {
+        // Show scope container, hide "General" (all) button — driver only sees their deliveries
+        if (historyScopeContainer) historyScopeContainer.style.display = 'flex';
+        if (historyScopeMine) {
+            historyScopeMine.style.display = 'inline-flex';
+            // Rename "Mis Ventas" → "Mis Domis"
+            historyScopeMine.innerHTML = '<i data-lucide="bike" style="width: 14px;"></i> Mis Domis';
+        }
+        // Hide "General" button — domiciliario only sees their own deliveries
+        const historyScopeAll = document.getElementById('history-scope-all');
+        if (historyScopeAll) historyScopeAll.style.display = 'none';
+        if (pdfScopeMine) pdfScopeMine.style.display = 'flex';
+        if (subtabUnpaidBtn) subtabUnpaidBtn.style.display = 'none';
+
+        // Set a flag so renderOrders filters delivery-only orders
+        window.driverDeliveryOnlyHistory = true;
+
+        // Auto-activate "mine" scope for domiciliario
+        if (typeof window.setHistoryScope === 'function') {
+            window.setHistoryScope('mine');
+        }
+        if (window.lucide) lucide.createIcons();
     } else {
+        // Restore "Mis Ventas" label in case of role switch
+        if (historyScopeMine) {
+            historyScopeMine.innerHTML = '<i data-lucide="user" style="width: 14px;"></i> Mis Ventas';
+        }
+        const historyScopeAll = document.getElementById('history-scope-all');
+        if (historyScopeAll) historyScopeAll.style.display = 'flex';
+        window.driverDeliveryOnlyHistory = false;
         if (historyScopeContainer) historyScopeContainer.style.display = 'flex';
         if (historyScopeMine) historyScopeMine.style.display = 'inline-flex';
         if (pdfScopeMine) pdfScopeMine.style.display = 'flex';
