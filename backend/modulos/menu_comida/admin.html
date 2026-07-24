@@ -557,6 +557,10 @@
                             <i data-lucide="line-chart"></i>
                             <span>Mis Métricas</span>
                         </button>
+                        <button class="sidebar-btn" id="nav-btn-driver-metrics" data-tab="driver-metrics-tab" title="Mis Métricas de Domicilio" style="display: none;">
+                            <i data-lucide="bar-chart-2"></i>
+                            <span>Métricas</span>
+                        </button>
                         <button class="sidebar-btn" data-tab="config-tab" title="Configuración">
                             <i data-lucide="settings"></i>
                             <span>Ajustes</span>
@@ -921,6 +925,148 @@
                                     <canvas id="chart-my-monthly-revenue"></canvas>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Métricas del Domiciliario -->
+                    <div id="driver-metrics-tab" class="admin-tab-content hidden">
+                        <div class="stats-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <div>
+                                <h2 class="font-serif" id="driver-metrics-header-title">Mis Métricas de Domicilio</h2>
+                                <p style="color: var(--text-dim);" id="driver-metrics-header-subtitle">Análisis de tus entregas, ingresos por domicilio y rendimiento.</p>
+                            </div>
+                            <div class="stats-filters-wrapper">
+                                <div class="stats-filters glass">
+                                    <button id="driver-reset-stats-btn" class="btn-reset-stats" title="Limpiar datos">
+                                        <i data-lucide="refresh-cw"></i> <span>Reset</span>
+                                    </button>
+                                    <div id="driver-stats-date-wrapper" class="date-picker-mini" title="Buscar día específico">
+                                        <i data-lucide="calendar"></i>
+                                        <input type="date" id="driver-stats-date-filter">
+                                    </div>
+                                    <div class="custom-dropdown" id="driver-range-dropdown">
+                                        <div class="dropdown-trigger" id="driver-range-trigger">
+                                            <span id="driver-current-range">Hoy</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="today" class="active">Hoy</li>
+                                            <li data-value="yesterday">Ayer</li>
+                                            <li data-value="week">7 Días</li>
+                                            <li data-value="fortnight">15 Días</li>
+                                            <li data-value="month">Este Mes</li>
+                                            <li data-value="all">Todo</li>
+                                        </ul>
+                                    </div>
+                                    <div class="custom-dropdown" id="driver-month-dropdown">
+                                        <div class="dropdown-trigger" id="driver-month-trigger">
+                                            <span id="driver-current-month">Meses...</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </div>
+                                        <ul class="dropdown-menu">
+                                            <li data-value="">Meses...</li>
+                                            <li data-value="0">Enero</li>
+                                            <li data-value="1">Febrero</li>
+                                            <li data-value="2">Marzo</li>
+                                            <li data-value="3">Abril</li>
+                                            <li data-value="4">Mayo</li>
+                                            <li data-value="5">Junio</li>
+                                            <li data-value="6">Julio</li>
+                                            <li data-value="7">Agosto</li>
+                                            <li data-value="8">Septiembre</li>
+                                            <li data-value="9">Octubre</li>
+                                            <li data-value="10">Noviembre</li>
+                                            <li data-value="11">Diciembre</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Cards -->
+                        <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2.2rem;">
+                            <!-- Domicilios Entregados -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                                    <i data-lucide="bike"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Domicilios Entregados</span>
+                                    <span class="metric-value" id="driver-stat-deliveries" style="color: #10b981;">0</span>
+                                </div>
+                            </div>
+
+                            <!-- Recaudado en Envíos -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(76, 175, 80, 0.12); color: #4caf50;">
+                                    <i data-lucide="dollar-sign"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Valor Entregado</span>
+                                    <span class="metric-value" id="driver-stat-value" style="color: #4caf50;">$0</span>
+                                </div>
+                            </div>
+
+                            <!-- Ingresos por Domicilio -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(236, 72, 153, 0.12); color: #ec4899;">
+                                    <i data-lucide="percent"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label" id="driver-stat-comm-rate-label">Domicilio Cobrado</span>
+                                    <span class="metric-value" id="driver-stat-fee" style="color: #ec4899;">$0</span>
+                                </div>
+                            </div>
+
+                            <!-- Promedio por Entrega -->
+                            <div class="metric-card glass kpi-card">
+                                <div class="metric-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+                                    <i data-lucide="trending-up"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Promedio por Entrega</span>
+                                    <span class="metric-value" id="driver-stat-avg" style="color: #f59e0b;">$0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Grid -->
+                        <div class="charts-container-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <!-- Entregas por Día -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="trending-up" style="color: #10b981; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Entregas del Período</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Cantidad de domicilios completados día a día.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-driver-deliveries-trend"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Valor por Mes -->
+                            <div class="chart-card glass">
+                                <h3><i data-lucide="bar-chart-3" style="color: #3b82f6; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Valor Entregado por Mes</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Total de pedidos transportados mes a mes.</p>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-driver-monthly-value"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Historial de Entregas Table -->
+                        <div class="chart-card glass" style="overflow-x: auto;">
+                            <h3 style="margin-bottom: 1rem;"><i data-lucide="list" style="color: var(--theme-accent); width: 18px; vertical-align: middle; margin-right: 8px;"></i> Historial de Entregas</h3>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--glass-border); text-align: left;">
+                                        <th style="padding: 0.8rem 1rem; color: var(--text-dim); font-weight: 700;">#Pedido</th>
+                                        <th style="padding: 0.8rem 1rem; color: var(--text-dim); font-weight: 700;">Fecha</th>
+                                        <th style="padding: 0.8rem 1rem; color: var(--text-dim); font-weight: 700;">Cliente</th>
+                                        <th style="padding: 0.8rem 1rem; color: var(--text-dim); font-weight: 700;">Dirección</th>
+                                        <th style="padding: 0.8rem 1rem; color: var(--text-dim); font-weight: 700; text-align: right;">Valor</th>
+                                        <th style="padding: 0.8rem 1rem; color: var(--text-dim); font-weight: 700; text-align: right;">Domicilio</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driver-metrics-table-body"></tbody>
+                            </table>
                         </div>
                     </div>
 

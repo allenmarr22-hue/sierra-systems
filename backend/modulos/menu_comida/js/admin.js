@@ -789,6 +789,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMyMetrics('today');
                 }
             }
+            if (tabId === 'driver-metrics-tab') {
+                if (typeof window.reRenderCurrentDriverMetrics === 'function') {
+                    window.reRenderCurrentDriverMetrics();
+                } else if (typeof renderDriverMetrics === 'function') {
+                    renderDriverMetrics('today');
+                }
+            }
             if (tabId === 'orders-tab') {
                 if (typeof renderOrders === 'function') renderOrders();
             }
@@ -2987,6 +2994,63 @@ if (myResetBtn) {
 // Re-init dropdowns after content load or render
 initCustomDropdowns();
 
+// --- Driver Metrics filter init ---
+const driverResetBtn = document.getElementById('driver-reset-stats-btn');
+if (driverResetBtn) {
+    driverResetBtn.addEventListener('click', () => {
+        const dateInput = document.getElementById('driver-stats-date-filter');
+        if (dateInput) dateInput.value = '';
+        document.querySelectorAll('#driver-range-dropdown li, #driver-month-dropdown li').forEach(li => li.classList.remove('active'));
+        const rangeToday = document.querySelector('#driver-range-dropdown li[data-value="today"]');
+        if (rangeToday) rangeToday.classList.add('active');
+        const rangeDisp = document.getElementById('driver-current-range');
+        const monthDisp = document.getElementById('driver-current-month');
+        if (rangeDisp) rangeDisp.textContent = 'Hoy';
+        if (monthDisp) monthDisp.textContent = 'Meses...';
+        renderDriverMetrics('today');
+    });
+}
+
+const driverDateInput = document.getElementById('driver-stats-date-filter');
+if (driverDateInput) {
+    driverDateInput.addEventListener('change', () => {
+        if (driverDateInput.value) renderDriverMetrics(null, null, driverDateInput.value);
+    });
+}
+
+document.querySelectorAll('#driver-range-dropdown li').forEach(li => {
+    li.addEventListener('click', () => {
+        document.querySelectorAll('#driver-range-dropdown li').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('#driver-month-dropdown li').forEach(x => x.classList.remove('active'));
+        const firstMonth = document.querySelector('#driver-month-dropdown li[data-value=""]');
+        if (firstMonth) firstMonth.classList.add('active');
+        li.classList.add('active');
+        const rangeDisp = document.getElementById('driver-current-range');
+        if (rangeDisp) rangeDisp.textContent = li.textContent;
+        const monthDisp = document.getElementById('driver-current-month');
+        if (monthDisp) monthDisp.textContent = 'Meses...';
+        const dateInput = document.getElementById('driver-stats-date-filter');
+        if (dateInput) dateInput.value = '';
+        renderDriverMetrics(li.dataset.value);
+    });
+});
+
+document.querySelectorAll('#driver-month-dropdown li').forEach(li => {
+    li.addEventListener('click', () => {
+        if (li.dataset.value === '') return;
+        document.querySelectorAll('#driver-range-dropdown li').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('#driver-month-dropdown li').forEach(x => x.classList.remove('active'));
+        li.classList.add('active');
+        const monthDisp = document.getElementById('driver-current-month');
+        if (monthDisp) monthDisp.textContent = li.textContent;
+        const rangeDisp = document.getElementById('driver-current-range');
+        if (rangeDisp) rangeDisp.textContent = 'Rango...';
+        const dateInput = document.getElementById('driver-stats-date-filter');
+        if (dateInput) dateInput.value = '';
+        renderDriverMetrics('month', li.dataset.value);
+    });
+});
+
 window.addEventListener('storage', (e) => {
     if (e.key && e.key.startsWith('streetfeed_')) {
         const statsTab = document.getElementById('stats-tab');
@@ -2997,6 +3061,11 @@ window.addEventListener('storage', (e) => {
         const myMetricsTab = document.getElementById('my-metrics-tab');
         if (myMetricsTab && !myMetricsTab.classList.contains('hidden')) {
             if (typeof window.reRenderCurrentMyMetrics === 'function') window.reRenderCurrentMyMetrics();
+        }
+
+        const driverMetricsTab = document.getElementById('driver-metrics-tab');
+        if (driverMetricsTab && !driverMetricsTab.classList.contains('hidden')) {
+            if (typeof window.reRenderCurrentDriverMetrics === 'function') window.reRenderCurrentDriverMetrics();
         }
 
         // Actualizar la vista de pedidos en tiempo real
@@ -3423,6 +3492,252 @@ function renderMyMetrics(range = 'today', specificMonth = null, specificDate = n
     if (window.lucide) lucide.createIcons();
 }
 window.renderMyMetrics = renderMyMetrics;
+
+// ====== DRIVER METRICS (Domiciliario) ======
+
+function renderDriverMetrics(range = 'today', specificMonth = null, specificDate = null) {
+    const tabEl = document.getElementById('driver-metrics-tab');
+    if (!tabEl) return;
+
+    const driverName = getCurrentActiveEmployeeName() || '';
+    const isLight = document.body.classList.contains('light-mode');
+    const chartText = isLight ? '#0f172a' : '#ffffff';
+    const chartGrid = isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.08)';
+
+    // Get all completed delivery orders assigned to this driver
+    const allOrders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
+    const now = new Date();
+
+    const getLocalStr = (dObj) => {
+        const d = new Date(dObj);
+        if (isNaN(d.getTime())) return '';
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    // Filter: completed deliveries by this driver
+    let deliveries = allOrders.filter(o => {
+        const isDelivery = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
+        const isCompleted = (o.status === 'completed' || o.status === 'accepted');
+        // Check attendedBy or deliveredBy matching driver name
+        const attended = (o.attendedBy || o.deliveredBy || '').toLowerCase().trim();
+        const cleanDriver = driverName.toLowerCase().trim();
+        const byDriver = !cleanDriver || attended.includes(cleanDriver) || cleanDriver.includes(attended);
+        return isDelivery && isCompleted;
+    });
+
+    // Apply time filter
+    if (specificDate) {
+        deliveries = deliveries.filter(o => o.date && getLocalStr(o.date) === specificDate);
+    } else if (specificMonth !== null && specificMonth !== '') {
+        const targetMonth = parseInt(specificMonth, 10);
+        deliveries = deliveries.filter(o => {
+            if (!o.date) return false;
+            const d = new Date(o.date);
+            return !isNaN(d.getTime()) && d.getMonth() === targetMonth;
+        });
+    } else if (range && range !== 'all') {
+        let daysBack = 0;
+        if (range === 'today') {
+            const todayStr = getLocalStr(now);
+            deliveries = deliveries.filter(o => o.date && getLocalStr(o.date) === todayStr);
+        } else if (range === 'yesterday') {
+            const yest = new Date(now); yest.setDate(now.getDate() - 1);
+            const yestStr = getLocalStr(yest);
+            deliveries = deliveries.filter(o => o.date && getLocalStr(o.date) === yestStr);
+        } else {
+            if (range === 'week') daysBack = 6;
+            else if (range === 'fortnight') daysBack = 14;
+            else if (range === 'month') daysBack = 29;
+            if (daysBack > 0) {
+                const startOfRange = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                startOfRange.setDate(startOfRange.getDate() - daysBack);
+                startOfRange.setHours(0, 0, 0, 0);
+                deliveries = deliveries.filter(o => {
+                    if (!o.date) return false;
+                    const d = new Date(o.date);
+                    return !isNaN(d.getTime()) && d >= startOfRange;
+                });
+            }
+        }
+    }
+
+    // KPI calculations
+    const totalDeliveries = deliveries.length;
+    const totalValue = deliveries.reduce((s, o) => s + (o.total || 0), 0);
+    const totalFee = deliveries.reduce((s, o) => s + (o.deliveryFee || 0), 0);
+    const avgValue = totalDeliveries > 0 ? Math.round(totalValue / totalDeliveries) : 0;
+
+    const headerTitle = document.getElementById('driver-metrics-header-title');
+    const headerSubtitle = document.getElementById('driver-metrics-header-subtitle');
+    if (headerTitle) headerTitle.textContent = `Mis Métricas — ${driverName || 'Domiciliario'}`;
+    if (headerSubtitle) headerSubtitle.textContent = `Resumen de tus entregas, valor transportado y cobro de domicilios.`;
+
+    const delivEl = document.getElementById('driver-stat-deliveries');
+    if (delivEl) delivEl.textContent = totalDeliveries;
+
+    const valEl = document.getElementById('driver-stat-value');
+    if (valEl) valEl.textContent = '$' + totalValue.toLocaleString('es-CO');
+
+    const feeEl = document.getElementById('driver-stat-fee');
+    if (feeEl) feeEl.textContent = '$' + totalFee.toLocaleString('es-CO');
+
+    const avgEl = document.getElementById('driver-stat-avg');
+    if (avgEl) avgEl.textContent = '$' + avgValue.toLocaleString('es-CO');
+
+    const toLocalKey = (dObj) => {
+        const y = dObj.getFullYear();
+        const m = String(dObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    // Chart 1: Entregas por día (trend)
+    const ctxTrend = document.getElementById('chart-driver-deliveries-trend');
+    if (ctxTrend) {
+        const dateMap = {};
+        let daysToCover = range === 'today' ? 1 : range === 'yesterday' ? 2 : range === 'week' ? 7 : range === 'fortnight' ? 15 : 30;
+        for (let i = daysToCover - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            const key = toLocalKey(d);
+            dateMap[key] = { count: 0, value: 0, label: d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) };
+        }
+        deliveries.forEach(o => {
+            if (o.date) {
+                const dObj = new Date(o.date);
+                if (!isNaN(dObj.getTime())) {
+                    const dKey = toLocalKey(dObj);
+                    if (!dateMap[dKey]) dateMap[dKey] = { count: 0, value: 0, label: dObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) };
+                    dateMap[dKey].count += 1;
+                    dateMap[dKey].value += (o.total || 0);
+                }
+            }
+        });
+        const sortedDates = Object.keys(dateMap).sort();
+        const trendLabels = sortedDates.map(k => dateMap[k].label);
+        const trendCounts = sortedDates.map(k => dateMap[k].count);
+        const trendValues = sortedDates.map(k => dateMap[k].value);
+        const maxVal = Math.max(...trendValues, 0);
+        const suggestedMax = maxVal > 0 ? Math.ceil(maxVal * 1.25) : 100000;
+
+        if (charts.driverDeliveriesTrend) charts.driverDeliveriesTrend.destroy();
+        charts.driverDeliveriesTrend = new Chart(ctxTrend.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    { type: 'bar', label: 'Entregas', data: trendCounts, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 6, yAxisID: 'y1' },
+                    { type: 'line', label: 'Valor ($)', data: trendValues, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 3, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f59e0b', fill: true, yAxisID: 'y' }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: chartText, font: { weight: 'bold' } } },
+                    tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + (ctx.datasetIndex === 1 ? ': $' + Math.round(ctx.parsed.y).toLocaleString('es-CO') : ': ' + ctx.parsed.y); } } }
+                },
+                scales: {
+                    x: { ticks: { color: chartText, font: { weight: 'bold' } }, grid: { color: chartGrid } },
+                    y: { position: 'left', beginAtZero: true, suggestedMax, ticks: { color: chartText, font: { weight: 'bold' }, callback: v => v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + v }, grid: { color: chartGrid } },
+                    y1: { position: 'right', beginAtZero: true, ticks: { color: '#10b981', font: { weight: 'bold' }, stepSize: 1 }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+    }
+
+    // Chart 2: Valor por mes
+    const ctxMonth = document.getElementById('chart-driver-monthly-value');
+    if (ctxMonth) {
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthlyValues = Array(12).fill(0);
+        const monthlyCounts = Array(12).fill(0);
+        const allDeliveries = allOrders.filter(o => {
+            const isDelivery = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0));
+            return isDelivery && (o.status === 'completed' || o.status === 'accepted');
+        });
+        allDeliveries.forEach(o => {
+            if (o.date) {
+                const d = new Date(o.date);
+                if (!isNaN(d.getTime()) && d.getFullYear() === now.getFullYear()) {
+                    monthlyValues[d.getMonth()] += (o.total || 0);
+                    monthlyCounts[d.getMonth()] += 1;
+                }
+            }
+        });
+        const maxMonthVal = Math.max(...monthlyValues, 0);
+        const suggestedMaxMonth = maxMonthVal > 0 ? Math.ceil(maxMonthVal * 1.25) : 100000;
+
+        if (charts.driverMonthlyValue) charts.driverMonthlyValue.destroy();
+        charts.driverMonthlyValue = new Chart(ctxMonth.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: monthNames,
+                datasets: [
+                    { label: 'Valor Entregado ($)', data: monthlyValues, backgroundColor: 'rgba(59,130,246,0.75)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 6 },
+                    { label: 'Nº Entregas', data: monthlyCounts, backgroundColor: 'rgba(16,185,129,0.6)', borderColor: '#10b981', borderWidth: 1, borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: chartText, font: { weight: 'bold' } } },
+                    tooltip: { callbacks: { label: function(ctx) { return ctx.datasetIndex === 0 ? 'Valor: $' + Math.round(ctx.parsed.y).toLocaleString('es-CO') : 'Entregas: ' + ctx.parsed.y; } } }
+                },
+                scales: {
+                    x: { ticks: { color: chartText, font: { weight: 'bold' } }, grid: { color: chartGrid } },
+                    y: { beginAtZero: true, suggestedMax: suggestedMaxMonth, ticks: { color: chartText, font: { weight: 'bold' }, callback: v => v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + v }, grid: { color: chartGrid } }
+                }
+            }
+        });
+    }
+
+    // Table
+    const tbody = document.getElementById('driver-metrics-table-body');
+    if (tbody) {
+        if (deliveries.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-dim); font-size: 0.9rem;"><i data-lucide="inbox" style="width: 32px; height: 32px; display: block; margin: 0 auto 0.5rem; opacity: 0.5;"></i>No hay entregas registradas en este período.</td></tr>`;
+        } else {
+            tbody.innerHTML = deliveries.slice().reverse().map(o => {
+                const total = o.total || 0;
+                const fee = o.deliveryFee || 0;
+                const dateStr = o.date ? new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Reciente';
+                const clientName = escapeHtml(o.customer?.name || o.customerName || 'Cliente');
+                const address = escapeHtml(o.customer?.address || o.address || '—');
+                return `
+                    <tr style="border-bottom: 1px solid var(--glass-border);">
+                        <td style="padding: 0.9rem 1rem; font-weight: 800; color: var(--text);">#ORD-${o.id || o.orderId}</td>
+                        <td style="padding: 0.9rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${dateStr}</td>
+                        <td style="padding: 0.9rem 1rem; font-weight: 700; color: var(--text);">${clientName}</td>
+                        <td style="padding: 0.9rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${address}</td>
+                        <td style="padding: 0.9rem 1rem; text-align: right; font-weight: 900; color: var(--text);">$${total.toLocaleString('es-CO')}</td>
+                        <td style="padding: 0.9rem 1rem; text-align: right; font-weight: 900; color: #ec4899;">${fee > 0 ? '+$' + fee.toLocaleString('es-CO') : '—'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    if (window.lucide) lucide.createIcons();
+}
+window.renderDriverMetrics = renderDriverMetrics;
+
+window.reRenderCurrentDriverMetrics = function() {
+    const activeRangeLi = document.querySelector('#driver-range-dropdown li.active');
+    const activeMonthLi = document.querySelector('#driver-month-dropdown li.active');
+    const dateInput = document.getElementById('driver-stats-date-filter');
+    if (dateInput && dateInput.value) {
+        renderDriverMetrics(null, null, dateInput.value);
+    } else if (activeMonthLi && activeMonthLi.dataset.value !== '') {
+        renderDriverMetrics('month', activeMonthLi.dataset.value);
+    } else if (activeRangeLi && activeRangeLi.dataset.value) {
+        renderDriverMetrics(activeRangeLi.dataset.value);
+    } else {
+        renderDriverMetrics('today');
+    }
+};
 
 window.reRenderCurrentMyMetrics = function() {
     const activeRangeLi = document.querySelector('#my-range-dropdown li.active');
@@ -7097,6 +7412,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     const navCombos = document.querySelector('.sidebar-btn[data-tab="combos-tab"]');
     const navMyMetrics = document.getElementById('nav-btn-my-metrics');
     const navDomiciliarios = document.getElementById('nav-btn-domiciliarios');
+    const navDriverMetrics = document.getElementById('nav-btn-driver-metrics');
 
     const btnNewOrder = document.getElementById('btn-new-manual-order');
     const orderSettingsBtn = document.querySelector('.order-settings-btn');
@@ -7112,14 +7428,24 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navStats) navStats.style.display = 'none';
         if (navMyMetrics) navMyMetrics.style.display = 'none';
         if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
+        if (navDriverMetrics) navDriverMetrics.style.display = 'flex';
         if (btnNewOrder) btnNewOrder.style.display = 'none';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
+
+        // Force correct sidebar order: Domicilios, Historial, Métricas
+        const sidebar = document.querySelector('.sidebar-nav');
+        if (sidebar && navDomiciliarios && navHistory && navDriverMetrics) {
+            sidebar.insertBefore(navDomiciliarios, sidebar.firstChild);
+            navDomiciliarios.after(navHistory);
+            navHistory.after(navDriverMetrics);
+        }
 
         // Automatically open Domicilios tab for driver
         setTimeout(() => {
             if (navDomiciliarios) navDomiciliarios.click();
         }, 60);
     } else if (role === 'mesero') {
+        if (navDriverMetrics) navDriverMetrics.style.display = 'none';
         if (navOrders) navOrders.style.display = 'flex';
         if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'none';
@@ -7135,6 +7461,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
 
         document.querySelectorAll('.btn-delete-item, .btn-delete-cat, .btn-add-category').forEach(el => el.style.display = 'none');
     } else if (role === 'cajero') {
+        if (navDriverMetrics) navDriverMetrics.style.display = 'none';
         if (navOrders) navOrders.style.display = 'flex';
         if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'none';
@@ -7148,6 +7475,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (btnNewOrder) btnNewOrder.style.display = 'flex';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
     } else if (role === 'cocina') {
+        if (navDriverMetrics) navDriverMetrics.style.display = 'none';
         if (navOrders) navOrders.style.display = 'flex';
         if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'none';
@@ -7161,6 +7489,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (btnNewOrder) btnNewOrder.style.display = 'none';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
     } else {
+        if (navDriverMetrics) navDriverMetrics.style.display = 'none';
         if (navOrders) navOrders.style.display = 'flex';
         if (navHistory) navHistory.style.display = 'flex';
         if (navItems) navItems.style.display = 'flex';
@@ -7207,7 +7536,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     // --- CORRECCIÓN DE BUG DE NAVEGACIÓN POR ROL ---
     const forbiddenTabIds = [];
     if (role === 'domiciliario') {
-        forbiddenTabIds.push('orders-tab', 'items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab', 'my-metrics-tab', 'history-tab');
+        forbiddenTabIds.push('orders-tab', 'items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab', 'my-metrics-tab');
     } else if (role === 'mesero') {
         forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab');
     } else if (role === 'cocina') {
