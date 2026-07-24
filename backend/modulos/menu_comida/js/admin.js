@@ -7725,12 +7725,14 @@ function getCurrentDriverInfo() {
     return { name: 'Domiciliario', id: 'unknown' };
 }
 
-function claimDeliveryOrder(orderId) {
+function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = null) {
     const assignments = getOrderAssignments();
     const existing = assignments[orderId];
-    const driver = getCurrentDriverInfo();
+    const driver = (targetDriverName && targetDriverId)
+        ? { name: targetDriverName, id: targetDriverId }
+        : getCurrentDriverInfo();
 
-    if (existing && existing.driverId !== driver.id) {
+    if (existing && existing.driverId !== driver.id && !targetDriverName) {
         const elapsed = existing.claimedAt
             ? Math.round((Date.now() - new Date(existing.claimedAt).getTime()) / 60000)
             : 0;
@@ -7757,10 +7759,93 @@ function claimDeliveryOrder(orderId) {
     }
 
     if (typeof showAdminNotification === 'function') {
-        showAdminNotification(`✅ ¡Pedido #${orderId} asignado a ti! Ya aparece en "Mis Pedidos"`, 'success');
+        showAdminNotification(`🛵 Pedido #${orderId} asignado a ${driver.name}`, 'success');
     }
     renderDriverDeliveriesSection();
+    if (typeof window.renderOrders === 'function') window.renderOrders();
 }
+
+window.openAssignDriverModal = async function(orderId) {
+    // 1. Fetch employees list if empty
+    if (!employeesList || employeesList.length === 0) {
+        try {
+            const instanceId = (typeof getUrlParam === 'function' ? getUrlParam('instanceId') : null) || localStorage.getItem('streetfeed_active_instance') || 'inst_default';
+            const headers = (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {};
+            const res = await fetch(`/api/modules/streetfeed/employees?instanceId=${encodeURIComponent(instanceId)}`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                employeesList = data.employees || [];
+            }
+        } catch(e) {}
+    }
+
+    const drivers = (employeesList || []).filter(e => e.role === 'domiciliario' || e.role === 'repartidor' || e.status === 'active');
+
+    // Create modal element
+    let modal = document.getElementById('assign-driver-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'assign-driver-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div style="background:var(--surface-light, #1e293b);border:1px solid var(--glass-border);border-radius:24px;width:100%;max-width:440px;padding:2rem;box-shadow:0 25px 60px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:1.2rem;animation:fadeIn 0.25s ease;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <div style="width:44px;height:44px;border-radius:14px;background:rgba(245,158,11,0.15);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🛵</div>
+                    <div>
+                        <h3 style="margin:0;font-size:1.15rem;font-weight:900;color:var(--text);">Asignar Domiciliario</h3>
+                        <p style="margin:0;font-size:0.8rem;color:var(--text-dim);">Pedido #${escapeHtml(orderId)}</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('assign-driver-modal').remove()" style="background:none;border:none;color:var(--text-dim);font-size:1.6rem;cursor:pointer;line-height:1;padding:0.2rem;">&times;</button>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:0.55rem;max-height:260px;overflow-y:auto;padding-right:4px;">
+                ${drivers.length > 0 ? drivers.map(d => `
+                    <button onclick="selectDriverForOrder('${escapeHtml(orderId)}', '${escapeHtml(d.name)}', '${escapeHtml(d.id || d.name)}')"
+                        style="width:100%;padding:0.85rem 1.1rem;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);color:var(--text);font-weight:800;font-size:0.92rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.2s;"
+                        onmouseover="this.style.background='rgba(245,158,11,0.15)';this.style.borderColor='rgba(245,158,11,0.4)';"
+                        onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='var(--glass-border)';">
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:rgba(16,185,129,0.15);color:#10b981;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;">🛵</div>
+                            <span style="font-weight:800;">${escapeHtml(d.name)}</span>
+                        </div>
+                        <span style="font-size:0.75rem;color:#10b981;background:rgba(16,185,129,0.12);padding:4px 10px;border-radius:8px;font-weight:800;">Asignar</span>
+                    </button>
+                `).join('') : '<p style="color:var(--text-dim);font-size:0.85rem;text-align:center;margin:0.5rem 0;">Escribe el nombre del domiciliario a continuación:</p>'}
+            </div>
+
+            <div style="border-top:1px dashed var(--glass-border);padding-top:1rem;display:flex;flex-direction:column;gap:0.6rem;">
+                <label style="font-size:0.72rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Escribir Nombre Manualmente</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <input type="text" id="manual-driver-name" placeholder="Ej: Carlos Ramírez" style="flex:1;padding:0.75rem;border-radius:10px;background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);color:var(--text);font-size:0.9rem;font-weight:700;">
+                    <button onclick="submitManualDriver('${escapeHtml(orderId)}')" style="padding:0.75rem 1.2rem;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-weight:800;cursor:pointer;white-space:nowrap;">Asignar</button>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+window.selectDriverForOrder = function(orderId, name, id) {
+    const modal = document.getElementById('assign-driver-modal');
+    if (modal) modal.remove();
+    claimDeliveryOrder(orderId, name, id);
+};
+
+window.submitManualDriver = function(orderId) {
+    const input = document.getElementById('manual-driver-name');
+    const name = input ? input.value.trim() : '';
+    if (!name) {
+        if (typeof showToast === 'function') showToast('Escribe el nombre del domiciliario', 'warning');
+        return;
+    }
+    const modal = document.getElementById('assign-driver-modal');
+    if (modal) modal.remove();
+    claimDeliveryOrder(orderId, name, 'manual_' + Date.now());
+};
 
 function releaseDeliveryOrder(orderId) {
     const doRelease = () => {
@@ -8028,7 +8113,14 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                             <i data-lucide="user-x" style="width:15px;height:15px;"></i> 🔄 Liberar
                         </button>
                     </div>
-                    ` : ''}
+                    ` : `
+                    <button onclick="openAssignDriverModal('${escapeHtml(orderId)}')"
+                        style="width:100%;padding:0.82rem 1rem;border-radius:12px;font-weight:900;font-size:0.92rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.4);transition:filter 0.2s;"
+                        onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                        <i data-lucide="user-plus" style="width:18px;height:18px;"></i>
+                        🛵 Asignar Domiciliario
+                    </button>
+                    `}
                 `}
             </div>
         </div>
