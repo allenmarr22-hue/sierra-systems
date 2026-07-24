@@ -7549,6 +7549,14 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
     `;
 }
 
+let currentDeliveryFilterTab = 'all'; // 'mine', 'available', 'all'
+
+function setDeliveryFilterTab(tab) {
+    currentDeliveryFilterTab = tab;
+    renderDriverDeliveriesSection();
+}
+window.setDeliveryFilterTab = setDeliveryFilterTab;
+
 function renderDriverDeliveriesSection() {
     const container = document.getElementById('driver-deliveries-list');
     if (!container) return;
@@ -7599,81 +7607,122 @@ function renderDriverDeliveriesSection() {
     const assignments = getOrderAssignments();
     const driver = getCurrentDriverInfo();
 
-    if (isDriver) {
-        // Split into: available (unclaimed or mine) vs mine
-        const available = deliveryOrders.filter(o => {
-            const a = assignments[o.id || o.orderId];
-            return !a || a.driverId === driver.id || (a && a.driverId !== driver.id);
-        });
-        const mine = deliveryOrders.filter(o => {
-            const a = assignments[o.id || o.orderId];
-            return a && a.driverId === driver.id;
-        });
-        const others = deliveryOrders.filter(o => {
-            const a = assignments[o.id || o.orderId];
-            return a && a.driverId !== driver.id;
-        });
-        const unassigned = deliveryOrders.filter(o => !assignments[o.id || o.orderId]);
+    const mine = deliveryOrders.filter(o => {
+        const a = assignments[o.id || o.orderId];
+        return a && a.driverId === driver.id;
+    });
+    const unassigned = deliveryOrders.filter(o => !assignments[o.id || o.orderId]);
+    const others = deliveryOrders.filter(o => {
+        const a = assignments[o.id || o.orderId];
+        return a && a.driverId !== driver.id;
+    });
 
-        let html = '';
+    // Top Filter Bar HTML
+    const activeTab = currentDeliveryFilterTab;
+    const filterBarHtml = `
+        <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:0.6rem; margin-bottom:1.5rem; flex-wrap:wrap; background:rgba(0,0,0,0.15); padding:0.4rem; border-radius:16px; border:1px solid var(--glass-border);">
+            <button onclick="setDeliveryFilterTab('mine')"
+                style="flex:1; min-width:140px; padding:0.65rem 1rem; border-radius:12px; font-weight:800; font-size:0.85rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                <i data-lucide="package-check" style="width:16px;height:16px;"></i>
+                Mis Domicilios <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:1px 7px; border-radius:10px; font-size:0.75rem;">${mine.length}</span>
+            </button>
 
-        // MY ORDERS section
+            <button onclick="setDeliveryFilterTab('available')"
+                style="flex:1; min-width:140px; padding:0.65rem 1rem; border-radius:12px; font-weight:800; font-size:0.85rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s; ${activeTab === 'available' ? 'background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                <i data-lucide="bell" style="width:16px;height:16px;"></i>
+                Entrantes <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)'}; color:${activeTab === 'available' ? '#fff' : '#f59e0b'}; padding:1px 7px; border-radius:10px; font-size:0.75rem;">${unassigned.length}</span>
+            </button>
+
+            <button onclick="setDeliveryFilterTab('all')"
+                style="flex:1; min-width:120px; padding:0.65rem 1rem; border-radius:12px; font-weight:800; font-size:0.85rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s; ${activeTab === 'all' ? 'background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; box-shadow:0 4px 14px rgba(59,130,246,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                <i data-lucide="layers" style="width:16px;height:16px;"></i>
+                Todos <span style="background:${activeTab === 'all' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)'}; color:${activeTab === 'all' ? '#fff' : '#3b82f6'}; padding:1px 7px; border-radius:10px; font-size:0.75rem;">${deliveryOrders.length}</span>
+            </button>
+        </div>
+    `;
+
+    let contentHtml = '';
+
+    if (activeTab === 'mine') {
+        if (mine.length === 0) {
+            contentHtml = `
+                <div style="grid-column:1/-1;text-align:center;padding:3rem 1.5rem;background:var(--surface-light);border-radius:20px;border:1px dashed var(--glass-border);">
+                    <i data-lucide="package-open" style="width:40px;height:40px;color:#10b981;margin-bottom:0.8rem;opacity:0.6;display:block;margin-left:auto;margin-right:auto;"></i>
+                    <h5 style="margin:0 0 0.3rem;font-size:1.1rem;font-weight:800;color:var(--text);">No tienes domicilios asignados</h5>
+                    <p style="margin:0;font-size:0.85rem;color:var(--text-dim);">Ve a la pestaña "Entrantes" para reclamar un pedido disponible con ✋ Yo lo llevo.</p>
+                </div>
+            `;
+        } else {
+            contentHtml = mine.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
+        }
+    } else if (activeTab === 'available') {
+        if (unassigned.length === 0) {
+            contentHtml = `
+                <div style="grid-column:1/-1;text-align:center;padding:3rem 1.5rem;background:var(--surface-light);border-radius:20px;border:1px dashed var(--glass-border);">
+                    <i data-lucide="check-check" style="width:40px;height:40px;color:#f59e0b;margin-bottom:0.8rem;opacity:0.6;display:block;margin-left:auto;margin-right:auto;"></i>
+                    <h5 style="margin:0 0 0.3rem;font-size:1.1rem;font-weight:800;color:var(--text);">¡No hay domicilios entrantes sin asignar!</h5>
+                    <p style="margin:0;font-size:0.85rem;color:var(--text-dim);">Todos los pedidos activos ya fueron reclamados por repartidores.</p>
+                </div>
+            `;
+        } else {
+            contentHtml = unassigned.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
+        }
+    } else {
+        // Tab 'all'
+        let sections = '';
+
         if (mine.length > 0) {
-            html += `
+            sections += `
                 <div style="grid-column:1/-1;">
                     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
                         <div style="height:2px;flex:1;background:linear-gradient(90deg,#10b981,transparent);"></div>
                         <span style="background:rgba(16,185,129,0.15);color:#10b981;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
                             <i data-lucide="package-check" style="width:15px;height:15px;"></i>
-                            Mis Pedidos (${mine.length})
+                            Mis Domicilios (${mine.length})
                         </span>
                         <div style="height:2px;flex:1;background:linear-gradient(270deg,#10b981,transparent);"></div>
                     </div>
                 </div>
-                ${mine.map((o, i) => buildDeliveryCard(o, i, true, assignments)).join('')}
+                ${mine.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('')}
             `;
         }
 
-        // AVAILABLE section
         if (unassigned.length > 0) {
-            html += `
+            sections += `
                 <div style="grid-column:1/-1;">
                     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;${mine.length > 0 ? 'margin-top:1.5rem;' : ''}">
                         <div style="height:2px;flex:1;background:linear-gradient(90deg,#f59e0b,transparent);"></div>
                         <span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
-                            <i data-lucide="package" style="width:15px;height:15px;"></i>
-                            Disponibles (${unassigned.length})
+                            <i data-lucide="bell" style="width:15px;height:15px;"></i>
+                            Entrantes / Disponibles (${unassigned.length})
                         </span>
                         <div style="height:2px;flex:1;background:linear-gradient(270deg,#f59e0b,transparent);"></div>
                     </div>
                 </div>
-                ${unassigned.map((o, i) => buildDeliveryCard(o, mine.length + i, true, assignments)).join('')}
+                ${unassigned.map((o, i) => buildDeliveryCard(o, mine.length + i, isDriver, assignments)).join('')}
             `;
         }
 
-        // TAKEN BY OTHERS
         if (others.length > 0) {
-            html += `
+            sections += `
                 <div style="grid-column:1/-1;">
                     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;margin-top:1.5rem;">
                         <div style="height:2px;flex:1;background:linear-gradient(90deg,#ef4444,transparent);"></div>
                         <span style="background:rgba(239,68,68,0.12);color:#ef4444;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
                             <i data-lucide="lock" style="width:15px;height:15px;"></i>
-                            Ya tomados (${others.length})
+                            Tomados por otros (${others.length})
                         </span>
                         <div style="height:2px;flex:1;background:linear-gradient(270deg,#ef4444,transparent);"></div>
                     </div>
                 </div>
-                ${others.map((o, i) => buildDeliveryCard(o, mine.length + unassigned.length + i, true, assignments)).join('')}
+                ${others.map((o, i) => buildDeliveryCard(o, mine.length + unassigned.length + i, isDriver, assignments)).join('')}
             `;
         }
 
-        container.innerHTML = html;
-    } else {
-        // Admin view: all orders with assignment badges
-        container.innerHTML = deliveryOrders.map((o, i) => buildDeliveryCard(o, i, false, assignments)).join('');
+        contentHtml = sections;
     }
 
+    container.innerHTML = filterBarHtml + contentHtml;
     if (window.lucide) lucide.createIcons();
 }
 
