@@ -326,9 +326,14 @@
             </div>
             <div class="brand-title">STREETFEED <span style="font-size: 0.75rem; color: var(--brand); font-weight: 800; text-transform: uppercase;">Repartidor</span></div>
         </div>
-        <div id="active-driver-name" class="driver-badge">
-            <span class="status-dot"></span>
-            <span id="driver-label">Conectado</span>
+        <div style="display: flex; align-items: center; gap: 0.8rem;">
+            <div id="active-driver-name" class="driver-badge">
+                <span class="status-dot"></span>
+                <span id="driver-label">Conectado</span>
+            </div>
+            <button onclick="logoutDriver()" title="Volver al Panel de Control de Administración" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
+                <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> Salir al Admin
+            </button>
         </div>
     </header>
 
@@ -584,6 +589,13 @@
             }
 
             loadAssignedOrders();
+        }
+
+        function logoutDriver() {
+            localStorage.removeItem('streetfeed_driver_user');
+            localStorage.removeItem('streetfeed_employee_user');
+            const instanceId = new URLSearchParams(window.location.search).get('instanceId');
+            window.location.href = `admin.html${instanceId ? `?instanceId=${instanceId}` : ''}`;
         }
     </script>
 </body>

@@ -5659,16 +5659,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-        const savedEmpRaw = localStorage.getItem('streetfeed_employee_user');
-        if (savedEmpRaw) {
-            const savedEmp = JSON.parse(savedEmpRaw);
-            if (savedEmp && savedEmp.role) {
-                applyRolePermissions(savedEmp.role, savedEmp.name);
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('logout') === 'true') {
+            localStorage.removeItem('streetfeed_employee_user');
+            localStorage.removeItem('streetfeed_driver_user');
+            applyRolePermissions('owner', 'Propietario');
+        } else {
+            const savedEmpRaw = localStorage.getItem('streetfeed_employee_user');
+            if (savedEmpRaw) {
+                const savedEmp = JSON.parse(savedEmpRaw);
+                if (savedEmp && savedEmp.role) {
+                    applyRolePermissions(savedEmp.role, savedEmp.name);
+                } else {
+                    applyRolePermissions('owner', 'Propietario');
+                }
             } else {
                 applyRolePermissions('owner', 'Propietario');
             }
-        } else {
-            applyRolePermissions('owner', 'Propietario');
         }
     } catch (e) {
         applyRolePermissions('owner', 'Propietario');
