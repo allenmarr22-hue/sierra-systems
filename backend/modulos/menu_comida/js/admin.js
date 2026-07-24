@@ -7864,40 +7864,50 @@ window.openAssignDriverModal = async function(orderId) {
     const initials = (name) => name.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || 'DR';
 
     modal.innerHTML = `
-        <div id="assign-driver-modal-box" style="border-radius:28px;width:100%;max-width:450px;padding:2rem;display:flex;flex-direction:column;gap:1.25rem;animation:slideDown 0.22s ease;">
+        <style>
+            #assign-driver-modal .drv-card { transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s; }
+            #assign-driver-modal .drv-card:hover { background: rgba(99,102,241,0.12) !important; border-color: rgba(99,102,241,0.5) !important; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(99,102,241,0.18); }
+            #assign-driver-modal .drv-card:hover .drv-assign-btn { background: linear-gradient(135deg,#818cf8,#6366f1) !important; box-shadow: 0 4px 16px rgba(99,102,241,0.45) !important; }
+            #assign-driver-modal ::-webkit-scrollbar { width: 4px; }
+            #assign-driver-modal ::-webkit-scrollbar-track { background: transparent; }
+            #assign-driver-modal ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 4px; }
+        </style>
+        <div style="background:var(--surface-light, #1e293b);border:1px solid var(--glass-border);border-radius:28px;width:100%;max-width:450px;padding:2rem;box-shadow:0 30px 70px rgba(0,0,0,0.35), 0 0 0 1px var(--glass-border);display:flex;flex-direction:column;gap:1.25rem;animation:slideDown 0.22s ease;">
             
             <!-- Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div style="display:flex;align-items:center;gap:0.9rem;">
                     <div style="width:50px;height:50px;border-radius:16px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 6px 20px rgba(99,102,241,0.45);">🏍️</div>
                     <div>
-                        <h3 class="modal-title" style="margin:0;font-size:1.18rem;font-weight:900;letter-spacing:-0.3px;">Asignar Domiciliario</h3>
-                        <p class="modal-subtitle" style="margin:3px 0 0;font-size:0.8rem;">Pedido <strong style="color:#818cf8;font-family:monospace;">#${escapeHtml(orderId)}</strong></p>
+                        <h3 style="margin:0;font-size:1.18rem;font-weight:900;color:var(--text, #f8fafc);letter-spacing:-0.3px;">Asignar Domiciliario</h3>
+                        <p style="margin:3px 0 0;font-size:0.8rem;color:var(--text-dim, #94a3b8);">Pedido <strong style="color:#6366f1;font-family:monospace;">#${escapeHtml(orderId)}</strong></p>
                     </div>
                 </div>
-                <button class="close-btn" onclick="document.getElementById('assign-driver-modal').remove()"
-                    style="width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.25rem;line-height:1;transition:all 0.2s;">&times;</button>
+                <button onclick="document.getElementById('assign-driver-modal').remove()"
+                    style="background:rgba(0,0,0,0.05);border:1px solid var(--glass-border);color:var(--text-dim);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.25rem;line-height:1;transition:all 0.2s;"
+                    onmouseover="this.style.color='var(--text)';this.style.borderColor='rgba(99,102,241,0.5)';this.style.background='rgba(99,102,241,0.15)';"
+                    onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--glass-border)';this.style.background='rgba(0,0,0,0.05)';">&times;</button>
             </div>
 
             <!-- Divider -->
-            <div class="divider-line" style="height:1px;"></div>
+            <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(99,102,241,0.3),transparent);"></div>
 
             <!-- Driver List -->
             <div style="display:flex;flex-direction:column;gap:0.6rem;max-height:320px;overflow-y:auto;padding-right:2px;">
                 ${drivers.length > 0 ? drivers.map(d => `
                     <div class="drv-card" onclick="selectDriverForOrder('${escapeHtml(orderId)}', '${escapeHtml(d.name)}', '${escapeHtml(d.id)}')"
-                        style="padding:0.9rem 1rem;border-radius:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+                        style="padding:0.9rem 1rem;border-radius:16px;background:rgba(0,0,0,0.03);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
                         <div style="display:flex;align-items:center;gap:0.85rem;">
                             <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.92rem;box-shadow:0 4px 14px rgba(99,102,241,0.4);position:relative;flex-shrink:0;">
                                 ${initials(d.name)}
-                                <span style="position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:${d.activeCount > 0 ? '#f59e0b' : '#10b981'};border:2px solid currentColor;"></span>
+                                <span style="position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:${d.activeCount > 0 ? '#f59e0b' : '#10b981'};border:2px solid var(--surface-light, #fff);"></span>
                             </div>
                             <div>
-                                <div class="drv-card-name" style="font-weight:800;font-size:0.97rem;">${escapeHtml(d.name)}</div>
+                                <div style="font-weight:800;font-size:0.97rem;color:var(--text);"> ${escapeHtml(d.name)}</div>
                                 <div style="font-size:0.74rem;margin-top:3px;">
                                     ${d.activeCount > 0
                                         ? `<span style="color:#fbbf24;font-weight:700;">🛵 ${d.activeCount} en curso</span>`
-                                        : `<span style="color:#10b981;font-weight:700;">✅ Disponible</span>`}
+                                        : `<span style="color:#34d399;font-weight:700;">✅ Disponible</span>`}
                                 </div>
                             </div>
                         </div>
@@ -8134,7 +8144,7 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
             </div>
 
             <!-- Footer -->
-            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.55rem;">
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: var(--surface-light); display: flex; flex-direction: column; gap: 0.55rem;">
                 ${isDriver ? `
                     ${isTakenByOther ? `
                         <!-- Taken by another driver -->
@@ -8203,8 +8213,8 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                             <i data-lucide="map-pin" style="width:17px;height:17px;"></i> Rastreo GPS
                         </button>
                         <a href="${wazeUrl}" ${mapClickAttr}
-                            style="padding:0.78rem;border-radius:12px;font-size:0.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);transition:background 0.2s;"
-                            onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
+                            style="padding:0.78rem;border-radius:12px;font-size:0.85rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;background:rgba(59,130,246,0.1);color:#2563eb;border:1px solid rgba(59,130,246,0.25);transition:background 0.2s;"
+                            onmouseover="this.style.background='rgba(59,130,246,0.2)'" onmouseout="this.style.background='rgba(59,130,246,0.1)'">
                             <i data-lucide="map" style="width:17px;height:17px;"></i> Abrir Mapa
                         </a>
                     </div>
@@ -8223,10 +8233,10 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                     </div>
                     ` : `
                     <button onclick="openAssignDriverModal('${escapeHtml(orderId)}')"
-                        style="width:100%;padding:0.82rem 1rem;border-radius:12px;font-weight:900;font-size:0.92rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.4);transition:filter 0.2s;"
+                        style="width:100%;padding:0.82rem 1rem;border-radius:12px;font-weight:900;font-size:0.92rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.35);transition:filter 0.2s;"
                         onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
                         <i data-lucide="user-plus" style="width:18px;height:18px;"></i>
-                        🛵 Asignar Domiciliario
+                        Asignar Domiciliario
                     </button>
                     `}
                 `}
@@ -8322,17 +8332,17 @@ function renderDriverDeliveriesSection() {
 
     // Top Filter Bar HTML
     const filterBarHtml = `
-        <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:0.6rem; margin-bottom:1.5rem; flex-wrap:wrap; background:rgba(0,0,0,0.15); padding:0.4rem; border-radius:16px; border:1px solid var(--glass-border);">
+        <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:0.6rem; margin-bottom:1.5rem; flex-wrap:wrap; background:var(--surface-light); padding:0.45rem; border-radius:18px; border:1px solid var(--glass-border); box-shadow:0 4px 20px rgba(0,0,0,0.06);">
             <button onclick="setDeliveryFilterTab('available')"
-                style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'available' ? 'background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                style="flex:1; min-width:140px; padding:0.75rem 1.2rem; border-radius:13px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'available' ? 'background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.35);' : 'background:transparent; color:var(--text); opacity:0.75;'}">
                 <i data-lucide="bell" style="width:17px;height:17px;"></i>
-                ${leftTabLabel} <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)'}; color:${activeTab === 'available' ? '#fff' : '#f59e0b'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${unassigned.length}</span>
+                ${leftTabLabel} <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.18)'}; color:${activeTab === 'available' ? '#fff' : '#d97706'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${unassigned.length}</span>
             </button>
 
             <button onclick="setDeliveryFilterTab('mine')"
-                style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                style="flex:1; min-width:140px; padding:0.75rem 1.2rem; border-radius:13px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text); opacity:0.75;'}">
                 <i data-lucide="${isDriver ? 'package-check' : 'bike'}" style="width:17px;height:17px;"></i>
-                ${rightTabLabel} <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${assignedList.length}</span>
+                ${rightTabLabel} <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.18)'}; color:${activeTab === 'mine' ? '#fff' : '#059669'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${assignedList.length}</span>
             </button>
         </div>
     `;
