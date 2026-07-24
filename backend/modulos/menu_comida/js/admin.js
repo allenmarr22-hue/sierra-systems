@@ -7865,8 +7865,8 @@ window.openAssignDriverModal = async function(orderId) {
 
     modal.innerHTML = `
         <style>
-            #assign-driver-modal .drv-card { transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s; }
-            #assign-driver-modal .drv-card:hover { background: rgba(16,185,129,0.08) !important; border-color: rgba(16,185,129,0.4) !important; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(16,185,129,0.15); }
+            #assign-driver-modal .drv-card { transition: background 0.18s, border-color 0.18s, box-shadow 0.18s; }
+            #assign-driver-modal .drv-card:hover { background: rgba(16,185,129,0.08) !important; border-color: #10b981 !important; box-shadow: 0 4px 20px rgba(16,185,129,0.18); }
             #assign-driver-modal .drv-card:hover .drv-assign-btn { background: linear-gradient(135deg,#059669,#047857) !important; box-shadow: 0 4px 16px rgba(16,185,129,0.45) !important; }
             #assign-driver-modal ::-webkit-scrollbar { width: 4px; }
             #assign-driver-modal ::-webkit-scrollbar-track { background: transparent; }
@@ -7890,10 +7890,10 @@ window.openAssignDriverModal = async function(orderId) {
             </div>
 
             <!-- Divider -->
-            <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(16,185,129,0.3),transparent);"></div>
+            <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(16,185,129,0.3),transparent);margin:2px 0;"></div>
 
             <!-- Driver List -->
-            <div style="display:flex;flex-direction:column;gap:0.6rem;max-height:320px;overflow-y:auto;padding-right:2px;">
+            <div style="display:flex;flex-direction:column;gap:0.6rem;max-height:320px;overflow-y:auto;padding:6px 4px 6px 2px;">
                 ${drivers.length > 0 ? drivers.map(d => `
                     <div class="drv-card" onclick="selectDriverForOrder('${escapeHtml(orderId)}', '${escapeHtml(d.name)}', '${escapeHtml(d.id)}')"
                         style="padding:0.9rem 1rem;border-radius:16px;background:rgba(0,0,0,0.03);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
