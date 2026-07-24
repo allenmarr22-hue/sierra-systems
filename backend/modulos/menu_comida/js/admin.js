@@ -7549,7 +7549,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         }
         // Hide "General" button — domiciliario only sees their own deliveries
         const historyScopeAll = document.getElementById('history-scope-all');
-        if (historyScopeAll) historyScopeAll.style.display = 'none';
+        if (historyScopeAll) historyScopeAll.style.display = 'flex';
         if (pdfScopeMine) pdfScopeMine.style.display = 'flex';
         if (subtabUnpaidBtn) subtabUnpaidBtn.style.display = 'none';
 
