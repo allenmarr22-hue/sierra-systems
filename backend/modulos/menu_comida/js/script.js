@@ -2060,6 +2060,15 @@ function setupEventListeners() {
     }
 
     const logoutAction = () => {
+        // Close GPS map modal if open
+        if (typeof closeDriverMapModal === 'function') closeDriverMapModal();
+        // Stop any active GPS transmission
+        if (typeof activeWatchPositionId !== 'undefined' && activeWatchPositionId !== null) {
+            navigator.geolocation.clearWatch(activeWatchPositionId);
+            activeWatchPositionId = null;
+        }
+        if (typeof activeGpsOrderId !== 'undefined') activeGpsOrderId = null;
+
         state.isLoggedIn = false;
         localStorage.setItem('streetfeed_isLoggedIn', 'false');
         // Clear credentials on logout for security

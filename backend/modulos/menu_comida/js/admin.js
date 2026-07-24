@@ -7566,10 +7566,19 @@ function openDriverMapModal(orderId, customerName, address) {
 
 function closeDriverMapModal() {
     const modal = document.getElementById('driver-map-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
     if (adminDriverMapInterval) {
         clearInterval(adminDriverMapInterval);
         adminDriverMapInterval = null;
+    }
+    // Reset map instance so it re-initializes next time
+    if (adminDriverMapInstance) {
+        try { adminDriverMapInstance.remove(); } catch(e) {}
+        adminDriverMapInstance = null;
+        adminDriverMapMarker = null;
     }
 }
 
@@ -7585,6 +7594,15 @@ window.toggleDriverGPS = toggleDriverGPS;
 window.completeDriverDelivery = completeDriverDelivery;
 window.openDriverMapModal = openDriverMapModal;
 window.closeDriverMapModal = closeDriverMapModal;
+// Export GPS state so script.js can clean them up on logout
+Object.defineProperty(window, 'activeWatchPositionId', {
+    get: () => activeWatchPositionId,
+    set: (v) => { activeWatchPositionId = v; }
+});
+Object.defineProperty(window, 'activeGpsOrderId', {
+    get: () => activeGpsOrderId,
+    set: (v) => { activeGpsOrderId = v; }
+});
 
 
 
