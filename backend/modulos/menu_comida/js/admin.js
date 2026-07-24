@@ -3841,10 +3841,11 @@ window.renderOrders = function() {
     if (!incomingList || !preparingList || !unpaidList || !historyList) return;
 
     // Filter by 3 active statuses + history
+    // 'completed' is used by the driver when they mark a delivery as done — must be included in history
     let incoming = orders.filter(o => o.status === 'pending' || !o.status).reverse();
     let preparing = orders.filter(o => o.status === 'confirmed').reverse();
     let unpaid = orders.filter(o => o.status === 'dispatched').reverse();
-    let history = orders.filter(o => o.status === 'accepted' || o.status === 'cancelled').reverse();
+    let history = orders.filter(o => o.status === 'accepted' || o.status === 'cancelled' || o.status === 'completed').reverse();
 
     if (window._prevIncomingCount !== undefined && incoming.length > window._prevIncomingCount) {
         if (typeof window.playNewOrderChime === 'function') {
@@ -3853,13 +3854,35 @@ window.renderOrders = function() {
     }
     window._prevIncomingCount = incoming.length;
 
+    // Chime for domiciliario: play when a new dispatched delivery arrives in their queue
+    const dispatchedDeliveries = unpaid.filter(o => {
+        const isDeliv = (
+            o.deliveryType === 'delivery' ||
+            o.type === 'domicilio' ||
+            o.customer?.deliveryType === 'delivery' ||
+            (o.deliveryFee && o.deliveryFee > 0)
+        );
+        return isDeliv;
+    });
+    const currentDriverCount = dispatchedDeliveries.length;
+    if (window._prevDriverDispatchCount !== undefined && currentDriverCount > window._prevDriverDispatchCount) {
+        if (typeof window.playNewOrderChime === 'function') {
+            window.playNewOrderChime();
+        }
+        // Show notification for domiciliario
+        if (typeof showAdminNotification === 'function') {
+            showAdminNotification('🏍️ ¡Nuevo domicilio listo para entregar!', 'info');
+        }
+    }
+    window._prevDriverDispatchCount = currentDriverCount;
+
     // Filter History by Scope (Todos vs Mis Pedidos)
     if (window.historyScope === 'mine') {
         const activeName = getCurrentActiveEmployeeName().toLowerCase().trim();
         const firstName = activeName.split(' ')[0];
         if (activeName) {
             history = history.filter(o => {
-                const attended = (o.attendedBy || o.customer?.attendedBy || '').toLowerCase().trim();
+                const attended = (o.attendedBy || o.deliveredBy || o.customer?.attendedBy || '').toLowerCase().trim();
                 if (!attended) return false;
                 if (activeName.includes('propietario') || activeName.includes('administrador')) {
                     return attended.includes('propietario') || attended.includes('administrador') || (firstName && attended.includes(firstName));
