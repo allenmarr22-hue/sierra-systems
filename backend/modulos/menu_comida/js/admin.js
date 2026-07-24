@@ -7938,9 +7938,23 @@ window.toggleQuickAddDriverForm = function() {
 };
 
 window.selectDriverForOrder = function(orderId, name, id) {
-    const modal = document.getElementById('assign-driver-modal');
-    if (modal) modal.remove();
-    claimDeliveryOrder(orderId, name, id);
+    const doAssign = () => {
+        const modal = document.getElementById('assign-driver-modal');
+        if (modal) modal.remove();
+        claimDeliveryOrder(orderId, name, id);
+    };
+
+    if (typeof showConfirm === 'function') {
+        showConfirm(
+            `¿Estás seguro de asignar el Pedido #${orderId} a ${name}?`,
+            doAssign,
+            '🛵 Asignar Domiciliario',
+            '#10b981',
+            'Confirmar Asignación'
+        );
+    } else if (confirm(`¿Asignar el Pedido #${orderId} a ${name}?`)) {
+        doAssign();
+    }
 };
 
 window.submitManualDriver = function(orderId) {
