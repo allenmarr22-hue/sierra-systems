@@ -7286,31 +7286,59 @@ function claimDeliveryOrder(orderId) {
 }
 
 function releaseDeliveryOrder(orderId) {
-    const assignments = getOrderAssignments();
-    delete assignments[orderId];
-    saveOrderAssignments(assignments);
-    if (typeof showAdminNotification === 'function') {
-        showAdminNotification(`↩️ Pedido #${orderId} liberado al pool`, 'info');
+    const doRelease = () => {
+        const assignments = getOrderAssignments();
+        delete assignments[orderId];
+        saveOrderAssignments(assignments);
+        if (typeof showAdminNotification === 'function') {
+            showAdminNotification(`↩️ Pedido #${orderId} liberado al pool`, 'info');
+        }
+        renderDriverDeliveriesSection();
+    };
+
+    if (typeof showConfirm === 'function') {
+        showConfirm(
+            `¿Deseas liberar el pedido #${orderId} para que esté disponible para otros domiciliarios?`,
+            doRelease,
+            '↩️ Liberar Pedido',
+            '#ef4444',
+            'Liberar Pedido'
+        );
+    } else {
+        doRelease();
     }
-    renderDriverDeliveriesSection();
 }
 
 function forceReassignOrder(orderId, newDriverName, newDriverId) {
     const assignments = getOrderAssignments();
     const existing = assignments[orderId];
     const currentName = existing ? existing.driverName : 'nadie';
-    if (!confirm(`¿Reasignar #${orderId}?\nActualmente lo tiene: ${currentName}\n¿Forzar asignación a ${newDriverName}?`)) return;
-    assignments[orderId] = {
-        driverName: newDriverName,
-        driverId: newDriverId,
-        claimedAt: new Date().toISOString(),
-        forcedByAdmin: true
+    
+    const doReassign = () => {
+        assignments[orderId] = {
+            driverName: newDriverName,
+            driverId: newDriverId,
+            claimedAt: new Date().toISOString(),
+            forcedByAdmin: true
+        };
+        saveOrderAssignments(assignments);
+        if (typeof showAdminNotification === 'function') {
+            showAdminNotification(`🔄 #${orderId} reasignado a ${newDriverName} por Admin`, 'success');
+        }
+        renderDriverDeliveriesSection();
     };
-    saveOrderAssignments(assignments);
-    if (typeof showAdminNotification === 'function') {
-        showAdminNotification(`🔄 #${orderId} reasignado a ${newDriverName} por Admin`, 'success');
+
+    if (typeof showConfirm === 'function') {
+        showConfirm(
+            `Actualmente asignado a ${currentName}. ¿Forzar la reasignación del pedido #${orderId} a ${newDriverName}?`,
+            doReassign,
+            '🔄 Reasignar',
+            '#f59e0b',
+            `Reasignar #${orderId}`
+        );
+    } else if (confirm(`¿Reasignar #${orderId}?\nActualmente lo tiene: ${currentName}\n¿Forzar asignación a ${newDriverName}?`)) {
+        doReassign();
     }
-    renderDriverDeliveriesSection();
 }
 
 // ====== CARD BUILDER (shared between driver and admin) ======
@@ -7711,27 +7739,40 @@ function updateGpsStatusPill(isActive) {
 }
 
 function completeDriverDelivery(orderId) {
-    if (!confirm(`¿Confirmar que el pedido #${orderId} fue entregado con éxito?`)) return;
-    if (activeGpsOrderId === orderId && activeWatchPositionId !== null) {
-        navigator.geolocation.clearWatch(activeWatchPositionId);
-        activeWatchPositionId = null;
-        activeGpsOrderId = null;
-        updateGpsStatusPill(false);
-    }
-    // Clear assignment on delivery
-    const assignments = getOrderAssignments();
-    delete assignments[orderId];
-    saveOrderAssignments(assignments);
+    const doComplete = () => {
+        if (activeGpsOrderId === orderId && activeWatchPositionId !== null) {
+            navigator.geolocation.clearWatch(activeWatchPositionId);
+            activeWatchPositionId = null;
+            activeGpsOrderId = null;
+            updateGpsStatusPill(false);
+        }
+        // Clear assignment on delivery
+        const assignments = getOrderAssignments();
+        delete assignments[orderId];
+        saveOrderAssignments(assignments);
 
-    const allOrders = getOrders();
-    const idx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
-    if (idx !== -1) {
-        allOrders[idx].status = 'completed';
-        localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+        const allOrders = getOrders();
+        const idx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
+        if (idx !== -1) {
+            allOrders[idx].status = 'completed';
+            localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+        }
+        if (typeof showAdminNotification === 'function') showAdminNotification(`✅ Pedido #${orderId} marcado como Entregado`, 'success');
+        renderDriverDeliveriesSection();
+        if (typeof window.renderOrders === 'function') window.renderOrders();
+    };
+
+    if (typeof showConfirm === 'function') {
+        showConfirm(
+            `¿Confirmar que el pedido #${orderId} fue entregado con éxito al cliente?`,
+            doComplete,
+            '✅ Sí, Entregado',
+            'linear-gradient(135deg, #10b981, #059669)',
+            'Confirmar Entrega'
+        );
+    } else if (confirm(`¿Confirmar que el pedido #${orderId} fue entregado con éxito?`)) {
+        doComplete();
     }
-    if (typeof showAdminNotification === 'function') showAdminNotification(`✅ Pedido #${orderId} marcado como Entregado`, 'success');
-    renderDriverDeliveriesSection();
-    if (typeof window.renderOrders === 'function') window.renderOrders();
 }
 
 function openDriverMapModal(orderId, customerName, address) {
