@@ -7661,6 +7661,15 @@ function claimDeliveryOrder(orderId) {
     };
     saveOrderAssignments(assignments);
 
+    // Also stamp attendedBy on the order so history filter works
+    const allOrders = getOrders();
+    const claimIdx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
+    if (claimIdx !== -1 && driver.name) {
+        allOrders[claimIdx].attendedBy = driver.name;
+        allOrders[claimIdx].deliveredBy = driver.name;
+        localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+    }
+
     if (typeof showAdminNotification === 'function') {
         showAdminNotification(`✅ ¡Pedido #${orderId} asignado a ti! Ya aparece en "Mis Pedidos"`, 'success');
     }
@@ -8129,6 +8138,12 @@ function completeDriverDelivery(orderId) {
         const idx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
         if (idx !== -1) {
             allOrders[idx].status = 'completed';
+            // Stamp the driver's name so "Mis Domis" history filter works correctly
+            const driverInfo = getCurrentDriverInfo();
+            if (driverInfo && driverInfo.name) {
+                allOrders[idx].attendedBy = driverInfo.name;
+                allOrders[idx].deliveredBy = driverInfo.name;
+            }
             localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
         }
         if (typeof showAdminNotification === 'function') showAdminNotification(`✅ Pedido #${orderId} marcado como Entregado`, 'success');
