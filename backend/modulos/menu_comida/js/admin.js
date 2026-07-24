@@ -7878,7 +7878,7 @@ window.openAssignDriverModal = async function(orderId) {
                                 <div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px;">
                                     ${d.activeCount > 0 
                                         ? `<span style="color:#f59e0b;font-weight:800;">🛵 ${d.activeCount} domicilio${d.activeCount > 1 ? 's' : ''} en curso</span>` 
-                                        : `<span style="color:#10b981;font-weight:700;">✨ Disponible ahora</span>`}
+                                        : `<span style="color:#10b981;font-weight:700;">✅ Disponible ahora</span>`}
                                 </div>
                             </div>
                         </div>
