@@ -8020,31 +8020,41 @@ function renderDriverDeliveriesSection() {
     const assignments = getOrderAssignments();
     const driver = getCurrentDriverInfo();
 
-    const mine = deliveryOrders.filter(o => {
-        const a = assignments[o.id || o.orderId];
-        return a && a.driverId === driver.id;
-    });
     const unassigned = deliveryOrders.filter(o => !assignments[o.id || o.orderId]);
+
+    // For driver: show their claimed orders. For owner/admin: show all active assigned deliveries in progress.
+    const assignedList = isDriver
+        ? deliveryOrders.filter(o => {
+            const a = assignments[o.id || o.orderId];
+            return a && a.driverId === driver.id;
+        })
+        : deliveryOrders.filter(o => {
+            const a = assignments[o.id || o.orderId];
+            return !!a;
+        });
+
+    const leftTabLabel = isDriver ? 'Entrantes' : 'Sin Asignar';
+    const rightTabLabel = isDriver ? 'Mis Domicilios' : 'Domicilios en Camino';
 
     // Ensure valid active tab
     if (currentDeliveryFilterTab !== 'mine' && currentDeliveryFilterTab !== 'available') {
-        currentDeliveryFilterTab = mine.length > 0 ? 'mine' : 'available';
+        currentDeliveryFilterTab = assignedList.length > 0 ? 'mine' : 'available';
     }
     const activeTab = currentDeliveryFilterTab;
 
-    // Top Filter Bar HTML (Entrantes on the left, Mis Domicilios on the right)
+    // Top Filter Bar HTML
     const filterBarHtml = `
         <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:0.6rem; margin-bottom:1.5rem; flex-wrap:wrap; background:rgba(0,0,0,0.15); padding:0.4rem; border-radius:16px; border:1px solid var(--glass-border);">
             <button onclick="setDeliveryFilterTab('available')"
                 style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'available' ? 'background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.35);' : 'background:transparent; color:var(--text-dim);'}">
                 <i data-lucide="bell" style="width:17px;height:17px;"></i>
-                Entrantes <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)'}; color:${activeTab === 'available' ? '#fff' : '#f59e0b'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${unassigned.length}</span>
+                ${leftTabLabel} <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)'}; color:${activeTab === 'available' ? '#fff' : '#f59e0b'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${unassigned.length}</span>
             </button>
 
             <button onclick="setDeliveryFilterTab('mine')"
                 style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text-dim);'}">
-                <i data-lucide="package-check" style="width:17px;height:17px;"></i>
-                Mis Domicilios <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${mine.length}</span>
+                <i data-lucide="${isDriver ? 'package-check' : 'bike'}" style="width:17px;height:17px;"></i>
+                ${rightTabLabel} <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${assignedList.length}</span>
             </button>
         </div>
     `;
@@ -8052,25 +8062,33 @@ function renderDriverDeliveriesSection() {
     let contentHtml = '';
 
     if (activeTab === 'mine') {
-        if (mine.length === 0) {
+        if (assignedList.length === 0) {
+            const emptyTitle = isDriver ? 'No tienes domicilios asignados' : 'No hay domicilios en camino';
+            const emptySub = isDriver
+                ? 'Ve a la pestaña "Entrantes" para reclamar un pedido disponible con ✋ Yo lo llevo.'
+                : 'Los pedidos asignados a los domiciliarios aparecerán aquí para tu supervisión en tiempo real.';
             contentHtml = `
                 <div style="grid-column:1/-1;text-align:center;padding:3rem 1.5rem;background:var(--surface-light);border-radius:20px;border:1px dashed var(--glass-border);">
-                    <i data-lucide="package-open" style="width:40px;height:40px;color:#10b981;margin-bottom:0.8rem;opacity:0.6;display:block;margin-left:auto;margin-right:auto;"></i>
-                    <h5 style="margin:0 0 0.3rem;font-size:1.1rem;font-weight:800;color:var(--text);">No tienes domicilios asignados</h5>
-                    <p style="margin:0;font-size:0.85rem;color:var(--text-dim);">Ve a la pestaña "Entrantes" para reclamar un pedido disponible con ✋ Yo lo llevo.</p>
+                    <i data-lucide="bike" style="width:40px;height:40px;color:#10b981;margin-bottom:0.8rem;opacity:0.6;display:block;margin-left:auto;margin-right:auto;"></i>
+                    <h5 style="margin:0 0 0.3rem;font-size:1.1rem;font-weight:800;color:var(--text);">${emptyTitle}</h5>
+                    <p style="margin:0;font-size:0.85rem;color:var(--text-dim);">${emptySub}</p>
                 </div>
             `;
         } else {
-            contentHtml = mine.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
+            contentHtml = assignedList.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
         }
     } else {
-        // Tab 'available' (Entrantes)
+        // Tab 'available' (Entrantes / Sin Asignar)
         if (unassigned.length === 0) {
+            const emptyTitle = isDriver ? '¡No hay domicilios entrantes sin asignar!' : 'No hay domicilios sin asignar';
+            const emptySub = isDriver
+                ? 'Todos los pedidos activos ya fueron reclamados por repartidores.'
+                : 'Todos los domicilios activos ya se encuentran asignados a un domiciliario.';
             contentHtml = `
                 <div style="grid-column:1/-1;text-align:center;padding:3rem 1.5rem;background:var(--surface-light);border-radius:20px;border:1px dashed var(--glass-border);">
                     <i data-lucide="check-check" style="width:40px;height:40px;color:#f59e0b;margin-bottom:0.8rem;opacity:0.6;display:block;margin-left:auto;margin-right:auto;"></i>
-                    <h5 style="margin:0 0 0.3rem;font-size:1.1rem;font-weight:800;color:var(--text);">¡No hay domicilios entrantes sin asignar!</h5>
-                    <p style="margin:0;font-size:0.85rem;color:var(--text-dim);">Todos los pedidos activos ya fueron reclamados por repartidores.</p>
+                    <h5 style="margin:0 0 0.3rem;font-size:1.1rem;font-weight:800;color:var(--text);">${emptyTitle}</h5>
+                    <p style="margin:0;font-size:0.85rem;color:var(--text-dim);">${emptySub}</p>
                 </div>
             `;
         } else {
