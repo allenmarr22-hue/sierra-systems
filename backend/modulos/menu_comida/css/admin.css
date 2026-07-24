@@ -1368,75 +1368,10 @@ body.light-mode input[type="date"]::-webkit-calendar-picker-indicator {
     backdrop-filter: none;
     position: relative;
     z-index: 600;
-/* =========================================
-   ASSIGN DRIVER MODAL THEME STYLES
-   ========================================= */
-#assign-driver-modal-box {
-    background: linear-gradient(160deg, #0f172a 0%, #131c35 100%);
-    border: 1px solid rgba(99,102,241,0.25);
-    box-shadow: 0 30px 70px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
-    color: #f8fafc;
 }
-#assign-driver-modal-box .modal-title { color: #f8fafc; }
-#assign-driver-modal-box .modal-subtitle { color: #94a3b8; }
-#assign-driver-modal-box .close-btn {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #64748b;
-}
-#assign-driver-modal-box .close-btn:hover {
-    color: #f8fafc;
-    border-color: rgba(99,102,241,0.5);
-    background: rgba(99,102,241,0.15);
-}
-#assign-driver-modal-box .divider-line {
-    background: linear-gradient(90deg,transparent,rgba(99,102,241,0.3),transparent);
-}
-#assign-driver-modal-box .drv-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
-}
-#assign-driver-modal-box .drv-card:hover {
-    background: rgba(99,102,241,0.12) !important;
-    border-color: rgba(99,102,241,0.5) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(99,102,241,0.18);
-}
-#assign-driver-modal-box .drv-card-name { color: #f1f5f9; }
 
-/* LIGHT MODE OVERRIDES */
-body.light-mode #assign-driver-modal-box {
-    background: #ffffff !important;
-    border: 1px solid rgba(226, 232, 240, 0.9) !important;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15), 0 4px 12px rgba(0,0,0,0.05) !important;
-    color: #0f172a !important;
-}
-body.light-mode #assign-driver-modal-box .modal-title { color: #0f172a !important; }
-body.light-mode #assign-driver-modal-box .modal-subtitle { color: #64748b !important; }
-body.light-mode #assign-driver-modal-box .close-btn {
-    background: #f1f5f9 !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #475569 !important;
-}
-body.light-mode #assign-driver-modal-box .close-btn:hover {
-    color: #0f172a !important;
-    border-color: #6366f1 !important;
-    background: rgba(99,102,241,0.1) !important;
-}
-body.light-mode #assign-driver-modal-box .divider-line {
-    background: linear-gradient(90deg,transparent,rgba(99,102,241,0.2),transparent) !important;
-}
-body.light-mode #assign-driver-modal-box .drv-card {
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-}
-body.light-mode #assign-driver-modal-box .drv-card:hover {
-    background: #eef2ff !important;
-    border-color: #818cf8 !important;
-    box-shadow: 0 6px 20px rgba(99,102,241,0.15) !important;
-}
-body.light-mode #assign-driver-modal-box .drv-card-name { color: #0f172a !important; }
+
+
 /* Ensure all interactive elements in the bar share the same baseline */
 .stats-filters > * {
     flex-shrink: 0;
