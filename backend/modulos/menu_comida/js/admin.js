@@ -7768,7 +7768,30 @@ function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = n
 function getAvailableDrivers() {
     const driversMap = new Map();
 
-    // 1. From API employeesList — only domiciliarios/repartidores, never meseros/cajeros/etc.
+    // Build a SET of non-driver names (meseros, cajeros, cocina, owner, admin)
+    // so we can EXCLUDE them from ALL sources (history, assignments, saved team)
+    const nonDriverNames = new Set();
+    if (Array.isArray(employeesList)) {
+        employeesList.forEach(e => {
+            const role = (e.role || '').toLowerCase();
+            const isDriver = role === 'domiciliario' || role === 'repartidor' || role === 'delivery' || role === 'driver';
+            if (!isDriver && e.name) {
+                nonDriverNames.add(e.name.toLowerCase().trim());
+            }
+        });
+    }
+
+    const isAllowed = (name) => {
+        if (!name) return false;
+        const lower = name.toLowerCase().trim();
+        // Always block known system roles
+        if (lower.includes('propietario') || lower.includes('administrador') || lower.includes('admin')) return false;
+        // Block any employee who is NOT a driver
+        if (nonDriverNames.has(lower)) return false;
+        return true;
+    };
+
+    // 1. From API employeesList — only domiciliarios/repartidores
     if (Array.isArray(employeesList)) {
         employeesList.forEach(e => {
             const role = (e.role || '').toLowerCase();
@@ -7779,37 +7802,32 @@ function getAvailableDrivers() {
         });
     }
 
-    // 2. From saved drivers team in localStorage
+    // 2. From saved drivers team in localStorage (only if not blocked)
     try {
         const savedTeam = JSON.parse(localStorage.getItem('streetfeed_drivers_team') || '[]');
         savedTeam.forEach(name => {
-            if (name && !driversMap.has(name.toLowerCase().trim())) {
+            if (isAllowed(name) && !driversMap.has(name.toLowerCase().trim())) {
                 driversMap.set(name.toLowerCase().trim(), { id: 'team_' + name, name: name });
             }
         });
     } catch(e) {}
 
-    // 3. From order assignments
+    // 3. From order assignments (only if not blocked)
     const assignments = getOrderAssignments();
     Object.values(assignments).forEach(a => {
-        if (a && a.driverName && !driversMap.has(a.driverName.toLowerCase().trim())) {
+        if (a && isAllowed(a.driverName) && !driversMap.has(a.driverName.toLowerCase().trim())) {
             driversMap.set(a.driverName.toLowerCase().trim(), { id: a.driverId || a.driverName, name: a.driverName });
         }
     });
 
-    // 4. From history of orders
+    // 4. From history of orders: ONLY use deliveredBy (not attendedBy — meseros attend orders too)
     const allOrders = getOrders();
     allOrders.forEach(o => {
-        const dName = (o.deliveredBy || o.attendedBy || '').trim();
-        if (dName && !dName.toLowerCase().includes('propietario') && !dName.toLowerCase().includes('admin') && !driversMap.has(dName.toLowerCase())) {
+        const dName = (o.deliveredBy || '').trim(); // deliveredBy = stamped only by driver flow
+        if (dName && isAllowed(dName) && !driversMap.has(dName.toLowerCase())) {
             driversMap.set(dName.toLowerCase(), { id: 'hist_' + dName, name: dName });
         }
     });
-
-    // 5. Default fallback if empty
-    if (driversMap.size === 0) {
-        driversMap.set('evelio', { id: 'drv_evelio', name: 'Evelio' });
-    }
 
     // Calculate active workload per driver
     const activeAssignments = Object.values(assignments);
