@@ -7847,7 +7847,9 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
     const isTransmitting = (activeGpsOrderId === orderId);
 
     const fullAddrStr = barrio ? `${address} - B/ ${barrio}` : address;
-    const wazeUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddrStr)}`;
+    const hasValidAddr = address && address !== 'Dirección no especificada' && address.trim().length > 2;
+    const wazeUrl = hasValidAddr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddrStr)}` : 'javascript:void(0);';
+    const mapClickAttr = hasValidAddr ? 'target="_blank"' : `onclick="if(typeof showAdminNotification==='function') showAdminNotification('⚠️ Este pedido no especifica dirección exacta de entrega', 'warning'); return false;"`;
     const waUrl = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : '#';
 
     const payIconMap = { 'efectivo': '💵', 'transferencia': '📲', 'tarjeta': '💳', 'nequi': '📱', 'daviplata': '📱' };
@@ -7861,10 +7863,10 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
 
     // Assignment badge for admin view
     const assignmentBadge = (() => {
-        if (!assignment) return `<span style="background:rgba(107,114,128,0.15);color:#9ca3af;padding:2px 8px;border-radius:6px;font-weight:700;font-size:0.69rem;">🔘 Sin asignar</span>`;
+        if (!assignment) return `<span style="background:rgba(107,114,128,0.15);color:#9ca3af;padding:3px 9px;border-radius:6px;font-weight:700;font-size:0.7rem;display:inline-flex;align-items:center;gap:0.3rem;">🔘 Sin asignar</span>`;
         const elapsed = Math.round((Date.now() - new Date(assignment.claimedAt).getTime()) / 60000);
         const elapsedText = elapsed < 1 ? 'ahora' : `hace ${elapsed} min`;
-        return `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;font-size:0.69rem;">🛵 ${escapeHtml(assignment.driverName)} · ${elapsedText}</span>`;
+        return `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:3px 9px;border-radius:6px;font-weight:800;font-size:0.71rem;display:inline-flex;align-items:center;gap:0.3rem;">🛵 ${escapeHtml(assignment.driverName)} · ${elapsedText}</span>`;
     })();
 
     return `
@@ -7939,7 +7941,7 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
             </div>
 
             <!-- Footer -->
-            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.55rem;">
                 ${isDriver ? `
                     ${isTakenByOther ? `
                         <!-- Taken by another driver -->
@@ -7955,7 +7957,7 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                             ${isTransmitting ? '📡 Transmitiendo GPS — Toca para detener' : '🚀 Iniciar Entrega (Activar GPS)'}
                         </button>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-                            <a href="${wazeUrl}" target="_blank"
+                            <a href="${wazeUrl}" ${mapClickAttr}
                                 style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);transition:background 0.2s;"
                                 onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
                                 <i data-lucide="navigation-2" style="width:15px;height:15px;"></i> Navegar
@@ -7987,7 +7989,7 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                             ✋ Yo lo llevo
                         </button>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-                            <a href="${wazeUrl}" target="_blank"
+                            <a href="${wazeUrl}" ${mapClickAttr}
                                 style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);">
                                 <i data-lucide="map" style="width:15px;height:15px;"></i> Ver Ruta
                             </a>
@@ -8007,18 +8009,25 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                             onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
                             <i data-lucide="map-pin" style="width:17px;height:17px;"></i> Rastreo GPS
                         </button>
-                        <a href="${wazeUrl}" target="_blank"
+                        <a href="${wazeUrl}" ${mapClickAttr}
                             style="padding:0.78rem;border-radius:12px;font-size:0.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);transition:background 0.2s;"
                             onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
                             <i data-lucide="map" style="width:17px;height:17px;"></i> Abrir Mapa
                         </a>
                     </div>
                     ${assignment ? `
-                    <button onclick="releaseDeliveryOrder('${escapeHtml(orderId)}')"
-                        style="width:100%;padding:0.62rem;border-radius:10px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.2);cursor:pointer;transition:background 0.2s;"
-                        onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
-                        <i data-lucide="user-x" style="width:15px;height:15px;"></i> 🔄 Liberar / Reasignar
-                    </button>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.55rem;">
+                        <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')"
+                            style="padding:0.62rem;border-radius:10px;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.28);cursor:pointer;transition:background 0.2s;"
+                            onmouseover="this.style.background='rgba(16,185,129,0.2)'" onmouseout="this.style.background='rgba(16,185,129,0.1)'">
+                            <i data-lucide="check-circle" style="width:15px;height:15px;"></i> ✅ Entregado
+                        </button>
+                        <button onclick="releaseDeliveryOrder('${escapeHtml(orderId)}')"
+                            style="padding:0.62rem;border-radius:10px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.2);cursor:pointer;transition:background 0.2s;"
+                            onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                            <i data-lucide="user-x" style="width:15px;height:15px;"></i> 🔄 Liberar
+                        </button>
+                    </div>
                     ` : ''}
                 `}
             </div>
