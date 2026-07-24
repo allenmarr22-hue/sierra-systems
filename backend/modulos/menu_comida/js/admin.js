@@ -6247,15 +6247,15 @@ function renderEmployeesGrid() {
             <!-- KPIs Row -->
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; padding: 0;">
                 <div style="padding: 0.8rem 1rem; text-align: center; border-right: 1px solid var(--glass-border);">
-                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">Pedidos</div>
+                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">${emp.role === 'domiciliario' ? 'Entregas' : 'Pedidos'}</div>
                     <div style="font-size: 1.3rem; font-weight: 900; color: var(--text);">${stats.totalOrders}</div>
                 </div>
                 <div style="padding: 0.8rem 1rem; text-align: center; border-right: 1px solid var(--glass-border);">
-                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">Ventas</div>
+                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">${emp.role === 'domiciliario' ? 'Cobrado' : 'Ventas'}</div>
                     <div style="font-size: 1rem; font-weight: 900; color: #4caf50;">$${stats.totalSales.toLocaleString('es-CO')}</div>
                 </div>
                 <div style="padding: 0.8rem 1rem; text-align: center;">
-                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">Comisión (${stats.commissionRate}%)</div>
+                    <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">${emp.role === 'domiciliario' ? 'Domicilios' : `Comisión (${stats.commissionRate}%)`}</div>
                     <div style="font-size: 1rem; font-weight: 900; color: #ec4899;">$${stats.commission.toLocaleString('es-CO')}</div>
                 </div>
             </div>
@@ -6886,7 +6886,7 @@ window.requireSecurityAuth = function(actionCallback, forcePrompt = false) {
         }
     } catch(e) {}
 
-    if (typeof currentEmployeeRole !== 'undefined' && (currentEmployeeRole === 'mesero' || currentEmployeeRole === 'cajero' || currentEmployeeRole === 'cocina')) {
+    if (typeof currentEmployeeRole !== 'undefined' && (currentEmployeeRole === 'mesero' || currentEmployeeRole === 'cajero' || currentEmployeeRole === 'cocina' || currentEmployeeRole === 'domiciliario')) {
         isWorkerSession = true;
     }
 
@@ -7078,6 +7078,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         else if (role === 'mesero') roleTitle = 'Mesero';
         else if (role === 'cajero') roleTitle = 'Cajero';
         else if (role === 'cocina') roleTitle = 'Cocina';
+        else if (role === 'domiciliario') roleTitle = 'Domiciliario';
         
         const displayName = (name === 'Administrador' || !name) ? 'Propietario' : name;
         const firstName = formatFirstName(displayName);
@@ -7087,6 +7088,13 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         } else {
             badgeName.innerHTML = `${escapeHtml(firstName)} <small style="opacity:0.75; font-size:0.75rem;">(${roleTitle})</small>`;
         }
+    }
+
+    if (role === 'domiciliario') {
+        const instanceId = new URLSearchParams(window.location.search).get('instanceId');
+        const redirectUrl = `repartidor.html${instanceId ? `?instanceId=${instanceId}` : ''}`;
+        window.location.href = redirectUrl;
+        return;
     }
 
     const navEmployees = document.getElementById('nav-btn-employees');
