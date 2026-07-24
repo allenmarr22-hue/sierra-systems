@@ -7619,19 +7619,19 @@ function renderDriverDeliveriesSection() {
     }
     const activeTab = currentDeliveryFilterTab;
 
-    // Top Filter Bar HTML (Only Entrantes and Mis Domicilios)
+    // Top Filter Bar HTML (Entrantes on the left, Mis Domicilios on the right)
     const filterBarHtml = `
         <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:0.6rem; margin-bottom:1.5rem; flex-wrap:wrap; background:rgba(0,0,0,0.15); padding:0.4rem; border-radius:16px; border:1px solid var(--glass-border);">
-            <button onclick="setDeliveryFilterTab('mine')"
-                style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text-dim);'}">
-                <i data-lucide="package-check" style="width:17px;height:17px;"></i>
-                Mis Domicilios <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${mine.length}</span>
-            </button>
-
             <button onclick="setDeliveryFilterTab('available')"
                 style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'available' ? 'background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.35);' : 'background:transparent; color:var(--text-dim);'}">
                 <i data-lucide="bell" style="width:17px;height:17px;"></i>
                 Entrantes <span style="background:${activeTab === 'available' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.15)'}; color:${activeTab === 'available' ? '#fff' : '#f59e0b'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${unassigned.length}</span>
+            </button>
+
+            <button onclick="setDeliveryFilterTab('mine')"
+                style="flex:1; min-width:140px; padding:0.7rem 1.2rem; border-radius:12px; font-weight:800; font-size:0.88rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:all 0.2s; ${activeTab === 'mine' ? 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.35);' : 'background:transparent; color:var(--text-dim);'}">
+                <i data-lucide="package-check" style="width:17px;height:17px;"></i>
+                Mis Domicilios <span style="background:${activeTab === 'mine' ? 'rgba(255,255,255,0.25)' : 'rgba(16,185,129,0.15)'}; color:${activeTab === 'mine' ? '#fff' : '#10b981'}; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:900;">${mine.length}</span>
             </button>
         </div>
     `;
