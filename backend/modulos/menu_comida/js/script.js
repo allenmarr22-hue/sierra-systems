@@ -2445,7 +2445,8 @@ function initCheckout() {
                 if (empStr) {
                     const emp = JSON.parse(empStr);
                     if (emp && emp.name) {
-                        const roleTitle = emp.role === 'mesero' ? 'Mesero' : (emp.role === 'cajero' ? 'Cajero' : (emp.role === 'cocina' ? 'Cocina' : 'Administrador'));
+                        const rMap = { 'mesero': 'Mesero', 'cajero': 'Cajero', 'cocina': 'Cocina', 'domiciliario': 'Domiciliario', 'owner': 'Propietario', 'propietario': 'Propietario', 'admin': 'Administrador' };
+                        const roleTitle = rMap[emp.role] || 'Colaborador';
                         return `${emp.name} (${roleTitle})`;
                     }
                 }

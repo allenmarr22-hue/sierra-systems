@@ -5126,10 +5126,9 @@ document.addEventListener('click', (e) => {
                 const empStr = localStorage.getItem('streetfeed_employee_user');
                 if (empStr) {
                     const emp = JSON.parse(empStr);
-                    if (emp && emp.name) {
-                        const roleTitle = emp.role === 'mesero' ? 'Mesero' : (emp.role === 'cajero' ? 'Cajero' : (emp.role === 'cocina' ? 'Cocina' : 'Administrador'));
+                        const rMap = { 'mesero': 'Mesero', 'cajero': 'Cajero', 'cocina': 'Cocina', 'domiciliario': 'Domiciliario', 'owner': 'Propietario', 'propietario': 'Propietario', 'admin': 'Administrador' };
+                        const roleTitle = rMap[emp.role] || 'Colaborador';
                         return `${formatShortName(emp.name)} (${roleTitle})`;
-                    }
                 }
             } catch(e) {}
             if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
@@ -7076,13 +7075,15 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     const badgeName = document.getElementById('admin-name-display');
     if (badgeName) {
         let roleTitle = 'Propietario';
-        if (role === 'owner' || role === 'propietario') roleTitle = 'Propietario';
-        else if (role === 'admin') roleTitle = 'Administrador';
-        else if (role === 'mesero') roleTitle = 'Mesero';
-        else if (role === 'cajero') roleTitle = 'Cajero';
-        else if (role === 'cocina') roleTitle = 'Cocina';
+        const rLower = (role || '').toLowerCase();
+        if (rLower === 'owner' || rLower === 'propietario') roleTitle = 'Propietario';
+        else if (rLower === 'admin' || rLower === 'administrador') roleTitle = 'Administrador';
+        else if (rLower === 'mesero') roleTitle = 'Mesero';
+        else if (rLower === 'cajero') roleTitle = 'Cajero';
+        else if (rLower === 'cocina') roleTitle = 'Cocina';
+        else if (rLower === 'domiciliario' || rLower === 'repartidor' || rLower === 'delivery') roleTitle = 'Domiciliario';
         
-        const displayName = (name === 'Administrador' || !name) ? 'Propietario' : name;
+        const displayName = (name === 'Administrador' || !name) ? roleTitle : name;
         const firstName = formatFirstName(displayName);
 
         if (firstName.toLowerCase() === roleTitle.toLowerCase()) {
