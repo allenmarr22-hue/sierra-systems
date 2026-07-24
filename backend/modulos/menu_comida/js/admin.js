@@ -4188,12 +4188,6 @@ window.showOrderDetails = function(id) {
         }
     }
 
-    const trackBtn = document.getElementById('detail-customer-tracking-btn');
-    if (trackBtn) {
-        trackBtn.href = `rastreo.html?order=${order.id}`;
-        trackBtn.style.display = (order.customer?.deliveryType === 'delivery' || order.deliveryFee > 0 || order.customer?.address) ? 'inline-flex' : 'none';
-    }
-
     document.getElementById('detail-total-price').textContent = '$' + order.total.toLocaleString();
 
     const list = document.getElementById('detail-items-list');
