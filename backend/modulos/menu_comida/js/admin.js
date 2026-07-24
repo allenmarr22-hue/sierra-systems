@@ -7233,12 +7233,301 @@ let adminDriverMapInstance = null;
 let adminDriverMapMarker = null;
 let adminDriverMapInterval = null;
 
+// ====== ORDER ASSIGNMENT / CLAIMING SYSTEM ======
+
+function getOrderAssignments() {
+    try {
+        const raw = localStorage.getItem('streetfeed_order_assignments');
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+}
+
+function saveOrderAssignments(assignments) {
+    localStorage.setItem('streetfeed_order_assignments', JSON.stringify(assignments));
+}
+
+function getCurrentDriverInfo() {
+    try {
+        const empStr = localStorage.getItem('streetfeed_employee_user');
+        if (empStr) {
+            const emp = JSON.parse(empStr);
+            if (emp && emp.name) return { name: emp.name, id: emp.id || emp.username || emp.name };
+        }
+    } catch (e) {}
+    return { name: 'Domiciliario', id: 'unknown' };
+}
+
+function claimDeliveryOrder(orderId) {
+    const assignments = getOrderAssignments();
+    const existing = assignments[orderId];
+    const driver = getCurrentDriverInfo();
+
+    if (existing && existing.driverId !== driver.id) {
+        const elapsed = existing.claimedAt
+            ? Math.round((Date.now() - new Date(existing.claimedAt).getTime()) / 60000)
+            : 0;
+        if (typeof showAdminNotification === 'function') {
+            showAdminNotification(`❌ Ya reclamado por ${existing.driverName} (hace ${elapsed} min)`, 'error');
+        }
+        return;
+    }
+
+    assignments[orderId] = {
+        driverName: driver.name,
+        driverId: driver.id,
+        claimedAt: new Date().toISOString()
+    };
+    saveOrderAssignments(assignments);
+
+    if (typeof showAdminNotification === 'function') {
+        showAdminNotification(`✅ ¡Pedido #${orderId} asignado a ti! Ya aparece en "Mis Pedidos"`, 'success');
+    }
+    renderDriverDeliveriesSection();
+}
+
+function releaseDeliveryOrder(orderId) {
+    const assignments = getOrderAssignments();
+    delete assignments[orderId];
+    saveOrderAssignments(assignments);
+    if (typeof showAdminNotification === 'function') {
+        showAdminNotification(`↩️ Pedido #${orderId} liberado al pool`, 'info');
+    }
+    renderDriverDeliveriesSection();
+}
+
+function forceReassignOrder(orderId, newDriverName, newDriverId) {
+    const assignments = getOrderAssignments();
+    const existing = assignments[orderId];
+    const currentName = existing ? existing.driverName : 'nadie';
+    if (!confirm(`¿Reasignar #${orderId}?\nActualmente lo tiene: ${currentName}\n¿Forzar asignación a ${newDriverName}?`)) return;
+    assignments[orderId] = {
+        driverName: newDriverName,
+        driverId: newDriverId,
+        claimedAt: new Date().toISOString(),
+        forcedByAdmin: true
+    };
+    saveOrderAssignments(assignments);
+    if (typeof showAdminNotification === 'function') {
+        showAdminNotification(`🔄 #${orderId} reasignado a ${newDriverName} por Admin`, 'success');
+    }
+    renderDriverDeliveriesSection();
+}
+
+// ====== CARD BUILDER (shared between driver and admin) ======
+
+function buildDeliveryCard(order, idx, isDriver, assignments) {
+    const orderId = order.id || order.orderId || 'ORD-0';
+    const accentColors = ['#10b981','#f59e0b','#3b82f6','#a855f7','#ef4444','#06b6d4'];
+    const accentColor = accentColors[idx % accentColors.length];
+
+    let customerName = 'Cliente';
+    if (typeof order.customerName === 'string' && order.customerName.trim()) customerName = order.customerName;
+    else if (typeof order.customer === 'string' && order.customer.trim()) customerName = order.customer;
+    else if (order.customerName && typeof order.customerName === 'object' && order.customerName.name) customerName = order.customerName.name;
+    else if (order.customer && typeof order.customer === 'object' && order.customer.name) customerName = order.customer.name;
+
+    let address = 'Dirección no especificada';
+    if (typeof order.customerAddress === 'string' && order.customerAddress.trim()) address = order.customerAddress;
+    else if (typeof order.address === 'string' && order.address.trim()) address = order.address;
+    else if (order.address && typeof order.address === 'object' && order.address.street) address = order.address.street;
+
+    let phone = '';
+    if (typeof order.customerPhone === 'string' && order.customerPhone.trim()) phone = order.customerPhone;
+    else if (typeof order.phone === 'string' && order.phone.trim()) phone = order.phone;
+
+    const barrio = (typeof order.barrio === 'string') ? order.barrio : ((typeof order.neighborhood === 'string') ? order.neighborhood : '');
+    const notes = (typeof order.notes === 'string') ? order.notes : ((typeof order.observations === 'string') ? order.observations : '');
+    const total = order.total || 0;
+    const payMethod = order.paymentMethod || order.payMethod || 'Efectivo';
+    const isTransmitting = (activeGpsOrderId === orderId);
+
+    const fullAddrStr = barrio ? `${address} - B/ ${barrio}` : address;
+    const wazeUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddrStr)}`;
+    const waUrl = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : '#';
+
+    const payIconMap = { 'efectivo': '💵', 'transferencia': '📲', 'tarjeta': '💳', 'nequi': '📱', 'daviplata': '📱' };
+    const payIcon = payIconMap[(payMethod || '').toLowerCase()] || '💳';
+    const initials = customerName.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || 'CL';
+
+    const assignment = assignments[orderId];
+    const driver = getCurrentDriverInfo();
+    const isMine = assignment && assignment.driverId === driver.id;
+    const isTakenByOther = assignment && assignment.driverId !== driver.id;
+
+    // Assignment badge for admin view
+    const assignmentBadge = (() => {
+        if (!assignment) return `<span style="background:rgba(107,114,128,0.15);color:#9ca3af;padding:2px 8px;border-radius:6px;font-weight:700;font-size:0.69rem;">🔘 Sin asignar</span>`;
+        const elapsed = Math.round((Date.now() - new Date(assignment.claimedAt).getTime()) / 60000);
+        const elapsedText = elapsed < 1 ? 'ahora' : `hace ${elapsed} min`;
+        return `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;font-size:0.69rem;">🛵 ${escapeHtml(assignment.driverName)} · ${elapsedText}</span>`;
+    })();
+
+    return `
+        <div style="border-radius: 22px; overflow: hidden; border: 1px solid ${isMine ? '#10b981' : isTakenByOther ? 'rgba(239,68,68,0.3)' : 'var(--glass-border)'}; background: var(--surface-light); display: flex; flex-direction: column; box-shadow: 0 4px 24px rgba(0,0,0,0.18); transition: transform 0.2s, box-shadow 0.2s;"
+             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 32px rgba(0,0,0,0.28)';"
+             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 24px rgba(0,0,0,0.18)';">
+
+            <!-- Colored top accent bar -->
+            <div style="height: 5px; background: linear-gradient(90deg, ${isMine ? '#10b981' : isTakenByOther ? '#ef4444' : accentColor}, ${isMine ? '#059669' : isTakenByOther ? '#dc2626' : accentColor}88);"></div>
+
+            <!-- Card Body -->
+            <div style="padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; flex: 1;">
+
+                <!-- Header row -->
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 52px; height: 52px; border-radius: 16px; background: ${accentColor}22; border: 2px solid ${accentColor}44; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 900; color: ${accentColor}; flex-shrink: 0; letter-spacing: -1px;">
+                        ${initials}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.18rem;">
+                            <span style="background: ${accentColor}22; color: ${accentColor}; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 0.71rem; font-family: monospace;">#${escapeHtml(orderId)}</span>
+                            ${isTransmitting ? `<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:6px;font-weight:800;font-size:0.7rem;">📡 GPS Activo</span>` : ''}
+                            ${isMine ? `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:800;font-size:0.7rem;">✋ Tuyo</span>` : ''}
+                            ${!isDriver ? assignmentBadge : ''}
+                        </div>
+                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(customerName)}</h4>
+                    </div>
+                    <div style="text-align: right; flex-shrink: 0;">
+                        <div style="font-size: 1.18rem; font-weight: 900; color: #10b981;">$${total.toLocaleString('es-CO')}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-dim); font-weight: 700; display: flex; align-items: center; gap: 0.22rem; justify-content: flex-end; margin-top: 2px;">
+                            <span>${payIcon}</span><span>${escapeHtml(payMethod)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="height: 1px; background: var(--glass-border);"></div>
+
+                <!-- Address -->
+                <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.8rem; background: rgba(239,68,68,0.06); border-radius: 12px; border: 1px solid rgba(239,68,68,0.14);">
+                    <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(239,68,68,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #ef4444;"></i>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #ef4444; letter-spacing: 0.5px; margin-bottom: 0.22rem;">Dirección de entrega</div>
+                        <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.4;">${escapeHtml(address)}</div>
+                        ${barrio ? `<div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 0.2rem;"><strong>Barrio:</strong> ${escapeHtml(barrio)}</div>` : ''}
+                    </div>
+                </div>
+
+                <!-- Phone -->
+                ${phone ? `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; background: rgba(16,185,129,0.06); border-radius: 12px; border: 1px solid rgba(16,185,129,0.16);">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <div style="width: 30px; height: 30px; border-radius: 8px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="phone" style="width: 15px; height: 15px; color: #10b981;"></i>
+                        </div>
+                        <span style="font-size: 0.88rem; font-weight: 700; color: var(--text);">${escapeHtml(phone)}</span>
+                    </div>
+                    <a href="${waUrl}" target="_blank" style="padding: 5px 12px; border-radius: 8px; background: rgba(37,211,102,0.14); color: #25D366; border: 1px solid rgba(37,211,102,0.3); text-decoration: none; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem;">
+                        💬 WhatsApp
+                    </a>
+                </div>
+                ` : ''}
+
+                <!-- Notes -->
+                ${notes ? `
+                <div style="padding: 0.6rem 0.85rem; background: rgba(245,158,11,0.08); border-radius: 10px; border: 1px solid rgba(245,158,11,0.22); font-size: 0.82rem; color: var(--text-dim); display: flex; align-items: flex-start; gap: 0.5rem;">
+                    <span style="flex-shrink: 0;">⚠️</span>
+                    <div><strong style="color: #f59e0b;">Nota:</strong> ${escapeHtml(notes)}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.5rem;">
+                ${isDriver ? `
+                    ${isTakenByOther ? `
+                        <!-- Taken by another driver -->
+                        <div style="padding: 0.9rem; border-radius: 12px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); text-align: center; font-size: 0.88rem; color: #ef4444; font-weight: 800;">
+                            🔒 Ya lo tiene <strong>${escapeHtml(assignment.driverName)}</strong>
+                        </div>
+                    ` : isMine ? `
+                        <!-- My claimed order: show full action buttons -->
+                        <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')"
+                            style="width:100%;padding:0.82rem 1rem;border-radius:12px;font-weight:800;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:${isTransmitting ? 'linear-gradient(135deg,#ef4444,#dc2626)' : 'linear-gradient(135deg,#10b981,#059669)'};color:#fff;border:none;cursor:pointer;box-shadow:0 4px 14px ${isTransmitting ? 'rgba(239,68,68,0.35)' : 'rgba(16,185,129,0.35)'};transition:filter 0.2s;"
+                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                            <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width:18px;height:18px;"></i>
+                            ${isTransmitting ? '📡 Transmitiendo GPS — Toca para detener' : '🚀 Iniciar Entrega (Activar GPS)'}
+                        </button>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                            <a href="${wazeUrl}" target="_blank"
+                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
+                                <i data-lucide="navigation-2" style="width:15px;height:15px;"></i> Navegar
+                            </a>
+                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
+                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(168,85,247,0.12);color:#a855f7;border:1px solid rgba(168,85,247,0.28);cursor:pointer;transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'">
+                                <i data-lucide="eye" style="width:15px;height:15px;"></i> Ver en Mapa
+                            </button>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                            <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')"
+                                style="padding:0.7rem;border-radius:10px;font-size:0.85rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.28);cursor:pointer;transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(16,185,129,0.2)'" onmouseout="this.style.background='rgba(16,185,129,0.1)'">
+                                <i data-lucide="check-circle" style="width:16px;height:16px;"></i> ✅ Entregado
+                            </button>
+                            <button onclick="releaseDeliveryOrder('${escapeHtml(orderId)}')"
+                                style="padding:0.7rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(107,114,128,0.1);color:#9ca3af;border:1px solid rgba(107,114,128,0.2);cursor:pointer;transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(107,114,128,0.2)'" onmouseout="this.style.background='rgba(107,114,128,0.1)'">
+                                <i data-lucide="x-circle" style="width:15px;height:15px;"></i> Liberar
+                            </button>
+                        </div>
+                    ` : `
+                        <!-- Available: Claim button -->
+                        <button onclick="claimDeliveryOrder('${escapeHtml(orderId)}')"
+                            style="width:100%;padding:0.9rem 1rem;border-radius:12px;font-weight:900;font-size:0.95rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.4);transition:filter 0.2s;"
+                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                            <i data-lucide="hand" style="width:20px;height:20px;"></i>
+                            ✋ Yo lo llevo
+                        </button>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                            <a href="${wazeUrl}" target="_blank"
+                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);">
+                                <i data-lucide="map" style="width:15px;height:15px;"></i> Ver Ruta
+                            </a>
+                            ${phone ? `
+                            <a href="${waUrl}" target="_blank"
+                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(37,211,102,0.12);color:#25D366;border:1px solid rgba(37,211,102,0.28);">
+                                💬 WhatsApp
+                            </a>
+                            ` : `<div></div>`}
+                        </div>
+                    `}
+                ` : `
+                    <!-- Admin / Propietario view -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.55rem;">
+                        <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
+                            style="padding:0.78rem;border-radius:12px;font-weight:800;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);transition:filter 0.2s;"
+                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                            <i data-lucide="map-pin" style="width:17px;height:17px;"></i> Rastreo GPS
+                        </button>
+                        <a href="${wazeUrl}" target="_blank"
+                            style="padding:0.78rem;border-radius:12px;font-size:0.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);transition:background 0.2s;"
+                            onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
+                            <i data-lucide="map" style="width:17px;height:17px;"></i> Abrir Mapa
+                        </a>
+                    </div>
+                    ${assignment ? `
+                    <button onclick="releaseDeliveryOrder('${escapeHtml(orderId)}')"
+                        style="width:100%;padding:0.62rem;border-radius:10px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.2);cursor:pointer;transition:background 0.2s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                        <i data-lucide="user-x" style="width:15px;height:15px;"></i> 🔄 Liberar / Reasignar
+                    </button>
+                    ` : ''}
+                `}
+            </div>
+        </div>
+    `;
+}
+
 function renderDriverDeliveriesSection() {
     const container = document.getElementById('driver-deliveries-list');
     if (!container) return;
 
     const isDriver = (typeof currentEmployeeRole !== 'undefined' && currentEmployeeRole === 'domiciliario');
 
+    // Update status pill
     const statusPill = document.getElementById('driver-gps-status-pill');
     const statusText = document.getElementById('driver-gps-status-text');
     if (statusPill && statusText) {
@@ -7263,181 +7552,105 @@ function renderDriverDeliveriesSection() {
 
     const badge = document.getElementById('domicilios-count-badge');
     if (badge) {
-        if (deliveryOrders.length > 0) {
-            badge.textContent = deliveryOrders.length;
-            badge.classList.remove('hidden');
-        } else {
-            badge.classList.add('hidden');
-        }
+        badge.textContent = deliveryOrders.length;
+        deliveryOrders.length > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
     }
 
     if (deliveryOrders.length === 0) {
         container.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--surface-light); border-radius: 24px; border: 1px dashed var(--glass-border);">
-                <i data-lucide="check-circle-2" style="width: 48px; height: 48px; color: #10b981; margin-bottom: 1rem; opacity: 0.7; display: block; margin-left: auto; margin-right: auto;"></i>
-                <h4 style="margin: 0 0 0.4rem; font-size: 1.2rem; font-weight: 800; color: var(--text);">¡No hay domicilios pendientes!</h4>
-                <p style="margin: 0; font-size: 0.88rem; color: var(--text-dim);">Todos los domicilios han sido entregados o no hay pedidos activos a domicilio.</p>
+            <div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;background:var(--surface-light);border-radius:24px;border:1px dashed var(--glass-border);">
+                <i data-lucide="check-circle-2" style="width:48px;height:48px;color:#10b981;margin-bottom:1rem;opacity:0.7;display:block;margin-left:auto;margin-right:auto;"></i>
+                <h4 style="margin:0 0 0.4rem;font-size:1.2rem;font-weight:800;color:var(--text);">¡No hay domicilios pendientes!</h4>
+                <p style="margin:0;font-size:0.88rem;color:var(--text-dim);">Todos los domicilios han sido entregados o no hay pedidos activos.</p>
             </div>
         `;
         if (window.lucide) lucide.createIcons();
         return;
     }
 
-    container.innerHTML = deliveryOrders.map((order, idx) => {
-        const orderId = order.id || order.orderId || 'ORD-0';
-        const accentColors = ['#10b981','#f59e0b','#3b82f6','#a855f7','#ef4444','#06b6d4'];
-        const accentColor = accentColors[idx % accentColors.length];
+    const assignments = getOrderAssignments();
+    const driver = getCurrentDriverInfo();
 
-        // Robust string extractions to prevent [object Object]
-        let customerName = 'Cliente';
-        if (typeof order.customerName === 'string' && order.customerName.trim()) customerName = order.customerName;
-        else if (typeof order.customer === 'string' && order.customer.trim()) customerName = order.customer;
-        else if (order.customerName && typeof order.customerName === 'object' && order.customerName.name) customerName = order.customerName.name;
-        else if (order.customer && typeof order.customer === 'object' && order.customer.name) customerName = order.customer.name;
+    if (isDriver) {
+        // Split into: available (unclaimed or mine) vs mine
+        const available = deliveryOrders.filter(o => {
+            const a = assignments[o.id || o.orderId];
+            return !a || a.driverId === driver.id || (a && a.driverId !== driver.id);
+        });
+        const mine = deliveryOrders.filter(o => {
+            const a = assignments[o.id || o.orderId];
+            return a && a.driverId === driver.id;
+        });
+        const others = deliveryOrders.filter(o => {
+            const a = assignments[o.id || o.orderId];
+            return a && a.driverId !== driver.id;
+        });
+        const unassigned = deliveryOrders.filter(o => !assignments[o.id || o.orderId]);
 
-        let address = 'Dirección no especificada';
-        if (typeof order.customerAddress === 'string' && order.customerAddress.trim()) address = order.customerAddress;
-        else if (typeof order.address === 'string' && order.address.trim()) address = order.address;
-        else if (order.address && typeof order.address === 'object' && order.address.street) address = order.address.street;
-        else if (order.customerAddress && typeof order.customerAddress === 'object' && order.customerAddress.street) address = order.customerAddress.street;
+        let html = '';
 
-        let phone = '';
-        if (typeof order.customerPhone === 'string' && order.customerPhone.trim()) phone = order.customerPhone;
-        else if (typeof order.phone === 'string' && order.phone.trim()) phone = order.phone;
-        else if (order.phone && typeof order.phone === 'object' && order.phone.number) phone = order.phone.number;
-        else if (order.customerPhone && typeof order.customerPhone === 'object' && order.customerPhone.number) phone = order.customerPhone.number;
-
-        const barrio = (typeof order.barrio === 'string') ? order.barrio : ((typeof order.neighborhood === 'string') ? order.neighborhood : '');
-        const notes = (typeof order.notes === 'string') ? order.notes : ((typeof order.observations === 'string') ? order.observations : '');
-        const total = order.total || 0;
-        const payMethod = order.paymentMethod || order.payMethod || 'Efectivo';
-        const isTransmitting = (activeGpsOrderId === orderId);
-
-        const fullAddrStr = barrio ? `${address} - B/ ${barrio}` : address;
-        const wazeUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddrStr)}`;
-        const waUrl = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : '#';
-
-        const payIconMap = { 'efectivo': '💵', 'transferencia': '📲', 'tarjeta': '💳', 'nequi': '📱', 'daviplata': '📱' };
-        const payIcon = payIconMap[(payMethod || '').toLowerCase()] || '💳';
-        const initials = customerName.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || 'CL';
-
-        return `
-            <div style="border-radius: 22px; overflow: hidden; border: 1px solid var(--glass-border); background: var(--surface-light); display: flex; flex-direction: column; box-shadow: 0 4px 24px rgba(0,0,0,0.18); transition: transform 0.2s, box-shadow 0.2s;"
-                 onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 32px rgba(0,0,0,0.28)';"
-                 onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 24px rgba(0,0,0,0.18)';">
-
-                <!-- Colored top accent bar -->
-                <div style="height: 5px; background: linear-gradient(90deg, ${accentColor}, ${accentColor}88);"></div>
-
-                <!-- Card Body -->
-                <div style="padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; flex: 1;">
-
-                    <!-- Avatar + Name + Order ID + Amount -->
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 52px; height: 52px; border-radius: 16px; background: ${accentColor}22; border: 2px solid ${accentColor}44; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 900; color: ${accentColor}; flex-shrink: 0; letter-spacing: -1px;">
-                            ${initials}
-                        </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.18rem;">
-                                <span style="background: ${accentColor}22; color: ${accentColor}; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 0.71rem; font-family: monospace;">#${escapeHtml(orderId)}</span>
-                                ${isTransmitting ? `<span style="background: rgba(239,68,68,0.15); color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.7rem; animation: none;">📡 GPS Activo</span>` : ''}
-                            </div>
-                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(customerName)}</h4>
-                        </div>
-                        <div style="text-align: right; flex-shrink: 0;">
-                            <div style="font-size: 1.18rem; font-weight: 900; color: #10b981;">$${total.toLocaleString('es-CO')}</div>
-                            <div style="font-size: 0.7rem; color: var(--text-dim); font-weight: 700; display: flex; align-items: center; gap: 0.22rem; justify-content: flex-end; margin-top: 2px;">
-                                <span>${payIcon}</span><span>${escapeHtml(payMethod)}</span>
-                            </div>
-                        </div>
+        // MY ORDERS section
+        if (mine.length > 0) {
+            html += `
+                <div style="grid-column:1/-1;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                        <div style="height:2px;flex:1;background:linear-gradient(90deg,#10b981,transparent);"></div>
+                        <span style="background:rgba(16,185,129,0.15);color:#10b981;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
+                            <i data-lucide="package-check" style="width:15px;height:15px;"></i>
+                            Mis Pedidos (${mine.length})
+                        </span>
+                        <div style="height:2px;flex:1;background:linear-gradient(270deg,#10b981,transparent);"></div>
                     </div>
-
-                    <!-- Divider -->
-                    <div style="height: 1px; background: var(--glass-border);"></div>
-
-                    <!-- Address Block -->
-                    <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.8rem; background: rgba(239,68,68,0.06); border-radius: 12px; border: 1px solid rgba(239,68,68,0.14);">
-                        <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(239,68,68,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #ef4444;"></i>
-                        </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #ef4444; letter-spacing: 0.5px; margin-bottom: 0.22rem;">Dirección de entrega</div>
-                            <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.4;">${escapeHtml(address)}</div>
-                            ${barrio ? `<div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 0.2rem;"><strong>Barrio:</strong> ${escapeHtml(barrio)}</div>` : ''}
-                        </div>
-                    </div>
-
-                    <!-- Phone block -->
-                    ${phone ? `
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; background: rgba(16,185,129,0.06); border-radius: 12px; border: 1px solid rgba(16,185,129,0.16);">
-                        <div style="display: flex; align-items: center; gap: 0.6rem;">
-                            <div style="width: 30px; height: 30px; border-radius: 8px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i data-lucide="phone" style="width: 15px; height: 15px; color: #10b981;"></i>
-                            </div>
-                            <span style="font-size: 0.88rem; font-weight: 700; color: var(--text);">${escapeHtml(phone)}</span>
-                        </div>
-                        <a href="${waUrl}" target="_blank" style="padding: 5px 12px; border-radius: 8px; background: rgba(37,211,102,0.14); color: #25D366; border: 1px solid rgba(37,211,102,0.3); text-decoration: none; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem;">
-                            💬 WhatsApp
-                        </a>
-                    </div>
-                    ` : ''}
-
-                    <!-- Notes block -->
-                    ${notes ? `
-                    <div style="padding: 0.6rem 0.85rem; background: rgba(245,158,11,0.08); border-radius: 10px; border: 1px solid rgba(245,158,11,0.22); font-size: 0.82rem; color: var(--text-dim); display: flex; align-items: flex-start; gap: 0.5rem;">
-                        <span style="flex-shrink: 0;">⚠️</span>
-                        <div><strong style="color: #f59e0b;">Nota:</strong> ${escapeHtml(notes)}</div>
-                    </div>
-                    ` : ''}
                 </div>
+                ${mine.map((o, i) => buildDeliveryCard(o, i, true, assignments)).join('')}
+            `;
+        }
 
-                <!-- Footer Buttons -->
-                <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.5rem;">
-                    ${isDriver ? `
-                        <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')"
-                            style="width: 100%; padding: 0.82rem 1rem; border-radius: 12px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; background: ${isTransmitting ? 'linear-gradient(135deg,#ef4444,#dc2626)' : 'linear-gradient(135deg,#10b981,#059669)'}; color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 14px ${isTransmitting ? 'rgba(239,68,68,0.35)' : 'rgba(16,185,129,0.35)'}; transition: filter 0.2s;"
-                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
-                            <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width: 18px; height: 18px;"></i>
-                            ${isTransmitting ? '📡 Transmitiendo GPS — Toca para detener' : '🚀 Iniciar Entrega (Activar GPS)'}
-                        </button>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                            <a href="${wazeUrl}" target="_blank"
-                                style="padding: 0.65rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.28); transition: background 0.2s;"
-                                onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
-                                <i data-lucide="navigation-2" style="width: 15px; height: 15px;"></i> Navegar
-                            </a>
-                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
-                                style="padding: 0.65rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(168,85,247,0.12); color: #a855f7; border: 1px solid rgba(168,85,247,0.28); cursor: pointer; transition: background 0.2s;"
-                                onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'">
-                                <i data-lucide="eye" style="width: 15px; height: 15px;"></i> Ver en Mapa
-                            </button>
-                        </div>
-                        <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')"
-                            style="width: 100%; padding: 0.7rem; border-radius: 10px; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.28); cursor: pointer; transition: background 0.2s;"
-                            onmouseover="this.style.background='rgba(16,185,129,0.2)'" onmouseout="this.style.background='rgba(16,185,129,0.1)'">
-                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> ✅ Pedido Entregado
-                        </button>
-                    ` : `
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;">
-                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
-                                style="padding: 0.78rem; border-radius: 12px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg,#10b981,#059669); color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: filter 0.2s;"
-                                onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
-                                <i data-lucide="map-pin" style="width: 17px; height: 17px;"></i> Rastreo GPS
-                            </button>
-                            <a href="${wazeUrl}" target="_blank"
-                                style="padding: 0.78rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.28); transition: background 0.2s;"
-                                onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
-                                <i data-lucide="map" style="width: 17px; height: 17px;"></i> Abrir Mapa
-                            </a>
-                        </div>
-                    `}
+        // AVAILABLE section
+        if (unassigned.length > 0) {
+            html += `
+                <div style="grid-column:1/-1;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;${mine.length > 0 ? 'margin-top:1.5rem;' : ''}">
+                        <div style="height:2px;flex:1;background:linear-gradient(90deg,#f59e0b,transparent);"></div>
+                        <span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
+                            <i data-lucide="package" style="width:15px;height:15px;"></i>
+                            Disponibles (${unassigned.length})
+                        </span>
+                        <div style="height:2px;flex:1;background:linear-gradient(270deg,#f59e0b,transparent);"></div>
+                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+                ${unassigned.map((o, i) => buildDeliveryCard(o, mine.length + i, true, assignments)).join('')}
+            `;
+        }
+
+        // TAKEN BY OTHERS
+        if (others.length > 0) {
+            html += `
+                <div style="grid-column:1/-1;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;margin-top:1.5rem;">
+                        <div style="height:2px;flex:1;background:linear-gradient(90deg,#ef4444,transparent);"></div>
+                        <span style="background:rgba(239,68,68,0.12);color:#ef4444;padding:6px 14px;border-radius:20px;font-weight:800;font-size:0.82rem;display:flex;align-items:center;gap:0.4rem;">
+                            <i data-lucide="lock" style="width:15px;height:15px;"></i>
+                            Ya tomados (${others.length})
+                        </span>
+                        <div style="height:2px;flex:1;background:linear-gradient(270deg,#ef4444,transparent);"></div>
+                    </div>
+                </div>
+                ${others.map((o, i) => buildDeliveryCard(o, mine.length + unassigned.length + i, true, assignments)).join('')}
+            `;
+        }
+
+        container.innerHTML = html;
+    } else {
+        // Admin view: all orders with assignment badges
+        container.innerHTML = deliveryOrders.map((o, i) => buildDeliveryCard(o, i, false, assignments)).join('');
+    }
 
     if (window.lucide) lucide.createIcons();
 }
+
+
+
 
 function toggleDriverGPS(orderId) {
     if (activeGpsOrderId === orderId) {
@@ -7505,6 +7718,11 @@ function completeDriverDelivery(orderId) {
         activeGpsOrderId = null;
         updateGpsStatusPill(false);
     }
+    // Clear assignment on delivery
+    const assignments = getOrderAssignments();
+    delete assignments[orderId];
+    saveOrderAssignments(assignments);
+
     const allOrders = getOrders();
     const idx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
     if (idx !== -1) {
@@ -7595,6 +7813,11 @@ window.toggleDriverGPS = toggleDriverGPS;
 window.completeDriverDelivery = completeDriverDelivery;
 window.openDriverMapModal = openDriverMapModal;
 window.closeDriverMapModal = closeDriverMapModal;
+window.claimDeliveryOrder = claimDeliveryOrder;
+window.releaseDeliveryOrder = releaseDeliveryOrder;
+window.forceReassignOrder = forceReassignOrder;
+window.getOrderAssignments = getOrderAssignments;
+window.buildDeliveryCard = buildDeliveryCard;
 // Export GPS state so script.js can clean them up on logout
 Object.defineProperty(window, 'activeWatchPositionId', {
     get: () => activeWatchPositionId,
