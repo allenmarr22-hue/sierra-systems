@@ -49,6 +49,7 @@ let state = {
         heroTime: '15-25 min',
         heroRating: '4.9 (2k+)',
         whatsappNumber: '573001234567',
+        deliveryFee: 5000,
         themeAccent: '#f7931e',
         themeBg: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1920&auto=format&fit=crop',
         themeLogo: 'assets/logo-default.png',
@@ -628,16 +629,20 @@ function checkLicenseStatus() {
 
 function switchView(viewName) {
     const isPageAdmin = window.location.pathname.endsWith('admin.html');
+    const _urlP = new URLSearchParams(window.location.search);
+    const _iid  = _urlP.get('instanceId');
     
     // Cross-page navigation
     if (viewName === 'menu' && isPageAdmin) {
         sessionStorage.setItem('streetfeed_view', 'menu');
-        window.location.href = 'index.html';
+        // Preserva instanceId al volver al menú
+        window.location.href = _iid ? `index.html?instanceId=${_iid}` : 'index.html';
         return;
     }
     if ((viewName === 'login' || viewName === 'admin') && !isPageAdmin) {
         sessionStorage.setItem('streetfeed_view', viewName);
-        window.location.href = 'admin.html';
+        // Preserva instanceId al ir al panel admin
+        window.location.href = _iid ? `admin.html?instanceId=${_iid}` : 'admin.html';
         return;
     }
 
@@ -2299,6 +2304,20 @@ function initCheckout() {
         const infoGroup = document.getElementById('delivery-info-group');
         if (infoGroup) infoGroup.style.display = 'none';
 
+        // Reset GPS & Delivery Address Wrapper state
+        window._selectedCustomerCoords = null;
+        const btnGps = document.getElementById('btn-get-user-gps');
+        const msgGps = document.getElementById('gps-status-msg');
+        const delAddressWrapper = document.getElementById('delivery-address-wrapper');
+        if (btnGps) {
+            btnGps.disabled = false;
+            btnGps.style.background = 'rgba(16,185,129,0.15)';
+            btnGps.style.borderColor = 'rgba(16,185,129,0.3)';
+            btnGps.innerHTML = '📍 GPS Exacto';
+        }
+        if (msgGps) msgGps.style.display = 'none';
+        if (delAddressWrapper) delAddressWrapper.style.display = 'none';
+
         // Actualizar totales explícitamente sin depender del clic
         updateCheckoutTotal();
     });
@@ -2344,25 +2363,31 @@ function initCheckout() {
             
             const tableSelWrapper = document.getElementById('table-selector-wrapper');
             const takeoutSelWrapper = document.getElementById('takeout-selector-wrapper');
+            const delAddressWrapper = document.getElementById('delivery-address-wrapper');
             const infoGroup = document.getElementById('delivery-info-group');
 
             if (infoGroup) infoGroup.style.display = 'block';
             
             if (type === 'delivery') {
                 label.textContent = 'Dirección de Entrega';
-                input.placeholder = 'Ej: Calle 123 #45-67 Barrio...';
-                input.style.display = 'block';
+                if (input) {
+                    input.placeholder = 'Ej: Calle 123 #45-67 Barrio...';
+                    input.style.display = 'block';
+                }
+                if (delAddressWrapper) delAddressWrapper.style.display = 'block';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'none';
                 if (takeoutSelWrapper) takeoutSelWrapper.style.display = 'none';
             } else if (type === 'dine-in') {
                 label.textContent = 'Selecciona tu Mesa';
-                input.style.display = 'none';
+                if (input) input.style.display = 'none';
+                if (delAddressWrapper) delAddressWrapper.style.display = 'none';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'flex';
                 if (takeoutSelWrapper) takeoutSelWrapper.style.display = 'none';
                 renderTableSelector();
             } else {
                 label.textContent = '¿Cuándo recoges tu pedido?';
-                input.style.display = 'none';
+                if (input) input.style.display = 'none';
+                if (delAddressWrapper) delAddressWrapper.style.display = 'none';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'none';
                 if (takeoutSelWrapper) takeoutSelWrapper.style.display = 'flex';
                 renderTakeoutSelector();
@@ -2453,7 +2478,7 @@ function initCheckout() {
     function updateCheckoutTotal() {
         const type = document.getElementById('cust-delivery-type').value;
         const baseTotal = calculateTotal();
-        const delFee = (type === 'delivery') ? (state.config.deliveryFee || 0) : 0;
+        const delFee = (type === 'delivery') ? (state.config.deliveryFee !== undefined ? state.config.deliveryFee : 5000) : 0;
         
         const subtotalRow = document.getElementById('chk-subtotal-row');
         const delRow = document.getElementById('chk-del-row');
@@ -2529,20 +2554,29 @@ function initCheckout() {
             return;
         }
 
-        if (!custAddress) {
-            if (custDeliveryType === 'delivery') {
-                showToast('Por favor ingresa tu dirección de entrega.', 'error');
+        if (custDeliveryType === 'delivery') {
+            if (!custAddress || custAddress.trim().length < 3) {
+                showToast('Por favor ingresa tu dirección manual de entrega.', 'error');
                 highlightError('#cust-address', 'border');
+                return;
             }
-            if (custDeliveryType === 'dine-in') {
+            if (!window._selectedCustomerCoords) {
+                showToast('Por favor presiona "📍 GPS Exacto" para detectar tu ubicación en el mapa.', 'error');
+                highlightError('#btn-get-user-gps', 'border');
+                return;
+            }
+        } else if (custDeliveryType === 'dine-in') {
+            if (!custAddress) {
                 showToast('Por favor selecciona tu mesa.', 'error');
                 highlightError('#table-selector-wrapper', 'bg');
+                return;
             }
-            if (custDeliveryType === 'takeout') {
+        } else if (custDeliveryType === 'takeout') {
+            if (!custAddress) {
                 showToast('Por favor selecciona cuándo recoges tu pedido.', 'error');
                 highlightError('#takeout-selector-wrapper', 'bg');
+                return;
             }
-            return;
         }
 
         if (!custPayment) {
@@ -2565,7 +2599,8 @@ function initCheckout() {
             address: document.getElementById('cust-address').value,
             payment: document.getElementById('cust-payment').value,
             note: document.getElementById('cust-note').value,
-            deliveryType: document.getElementById('cust-delivery-type').value
+            deliveryType: document.getElementById('cust-delivery-type').value,
+            customerCoords: window._selectedCustomerCoords || null
         };
 
         // Obtener y actualizar el contador de pedidos secuencial
@@ -2575,7 +2610,7 @@ function initCheckout() {
 
         const orderId = 'ORD-' + orderCounter;
         const baseTotal = calculateTotal();
-        const delFee = (customer.deliveryType === 'delivery') ? (state.config.deliveryFee || 0) : 0;
+        const delFee = (customer.deliveryType === 'delivery') ? (state.config.deliveryFee !== undefined ? state.config.deliveryFee : 5000) : 0;
 
         const getAttendedByInfo = () => {
             try {
@@ -2583,7 +2618,17 @@ function initCheckout() {
                 if (empStr) {
                     const emp = JSON.parse(empStr);
                     if (emp && emp.name) {
-                        const roleTitle = emp.role === 'mesero' ? 'Mesero' : (emp.role === 'cajero' ? 'Cajero' : (emp.role === 'cocina' ? 'Cocina' : 'Administrador'));
+                        const rMap = {
+                            'mesero': 'Mesero',
+                            'cajero': 'Cajero',
+                            'cocina': 'Cocina',
+                            'domiciliario': 'Domiciliario',
+                            'admin': 'Administrador',
+                            'administrador': 'Administrador',
+                            'owner': 'Propietario',
+                            'propietario': 'Propietario'
+                        };
+                        const roleTitle = rMap[emp.role?.toLowerCase()] || 'Colaborador';
                         return `${emp.name} (${roleTitle})`;
                     }
                 }
@@ -2911,7 +2956,17 @@ window.addEventListener('storage', (e) => {
     const sessionKey = instanceId ? `streetfeed_isLoggedIn_${instanceId}` : 'streetfeed_isLoggedIn';
     if (e.key === sessionKey && e.newValue !== 'true') {
         console.warn(`[Storage Event] Sesión de menu_comida finalizada por cambio en ${sessionKey}. Cerrando sesión...`);
-        // Forzar cierre de sesión
+
+        const isOnAdminPage = window.location.pathname.endsWith('admin.html');
+
+        // Si estamos en el menú público del cliente, NO redirigir al admin.
+        // El cliente simplemente sigue navegando el menú normalmente.
+        if (!isOnAdminPage) {
+            console.info('[Storage Event] Página pública detectada — no se redirige al login del admin.');
+            return;
+        }
+
+        // Forzar cierre de sesión solo en páginas de administración
         localStorage.setItem('streetfeed_isLoggedIn', 'false');
         if (typeof state !== 'undefined') {
             state.isLoggedIn = false;
@@ -2929,4 +2984,54 @@ window.addEventListener('storage', (e) => {
         }
     }
 });
+
+// ====== OBTENCIÓN DE UBICACIÓN GPS DEL CLIENTE ======
+window._selectedCustomerCoords = null;
+
+window.getUserGPSLocation = function() {
+    const btn = document.getElementById('btn-get-user-gps');
+    const msg = document.getElementById('gps-status-msg');
+
+    if (!navigator.geolocation) {
+        if (typeof showToast === 'function') showToast('Tu navegador no soporta geolocalización', 'error');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⌛ Ubicando...';
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            window._selectedCustomerCoords = { lat, lng };
+
+            if (msg) {
+                msg.style.display = 'flex';
+            }
+            if (btn) {
+                btn.style.background = 'rgba(16,185,129,0.3)';
+                btn.style.borderColor = '#10b981';
+                btn.innerHTML = '✓ GPS Detectado';
+                btn.disabled = false;
+            }
+
+            if (typeof showToast === 'function') showToast('📍 Ubicación GPS obtenida con éxito', 'success');
+        },
+        (err) => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '📍 GPS Exacto';
+            }
+            if (err.code === 1) {
+                if (typeof showToast === 'function') showToast('Por favor permite el acceso a tu ubicación GPS', 'error');
+            } else {
+                if (typeof showToast === 'function') showToast('No se pudo obtener la ubicación GPS', 'error');
+            }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+};
 

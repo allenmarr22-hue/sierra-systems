@@ -2206,25 +2206,31 @@ function initCheckout() {
             
             const tableSelWrapper = document.getElementById('table-selector-wrapper');
             const takeoutSelWrapper = document.getElementById('takeout-selector-wrapper');
+            const delAddressWrapper = document.getElementById('delivery-address-wrapper');
             const infoGroup = document.getElementById('delivery-info-group');
 
             if (infoGroup) infoGroup.style.display = 'block';
             
             if (type === 'delivery') {
                 label.textContent = 'Dirección de Entrega';
-                input.placeholder = 'Ej: Calle 123 #45-67 Barrio...';
-                input.style.display = 'block';
+                if (input) {
+                    input.placeholder = 'Ej: Calle 123 #45-67 Barrio...';
+                    input.style.display = 'block';
+                }
+                if (delAddressWrapper) delAddressWrapper.style.display = 'block';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'none';
                 if (takeoutSelWrapper) takeoutSelWrapper.style.display = 'none';
             } else if (type === 'dine-in') {
                 label.textContent = 'Selecciona tu Mesa';
-                input.style.display = 'none';
+                if (input) input.style.display = 'none';
+                if (delAddressWrapper) delAddressWrapper.style.display = 'none';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'flex';
                 if (takeoutSelWrapper) takeoutSelWrapper.style.display = 'none';
                 renderTableSelector();
             } else {
                 label.textContent = '¿Cuándo recoges tu pedido?';
-                input.style.display = 'none';
+                if (input) input.style.display = 'none';
+                if (delAddressWrapper) delAddressWrapper.style.display = 'none';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'none';
                 if (takeoutSelWrapper) takeoutSelWrapper.style.display = 'flex';
                 renderTakeoutSelector();

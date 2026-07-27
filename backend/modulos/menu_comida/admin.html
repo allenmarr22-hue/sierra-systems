@@ -373,7 +373,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=2.1">
-    <link rel="stylesheet" href="css/admin.css?v=4.30">
+    <link rel="stylesheet" href="css/admin.css?v=4.36">
 
     <!-- Disable public logo shimmer on admin panel -->
     <style>
@@ -672,7 +672,7 @@
                         <div class="stats-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2.5rem;">
                             <div>
                                 <h2 class="font-serif">Dashboard Administrativo</h2>
-                                <p style="color: var(--text-dim);">Análisis inteligente de tu negocio.</p>
+                                <p id="stats-subtitle" style="color: var(--text-dim);">Análisis inteligente de tu negocio.</p>
                             </div>
                             <div class="stats-filters-wrapper">
                                 <div class="stats-filters glass">
@@ -722,45 +722,60 @@
                                             <li data-value="11">Diciembre</li>
                                         </ul>
                                     </div>
+                                    <!-- Employee Filter Modal Trigger Button -->
+                                    <button type="button" class="dropdown-trigger" id="employee-filter-btn" style="min-width: 170px; gap: 8px;">
+                                        <i data-lucide="users" style="width:14px;height:14px;color:var(--accent);"></i>
+                                        <span id="current-employee-filter">Personal: Todos</span>
+                                        <i data-lucide="sliders-horizontal" style="width:12px;height:12px;opacity:0.7;"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
                         <!-- KPI Cards Grid -->
                         <div class="metrics-grid">
-                            <div class="metric-card glass kpi-card">
-                                <div class="metric-icon" style="background: rgba(76, 175, 80, 0.1); color: #4caf50;">
+                            <div class="metric-card glass kpi-card" id="stat-card-1">
+                                <div class="metric-icon" id="stat-card-1-icon" style="background: rgba(76, 175, 80, 0.1); color: #4caf50;">
                                     <i data-lucide="dollar-sign"></i>
                                 </div>
                                 <div class="metric-info">
-                                    <span class="metric-label">Ingresos Totales</span>
+                                    <span class="metric-label" id="stat-label-1">Ingresos Totales</span>
                                     <span class="metric-value" id="stat-revenue">$0</span>
                                 </div>
                             </div>
-                            <div class="metric-card glass kpi-card">
-                                <div class="metric-icon" style="background: rgba(33, 150, 243, 0.1); color: #2196f3;">
+                            <div class="metric-card glass kpi-card" id="stat-card-2">
+                                <div class="metric-icon" id="stat-card-2-icon" style="background: rgba(33, 150, 243, 0.1); color: #2196f3;">
                                     <i data-lucide="receipt"></i>
                                 </div>
                                 <div class="metric-info">
-                                    <span class="metric-label">Ticket Promedio</span>
+                                    <span class="metric-label" id="stat-label-2">Ticket Promedio</span>
                                     <span class="metric-value" id="stat-avg-ticket">$0</span>
                                 </div>
                             </div>
-                            <div class="metric-card glass kpi-card">
-                                <div class="metric-icon" style="background: rgba(255, 82, 82, 0.1); color: #ff5252;">
+                            <div class="metric-card glass kpi-card" id="stat-card-3">
+                                <div class="metric-icon" id="stat-card-3-icon" style="background: rgba(255, 82, 82, 0.1); color: #ff5252;">
                                     <i data-lucide="trending-up"></i>
                                 </div>
                                 <div class="metric-info">
-                                    <span class="metric-label">Producto Estrella</span>
+                                    <span class="metric-label" id="stat-label-3">Producto Estrella</span>
                                     <span class="metric-value" id="stat-top-seller" style="font-size: 1.1rem; margin-top: 0.3rem;">---</span>
+                                </div>
+                            </div>
+                            <div class="metric-card glass kpi-card hidden" id="stat-card-4">
+                                <div class="metric-icon" id="stat-card-4-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                                    <i data-lucide="award"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label" id="stat-label-4">Promedio por Entrega</span>
+                                    <span class="metric-value" id="stat-card-4-val">$0</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Main Charts Quad Grid -->
-                        <div class="charts-container-grid quad-grid">
-                            <!-- Q1: Sales Trend -->
-                            <div class="chart-card glass">
+                        <div class="charts-container-grid quad-grid" id="stats-charts-grid">
+                            <!-- Q1: Sales Trend / Entregas -->
+                            <div class="chart-card glass" id="stat-chart-card-1">
                                 <h3><i data-lucide="trending-up" style="color: #e91e63; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Tendencia Diaria</h3>
                                 <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Flujo de ventas en el tiempo.</p>
                                 <div class="chart-wrapper">
@@ -768,8 +783,8 @@
                                 </div>
                             </div>
 
-                            <!-- Q2: Category Distribution -->
-                            <div class="chart-card glass">
+                            <!-- Q2: Category Distribution / Monthly Value -->
+                            <div class="chart-card glass" id="stat-chart-card-2">
                                 <h3><i data-lucide="pie-chart" style="color: #2196f3; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ventas por Categoría</h3>
                                 <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Distribución de demanda por sección.</p>
                                 <div class="chart-wrapper">
@@ -778,7 +793,7 @@
                             </div>
 
                             <!-- Q3: Monthly Totals -->
-                            <div class="chart-card glass">
+                            <div class="chart-card glass" id="stat-chart-card-3">
                                 <h3><i data-lucide="bar-chart-3" style="color: #4caf50; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ingresos Mensuales</h3>
                                 <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Comparativa de rendimiento anual.</p>
                                 <div class="chart-wrapper">
@@ -787,7 +802,7 @@
                             </div>
 
                             <!-- Q4: Top Products -->
-                            <div class="chart-card glass">
+                            <div class="chart-card glass" id="stat-chart-card-4">
                                 <h3><i data-lucide="award" style="color: #f7931e; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Top 5 Productos</h3>
                                 <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Los más pedidos en este periodo.</p>
                                 <div class="chart-wrapper">
@@ -1257,6 +1272,14 @@
                                 <div id="modal-sec-delivery" class="modal-settings-sec">
                                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                                         <div class="form-group">
+                                            <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Cantidad de Mesas</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);" class="input-focus-accent">
+                                                <i data-lucide="utensils" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
+                                                <input type="number" id="config-table-count" placeholder="10" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group">
                                             <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Precio del Domicilio</label>
                                             <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);" class="input-focus-accent">
                                                 <span style="font-weight: 800; color: var(--theme-accent); font-size: 1.2rem;">$</span>
@@ -1265,10 +1288,10 @@
                                         </div>
 
                                         <div class="form-group">
-                                            <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Cantidad de Mesas</label>
+                                            <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Ciudad del Negocio (para Rastreo GPS)</label>
                                             <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);" class="input-focus-accent">
-                                                <i data-lucide="utensils" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
-                                                <input type="number" id="config-table-count" placeholder="10" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
+                                                <i data-lucide="map-pin" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
+                                                <input type="text" id="config-business-city" placeholder="Ej: Riohacha, Barranquilla, Medellín" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
                                             </div>
                                         </div>
                                     </div>
@@ -1396,31 +1419,40 @@
                         <form id="global-config-form">
                             <div id="info-sec" class="config-sub-section">
                                 <div class="config-card">
-                                    <h3>Información del Negocio</h3>
-                                    <p>Configura los datos básicos y redes sociales de tu establecimiento.</p>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+                                        <h3 style="margin: 0;">Información del Negocio</h3>
+                                        <div style="display: flex; align-items: center; gap: 0.55rem; background: rgba(255,255,255,0.04); padding: 0.35rem 0.8rem; border-radius: 20px; border: 1px solid var(--glass-border);" title="Activar animación de brillo en el logo">
+                                            <span style="font-size: 0.8rem; color: var(--text-dim); font-weight: 600;">Brillo Animado</span>
+                                            <label class="toggle-switch toggle-switch-sm" style="margin: 0;">
+                                                <input type="checkbox" id="conf-logo-anim" checked>
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <p style="margin-bottom: 1.5rem;">Configura los datos básicos y redes sociales de tu establecimiento.</p>
+
                                     <div class="config-grid-2">
+                                        <!-- Fila 1: Nombre (izq) | Eslogan (der) -->
                                         <div class="form-group">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                                <label style="margin-bottom: 0;">Nombre del Negocio</label>
-                                                <div style="display: flex; align-items: center; gap: 0.5rem;" title="Activar animación de brillo">
-                                                    <span style="font-size: 0.8rem; color: var(--text-dim);">Brillo Animado</span>
-                                                    <label class="toggle-switch">
-                                                        <input type="checkbox" id="conf-logo-anim" checked>
-                                                        <span class="toggle-slider"></span>
-                                                    </label>
-                                                </div>
-                                            </div>
+                                            <label>Nombre del Negocio</label>
                                             <input type="text" id="conf-name">
                                         </div>
                                         <div class="form-group">
-                                            <label>WhatsApp para Pedidos</label>
-                                            <input type="text" id="conf-whatsapp">
-                                        </div>
-                                        <div class="form-group" style="grid-column: span 2;">
                                             <label>Eslogan Corto</label>
                                             <input type="text" id="conf-tagline">
                                         </div>
 
+                                        <!-- Fila 2: WhatsApp (izq) | Dirección (der) -->
+                                        <div class="form-group">
+                                            <label>WhatsApp para Pedidos</label>
+                                            <input type="text" id="conf-whatsapp">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Dirección del Negocio</label>
+                                            <input type="text" id="conf-address" placeholder="Ej: Calle 15 #12-45">
+                                        </div>
+
+                                        <!-- Fila 3: Instagram (izq) | Facebook (der) -->
                                         <div class="form-group">
                                             <label>Instagram (URL)</label>
                                             <input type="text" id="conf-instagram">
@@ -2348,6 +2380,9 @@
                                 <p id="detail-customer-waiter-row" style="display: flex; align-items: center; gap: 0.7rem; color: var(--text-dim); font-size: 0.9rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom: 0;">
                                     <i data-lucide="user-check" style="width: 16px; color: var(--theme-accent);"></i> <span>Atendido por: <strong id="detail-customer-waiter" style="color: var(--text); font-weight: 800;">---</strong></span>
                                 </p>
+                                <p id="detail-customer-driver-row" style="display: flex; align-items: center; gap: 0.7rem; color: var(--text-dim); font-size: 0.9rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom: 0;">
+                                    <i data-lucide="bike" style="width: 16px; color: #10b981;"></i> <span>Entregado por: <strong id="detail-customer-driver" style="color: #10b981; font-weight: 800;">---</strong></span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -2380,7 +2415,7 @@
 
                 <!-- Product Search Row -->
                 <div style="padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--glass-border); display: flex; gap: 0.6rem; flex-shrink: 0; background: rgba(0,0,0,0.1); align-items: center;">
-                    <div class="custom-dropdown" id="manual-cat-dropdown" style="min-width: 160px; position: relative;">
+                    <div class="custom-dropdown" id="manual-cat-dropdown" style="min-width: 160px; position: relative; z-index: 100050;">
                         <div class="dropdown-trigger" id="manual-cat-trigger" style="padding: 0.5rem 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; height: 38px; min-width: 160px; justify-content: space-between; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04);">
                             <span id="manual-cat-current">Cargando...</span>
                             <i data-lucide="chevron-down" style="width: 15px; height: 15px; color: var(--theme-accent); margin-left: 6px;"></i>
@@ -2441,22 +2476,7 @@
                         <input type="hidden" id="manual-cust-payment" value="">
                     </div>
 
-                    <script>
-                        // Logic for payment buttons (injected here or handled in admin.js)
-                        document.addEventListener('click', (e) => {
-                            if (e.target.classList.contains('manual-pay-btn')) {
-                                document.querySelectorAll('.manual-pay-btn').forEach(btn => {
-                                    btn.style.background = 'transparent';
-                                    btn.style.borderColor = 'var(--glass-border)';
-                                    btn.style.color = 'var(--text-dim)';
-                                });
-                                e.target.style.background = 'rgba(247,147,30,0.12)';
-                                e.target.style.borderColor = 'var(--theme-accent)';
-                                e.target.style.color = '#fff';
-                                document.getElementById('manual-cust-payment').value = e.target.dataset.value;
-                            }
-                        });
-                    </script>
+
 
                     <!-- Note (full width) -->
                     <input type="text" id="manual-cust-note" placeholder="Nota (opcional)..." style="width: 100%; padding: 0.55rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: inherit; font-size: 0.85rem; box-sizing: border-box; margin-bottom: 0.7rem;">
@@ -2860,30 +2880,176 @@
         </div>
     </div>
 
-    <!-- Live Driver Tracking Map Modal -->
-    <div id="driver-map-modal" class="modal-backdrop hidden" style="z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);">
-        <div class="glass-card" style="width: 95%; max-width: 850px; border-radius: 24px; overflow: hidden; padding: 0; background: var(--surface-light); border: 1px solid var(--glass-border); max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-            <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2);">
-                <div style="display: flex; align-items: center; gap: 0.8rem;">
-                    <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #10b981; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="map-pin" style="width: 22px; height: 22px;"></i>
+    <!-- Live Driver Tracking Map Modal — PRO Version -->
+    <div id="driver-map-modal" style="z-index:9999; display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(15,23,42,0.55); backdrop-filter:blur(10px);">
+        <div style="width:96%; max-width:1020px; height:92vh; max-height:820px; border-radius:24px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 32px 90px rgba(0,0,0,0.45);">
+
+            <!-- ── Compact Header ── -->
+            <div style="background:#ffffff; padding:0.85rem 1.25rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-shrink:0; border-bottom:1px solid #f1f5f9;">
+                <div style="display:flex; align-items:center; gap:0.78rem;">
+                    <div style="width:38px; height:38px; border-radius:11px; background:linear-gradient(135deg,rgba(16,185,129,0.14),rgba(5,150,105,0.07)); border:1px solid rgba(16,185,129,0.28); color:#059669; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i data-lucide="navigation" style="width:17px;height:17px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <h3 id="driver-map-title" style="margin:0; font-size:0.94rem; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:520px;">Rastreo GPS en Vivo</h3>
+                        <p id="driver-map-subtitle" style="margin:0; font-size:0.71rem; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:520px;">Ubicación en tiempo real</p>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+                    <div style="display:flex; align-items:center; gap:0.4rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:20px; padding:0.28rem 0.72rem;">
+                        <div style="width:7px;height:7px;border-radius:50%;background:#10b981;animation:pulse 1.5s infinite;"></div>
+                        <span style="font-size:0.69rem;color:#059669;font-weight:900;letter-spacing:0.02em;">GPS LIVE</span>
+                    </div>
+                    <button onclick="closeDriverMapModal()" style="width:32px;height:32px;border-radius:50%;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.18s;" onmouseover="this.style.background='#e2e8f0';this.style.color='#0f172a'" onmouseout="this.style.background='#f8fafc';this.style.color='#64748b'">✕</button>
+                </div>
+            </div>
+
+            <!-- ── Map Container ── -->
+            <div style="position:relative; flex:1; min-height:0; background:#e8eff5;">
+                <div id="admin-driver-map" style="width:100%; height:100%;"></div>
+
+                <!-- No-GPS overlay (z-index above delivery card) -->
+                <div id="no-gps-overlay" style="display:flex; position:absolute; inset:0; z-index:60; background:rgba(255,255,255,0.92); backdrop-filter:blur(12px); flex-direction:column; align-items:center; justify-content:center; gap:0.9rem; text-align:center; padding:2rem;">
+                    <div style="width:80px;height:80px;border-radius:50%;background:rgba(245,158,11,0.1);border:2px solid rgba(245,158,11,0.28);display:flex;align-items:center;justify-content:center;font-size:2.5rem;">🛵</div>
+                    <div>
+                        <h4 style="margin:0 0 0.4rem;color:#0f172a;font-size:1.08rem;font-weight:900;">Esperando al Domiciliario</h4>
+                        <p style="margin:0;color:#475569;font-size:0.84rem;max-width:310px;line-height:1.65;">El domiciliario aún no ha iniciado su GPS. Cuando presione <strong style="color:#d97706;">🚀 Iniciar Entrega</strong>, su ubicación aparecerá aquí.</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.45rem;color:#d97706;font-size:0.77rem;font-weight:800;">
+                        <div style="width:7px;height:7px;border-radius:50%;background:#f59e0b;animation:pulse 1.5s infinite;"></div>
+                        Buscando señal GPS...
+                    </div>
+                </div>
+
+                <!-- ══ RAPPI-STYLE BOTTOM DELIVERY SHEET ══ -->
+                <div id="map-delivery-card" style="position:absolute; bottom:0; left:0; right:0; z-index:1000;">
+                    <div style="background:#ffffff; border-top:1.5px solid #e2e8f0; border-radius:24px 24px 0 0; padding:0.75rem 1.4rem 1.25rem; box-shadow:0 -12px 50px rgba(15,23,42,0.22);">
+
+                        <!-- Toggle button (sin rayita sobrante) -->
+                        <div onclick="toggleMapDeliveryCard()" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0.2rem 0 0.6rem; width:100%; user-select:none;" title="Toca para ocultar o mostrar la información">
+                            <div style="font-size:0.74rem;font-weight:900;color:#64748b;display:flex;align-items:center;gap:0.35rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;padding:0.25rem 0.85rem;transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0';this.style.color='#0f172a'" onmouseout="this.style.background='#f1f5f9';this.style.color='#64748b'">
+                                <span id="map-card-toggle-text">Ocultar información</span>
+                                <span id="map-card-toggle-arrow" style="display:inline-block;transition:transform 0.35s ease;font-size:0.75rem;">▼</span>
+                            </div>
+                        </div>
+
+                        <!-- Main Card: Big ETA + driver info + progress + Recentrar emoji -->
+                        <div style="display:flex; align-items:center; gap:1.1rem; margin-bottom:1rem; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:18px; padding:0.85rem 1rem; position:relative;">
+                            <!-- ETA box -->
+                            <div style="background:#ecfdf5; border-radius:14px; padding:0.65rem 0.9rem; text-align:center; flex-shrink:0; min-width:72px; border:1.5px solid #a7f3d0;">
+                                <div id="map-eta" style="font-size:2.2rem;font-weight:900;color:#047857;line-height:1;">—</div>
+                                <div style="font-size:0.68rem;font-weight:900;color:#047857;text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">MINUTOS</div>
+                            </div>
+                            <!-- Info + progress -->
+                            <div style="flex:1; min-width:0; position:relative;">
+                                <!-- Botón Recentrar Mapa (Ícono de blanco/mira verde esmeralda) -->
+                                <button onclick="recenterAdminDriverMap()" title="Recentrar Mapa" style="position:absolute; top:-2px; right:0; width:34px; height:34px; border-radius:50%; border:none; background:#ffffff; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; box-shadow:0 3px 12px rgba(15,23,42,0.18);" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 16px rgba(16,185,129,0.35)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 3px 12px rgba(15,23,42,0.18)'">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round">
+                                        <circle cx="12" cy="12" r="6" fill="#10b981"/>
+                                        <circle cx="12" cy="12" r="2.5" fill="#ffffff"/>
+                                        <line x1="12" y1="1.5" x2="12" y2="4"/>
+                                        <line x1="12" y1="20" x2="12" y2="22.5"/>
+                                        <line x1="1.5" y1="12" x2="4" y2="12"/>
+                                        <line x1="20" y1="12" x2="22.5" y2="12"/>
+                                    </svg>
+                                </button>
+
+                                <div id="map-driver-name-line" style="font-size:1.02rem;font-weight:900;color:#0f172a;margin-bottom:0.25rem;line-height:1.2;padding-right:34px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Domiciliario en camino...</div>
+                                <div style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#334155;margin-bottom:0.55rem;font-weight:700;padding-right:34px;">
+                                    <span id="map-distance-text" style="font-weight:900;color:#059669;flex-shrink:0;"></span>
+                                    <span id="map-address-display" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#475569;"></span>
+                                </div>
+                                <!-- Progress bar -->
+                                <div style="display:flex;align-items:center;gap:0.6rem;">
+                                    <div style="flex:1;height:7px;background:#cbd5e1;border-radius:4px;overflow:hidden;">
+                                        <div id="map-progress-bar" style="height:100%;width:5%;background:linear-gradient(90deg,#10b981,#059669);border-radius:4px;transition:width 1.5s ease;box-shadow:0 0 8px rgba(16,185,129,0.4);"></div>
+                                    </div>
+                                    <span id="map-progress-pct" style="font-size:0.75rem;font-weight:900;color:#047857;flex-shrink:0;">En ruta</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Delivery stages -->
+                        <div style="display:flex; align-items:center; padding:0 0.2rem;">
+                            <!-- Stage: Local -->
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;flex-shrink:0;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 10px rgba(245,158,11,0.35);">🏪</div>
+                                <span style="font-size:0.72rem;font-weight:900;color:#b45309;">Local</span>
+                            </div>
+                            <!-- Connector (completed) -->
+                            <div style="flex:1;height:4px;background:#10b981;margin:0 0.4rem;border-radius:2px;position:relative;top:-10px;"></div>
+                            <!-- Stage: En Camino (active) -->
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;flex-shrink:0;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 0 3px rgba(16,185,129,0.25),0 3px 10px rgba(16,185,129,0.4);">🛵</div>
+                                <span style="font-size:0.72rem;font-weight:900;color:#047857;">En Camino</span>
+                            </div>
+                            <!-- Connector (pending, with progress) -->
+                            <div style="flex:1;height:4px;background:#e2e8f0;margin:0 0.4rem;border-radius:2px;overflow:hidden;position:relative;top:-10px;">
+                                <div id="map-progress-bar-2" style="height:100%;width:0%;background:#10b981;transition:width 1.5s ease;"></div>
+                            </div>
+                            <!-- Stage: Destino -->
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;flex-shrink:0;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;font-size:16px;">🏠</div>
+                                <span style="font-size:0.72rem;font-weight:900;color:#64748b;">Destino</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- ══ END DELIVERY SHEET ══ -->
+
+            </div>
+            <!-- end map container -->
+        </div>
+    </div>
+
+    <!-- Modal Centralizado para Seleccionar Personal -->
+    <div id="filter-employee-modal" class="modal-overlay hidden" style="z-index: 10000;">
+        <div class="modal-card">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="emp-modal-icon-badge" style="width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="users" style="width: 22px; height: 22px;"></i>
                     </div>
                     <div>
-                        <h3 id="driver-map-title" style="margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--text);">Mapa de Rastreo GPS en Vivo</h3>
-                        <p id="driver-map-subtitle" style="margin: 0; font-size: 0.78rem; color: var(--text-dim);">Ubicación en tiempo real de la entrega</p>
+                        <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0;">Filtrar Métricas por Personal</h3>
+                        <p style="font-size: 0.8rem; margin: 2px 0 0 0;">Selecciona el rol y el trabajador para ver su perfil de ventas.</p>
                     </div>
                 </div>
-                <button onclick="closeDriverMapModal()" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: rgba(255,255,255,0.1); color: var(--text); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+                <button type="button" class="icon-btn-ghost" id="close-emp-filter-modal-btn" style="border: none; background: transparent; cursor: pointer; font-size: 1.2rem;">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
-            <div style="position: relative; width: 100%; height: 480px;">
-                <div id="admin-driver-map" style="width: 100%; height: 100%; z-index: 1;"></div>
-            </div>
-            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.1); font-size: 0.82rem; color: var(--text-dim);">
-                <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981; font-weight: 700;">
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div>
-                    <span>Actualizando GPS cada 4 segundos</span>
+
+            <!-- Paso 1: Pestañas de Selección de Rol -->
+            <div style="margin-bottom: 1.2rem;">
+                <label style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.6rem;">1. Selecciona el Tipo de Trabajador:</label>
+                <div class="emp-role-pills-wrapper" id="emp-role-pills-container" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" class="emp-role-pill active" data-role="all">🌐 Todos</button>
+                    <button type="button" class="emp-role-pill" data-role="domiciliario">🛵 Domiciliarios</button>
+                    <button type="button" class="emp-role-pill" data-role="mesero">🍽️ Meseros</button>
+                    <button type="button" class="emp-role-pill" data-role="cajero">💰 Cajeros</button>
+                    <button type="button" class="emp-role-pill" data-role="cocina">👨‍🍳 Cocina</button>
                 </div>
-                <button onclick="closeDriverMapModal()" class="btn-secondary" style="padding: 0.5rem 1.2rem; border-radius: 10px; font-weight: 700; cursor: pointer;">Cerrar Mapa</button>
+            </div>
+
+            <!-- Paso 2: Rejilla de Empleados -->
+            <div style="margin-bottom: 1.8rem;">
+                <label style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.6rem;">2. Selecciona el Trabajador:</label>
+                <div class="emp-filter-grid" id="emp-modal-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.8rem; max-height: 280px; overflow-y: auto; padding: 6px; margin: -6px;">
+                    <!-- Filled dynamically by renderEmployeeFilterGrid() -->
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1.2rem;">
+                <button type="button" class="btn-ghost" id="reset-emp-filter-modal-btn" style="padding: 0.7rem 1.2rem; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                    🔄 Ver Todos (Global)
+                </button>
+                <button type="button" class="btn-primary" id="apply-emp-filter-modal-btn" style="padding: 0.75rem 1.8rem; border-radius: 12px; font-weight: 800; font-size: 0.9rem; cursor: pointer; border: none;">
+                    ✅ Aplicar Filtro
+                </button>
             </div>
         </div>
     </div>
@@ -2891,7 +3057,7 @@
     <!-- Printable Thermal Ticket Container (Hidden except during printing) -->
     <div id="thermal-ticket-print-area" class="thermal-print-area"></div>
 
-    <script src="js/script_v9.js?v=20260721.3"></script>
-    <script src="js/admin.js?v=4.90"></script>
+    <script src="js/script_v9.js?v=20260727.3"></script>
+    <script src="js/admin.js?v=5.54"></script>
 </body>
 </html>

@@ -45,10 +45,10 @@ body.light-mode {
     --admin-surface: #f8fafc; /* Slate 50 - Sidebar */
     --admin-surface-light: #ffffff; /* Blanco puro - Cards */
     --admin-glass: rgba(255, 255, 255, 0.8);
-    --admin-text: #0f172a; /* Slate 900 - Texto principal */
-    --admin-text-rgb: 15, 23, 42;
+    --admin-text: #334155; /* Slate 700 - Texto suave y elegante, no negro puro */
+    --admin-text-rgb: 51, 65, 85;
     --admin-text-dim: #64748b; /* Slate 500 - Texto secundario */
-    --admin-border: rgba(15, 23, 42, 0.06);
+    --admin-border: rgba(15, 23, 42, 0.08);
     --admin-sidebar-bg: #f8fafc;
     --admin-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.03);
 
@@ -807,6 +807,18 @@ body.light-mode .date-picker-mini {
     margin: 0 auto;
 }
 
+.config-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+    .config-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
 .config-card {
     background: var(--surface-light);
     border: 1px solid var(--glass-border);
@@ -994,6 +1006,14 @@ body.light-mode .dropdown-trigger i {
     transform: rotate(180deg);
 }
 
+/* Employee filter: only rotate chevron, not the users icon */
+#employee-filter-dropdown.open .dropdown-trigger i:first-child {
+    transform: none;
+}
+#employee-filter-dropdown.open .dropdown-trigger i:last-child {
+    transform: rotate(180deg);
+}
+
 .dropdown-menu {
     position: absolute;
     top: calc(100% + 10px);
@@ -1136,6 +1156,20 @@ body.light-mode .dropdown-menu li:hover {
     width: 60px;
     height: 32px;
     flex-shrink: 0;
+}
+
+.toggle-switch-sm {
+    width: 44px !important;
+    height: 24px !important;
+}
+.toggle-switch-sm .toggle-slider::before {
+    width: 18px !important;
+    height: 18px !important;
+    left: 3px !important;
+    top: 3px !important;
+}
+.toggle-switch-sm input:checked + .toggle-slider::before {
+    transform: translateX(20px) !important;
 }
 
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
@@ -2556,7 +2590,8 @@ body.light-mode .order-settings-btn:hover {
 .order-card-pro.status-pending::before { background: #4caf50; box-shadow: 0 0 12px rgba(76, 175, 80, 0.5); }
 .order-card-pro.status-confirmed::before { background: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
 .order-card-pro.status-dispatched::before { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
-.order-card-pro.status-accepted::before { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
+.order-card-pro.status-accepted::before,
+.order-card-pro.status-completed::before { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
 .order-card-pro.status-cancelled::before { background: #ff5252; box-shadow: 0 0 12px rgba(255, 82, 82, 0.5); }
 
 /* Nuevo Badge en Sidebar */
@@ -2994,6 +3029,16 @@ body.light-mode .admin-header-main .theme-toggle-btn:hover {
 }
 
 /* Light mode Glass Cards & Contrast Polish */
+body.light-mode,
+body.light-mode #admin-view,
+body.light-mode .admin-container-wrapper,
+body.light-mode .admin-main,
+body.light-mode .admin-tab-content {
+    background-color: #f1f5f9 !important;
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+
 body.light-mode .glass,
 body.light-mode .chart-card,
 body.light-mode .metric-card,
@@ -3003,16 +3048,27 @@ body.light-mode .order-card-pro {
     box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
 }
 
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3,
+body.light-mode h4,
 body.light-mode .metric-label,
 body.light-mode .chart-card h3,
 body.light-mode .chart-card h4,
 body.light-mode .tab-header-pro h2,
-body.light-mode .tab-header-pro h3 {
+body.light-mode .tab-header-pro h3,
+body.light-mode .stats-header h2,
+body.light-mode #my-metrics-header-title,
+body.light-mode #driver-metrics-header-title {
     color: #0f172a !important;
 }
 
+body.light-mode p,
 body.light-mode .chart-card p,
 body.light-mode .tab-header-pro p,
+body.light-mode .stats-header p,
+body.light-mode #my-metrics-header-subtitle,
+body.light-mode #driver-metrics-header-subtitle,
 body.light-mode .metric-label {
     color: #475569 !important;
 }
@@ -4244,6 +4300,113 @@ body.light-mode .admin-custom-select-trigger:hover {
     border-color: var(--theme-accent, #f7931e) !important;
 }
 
+/* Animated GPS Route Polyline */
+@keyframes routeDashFlow {
+    from { stroke-dashoffset: 40; }
+    to { stroke-dashoffset: 0; }
+}
+
+.leaflet-interactive.animated-gps-route {
+    stroke-dasharray: 8, 12 !important;
+    animation: routeDashFlow 1.2s linear infinite !important;
+}
+
+/* ── Premium GPS Map — Driver marker pulse rings ── */
+@keyframes pulseRingMap {
+    0%   { transform: translate(-50%, -50%) scale(1);    opacity: 0.72; }
+    100% { transform: translate(-50%, -50%) scale(1.62); opacity: 0; }
+}
+
+/* Premium route layers */
+.leaflet-interactive.gps-route-base {
+    filter: drop-shadow(0 3px 10px rgba(16,185,129,0.38));
+}
+
+.leaflet-interactive.gps-route-anim {
+    stroke-dasharray: 14, 9;
+    animation: routeDashFlow 0.85s linear infinite;
+}
+
+/* Delivery bottom-sheet card smooth entrance & collapse toggle */
+#map-delivery-card {
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+#map-delivery-card.collapsed {
+    transform: translateY(calc(100% - 50px)) !important;
+}
+
+/* ── Mobile Optimization for Live GPS Tracking Modal (Phones & Small Displays) ── */
+@media (max-width: 640px) {
+    #driver-map-modal > div {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    #driver-map-modal > div > div:first-child {
+        padding: 0.6rem 0.85rem !important;
+    }
+
+    #driver-map-title {
+        font-size: 0.84rem !important;
+        max-width: 180px !important;
+    }
+
+    #driver-map-subtitle {
+        font-size: 0.67rem !important;
+        max-width: 180px !important;
+    }
+
+    #map-delivery-card > div {
+        border-radius: 20px 20px 0 0 !important;
+        padding: 0.5rem 0.8rem 0.75rem !important;
+        box-shadow: 0 -8px 30px rgba(15,23,42,0.2) !important;
+    }
+
+    /* ETA & Driver info card container */
+    #map-delivery-card > div > div:nth-child(3) {
+        gap: 0.65rem !important;
+        padding: 0.55rem 0.75rem !important;
+        border-radius: 14px !important;
+        margin-bottom: 0.6rem !important;
+    }
+
+    #map-eta {
+        font-size: 1.65rem !important;
+    }
+
+    #map-driver-name-line {
+        font-size: 0.88rem !important;
+    }
+
+    #map-address-display {
+        font-size: 0.72rem !important;
+    }
+
+    #map-progress-pct {
+        font-size: 0.68rem !important;
+    }
+
+    /* Stage circles on mobile */
+    #map-delivery-card > div > div:nth-child(4) > div > div:first-child {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 13px !important;
+    }
+
+    #map-delivery-card > div > div:nth-child(4) span {
+        font-size: 0.64rem !important;
+    }
+
+    #map-delivery-card > div > div:nth-child(4) > div[style*="height:4px"] {
+        top: -8px !important;
+    }
+}
+
 /* =========================================
    POS THERMAL TICKET PRINT STYLES (58mm / 80mm)
    ========================================= */
@@ -4278,5 +4441,200 @@ body.light-mode .admin-custom-select-trigger:hover {
         margin: 0mm;
     }
 }
+/* Employee Filter Modal Styles (Dark Mode Base) */
+#filter-employee-modal.modal-overlay,
+#filter-employee-modal.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000 !important;
+    transition: opacity 0.25s ease;
+}
 
+#filter-employee-modal.hidden {
+    display: none !important;
+}
 
+#filter-employee-modal .modal-card {
+    max-width: 580px;
+    width: 92%;
+    padding: 2rem;
+    border-radius: 24px;
+    background: #16171a;
+    border: 1.5px solid rgba(16, 185, 129, 0.35);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+    transition: all 0.25s ease;
+}
+
+#filter-employee-modal .emp-modal-icon-badge {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+}
+
+.emp-role-pill {
+    padding: 0.5rem 1.05rem;
+    border-radius: 50px;
+    background: #222429;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.emp-role-pill:hover {
+    background: #2a2d34;
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #ffffff;
+}
+
+.emp-role-pill.active {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    border-color: #10b981 !important;
+    box-shadow: none !important;
+}
+
+.emp-filter-card {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.85rem 1rem;
+    background: #202227;
+    border: 1.2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.emp-filter-card:hover {
+    background: #272a31;
+    border-color: rgba(16, 185, 129, 0.5);
+    transform: translateY(-2px);
+}
+
+.emp-filter-card.selected {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border: 2px solid #10b981 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.emp-filter-card-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+#apply-emp-filter-modal-btn {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35) !important;
+}
+
+/* ==========================================
+   LIGHT MODE OVERRIDES (Modo Día / Modo Claro)
+   ========================================== */
+body.light-mode #filter-employee-modal.modal-overlay,
+body.light-mode #filter-employee-modal.modal {
+    background: rgba(0, 0, 0, 0.45) !important;
+}
+
+body.light-mode #filter-employee-modal .modal-card {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.15) !important;
+}
+
+body.light-mode #filter-employee-modal h3 {
+    color: #0f172a !important;
+}
+
+body.light-mode #filter-employee-modal p,
+body.light-mode #filter-employee-modal label {
+    color: #64748b !important;
+}
+
+body.light-mode #filter-employee-modal #close-emp-filter-modal-btn {
+    color: #64748b !important;
+}
+
+body.light-mode #filter-employee-modal #close-emp-filter-modal-btn:hover {
+    color: #0f172a !important;
+}
+
+body.light-mode .emp-role-pill {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+
+body.light-mode .emp-role-pill:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode .emp-role-pill.active {
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+body.light-mode .emp-filter-card {
+    background: #f8fafc !important;
+    border: 1.2px solid #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode .emp-filter-card [style*="color: var(--text)"] {
+    color: #0f172a !important;
+}
+
+body.light-mode .emp-filter-card [style*="color: var(--text-dim)"] {
+    color: #64748b !important;
+}
+
+body.light-mode .emp-filter-card:hover {
+    background: #f1f5f9 !important;
+    border-color: rgba(16, 185, 129, 0.6) !important;
+}
+
+body.light-mode .emp-filter-card.selected {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border: 2px solid #10b981 !important;
+    box-shadow: none !important;
+}
+
+body.light-mode #reset-emp-filter-modal-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+
+body.light-mode #employee-filter-btn {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode #employee-filter-btn.active-trigger {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-color: #10b981 !important;
+    color: #047857 !important;
+}

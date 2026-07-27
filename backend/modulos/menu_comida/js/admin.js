@@ -300,6 +300,7 @@ function prefillConfigForm() {
         'conf-name': state.config.restaurantName,
         'conf-whatsapp': state.config.whatsappNumber,
         'conf-tagline': state.config.tagline,
+        'conf-address': state.config.address || '',
         'conf-instagram': state.config.instagram,
         'conf-facebook': state.config.facebook,
         'conf-hero-t1': state.config.heroTitleT1,
@@ -841,6 +842,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.config.heroTime = document.getElementById('conf-hero-time').value;
             state.config.heroRating = document.getElementById('conf-hero-rating').value;
             state.config.whatsappNumber = document.getElementById('conf-whatsapp').value;
+            const addrEl = document.getElementById('conf-address');
+            if (addrEl) state.config.address = addrEl.value;
             state.config.footerText = document.getElementById('conf-footer').value;
             
             const waTemplateEl = document.getElementById('conf-wa-template');
@@ -2067,6 +2070,22 @@ function setupDiscountAutocomplete() {
     }
 }
 
+function toggleMapDeliveryCard() {
+    const card = document.getElementById('map-delivery-card');
+    if (!card) return;
+    const isCollapsed = card.classList.toggle('collapsed');
+    const arrow = document.getElementById('map-card-toggle-arrow');
+    const text = document.getElementById('map-card-toggle-text');
+    if (arrow) arrow.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (text) text.textContent = isCollapsed ? 'Mostrar información' : 'Ocultar información';
+
+    if (adminDriverMapInstance) {
+        setTimeout(() => {
+            adminDriverMapInstance.invalidateSize();
+        }, 400);
+    }
+}
+
 function renderAdminDiscounts() {
     const list = document.getElementById('admin-discounts-list');
     if (!list) return;
@@ -2381,26 +2400,70 @@ if (!localStorage.getItem('streetfeed_orders')) {
 }
 
 function getOrders() {
-    return JSON.parse(localStorage.getItem('streetfeed_orders')) || [];
+    const raw = JSON.parse(localStorage.getItem('streetfeed_orders')) || [];
+    let modified = false;
+    const orders = raw.map(o => {
+        if (o.deliveryFee === undefined) {
+            let fee = 0;
+            if (typeof o.shippingFee === 'number') fee = o.shippingFee;
+            else if (typeof o.delivery_fee === 'number') fee = o.delivery_fee;
+            else if (o.deliveryType === 'delivery' || o.type === 'domicilio' || o.customer?.deliveryType === 'delivery' || o.address || o.deliveredBy) {
+                const itemsTotal = (o.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
+                if (o.total && itemsTotal > 0 && o.total > itemsTotal) {
+                    fee = o.total - itemsTotal;
+                } else {
+                    fee = 4000;
+                }
+            }
+            o.deliveryFee = fee;
+            modified = true;
+        }
+        return o;
+    });
+
+    if (modified) {
+        localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+    }
+    return orders;
 }
 
-function renderStats(range = 'today', specificMonth = null, specificDate = null) {
+function renderStats(range = 'today', specificMonth = null, specificDate = null, employeeFilter = null) {
     if (!document.getElementById('stats-tab')) return;
+
+    // Resolve active employee filter from the dropdown state if not passed explicitly
+    if (employeeFilter === null) {
+        employeeFilter = window._activeEmployeeFilter || null;
+    }
 
     const dishes = state.dishes || [];
     const categories = state.categories.filter(c => c.id !== 'todos');
     const allOrders = getOrders();
-    // CLAVE: Solo procesar pedidos ACEPTADOS para el BI
-    const acceptedOrders = allOrders.filter(o => o.status === 'accepted' || !o.status); // !o.status para compatibilidad con datos viejos
+    // CLAVE: Procesar pedidos FINALIZADOS para el BI:
+    // 'accepted'  → pedido cobrado en local (mesero/cajero/admin)
+    // 'completed' → domicilio entregado por domiciliario
+    // !o.status   → compatibilidad con datos viejos sin status
+    const acceptedOrders = allOrders.filter(o =>
+        o.status === 'accepted' || o.status === 'completed' || !o.status
+    );
     const isLight = document.body.classList.contains('light-mode');
     const chartText = isLight ? '#1a1a2e' : '#ffffff';
     const chartGrid = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
     const chartDim = isLight ? '#5c5c70' : '#888888';
 
+    // --- Update dashboard subtitle based on employee filter ---
+    const statsSubtitle = document.getElementById('stats-subtitle');
+    if (statsSubtitle) {
+        if (employeeFilter) {
+            statsSubtitle.innerHTML = `<span style="color:var(--accent);font-weight:600;">📊 Métricas de: <strong>${employeeFilter}</strong></span> <span style="opacity:0.6;font-size:0.85em;">— Solo sus pedidos</span>`;
+        } else {
+            statsSubtitle.textContent = 'Análisis inteligente de tu negocio.';
+        }
+    }
+
     const now = new Date();
     
     // 1. Filter Orders by Range
-    const filteredOrders = acceptedOrders.filter(order => {
+    let filteredOrders = acceptedOrders.filter(order => {
         const orderDate = new Date(order.date);
 
         // Prioridad 1: Fecha específica del calendario
@@ -2431,299 +2494,500 @@ function renderStats(range = 'today', specificMonth = null, specificDate = null)
         return true;
     });
 
-    // 2. Financial KPIs
-    const totalRevenue = filteredOrders.reduce((sum, o) => sum + o.total, 0);
+    // 1b. Filter by Employee if active
+    if (employeeFilter) {
+        const empLower = employeeFilter.toLowerCase().trim();
+        filteredOrders = filteredOrders.filter(o => {
+            const att = (o.attendedBy || '').toLowerCase().trim().replace(/\s*\([^)]*\)/, '');
+            const del = (o.deliveredBy || '').toLowerCase().trim().replace(/\s*\([^)]*\)/, '');
+            const custAtt = (o.customer?.attendedBy || '').toLowerCase().trim().replace(/\s*\([^)]*\)/, '');
+            return att === empLower || att.startsWith(empLower) ||
+                   del === empLower || del.startsWith(empLower) ||
+                   custAtt === empLower || custAtt.startsWith(empLower);
+        });
+    }
+
+    // 2. Financial KPIs & Role-Adaptive Dashboard
+    const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
     const avgTicket = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
     
     const itemCounts = {};
     filteredOrders.forEach(o => {
-        o.items.forEach(item => {
-            itemCounts[item.name] = (itemCounts[item.name] || 0) + 1;
+        (o.items || []).forEach(item => {
+            const itemName = item.name || 'Producto';
+            itemCounts[itemName] = (itemCounts[itemName] || 0) + (item.quantity || 1);
         });
     });
     const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
     const topSeller = sortedItems[0]?.[0] || '---';
 
-    document.getElementById('stat-revenue').textContent = '$' + totalRevenue.toLocaleString('es-CO');
-    document.getElementById('stat-avg-ticket').textContent = '$' + Math.round(avgTicket).toLocaleString('es-CO');
-    document.getElementById('stat-top-seller').textContent = topSeller;
+    // Look up employee info if filtering by employee
+    let empObj = null;
+    let isDriverRole = false;
+    if (employeeFilter) {
+        empObj = (employeesList || []).find(e => e.name && e.name.toLowerCase() === employeeFilter.toLowerCase().trim());
+        isDriverRole = empObj && (empObj.role === 'domiciliario' || empObj.role === 'repartidor' || empObj.role === 'delivery');
+        if (!empObj && (employeeFilter.toLowerCase().includes('domi') || employeeFilter.toLowerCase().includes('evelio'))) {
+            isDriverRole = true;
+        }
+    }
 
-    // --- CHART 1: TOP 5 PRODUCTS (Grouped Horizontal Bar - Pro Model) ---
-    const top5 = sortedItems.slice(0, 5);
-    const labels = top5.map(i => i[0]);
-    
-    // Calcular 3 dimensiones para cada producto
-    const unitsData = top5.map(i => i[1]);
-    const revenueData = top5.map(i => {
-        const dish = dishes.find(d => d.name === i[0]);
-        return dish ? (dish.price * i[1]) : 0;
-    });
+    const label1 = document.getElementById('stat-label-1');
+    const label2 = document.getElementById('stat-label-2');
+    const label3 = document.getElementById('stat-label-3');
+    const label4 = document.getElementById('stat-label-4');
+    const val1   = document.getElementById('stat-revenue');
+    const val2   = document.getElementById('stat-avg-ticket');
+    const val3   = document.getElementById('stat-top-seller');
+    const val4   = document.getElementById('stat-card-4-val');
+    const card4  = document.getElementById('stat-card-4');
 
-    const ctxTop = document.getElementById('chart-top-products').getContext('2d');
-    if (charts.topProducts) charts.topProducts.destroy();
-    charts.topProducts = new Chart(ctxTop, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Unidades',
-                    data: unitsData,
-                    backgroundColor: '#00b5ad',
-                    borderRadius: 3,
-                    barThickness: 12,
-                    xAxisID: 'xUnits'
-                },
-                {
-                    label: 'Ingresos ($)',
-                    data: revenueData,
-                    backgroundColor: '#3d3e3f',
-                    borderRadius: 3,
-                    barThickness: 12,
-                    xAxisID: 'xRevenue'
-                }
-            ]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                xUnits: {
-                    type: 'linear',
-                    position: 'bottom',
-                    beginAtZero: true,
-                    title: { display: true, text: 'Cant. Vendida', color: chartDim, font: { size: 9 } },
-                    grid: { display: false },
-                    ticks: { color: '#00b5ad', font: { size: 9 } }
-                },
-                xRevenue: {
-                    type: 'linear',
-                    position: 'top',
-                    beginAtZero: true,
-                    title: { display: true, text: 'Total Ingresos ($)', color: chartDim, font: { size: 9 } },
-                    grid: { color: chartGrid },
-                    ticks: { 
-                        color: chartText, 
-                        font: { size: 9 },
-                        callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v)
-                    }
-                },
-                y: { 
-                    ticks: { color: chartText, font: { size: 11, weight: 'bold' } },
-                    grid: { display: false }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom',
-                    labels: { color: chartText, boxWidth: 10, font: { size: 10 } }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            let value = context.raw;
-                            if (label.includes('$')) {
-                                return label + ': $' + value.toLocaleString('es-CO');
-                            }
-                            return label + ': ' + value;
-                        }
-                    }
+    const icon1 = document.getElementById('stat-card-1-icon');
+    const icon2 = document.getElementById('stat-card-2-icon');
+    const icon3 = document.getElementById('stat-card-3-icon');
+
+    // Chart Card titles
+    const chart1Card = document.getElementById('chart-sales-trend')?.closest('.chart-card');
+    const chart2Card = document.getElementById('chart-categories')?.closest('.chart-card');
+    const chart3Card = document.getElementById('chart-monthly-revenue')?.closest('.chart-card');
+    const chart4Card = document.getElementById('chart-top-products')?.closest('.chart-card');
+
+    if (employeeFilter && isDriverRole) {
+        // --- DOMICILIARIO PROFILE VIEW (Matching Domiciliario Metrics) ---
+        const totalDeliveries = filteredOrders.length;
+        const totalDeliveryFee = filteredOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0);
+        const avgDelivery = totalDeliveries > 0 ? Math.round(totalRevenue / totalDeliveries) : 0;
+
+        if (label1) label1.textContent = 'Domicilios Entregados';
+        if (val1) val1.textContent = totalDeliveries;
+        if (icon1) icon1.innerHTML = '<i data-lucide="bike"></i>';
+
+        if (label2) label2.textContent = 'Valor Entregado';
+        if (val2) val2.textContent = '$' + totalRevenue.toLocaleString('es-CO');
+        if (icon2) icon2.innerHTML = '<i data-lucide="dollar-sign"></i>';
+
+        if (label3) label3.textContent = 'Domicilio Cobrado';
+        if (val3) {
+            val3.style.fontSize = '1.8rem';
+            val3.style.marginTop = '0';
+            val3.style.color = '#ec4899';
+            val3.textContent = '$' + totalDeliveryFee.toLocaleString('es-CO');
+        }
+        if (icon3) icon3.innerHTML = '<i data-lucide="percent"></i>';
+
+        if (card4) card4.classList.remove('hidden');
+        if (label4) label4.textContent = 'Promedio por Entrega';
+        if (val4) {
+            val4.style.color = '#f59e0b';
+            val4.textContent = '$' + avgDelivery.toLocaleString('es-CO');
+        }
+
+        if (chart1Card) {
+            const h3 = chart1Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="trending-up" style="color: #10b981; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Entregas del Período';
+            const p = chart1Card.querySelector('p'); if (p) p.textContent = 'Cantidad de domicilios completados día a día.';
+        }
+        if (chart2Card) {
+            const h3 = chart2Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="pie-chart" style="color: #2196f3; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Categorías Entregadas';
+            const p = chart2Card.querySelector('p'); if (p) p.textContent = 'Distribución de productos transportados.';
+        }
+        if (chart3Card) {
+            const h3 = chart3Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="bar-chart-3" style="color: #4caf50; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Valor Entregado por Mes';
+            const p = chart3Card.querySelector('p'); if (p) p.textContent = 'Total de pedidos transportados mes a mes.';
+        }
+        if (chart4Card) {
+            const h3 = chart4Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="award" style="color: #f7931e; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Productos Más Entregados';
+            const p = chart4Card.querySelector('p'); if (p) p.textContent = 'Los platos más solicitados por sus clientes.';
+        }
+
+    } else if (employeeFilter) {
+        // --- STAFF MEMBER VIEW (Mesero, Cajero, Cocinero, etc.) ---
+        const orderCount = filteredOrders.length;
+        const commRate = (empObj && empObj.commissionRate !== undefined && empObj.commissionRate !== '') ? parseFloat(empObj.commissionRate) : 10;
+        const commissionVal = Math.round(totalRevenue * (commRate / 100));
+
+        if (label1) label1.textContent = 'Ventas Totales';
+        if (val1) val1.textContent = '$' + totalRevenue.toLocaleString('es-CO');
+        if (icon1) icon1.innerHTML = '<i data-lucide="dollar-sign"></i>';
+
+        if (label2) label2.textContent = 'Pedidos Atendidos';
+        if (val2) val2.textContent = orderCount;
+        if (icon2) icon2.innerHTML = '<i data-lucide="shopping-bag"></i>';
+
+        if (label3) label3.textContent = 'Ticket Promedio';
+        if (val3) {
+            val3.style.fontSize = '1.8rem';
+            val3.style.marginTop = '0';
+            val3.style.color = '#2196f3';
+            val3.textContent = '$' + Math.round(avgTicket).toLocaleString('es-CO');
+        }
+        if (icon3) icon3.innerHTML = '<i data-lucide="receipt"></i>';
+
+        if (card4) card4.classList.remove('hidden');
+        if (label4) label4.textContent = `Comisión (${commRate}%)`;
+        if (val4) {
+            val4.style.color = '#10b981';
+            val4.textContent = '$' + commissionVal.toLocaleString('es-CO');
+        }
+
+        if (chart1Card) {
+            const h3 = chart1Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="trending-up" style="color: #e91e63; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Rendimiento Diario';
+            const p = chart1Card.querySelector('p'); if (p) p.textContent = 'Ventas y atención día a día.';
+        }
+        if (chart2Card) {
+            const h3 = chart2Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="pie-chart" style="color: #2196f3; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ventas por Categoría';
+            const p = chart2Card.querySelector('p'); if (p) p.textContent = 'Distribución de pedidos atendidos.';
+        }
+        if (chart3Card) {
+            const h3 = chart3Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="bar-chart-3" style="color: #4caf50; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ventas Mensuales';
+            const p = chart3Card.querySelector('p'); if (p) p.textContent = 'Rendimiento acumulado mes a mes.';
+        }
+        if (chart4Card) {
+            const h3 = chart4Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="award" style="color: #f7931e; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Top 5 Productos Vendidos';
+            const p = chart4Card.querySelector('p'); if (p) p.textContent = 'Platos más vendidos por el empleado.';
+        }
+
+    } else {
+        // --- GLOBAL STORE VIEW (Todos) ---
+        if (label1) label1.textContent = 'Ingresos Totales';
+        if (val1) val1.textContent = '$' + totalRevenue.toLocaleString('es-CO');
+        if (icon1) icon1.innerHTML = '<i data-lucide="dollar-sign"></i>';
+
+        if (label2) label2.textContent = 'Ticket Promedio';
+        if (val2) val2.textContent = '$' + Math.round(avgTicket).toLocaleString('es-CO');
+        if (icon2) icon2.innerHTML = '<i data-lucide="receipt"></i>';
+
+        if (label3) label3.textContent = 'Producto Estrella';
+        if (val3) {
+            val3.style.fontSize = '1.1rem';
+            val3.style.marginTop = '0.3rem';
+            val3.style.color = '#ff5252';
+            val3.textContent = topSeller;
+        }
+        if (icon3) icon3.innerHTML = '<i data-lucide="trending-up"></i>';
+
+        if (card4) card4.classList.add('hidden');
+
+        if (chart1Card) {
+            const h3 = chart1Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="trending-up" style="color: #e91e63; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Tendencia Diaria';
+            const p = chart1Card.querySelector('p'); if (p) p.textContent = 'Flujo de ventas en el tiempo.';
+        }
+        if (chart2Card) {
+            const h3 = chart2Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="pie-chart" style="color: #2196f3; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ventas por Categoría';
+            const p = chart2Card.querySelector('p'); if (p) p.textContent = 'Distribución de demanda por sección.';
+        }
+        if (chart3Card) {
+            const h3 = chart3Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="bar-chart-3" style="color: #4caf50; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Ingresos Mensuales';
+            const p = chart3Card.querySelector('p'); if (p) p.textContent = 'Comparativa de rendimiento anual.';
+        }
+        if (chart4Card) {
+            const h3 = chart4Card.querySelector('h3'); if (h3) h3.innerHTML = '<i data-lucide="award" style="color: #f7931e; width: 18px; vertical-align: middle; margin-right: 8px;"></i> Top 5 Productos';
+            const p = chart4Card.querySelector('p'); if (p) p.textContent = 'Los más pedidos en este periodo.';
+        }
+    }
+
+    if (window.lucide) lucide.createIcons();
+
+    // Show/Hide chart cards based on employee filter (2 charts when filtering by employee, 4 charts for global)
+    const chartCard1 = document.getElementById('stat-chart-card-1');
+    const chartCard2 = document.getElementById('stat-chart-card-2');
+    const chartCard3 = document.getElementById('stat-chart-card-3');
+    const chartCard4 = document.getElementById('stat-chart-card-4');
+
+    if (employeeFilter) {
+        if (chartCard3) chartCard3.classList.add('hidden');
+        if (chartCard4) chartCard4.classList.add('hidden');
+    } else {
+        if (chartCard3) chartCard3.classList.remove('hidden');
+        if (chartCard4) chartCard4.classList.remove('hidden');
+    }
+
+    // All orders of this employee across the dataset (for monthly & trend charts)
+    let empAllOrders = acceptedOrders;
+    if (employeeFilter) {
+        const empLower = employeeFilter.toLowerCase().trim();
+        empAllOrders = acceptedOrders.filter(o => {
+            const att = (o.attendedBy || '').toLowerCase().trim().replace(/\s*\([^)]*\)/, '');
+            const del = (o.deliveredBy || '').toLowerCase().trim().replace(/\s*\([^)]*\)/, '');
+            const custAtt = (o.customer?.attendedBy || '').toLowerCase().trim().replace(/\s*\([^)]*\)/, '');
+            return att === empLower || att.startsWith(empLower) ||
+                   del === empLower || del.startsWith(empLower) ||
+                   custAtt === empLower || custAtt.startsWith(empLower);
+        });
+    }
+
+    if (employeeFilter && isDriverRole) {
+        // --- DOMICILIARIO CHART 1: Entregas del Período (Bar Entregas + Line Valor $) ---
+        const toLocalKey = (dObj) => {
+            const y = dObj.getFullYear();
+            const m = String(dObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const dateMap = {};
+        let daysToCover = range === 'today' ? 1 : range === 'yesterday' ? 2 : range === 'week' ? 7 : range === 'fortnight' ? 15 : 30;
+        for (let i = daysToCover - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            const key = toLocalKey(d);
+            dateMap[key] = { count: 0, value: 0, label: d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) };
+        }
+        filteredOrders.forEach(o => {
+            if (o.date) {
+                const dObj = new Date(o.date);
+                if (!isNaN(dObj.getTime())) {
+                    const dKey = toLocalKey(dObj);
+                    if (!dateMap[dKey]) dateMap[dKey] = { count: 0, value: 0, label: dObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) };
+                    dateMap[dKey].count += 1;
+                    dateMap[dKey].value += (o.total || 0);
                 }
             }
-        }
-    });
+        });
+        const sortedDates = Object.keys(dateMap).sort();
+        const trendLabels = sortedDates.map(k => dateMap[k].label);
+        const trendCounts = sortedDates.map(k => dateMap[k].count);
+        const trendValues = sortedDates.map(k => dateMap[k].value);
+        const maxVal = Math.max(...trendValues, 0);
+        const maxCount = Math.max(...trendCounts, 0);
+        const suggestedMax = maxVal > 0 ? Math.ceil(maxVal * 1.25) : 10000;
+        const suggestedMaxCount = maxCount > 0 ? Math.ceil(maxCount * 1.25) : 5;
 
-    // --- CHART 2: CATEGORY SALES (Doughnut) ---
-    const catSales = categories.map(c => {
-        const catId = c.id.toLowerCase();
-        return filteredOrders.reduce((acc, o) => {
-            return acc + o.items.filter(i => {
-                // Si el item ya tiene cat, lo usamos. Si no, lo buscamos en dishes por nombre o ID.
+        const ctxTrend = document.getElementById('chart-sales-trend').getContext('2d');
+        if (charts.salesTrend) charts.salesTrend.destroy();
+        charts.salesTrend = new Chart(ctxTrend, {
+            type: 'bar',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    { type: 'bar', label: 'Entregas', data: trendCounts, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 6, yAxisID: 'y1' },
+                    { type: 'line', label: 'Valor ($)', data: trendValues, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 3, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f59e0b', fill: true, yAxisID: 'y' }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: chartText, font: { weight: 'bold' } } },
+                    tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + (ctx.datasetIndex === 1 ? ': $' + Math.round(ctx.parsed.y).toLocaleString('es-CO') : ': ' + ctx.parsed.y); } } }
+                },
+                scales: {
+                    x: { ticks: { color: chartText, font: { weight: 'bold' } }, grid: { color: chartGrid } },
+                    y: { position: 'left', beginAtZero: true, suggestedMax, ticks: { color: chartText, font: { weight: 'bold' }, callback: v => v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + v }, grid: { color: chartGrid } },
+                    y1: { position: 'right', beginAtZero: true, suggestedMax: suggestedMaxCount, ticks: { color: '#10b981', font: { weight: 'bold' }, stepSize: 1 }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+
+        // --- DOMICILIARIO CHART 2: Valor Entregado por Mes (Bar Valor $ + Bar Nº Entregas) ---
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthlyValues = Array(12).fill(0);
+        const monthlyCounts = Array(12).fill(0);
+        empAllOrders.forEach(o => {
+            if (o.date) {
+                const d = new Date(o.date);
+                if (!isNaN(d.getTime()) && d.getFullYear() === now.getFullYear()) {
+                    monthlyValues[d.getMonth()] += (o.total || 0);
+                    monthlyCounts[d.getMonth()] += 1;
+                }
+            }
+        });
+
+        const ctxCat = document.getElementById('chart-categories').getContext('2d');
+        if (charts.categories) charts.categories.destroy();
+        charts.categories = new Chart(ctxCat, {
+            type: 'bar',
+            data: {
+                labels: monthNames,
+                datasets: [
+                    { label: 'Valor Entregado ($)', data: monthlyValues, backgroundColor: 'rgba(59,130,246,0.8)', borderRadius: 6, yAxisID: 'y' },
+                    { label: 'Nº Entregas', data: monthlyCounts, backgroundColor: 'rgba(16,185,129,0.8)', borderRadius: 6, yAxisID: 'y1' }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: chartText, font: { weight: 'bold' } } },
+                    tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + (ctx.datasetIndex === 0 ? ': $' + Math.round(ctx.parsed.y).toLocaleString('es-CO') : ': ' + ctx.parsed.y); } } }
+                },
+                scales: {
+                    x: { ticks: { color: chartText, font: { weight: 'bold' } }, grid: { color: chartGrid } },
+                    y: { position: 'left', beginAtZero: true, ticks: { color: chartText, font: { weight: 'bold' }, callback: v => v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + v }, grid: { color: chartGrid } },
+                    y1: { position: 'right', beginAtZero: true, ticks: { color: '#10b981', font: { weight: 'bold' }, stepSize: 1 }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+
+    } else if (employeeFilter) {
+        // --- STAFF MEMBER CHART 1: Rendimiento Diario ---
+        let trendLabels = [];
+        let trendValues = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(); d.setDate(now.getDate() - (6 - i));
+            trendLabels.push(d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' }));
+            trendValues.push(filteredOrders.filter(o => o.date && new Date(o.date).toDateString() === d.toDateString()).reduce((s, o) => s + (o.total || 0), 0));
+        }
+
+        const ctxTrend = document.getElementById('chart-sales-trend').getContext('2d');
+        if (charts.salesTrend) charts.salesTrend.destroy();
+        charts.salesTrend = new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: 'Ventas ($)', data: trendValues, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: chartGrid }, ticks: { color: chartDim, callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v } },
+                    x: { ticks: { color: chartText, font: { size: 10 } } }
+                },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` Ventas: $${ctx.raw.toLocaleString('es-CO')}` } } }
+            }
+        });
+
+        // --- STAFF MEMBER CHART 2: Ventas Mensuales ---
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthlyData = months.map((_, i) => empAllOrders.filter(o => o.date && new Date(o.date).getMonth() === i).reduce((sum, o) => sum + (o.total || 0), 0));
+
+        const ctxCat = document.getElementById('chart-categories').getContext('2d');
+        if (charts.categories) charts.categories.destroy();
+        charts.categories = new Chart(ctxCat, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{ label: 'Ventas ($)', data: monthlyData, backgroundColor: 'rgba(76, 175, 80, 0.7)', borderRadius: 5 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: chartGrid }, ticks: { color: chartDim, callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v } },
+                    x: { ticks: { color: chartText, font: { size: 10 } } }
+                },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` Ventas: $${ctx.raw.toLocaleString('es-CO')}` } } }
+            }
+        });
+
+    } else {
+        // --- GLOBAL STORE VIEW (4 Charts) ---
+        // Chart 1: Sales Trend
+        let trendLabels = [];
+        let trendValues = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(); d.setDate(now.getDate() - (6 - i));
+            trendLabels.push(d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' }));
+            trendValues.push(acceptedOrders.filter(o => o.date && new Date(o.date).toDateString() === d.toDateString()).reduce((s, o) => s + (o.total || 0), 0));
+        }
+
+        const ctxTrend = document.getElementById('chart-sales-trend').getContext('2d');
+        if (charts.salesTrend) charts.salesTrend.destroy();
+        charts.salesTrend = new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{ label: 'Flujo', data: trendValues, borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.1)', fill: true, tension: 0.4, pointRadius: 3 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grace: '10%', grid: { color: chartGrid }, ticks: { color: chartDim, callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v } },
+                    x: { ticks: { color: chartText, font: { size: 10 } } }
+                },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` $${ctx.raw.toLocaleString('es-CO')}` } } }
+            }
+        });
+
+        // Chart 2: Category Sales
+        const catSales = categories.map(c => {
+            const catId = c.id.toLowerCase();
+            return filteredOrders.reduce((acc, o) => acc + (o.items || []).filter(i => {
                 let itemCat = (i.cat || '').toLowerCase();
                 if (!itemCat) {
                     const foundDish = dishes.find(d => d.id === i.id || d.name === i.name);
                     if (foundDish) itemCat = (foundDish.cat || '').toLowerCase();
                 }
                 return itemCat === catId;
-            }).length;
-        }, 0);
-    });
+            }).length, 0);
+        });
+        const totalItems = catSales.reduce((a, b) => a + b, 0);
+        const catLabels = categories.map((c, idx) => `${c.name} (${totalItems > 0 ? Math.round((catSales[idx]/totalItems)*100) : 0}%)`);
 
-    // --- CHART 2: CATEGORY SALES (Doughnut) ---
-    const totalItems = catSales.reduce((a, b) => a + b, 0);
-    const catLabels = categories.map((c, idx) => {
-        const val = catSales[idx];
-        const pct = totalItems > 0 ? Math.round((val / totalItems) * 100) : 0;
-        return `${c.name} (${pct}%)`;
-    });
-
-    const ctxCat = document.getElementById('chart-categories').getContext('2d');
-    if (charts.categories) charts.categories.destroy();
-    charts.categories = new Chart(ctxCat, {
-        type: 'doughnut',
-        data: {
-            labels: catLabels,
-            datasets: [{
-                data: catSales,
-                backgroundColor: [
-                    '#f7931e', // 🟠 Naranja — Hamburguesas
-                    '#4caf50', // 🟢 Verde — Salchipapas
-                    '#2196f3', // 🔵 Azul — Perros
-                    '#e91e63', // 🩷 Rosa — Mazorcadas
-                    '#9c27b0', // 🟣 Morado — Snacks
-                    '#00bcd4', // 🩵 Cian — Postres
-                    '#ffeb3b', // 🟡 Amarillo — Bebidas
-                    '#ff5722', // 🔴 Rojo-naranja — Extras
-                    '#009688', // 🩶 Verde azulado — extra cat 9
-                    '#3f51b5', // 💙 Índigo — extra cat 10
-                ],
-                borderWidth: 0,
-                hoverOffset: 12
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '65%',
-            plugins: {
-                legend: { 
-                    position: 'bottom', 
-                    labels: { 
-                        color: chartText, 
-                        boxWidth: 8, 
-                        padding: 15,
-                        font: { size: 10, weight: '500' } 
-                    } 
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
-                            const pct = totalItems > 0 ? ((value / totalItems) * 100).toFixed(1) : 0;
-                            return ` ${label}: ${value} und. (${pct}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    // --- CHART 3: MONTHLY REVENUE (Vertical Bar) ---
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const monthlyData = months.map((_, i) => {
-        return acceptedOrders
-            .filter(o => new Date(o.date).getMonth() === i)
-            .reduce((sum, o) => sum + o.total, 0);
-    });
-
-    const maxMonthly = Math.max(...monthlyData, 100000); 
-
-    const ctxMonth = document.getElementById('chart-monthly-revenue').getContext('2d');
-    if (charts.monthlyRevenue) charts.monthlyRevenue.destroy();
-    charts.monthlyRevenue = new Chart(ctxMonth, {
-        type: 'bar',
-        data: {
-            labels: months,
-            datasets: [{
-                label: 'Ventas ($)',
-                data: monthlyData,
-                backgroundColor: 'rgba(33, 150, 243, 0.6)',
-                hoverBackgroundColor: 'rgba(33, 150, 243, 0.8)',
-                borderRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { 
-                    beginAtZero: true, 
-                    grace: '15%',
-                    grid: { color: chartGrid }, 
-                    ticks: { 
-                        color: chartDim, 
-                        callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v 
-                    } 
-                },
-                x: { ticks: { color: chartText, font: { size: 10 } } }
+        const ctxCat = document.getElementById('chart-categories').getContext('2d');
+        if (charts.categories) charts.categories.destroy();
+        charts.categories = new Chart(ctxCat, {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{ data: catSales, backgroundColor: ['#f7931e', '#4caf50', '#2196f3', '#e91e63', '#9c27b0', '#00bcd4', '#ffeb3b', '#ff5722', '#009688', '#3f51b5'], borderWidth: 0, hoverOffset: 12 }]
             },
-            plugins: { 
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => ` Ventas: $${ctx.raw.toLocaleString('es-CO')}`
-                    }
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: chartText, boxWidth: 8, padding: 15, font: { size: 10, weight: '500' } } },
+                    tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.raw} und.` } }
                 }
             }
-        }
-    });
+        });
 
-    // --- CHART 4: SALES TREND (Line) ---
-    let trendLabels = [];
-    let trendValues = [];
-    if (specificMonth !== null && specificMonth !== "") {
-        const daysInMonth = new Date(now.getFullYear(), parseInt(specificMonth) + 1, 0).getDate();
-        for (let i = 1; i <= daysInMonth; i++) {
-            trendLabels.push(i.toString());
-            trendValues.push(filteredOrders.filter(o => new Date(o.date).getDate() === i).reduce((s, o) => s + o.total, 0));
-        }
-    } else {
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(); d.setDate(now.getDate() - (6 - i));
-            trendLabels.push(d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' }));
-            trendValues.push(acceptedOrders.filter(o => new Date(o.date).toDateString() === d.toDateString()).reduce((s, o) => s + o.total, 0));
-        }
+        // Chart 3: Monthly Revenue
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthlyData = months.map((_, i) => acceptedOrders.filter(o => o.date && new Date(o.date).getMonth() === i).reduce((sum, o) => sum + (o.total || 0), 0));
+
+        const ctxMonth = document.getElementById('chart-monthly-revenue').getContext('2d');
+        if (charts.monthlyRevenue) charts.monthlyRevenue.destroy();
+        charts.monthlyRevenue = new Chart(ctxMonth, {
+            type: 'bar',
+            data: { labels: months, datasets: [{ label: 'Ventas ($)', data: monthlyData, backgroundColor: 'rgba(33, 150, 243, 0.6)', hoverBackgroundColor: 'rgba(33, 150, 243, 0.8)', borderRadius: 5 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, grace: '15%', grid: { color: chartGrid }, ticks: { color: chartDim, callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v } }, x: { ticks: { color: chartText, font: { size: 10 } } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` Ventas: $${ctx.raw.toLocaleString('es-CO')}` } } }
+            }
+        });
+
+        // Chart 4: Top 5 Products
+        const top5 = sortedItems.slice(0, 5);
+        const labels = top5.map(i => i[0]);
+        const unitsData = top5.map(i => i[1]);
+        const revenueData = top5.map(i => { const dish = dishes.find(d => d.name === i[0]); return dish ? (dish.price * i[1]) : 0; });
+
+        const ctxTop = document.getElementById('chart-top-products').getContext('2d');
+        if (charts.topProducts) charts.topProducts.destroy();
+        charts.topProducts = new Chart(ctxTop, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Unidades', data: unitsData, backgroundColor: '#00b5ad', borderRadius: 3, barThickness: 12, xAxisID: 'xUnits' },
+                    { label: 'Ingresos ($)', data: revenueData, backgroundColor: '#3d3e3f', borderRadius: 3, barThickness: 12, xAxisID: 'xRevenue' }
+                ]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                scales: {
+                    xUnits: { type: 'linear', position: 'bottom', beginAtZero: true, title: { display: true, text: 'Cant. Vendida', color: chartDim, font: { size: 9 } }, grid: { display: false }, ticks: { color: '#00b5ad', font: { size: 9 } } },
+                    xRevenue: { type: 'linear', position: 'top', beginAtZero: true, title: { display: true, text: 'Total Ingresos ($)', color: chartDim, font: { size: 9 } }, grid: { color: chartGrid }, ticks: { color: chartText, font: { size: 9 }, callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) } },
+                    y: { ticks: { color: chartText, font: { size: 11, weight: 'bold' } }, grid: { display: false } }
+                },
+                plugins: { legend: { display: true, position: 'bottom', labels: { color: chartText, boxWidth: 10, font: { size: 10 } } } }
+            }
+        });
     }
-
-    const ctxTrend = document.getElementById('chart-sales-trend').getContext('2d');
-    if (charts.salesTrend) charts.salesTrend.destroy();
-    charts.salesTrend = new Chart(ctxTrend, {
-        type: 'line',
-        data: {
-            labels: trendLabels,
-            datasets: [{
-                label: 'Flujo',
-                data: trendValues,
-                borderColor: '#4caf50',
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { 
-                    beginAtZero: true, 
-                    grace: '10%',
-                    grid: { color: chartGrid }, 
-                    ticks: { 
-                        color: chartDim,
-                        callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v
-                    } 
-                },
-                x: { ticks: { color: chartText, font: { size: 10 } } }
-            },
-            plugins: { 
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => ` $${ctx.raw.toLocaleString('es-CO')}`
-                    }
-                }
-            }
-        }
-    });
 }
 
 // Logic for Filter & Reset Buttons (Robust Delegation)
 document.addEventListener('click', (e) => {
+    // 0. Handle Employee Filter Modal Trigger Button
+    const empFilterTrigger = e.target.closest('#employee-filter-btn');
+    if (empFilterTrigger) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window.openEmployeeFilterModal === 'function') {
+            window.openEmployeeFilterModal();
+        }
+        return;
+    }
+
     // 1. Handle Reset Button (Opens Selective Modal)
     const resetBtn = e.target.closest('#reset-stats-btn');
     if (resetBtn) {
@@ -2814,11 +3078,12 @@ function handleSelectiveDelete(range) {
     showConfirm(
         `¿Estás seguro de que deseas borrar este periodo? Esta acción no se puede deshacer.`,
         () => {
+            const originalIds = new Set(orders.map(o => String(o.id || o.orderId)));
             if (range === 'today') {
                 orders = orders.filter(o => new Date(o.date).toDateString() !== now.toDateString());
                 msg = "Ventas de hoy borradas 🗓️";
             } else if (range === 'week') {
-                const weekAgo = new Date(); 
+                const weekAgo = new Date();
                 weekAgo.setDate(now.getDate() - 7);
                 orders = orders.filter(o => new Date(o.date) < weekAgo);
                 msg = "Ventas de la última semana borradas 📅";
@@ -2833,9 +3098,22 @@ function handleSelectiveDelete(range) {
                 msg = "Historial completo borrado 🗑️";
             }
 
+            // Determine which IDs were removed and clean up their assignments
+            const remainingIds = new Set(orders.map(o => String(o.id || o.orderId)));
+            const removedIds = [...originalIds].filter(id => !remainingIds.has(id));
+            if (removedIds.length > 0 && typeof getOrderAssignments === 'function') {
+                const assignments = getOrderAssignments();
+                let changed = false;
+                removedIds.forEach(id => {
+                    if (assignments[id]) { delete assignments[id]; changed = true; }
+                });
+                if (changed && typeof saveOrderAssignments === 'function') saveOrderAssignments(assignments);
+            }
+
             state.orders = orders;
             localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
-            renderStats('today');
+            if (typeof window.reRenderCurrentStats === 'function') window.reRenderCurrentStats();
+            if (typeof renderDriverDeliveriesSection === 'function') renderDriverDeliveriesSection();
             showToast(msg);
         },
         'Borrar Ahora',
@@ -2854,6 +3132,8 @@ function initCustomDropdowns() {
     const dropdowns = document.querySelectorAll('.custom-dropdown');
     
     dropdowns.forEach(dropdown => {
+        if (dropdown.id === 'manual-cat-dropdown') return;
+        if (dropdown.id === 'employee-filter-dropdown') return; // handled by populateEmployeeDropdown()
         const trigger = dropdown.querySelector('.dropdown-trigger');
         const menu = dropdown.querySelector('.dropdown-menu');
         const items = dropdown.querySelectorAll('li');
@@ -2911,6 +3191,7 @@ function initCustomDropdowns() {
                     window._activeEmpMonthValue = value;
                     window._activeEmpPresetValue = 'all';
                 }
+                // NOTE: employee-filter-dropdown is handled separately via populateEmployeeDropdown()
 
                 // Clear date input
                 const dateInput = document.getElementById('stats-date-filter');
@@ -2997,6 +3278,7 @@ if (myResetBtn) {
 
 // Re-init dropdowns after content load or render
 initCustomDropdowns();
+populateEmployeeDropdown();
 
 // --- Driver Metrics filter init ---
 const driverResetBtn = document.getElementById('driver-reset-stats-btn');
@@ -3227,18 +3509,26 @@ function renderMyMetrics(range = 'today', specificMonth = null, specificDate = n
     const salesEl = document.getElementById('my-stat-sales');
     if (salesEl) salesEl.textContent = '$' + filterStats.totalSales.toLocaleString('es-CO');
 
-    const commRateEl = document.getElementById('my-stat-comm-rate');
-    if (commRateEl) commRateEl.textContent = `Comisión (${filterStats.commissionRate}%)`;
+    const empRoleObj = (employeesList || []).find(e => e.name && e.name.toLowerCase() === activeEmpName.toLowerCase());
+    const isDriverUser = empRoleObj ? (empRoleObj.role === 'domiciliario' || empRoleObj.role === 'repartidor' || empRoleObj.role === 'delivery') : false;
 
+    const commRateEl = document.getElementById('my-stat-comm-rate');
     const commEl = document.getElementById('my-stat-commission');
-    if (commEl) commEl.textContent = '$' + filterStats.commission.toLocaleString('es-CO');
+
+    if (isDriverUser) {
+        if (commRateEl) commRateEl.textContent = 'Ganancias Domicilio';
+        if (commEl) commEl.textContent = '$' + (filterStats.totalDeliveryFee || 0).toLocaleString('es-CO');
+    } else {
+        if (commRateEl) commRateEl.textContent = `Comisión (${filterStats.commissionRate}%)`;
+        if (commEl) commEl.textContent = '$' + filterStats.commission.toLocaleString('es-CO');
+    }
 
     const ordersCountEl = document.getElementById('my-stat-orders-count');
     if (ordersCountEl) ordersCountEl.textContent = filterStats.acceptedOrders;
 
     const itemCounts = {};
     (filterStats.recentOrders || []).forEach(o => {
-        if (o.status === 'accepted') {
+        if (o.status === 'accepted' || o.status === 'completed' || !o.status) {
             (o.items || []).forEach(item => {
                 const name = item.name || 'Producto';
                 itemCounts[name] = (itemCounts[name] || 0) + (item.quantity || 1);
@@ -3279,7 +3569,7 @@ function renderMyMetrics(range = 'today', specificMonth = null, specificDate = n
         }
 
         (filterStats.recentOrders || []).forEach(o => {
-            if (o.status === 'accepted' && o.date) {
+            if ((o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered') && o.date) {
                 const dObj = new Date(o.date);
                 if (!isNaN(dObj.getTime())) {
                     const dKey = toLocalKey(dObj);
@@ -3378,7 +3668,7 @@ function renderMyMetrics(range = 'today', specificMonth = null, specificDate = n
 
         const allEmpOrders = getEmployeeStats(activeEmpName, { preset: 'all' }).recentOrders || [];
         allEmpOrders.forEach(o => {
-            if (o.status === 'accepted' && o.date) {
+            if ((o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered') && o.date) {
                 const d = new Date(o.date);
                 if (!isNaN(d.getTime()) && d.getFullYear() === now.getFullYear()) {
                     const m = d.getMonth();
@@ -3454,7 +3744,7 @@ function renderMyMetrics(range = 'today', specificMonth = null, specificDate = n
     // 4. Render History Table
     const tbody = document.getElementById('my-metrics-table-body');
     if (tbody) {
-        const acceptedList = (filterStats.recentOrders || []).filter(o => o.status === 'accepted');
+        const acceptedList = (filterStats.recentOrders || []).filter(o => o.status === 'accepted' || o.status === 'completed' || !o.status);
         if (acceptedList.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -3470,7 +3760,7 @@ function renderMyMetrics(range = 'today', specificMonth = null, specificDate = n
                 const orderComm = Math.round(total * (filterStats.commissionRate / 100));
                 const dateStr = o.date ? new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Reciente';
                 const clientOrTable = escapeHtml(o.table ? `Mesa ${o.table}` : (o.customer?.name || 'Cliente'));
-                const payMethod = escapeHtml(o.paymentMethod || o.payment || 'Efectivo');
+                const payMethod = escapeHtml(o.customer?.payment || o.paymentMethod || o.payment || 'Efectivo');
                 const isTransf = payMethod.toLowerCase().includes('transf') || payMethod.toLowerCase().includes('nequi');
                 const badgeBg = isTransf ? 'rgba(33, 150, 243, 0.15)' : 'rgba(76, 175, 80, 0.15)';
                 const badgeColor = isTransf ? '#2196f3' : '#4caf50';
@@ -3506,7 +3796,7 @@ function renderDriverMetrics(range = 'today', specificMonth = null, specificDate
     const driverName = getCurrentActiveEmployeeName() || '';
     const isLight = document.body.classList.contains('light-mode');
     const chartText = isLight ? '#0f172a' : '#ffffff';
-    const chartGrid = isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.08)';
+    const chartGrid = isLight ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.08)';
 
     // Get all completed delivery orders assigned to this driver
     const allOrders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
@@ -3525,12 +3815,18 @@ function renderDriverMetrics(range = 'today', specificMonth = null, specificDate
     let deliveries = allOrders.filter(o => {
         const isDelivery = (o.deliveryType === 'delivery' || o.type === 'domicilio' || (o.address && typeof o.address === 'string' && o.address.length > 2) || (o.deliveryFee && o.deliveryFee > 0) || (o.customer?.deliveryType === 'delivery'));
         const isCompleted = (o.status === 'completed' || o.status === 'accepted');
-        // Check attendedBy or deliveredBy matching driver name
-        const attended = (o.attendedBy || o.deliveredBy || o.customer?.attendedBy || '').toLowerCase().trim();
+        const att = (o.attendedBy || '').toLowerCase().trim();
+        const del = (o.deliveredBy || '').toLowerCase().trim();
+        const custAtt = (o.customer?.attendedBy || '').toLowerCase().trim();
         const cleanDriver = driverName.toLowerCase().trim();
         const firstName = cleanDriver.split(' ')[0];
-        // Bug fix: byDriver was declared but never applied — now actually filtering by driver
-        const byDriver = !cleanDriver || attended.includes(cleanDriver) || (firstName && attended.includes(firstName));
+        
+        const matches = (str) => {
+            if (!str) return false;
+            return str.includes(cleanDriver) || (firstName && str.includes(firstName));
+        };
+
+        const byDriver = !cleanDriver || matches(att) || matches(del) || matches(custAtt);
         return isDelivery && isCompleted && byDriver;
     });
 
@@ -3627,7 +3923,9 @@ function renderDriverMetrics(range = 'today', specificMonth = null, specificDate
         const trendCounts = sortedDates.map(k => dateMap[k].count);
         const trendValues = sortedDates.map(k => dateMap[k].value);
         const maxVal = Math.max(...trendValues, 0);
-        const suggestedMax = maxVal > 0 ? Math.ceil(maxVal * 1.25) : 100000;
+        const maxCount = Math.max(...trendCounts, 0);
+        const suggestedMax = maxVal > 0 ? Math.ceil(maxVal * 1.25) : 10000;
+        const suggestedMaxCount = maxCount > 0 ? Math.ceil(maxCount * 1.25) : 5;
 
         if (charts.driverDeliveriesTrend) charts.driverDeliveriesTrend.destroy();
         charts.driverDeliveriesTrend = new Chart(ctxTrend.getContext('2d'), {
@@ -3648,7 +3946,7 @@ function renderDriverMetrics(range = 'today', specificMonth = null, specificDate
                 scales: {
                     x: { ticks: { color: chartText, font: { weight: 'bold' } }, grid: { color: chartGrid } },
                     y: { position: 'left', beginAtZero: true, suggestedMax, ticks: { color: chartText, font: { weight: 'bold' }, callback: v => v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + v }, grid: { color: chartGrid } },
-                    y1: { position: 'right', beginAtZero: true, ticks: { color: '#10b981', font: { weight: 'bold' }, stepSize: 1 }, grid: { drawOnChartArea: false } }
+                    y1: { position: 'right', beginAtZero: true, suggestedMax: suggestedMaxCount, ticks: { color: '#10b981', font: { weight: 'bold' }, stepSize: 1 }, grid: { drawOnChartArea: false } }
                 }
             }
         });
@@ -3674,7 +3972,7 @@ function renderDriverMetrics(range = 'today', specificMonth = null, specificDate
             }
         });
         const maxMonthVal = Math.max(...monthlyValues, 0);
-        const suggestedMaxMonth = maxMonthVal > 0 ? Math.ceil(maxMonthVal * 1.25) : 100000;
+        const suggestedMaxMonth = maxMonthVal > 0 ? Math.ceil(maxMonthVal * 1.25) : 10000;
 
         if (charts.driverMonthlyValue) charts.driverMonthlyValue.destroy();
         charts.driverMonthlyValue = new Chart(ctxMonth.getContext('2d'), {
@@ -3766,19 +4064,226 @@ window.reRenderCurrentStats = function() {
     const activeMonthLi = document.querySelector('#month-dropdown li.active');
     const dateInput = document.getElementById('stats-date-filter');
     const activeBtn = document.querySelector('.filter-btn.active');
+    const empFilter = window._activeEmployeeFilter || null;
 
     if (dateInput && dateInput.value) {
-        renderStats(null, null, dateInput.value);
+        renderStats(null, null, dateInput.value, empFilter);
     } else if (activeMonthLi && activeMonthLi.dataset.value !== "") {
-        renderStats('month', activeMonthLi.dataset.value);
+        renderStats('month', activeMonthLi.dataset.value, null, empFilter);
     } else if (activeRangeLi && activeRangeLi.dataset.value) {
-        renderStats(activeRangeLi.dataset.value);
+        renderStats(activeRangeLi.dataset.value, null, null, empFilter);
     } else if (activeBtn) {
-        renderStats(activeBtn.dataset.range);
+        renderStats(activeBtn.dataset.range, null, null, empFilter);
     } else {
-        renderStats('today');
+        renderStats('today', null, null, empFilter);
+    }
+
+    // Refresh employee grid & table
+    if (typeof renderEmployeesGrid === 'function') renderEmployeesGrid();
+    if (typeof renderEmployeesTable === 'function') renderEmployeesTable();
+
+    // Refresh My Metrics tab if visible
+    if (typeof renderMyMetrics === 'function') {
+        const myMetricsTab = document.getElementById('my-metrics-tab');
+        if (myMetricsTab && !myMetricsTab.classList.contains('hidden')) {
+            renderMyMetrics('today');
+        }
+    }
+
+    // Refresh active Employee Profile Modal if open
+    if (window._activeProfileEmpId && typeof renderEmpProfileOrders === 'function') {
+        renderEmpProfileOrders(window._activeProfileEmpId);
     }
 };
+
+// --- Modal Centralizado de Selección de Personal por Rol ---
+let _selectedModalEmpName = null;
+let _selectedModalRole = 'all';
+
+window.openEmployeeFilterModal = function() {
+    const modal = document.getElementById('filter-employee-modal');
+    if (!modal) return;
+    _selectedModalEmpName = window._activeEmployeeFilter || null;
+    _selectedModalRole = 'all';
+    const pillsContainer = document.getElementById('emp-role-pills-container');
+    if (pillsContainer) {
+        pillsContainer.querySelectorAll('.emp-role-pill').forEach(p => {
+            p.classList.toggle('active', p.dataset.role === 'all');
+        });
+    }
+    renderEmployeeFilterGrid('all');
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+};
+
+function initEmployeeFilterModal() {
+    const filterBtn = document.getElementById('employee-filter-btn');
+    const modal = document.getElementById('filter-employee-modal');
+    const closeBtn = document.getElementById('close-emp-filter-modal-btn');
+    const applyBtn = document.getElementById('apply-emp-filter-modal-btn');
+    const resetBtn = document.getElementById('reset-emp-filter-modal-btn');
+    const pillsContainer = document.getElementById('emp-role-pills-container');
+
+    if (!modal) return;
+
+    if (filterBtn) {
+        filterBtn.onclick = (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            window.openEmployeeFilterModal();
+        };
+    }
+
+    // Close Modal
+    if (closeBtn) {
+        closeBtn.onclick = () => modal.classList.add('hidden');
+    }
+
+    // Role Pills Click
+    if (pillsContainer) {
+        pillsContainer.querySelectorAll('.emp-role-pill').forEach(pill => {
+            pill.onclick = () => {
+                pillsContainer.querySelectorAll('.emp-role-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                _selectedModalRole = pill.dataset.role || 'all';
+                renderEmployeeFilterGrid(_selectedModalRole);
+            };
+        });
+    }
+
+    // Apply Filter Button
+    if (applyBtn) {
+        applyBtn.onclick = () => {
+            window._activeEmployeeFilter = _selectedModalEmpName || null;
+            updateEmployeeFilterTriggerButton();
+            modal.classList.add('hidden');
+            window.reRenderCurrentStats();
+        };
+    }
+
+    // Reset Button
+    if (resetBtn) {
+        resetBtn.onclick = () => {
+            _selectedModalEmpName = null;
+            window._activeEmployeeFilter = null;
+            updateEmployeeFilterTriggerButton();
+            modal.classList.add('hidden');
+            window.reRenderCurrentStats();
+        };
+    }
+
+    updateEmployeeFilterTriggerButton();
+}
+
+function updateEmployeeFilterTriggerButton() {
+    const btn = document.getElementById('employee-filter-btn');
+    const label = document.getElementById('current-employee-filter');
+    if (!btn || !label) return;
+
+    const val = window._activeEmployeeFilter;
+    if (val) {
+        const emp = (employeesList || []).find(e => e.name && e.name.toLowerCase() === val.toLowerCase().trim());
+        const roleLabel = emp?.role ? ` (${emp.role})` : '';
+        const shortName = formatShortName(val);
+        label.textContent = `Personal: ${shortName}${roleLabel}`;
+        btn.classList.add('active-trigger');
+    } else {
+        label.textContent = 'Personal: Todos';
+        btn.classList.remove('active-trigger');
+    }
+}
+
+function renderEmployeeFilterGrid(selectedRole = 'all') {
+    const grid = document.getElementById('emp-modal-cards-grid');
+    if (!grid) return;
+
+    let emps = [];
+    try {
+        emps = JSON.parse(localStorage.getItem('streetfeed_employees_cache') || '[]');
+    } catch(e) {}
+    if (!emps.length && Array.isArray(employeesList)) {
+        emps = employeesList;
+    }
+
+    // Filter by role if not 'all'
+    if (selectedRole !== 'all') {
+        emps = emps.filter(e => {
+            const role = (e.role || '').toLowerCase();
+            if (selectedRole === 'domiciliario') return role === 'domiciliario' || role === 'repartidor' || role === 'delivery';
+            if (selectedRole === 'mesero') return role === 'mesero' || role === 'atencion';
+            if (selectedRole === 'cajero') return role === 'cajero' || role === 'caja';
+            if (selectedRole === 'cocina') return role === 'cocinero' || role === 'cocina' || role === 'chef';
+            return role === selectedRole;
+        });
+    }
+
+    // Deduplicate employees by name
+    const seen = new Set();
+    const uniqueEmps = [];
+    emps.forEach(e => {
+        if (!e.name || seen.has(e.name.toLowerCase())) return;
+        seen.add(e.name.toLowerCase());
+        uniqueEmps.push(e);
+    });
+
+    let html = `
+        <div class="emp-filter-card ${_selectedModalEmpName === null ? 'selected' : ''}" onclick="selectModalEmpCard(null)">
+            <div class="emp-filter-card-avatar" style="background: rgba(247, 147, 30, 0.2); color: var(--theme-accent);">🌐</div>
+            <div style="flex: 1; overflow: hidden;">
+                <div style="font-size: 0.85rem; font-weight: 800; color: var(--text);">Todos los Trabajadores</div>
+                <div style="font-size: 0.72rem; color: var(--text-dim);">Vista global de la tienda</div>
+            </div>
+        </div>
+    `;
+
+    if (uniqueEmps.length === 0) {
+        html += `<div style="grid-column: 1 / -1; padding: 1.5rem; text-align: center; color: var(--text-dim); font-size: 0.82rem;">No hay personal registrado en esta categoría.</div>`;
+    } else {
+        uniqueEmps.forEach(e => {
+            const roleIcon = e.role === 'domiciliario' ? '🛵'
+                : e.role === 'cajero' ? '💰'
+                : e.role === 'mesero' ? '🍽️'
+                : e.role === 'cocinero' ? '👨‍🍳'
+                : '👤';
+            const roleColor = e.role === 'domiciliario' ? '#10b981'
+                : e.role === 'cajero' ? '#3b82f6'
+                : e.role === 'mesero' ? '#f59e0b'
+                : '#ec4899';
+            const isSelected = _selectedModalEmpName && _selectedModalEmpName.toLowerCase() === e.name.toLowerCase();
+            const formattedName = e.name.replace(/\b\w/g, l => l.toUpperCase());
+            const initials = formattedName.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+            html += `
+                <div class="emp-filter-card ${isSelected ? 'selected' : ''}" onclick="selectModalEmpCard('${e.name.replace(/'/g, "\\'")}')">
+                    <div class="emp-filter-card-avatar" style="background: ${roleColor}22; color: ${roleColor};">
+                        ${initials}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.85rem; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${formattedName}
+                        </div>
+                        <div style="font-size: 0.72rem; color: ${roleColor}; font-weight: 700;">
+                            ${roleIcon} ${(e.role || 'Empleado').toUpperCase()}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    grid.innerHTML = html;
+}
+
+window.selectModalEmpCard = function(empName) {
+    _selectedModalEmpName = empName;
+    const rolePills = document.getElementById('emp-role-pills-container');
+    const currentRole = rolePills?.querySelector('.emp-role-pill.active')?.dataset.role || 'all';
+    renderEmployeeFilterGrid(currentRole);
+};
+
+// Aliases for compatibility
+function populateEmployeeDropdown() {
+    initEmployeeFilterModal();
+}
 
 window.openMyMetricsModal = function() {
     const navBtn = document.getElementById('nav-btn-my-metrics');
@@ -3847,7 +4352,9 @@ window.renderOrders = function() {
     let unpaid = orders.filter(o => o.status === 'dispatched').reverse();
     let history = orders.filter(o => o.status === 'accepted' || o.status === 'cancelled' || o.status === 'completed').reverse();
 
-    if (window._prevIncomingCount !== undefined && incoming.length > window._prevIncomingCount) {
+    const isDriverRole = (typeof currentEmployeeRole !== 'undefined' && currentEmployeeRole === 'domiciliario');
+
+    if (!isDriverRole && window._prevIncomingCount !== undefined && incoming.length > window._prevIncomingCount) {
         if (typeof window.playNewOrderChime === 'function') {
             window.playNewOrderChime();
         }
@@ -3865,9 +4372,9 @@ window.renderOrders = function() {
         return isDeliv;
     });
     const currentDriverCount = dispatchedDeliveries.length;
-    if (window._prevDriverDispatchCount !== undefined && currentDriverCount > window._prevDriverDispatchCount) {
-        if (typeof window.playNewOrderChime === 'function') {
-            window.playNewOrderChime();
+    if (isDriverRole && window._prevDriverDispatchCount !== undefined && currentDriverCount > window._prevDriverDispatchCount) {
+        if (typeof window.playDispatchChime === 'function') {
+            window.playDispatchChime();
         }
         // Show notification for domiciliario
         if (typeof showAdminNotification === 'function') {
@@ -3876,18 +4383,25 @@ window.renderOrders = function() {
     }
     window._prevDriverDispatchCount = currentDriverCount;
 
-    // Filter History by Scope (Todos vs Mis Pedidos)
+    // Filter History by Scope (Todos vs Mis Pedidos / Mis Domis)
     if (window.historyScope === 'mine') {
         const activeName = getCurrentActiveEmployeeName().toLowerCase().trim();
         const firstName = activeName.split(' ')[0];
         if (activeName) {
             history = history.filter(o => {
-                const attended = (o.attendedBy || o.deliveredBy || o.customer?.attendedBy || '').toLowerCase().trim();
-                if (!attended) return false;
-                if (activeName.includes('propietario') || activeName.includes('administrador')) {
-                    return attended.includes('propietario') || attended.includes('administrador') || (firstName && attended.includes(firstName));
-                }
-                return attended.includes(activeName) || (firstName && attended.includes(firstName));
+                const att = (o.attendedBy || '').toLowerCase().trim();
+                const del = (o.deliveredBy || '').toLowerCase().trim();
+                const custAtt = (o.customer?.attendedBy || '').toLowerCase().trim();
+                
+                const matches = (str) => {
+                    if (!str) return false;
+                    if (activeName.includes('propietario') || activeName.includes('administrador')) {
+                        return str.includes('propietario') || str.includes('administrador') || (firstName && str.includes(firstName));
+                    }
+                    return str.includes(activeName) || (firstName && str.includes(firstName));
+                };
+
+                return matches(att) || matches(del) || matches(custAtt);
             });
         }
     }
@@ -4064,13 +4578,8 @@ function createOrderCard(order) {
 
     const printBtn = `<button onclick="window.printThermalTicket('${order.id}')" style="width: ${isHistory ? '34px' : '44px'}; height: ${isHistory ? '34px' : '44px'}; border-radius: ${isHistory ? '8px' : '12px'}; background: rgba(var(--primary-rgb, 247, 147, 30), 0.08); border: 1px solid rgba(var(--primary-rgb, 247, 147, 30), 0.25); color: var(--theme-accent); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Imprimir Ticket Térmico POS"><i data-lucide="printer" style="width: ${isHistory ? '16px' : '20px'}; height: ${isHistory ? '16px' : '20px'};"></i></button>`;
 
-    let gridCols = isHistory
-        ? 'auto 175px 190px 130px auto'
-        : '240px 175px 190px 130px auto';
-
-    if (isPreparing || isUnpaid) {
-        gridCols = '240px 175px 190px 110px auto';
-    }
+    // Columnas fijas idénticas para TODOS los estados → alineación perfecta
+    const gridCols = '220px 175px auto 130px auto';
 
     const totalDisplay = isCocina
         ? `<span style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(245,158,11,0.12); padding: 0.25rem 0.5rem; border-radius: 6px;">Comanda</span>`
@@ -4109,9 +4618,9 @@ function createOrderCard(order) {
                     </button>
                 </div>`;
         } else {
-            const statusLabel = order.status === 'accepted' ? 'COBRADO' : 'CANCELADO';
-            const statusBg    = order.status === 'accepted' ? '#4caf50' : '#d32f2f';
-            const statusShadow = order.status === 'accepted' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(211, 47, 47, 0.2)';
+            const statusLabel = order.status === 'cancelled' ? 'CANCELADO' : 'ENTREGADO';
+            const statusBg    = order.status === 'cancelled' ? '#d32f2f' : '#4caf50';
+            const statusShadow = order.status === 'cancelled' ? 'rgba(211, 47, 47, 0.2)' : 'rgba(76, 175, 80, 0.2)';
             actionsHtml = `
                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
                     <div style="padding: 0.3rem 0.6rem; border-radius: 8px; background: ${statusBg}; box-shadow: 0 4px 10px ${statusShadow}; text-align: center; white-space: nowrap;">
@@ -4150,9 +4659,9 @@ function createOrderCard(order) {
                     </button>
                 </div>`;
         } else {
-            const statusLabel = order.status === 'accepted' ? 'COBRADO' : 'CANCELADO';
-            const statusBg    = order.status === 'accepted' ? '#4caf50' : '#d32f2f';
-            const statusShadow = order.status === 'accepted' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(211, 47, 47, 0.2)';
+            const statusLabel = order.status === 'cancelled' ? 'CANCELADO' : 'ENTREGADO';
+            const statusBg    = order.status === 'cancelled' ? '#d32f2f' : '#4caf50';
+            const statusShadow = order.status === 'cancelled' ? 'rgba(211, 47, 47, 0.2)' : 'rgba(76, 175, 80, 0.2)';
             actionsHtml = `
                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
                     <div style="padding: 0.3rem 0.6rem; border-radius: 8px; background: ${statusBg}; box-shadow: 0 4px 10px ${statusShadow}; text-align: center; white-space: nowrap;">
@@ -4198,9 +4707,9 @@ function createOrderCard(order) {
                 <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
             </button>`;
     } else {
-        const statusLabel = order.status === 'accepted' ? 'COBRADO' : 'CANCELADO';
-        const statusBg    = order.status === 'accepted' ? '#4caf50' : '#d32f2f';
-        const statusShadow = order.status === 'accepted' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(211, 47, 47, 0.2)';
+        const statusLabel = order.status === 'cancelled' ? 'CANCELADO' : 'ENTREGADO';
+        const statusBg    = order.status === 'cancelled' ? '#d32f2f' : '#4caf50';
+        const statusShadow = order.status === 'cancelled' ? 'rgba(211, 47, 47, 0.2)' : 'rgba(76, 175, 80, 0.2)';
         const deleteBtn = window.isCleaningMode ? `
             <button onclick="window.deleteHistoryOrder('${order.id}')" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(211, 47, 47, 0.15); border: 1px solid rgba(211, 47, 47, 0.3); color: #ff5252; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Eliminar este pedido">
                 <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
@@ -4224,45 +4733,37 @@ function createOrderCard(order) {
         </div>` : '';
 
     return `
-        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="position: relative; display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 1rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); min-height: ${isHistory ? '55px' : '85px'}; overflow: hidden; padding-right: ${isHistory ? '0.8rem' : '1.2rem'};">
+        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="position: relative; display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 0.75rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); height: 72px; overflow: hidden; padding-right: ${isHistory ? '0.8rem' : '1.2rem'};">
 
             <!-- 1. Identidad -->
-            <div style="padding: 0 0.4rem 0 1.5rem; display: flex; flex-direction: ${isHistory ? 'row' : 'column'}; align-items: ${isHistory ? 'center' : 'flex-start'}; justify-content: flex-start; gap: ${isHistory ? '1.2rem' : '0.2rem'}; height: 100%; min-width: ${isHistory ? '120px' : '220px'}; flex-shrink: 0;">
-                <div style="display: flex; align-items: center; gap: ${isHistory ? '0.6rem' : '0.8rem'}; overflow: hidden; width: ${isHistory ? 'auto' : '100%'}; flex-shrink: 0;">
-                    <div style="width: 85px; flex-shrink: 0;">
-                        <span style="font-size: 0.65rem; color: var(--text-dim); font-weight: 800; background: rgba(var(--text-rgb), 0.08); padding: 0.15rem 0.4rem; border-radius: 4px; display: inline-block; width: 100%; text-align: center;">#${order.id}</span>
-                    </div>
-                    <div style="${isHistory ? 'width: 100px; overflow: hidden; flex-shrink: 0;' : 'flex: 1; overflow: hidden;'}">
-                        <h4 style="margin: 0; font-size: ${isHistory ? '0.85rem' : '1.1rem'}; font-weight: 800; color: var(--text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${isHistory ? (order.customer?.name || 'Cliente').split(' ')[0] : (order.customer?.name || 'Cliente')}</h4>
-                    </div>
+            <div style="padding: 0 0.5rem 0 1.2rem; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.22rem; height: 100%; width: 220px; overflow: hidden; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%; overflow: hidden;">
+                    <span style="font-size: 0.62rem; color: var(--text-dim); font-weight: 800; background: rgba(var(--text-rgb), 0.08); padding: 0.12rem 0.35rem; border-radius: 4px; flex-shrink: 0; white-space: nowrap;">#${order.id}</span>
+                    <h4 style="margin: 0; font-size: 0.93rem; font-weight: 800; color: var(--text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${order.customer?.name || 'Cliente'}</h4>
                 </div>
-                ${isHistory ? `
-                    <span class="history-time-cell" style="font-size: 0.95rem; color: var(--text); font-weight: 800; opacity: 1; white-space: nowrap; flex-shrink: 0;">${date}</span>
-                ` : `
-                    <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-dim); font-size: 0.85rem;">
-                        <i data-lucide="clock" style="width: 13px; height: 13px; color: var(--theme-accent);"></i>
-                        <span style="font-weight: 700; color: var(--text-dim);">${date}</span>
-                    </div>
-                `}
+                <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem;">
+                    <i data-lucide="clock" style="width: 11px; height: 11px; color: var(--theme-accent); flex-shrink: 0;"></i>
+                    <span style="font-weight: 600; color: var(--text-dim); white-space: nowrap;">${date}</span>
+                </div>
             </div>
 
             <!-- 2. Ubicación -->
-            <div class="order-location-cell" style="display: flex; align-items: center; gap: 0.6rem; border-left: 1px solid var(--glass-border); padding: 0 0.3rem 0 0.6rem; width: 175px; flex-shrink: 0; overflow: hidden;">
-                <div style="color: var(--theme-accent); flex-shrink: 0;"><i data-lucide="map-pin" style="width: 14px;"></i></div>
-                <span style="font-weight: 700; color: var(--text); font-size: 0.8rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${order.customer?.address || 'Mesa 1'}</span>
+            <div class="order-location-cell" style="display: flex; align-items: center; gap: 0.5rem; border-left: 1px solid var(--glass-border); padding: 0 0.4rem 0 0.7rem; width: 175px; flex-shrink: 0; overflow: hidden;">
+                <i data-lucide="map-pin" style="width: 13px; color: var(--theme-accent); flex-shrink: 0;"></i>
+                <span style="font-weight: 700; color: var(--text); font-size: 0.78rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${order.customer?.address || 'Mesa 1'}</span>
             </div>
 
             <!-- 3. Pedido (Productos + Pago) -->
-            <div style="display: flex; align-items: center; gap: 0.8rem; border-left: 1px solid var(--glass-border); padding: 0 1rem; width: 100%; flex-shrink: 0;">
-                <div style="display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
-                    <i data-lucide="shopping-bag" style="width: 13px; color: var(--theme-accent);"></i>
-                    <span style="font-weight: 800; font-size: 0.8rem; color: var(--text);">${order.items.length} Product.</span>
+            <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem; overflow: hidden;">
+                <div style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; flex-shrink: 0;">
+                    <i data-lucide="shopping-bag" style="width: 12px; color: var(--theme-accent);"></i>
+                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--text);">${order.items.length} Prod.</span>
                 </div>
                 ${paymentBadge}
             </div>
 
             <!-- 4. Total -->
-            <div class="order-total-cell" style="display: flex; align-items: center; justify-content: flex-start; border-left: ${isHistory ? '1px solid var(--glass-border)' : 'none'}; padding: 0 0.8rem; align-self: stretch; width: 130px; flex-shrink: 0;">
+            <div class="order-total-cell" style="display: flex; align-items: center; justify-content: flex-start; border-left: 1px solid var(--glass-border); padding: 0 0.8rem; align-self: stretch; width: 130px; flex-shrink: 0;">
                 ${totalDisplay}
             </div>
 
@@ -4286,7 +4787,7 @@ window.updateOrderStatus = function(id, newStatus) {
         confirmColor = '#4caf50';
     } else if (newStatus === 'dispatched') {
         actionMsg = '¿Marcar este pedido como despachado por cocina y pasarlo a Por Cobrar?';
-        confirmBtn = 'Despachar Pedido';
+        confirmBtn = 'Despachar';
         confirmColor = '#f59e0b';
     } else if (newStatus === 'accepted') {
         actionMsg = '¿Registrar el cobro y finalizar la cuenta de este pedido?';
@@ -4311,17 +4812,36 @@ window.updateOrderStatus = function(id, newStatus) {
             orders[orderIndex].status = newStatus;
             state.orders = orders;
             localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
-            
+
+            // If cancelled: clean up any active driver assignment for this order
+            if (newStatus === 'cancelled') {
+                const assignments = getOrderAssignments();
+                if (assignments[String(id)]) {
+                    // Stop GPS if driver was tracking this order
+                    if (typeof activeGpsOrderId !== 'undefined' && activeGpsOrderId === String(id)) {
+                        if (typeof activeWatchPositionId !== 'undefined' && activeWatchPositionId !== null) {
+                            navigator.geolocation.clearWatch(activeWatchPositionId);
+                            activeWatchPositionId = null;
+                        }
+                        activeGpsOrderId = null;
+                        if (typeof updateGpsStatusPill === 'function') updateGpsStatusPill(false);
+                    }
+                    delete assignments[String(id)];
+                    if (typeof saveOrderAssignments === 'function') saveOrderAssignments(assignments);
+                }
+                if (typeof renderDriverDeliveriesSection === 'function') renderDriverDeliveriesSection();
+            }
+
             let toastMsg = '✅ Pedido actualizado';
             if (newStatus === 'accepted') toastMsg = '💰 Cobro registrado y cuenta cerrada';
             if (newStatus === 'dispatched') toastMsg = '🔔 Pedido despachado por cocina';
             if (newStatus === 'confirmed') toastMsg = '🍳 Pedido en preparación';
             if (newStatus === 'cancelled') toastMsg = '⚠️ Pedido cancelado';
-            
+
             showToast(toastMsg);
-            
+
             window.renderOrders();
-            if (typeof renderStats === 'function') renderStats();
+            if (typeof window.reRenderCurrentStats === 'function') window.reRenderCurrentStats();
 
             // Impresión automática al aceptar pedido para comanda de cocina
             if (newStatus === 'confirmed' && typeof window.printThermalTicket === 'function') {
@@ -4364,6 +4884,51 @@ window.playNewOrderChime = function() {
         });
     } catch (e) {
         console.warn("Audio chime error:", e);
+    }
+};
+
+window.playDispatchChime = function() {
+    if (!window.isSoundEnabled()) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+        const now = ctx.currentTime;
+
+        // 1. Barrido de frecuencia ascendente estilo despegue de avión / Swoosh (140Hz -> 1500Hz)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(1500, now + 0.32);
+
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.38, now + 0.16);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+
+        // 2. Tono brillante de llegada estilo iOS Mail / Avión en el aire (G6 1567.98Hz)
+        const pingOsc = ctx.createOscillator();
+        const pingGain = ctx.createGain();
+        pingOsc.type = 'sine';
+        pingOsc.frequency.setValueAtTime(1567.98, now + 0.26);
+        pingGain.gain.setValueAtTime(0.001, now + 0.26);
+        pingGain.gain.linearRampToValueAtTime(0.3, now + 0.30);
+        pingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+
+        pingOsc.connect(pingGain);
+        pingGain.connect(ctx.destination);
+        pingOsc.start(now + 0.26);
+        pingOsc.stop(now + 0.75);
+    } catch (e) {
+        console.warn("Dispatch audio chime error:", e);
     }
 };
 
@@ -4560,9 +5125,65 @@ window.showOrderDetails = function(id) {
     if (paymentEl) paymentEl.textContent = order.customer?.payment || 'No especificado';
 
     const waiterEl = document.getElementById('detail-customer-waiter');
+    const waiterRow = document.getElementById('detail-customer-waiter-row');
     if (waiterEl) {
-        const attendedBy = order.attendedBy || order.customer?.attendedBy || (order.isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)');
-        waiterEl.textContent = attendedBy;
+        const rMap = {
+            'mesero': 'Mesero', 'cajero': 'Cajero', 'cocina': 'Cocina',
+            'domiciliario': 'Domiciliario', 'admin': 'Administrador',
+            'administrador': 'Administrador', 'owner': 'Propietario', 'propietario': 'Propietario'
+        };
+
+        // Helper: given a raw attendedBy string like "Evelio (Administrador)", resolve the real label
+        const resolveLabel = (raw) => {
+            if (!raw) return null;
+            const bareName = raw.replace(/\s*\([^)]*\)/, '').trim();
+            if (!bareName) return raw;
+            let emps = (Array.isArray(employeesList) && employeesList.length > 0)
+                ? employeesList
+                : [];
+            if (emps.length === 0) {
+                try { emps = JSON.parse(localStorage.getItem('streetfeed_employees_cache') || '[]'); } catch(e) {}
+            }
+            const liveEmp = emps.find(e => (e.name || '').toLowerCase().trim() === bareName.toLowerCase());
+            if (liveEmp && liveEmp.role) {
+                const roleTitle = rMap[liveEmp.role.toLowerCase()] || 'Colaborador';
+                return `${liveEmp.name} (${roleTitle})`;
+            }
+            return raw;
+        };
+
+        // Extract bare name for same-person comparison
+        const bareAttended = (order.attendedBy || '').replace(/\s*\([^)]*\)/, '').trim();
+        const bareDelivered = (order.deliveredBy || '').replace(/\s*\([^)]*\)/, '').trim();
+        const isSamePerson = bareAttended && bareDelivered && bareAttended.toLowerCase() === bareDelivered.toLowerCase();
+
+        if (isSamePerson) {
+            // Same person attended and delivered — hide this row (it will show in Entregado por)
+            if (waiterRow) waiterRow.style.display = 'none';
+        } else {
+            if (waiterRow) waiterRow.style.display = 'flex';
+            const rawAttended = order.attendedBy || order.customer?.attendedBy;
+            const label = rawAttended
+                ? resolveLabel(rawAttended)
+                : (order.isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)');
+            waiterEl.textContent = label;
+        }
+    }
+
+    const driverRow = document.getElementById('detail-customer-driver-row');
+    const driverEl = document.getElementById('detail-customer-driver');
+    if (driverRow && driverEl) {
+        const isDelivery = order.customer?.deliveryType === 'delivery';
+        const assignments = (typeof getOrderAssignments === 'function') ? getOrderAssignments() : {};
+        const rawDriver = order.deliveredBy || assignments[order.id || order.orderId]?.driverName;
+        const driverName = (rawDriver && rawDriver !== 'Domiciliario') ? rawDriver : null;
+
+        if (isDelivery && driverName) {
+            driverEl.textContent = driverName;
+            driverRow.style.display = 'flex';
+        } else {
+            driverRow.style.display = 'none';
+        }
     }
     
     const delFeeEl = document.getElementById('detail-customer-delivery-fee');
@@ -4656,8 +5277,17 @@ window.deleteHistoryOrder = function(id) {
                 orders = orders.filter(o => String(o.id) !== String(id));
                 state.orders = orders;
                 localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+                // Also clean up any stale assignment for this deleted order
+                if (typeof getOrderAssignments === 'function' && typeof saveOrderAssignments === 'function') {
+                    const assignments = getOrderAssignments();
+                    if (assignments[String(id)]) {
+                        delete assignments[String(id)];
+                        saveOrderAssignments(assignments);
+                    }
+                }
                 window.renderOrders();
                 if (typeof renderStats === 'function') renderStats();
+                if (typeof renderDriverDeliveriesSection === 'function') renderDriverDeliveriesSection();
                 showToast("Pedido eliminado 🗑️");
             },
             'Eliminar',
@@ -4672,12 +5302,24 @@ window.clearAllHistory = function() {
             "¿Estás seguro de que quieres BORRAR TODO el historial de pedidos?",
             () => {
                 let orders = getOrders();
+                // Keep track of IDs being removed to clean up assignments
+                const removedIds = new Set(orders.filter(o => o.status !== 'pending').map(o => String(o.id || o.orderId)));
                 // Mantener solo los pendientes
                 orders = orders.filter(o => o.status === 'pending');
                 state.orders = orders;
                 localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+                // Clean up any stale assignments for deleted orders
+                if (typeof getOrderAssignments === 'function' && typeof saveOrderAssignments === 'function') {
+                    const assignments = getOrderAssignments();
+                    let changed = false;
+                    removedIds.forEach(id => {
+                        if (assignments[id]) { delete assignments[id]; changed = true; }
+                    });
+                    if (changed) saveOrderAssignments(assignments);
+                }
                 window.renderOrders();
                 if (typeof renderStats === 'function') renderStats();
+                if (typeof renderDriverDeliveriesSection === 'function') renderDriverDeliveriesSection();
                 showToast("Historial vaciado 🧹");
             },
             'Vaciar Ahora',
@@ -4878,7 +5520,7 @@ function generatePDF(monthIdx) {
         o.customer?.name || '---',
         o.attendedBy || o.customer?.attendedBy || (o.isManual ? 'Propietario' : 'Menú Digital'),
         o.customer?.payment?.toUpperCase() || '---',
-        o.status === 'accepted' ? 'ACEPTADO' : 'CANCELADO',
+        o.status === 'accepted' ? 'COBRADO' : (o.status === 'completed' ? 'ENTREGADO' : 'CANCELADO'),
         `$${o.total.toLocaleString()}`
     ]);
 
@@ -5070,6 +5712,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof window.reRenderCurrentMyMetrics === 'function') {
                     window.reRenderCurrentMyMetrics();
                 }
+                if (typeof renderDriverMetrics === 'function') {
+                    renderDriverMetrics();
+                }
                 if (typeof renderExpenses === 'function') {
                     renderExpenses();
                 }
@@ -5140,12 +5785,15 @@ window.openOrderSettingsModal = function(initialTab = 'delivery') {
     if (!modal) return;
     const currentFee = (typeof state !== 'undefined' && state.config && state.config.deliveryFee !== undefined) ? state.config.deliveryFee : 5000;
     const currentTables = (typeof state !== 'undefined' && state.config && state.config.tableCount !== undefined) ? state.config.tableCount : 10;
+    const currentCity = (typeof state !== 'undefined' && state.config && state.config.businessCity) ? state.config.businessCity : 'Riohacha';
     
     const priceInput = document.getElementById('config-delivery-price');
     const tableInput = document.getElementById('config-table-count');
+    const cityInput  = document.getElementById('config-business-city');
     
     if (priceInput) priceInput.value = currentFee.toLocaleString('es-CO');
     if (tableInput) tableInput.value = currentTables;
+    if (cityInput)  cityInput.value  = currentCity;
 
     window.switchOrderSettingsTab(initialTab);
     modal.classList.remove('hidden');
@@ -5161,12 +5809,17 @@ document.addEventListener('click', (e) => {
         const priceStr = document.getElementById('config-delivery-price').value.replace(/\./g, '');
         const price = parseInt(priceStr) || 0;
         const tables = parseInt(document.getElementById('config-table-count').value) || 10;
+        const city   = (document.getElementById('config-business-city')?.value || 'Riohacha').trim();
         
         state.config.deliveryFee = price;
         state.config.tableCount = tables;
+        state.config.businessCity = city;
         
+        // Clear geocode cache so new city is used immediately
+        _adminGeoCache = {};
+
         saveStateToLocal();
-        showToast('Configuración de domicilio guardada');
+        showToast('Configuración de pedido guardada con éxito');
         document.getElementById('order-settings-modal').classList.add('hidden');
     }
 
@@ -5222,6 +5875,7 @@ document.addEventListener('click', (e) => {
             b.style.background = 'transparent';
             b.style.borderColor = 'var(--glass-border)';
             b.style.color = 'var(--text-dim)';
+            b.style.boxShadow = 'none';
         });
         renderManualCategories();
         updateManualCart();
@@ -5404,10 +6058,12 @@ document.addEventListener('click', (e) => {
                 b.style.background = 'transparent';
                 b.style.borderColor = 'var(--glass-border)';
                 b.style.color = 'var(--text-dim)';
+                b.style.boxShadow = 'none';
             });
-            btn.style.background = 'rgba(247,147,30,0.15)';
-            btn.style.borderColor = 'var(--theme-accent)';
-            btn.style.color = '#fff';
+            btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+            btn.style.borderColor = 'transparent';
+            btn.style.color = '#ffffff';
+            btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
 
             // Clear dynamic inputs area to ensure fresh state
             deliveryDetailEl.innerHTML = '';
@@ -5442,10 +6098,12 @@ document.addEventListener('click', (e) => {
                             b.style.borderColor = 'var(--glass-border)';
                             b.style.background = 'rgba(255,255,255,0.03)';
                             b.style.color = 'var(--text-dim)';
+                            b.style.boxShadow = 'none';
                         });
-                        this.style.borderColor = 'var(--theme-accent)';
-                        this.style.background = 'rgba(247,147,30,0.12)';
-                        this.style.color = '#fff';
+                        this.style.borderColor = 'transparent';
+                        this.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+                        this.style.color = '#ffffff';
+                        this.style.boxShadow = '0 3px 8px rgba(245,158,11,0.35)';
                         document.getElementById('manual-table-val').value = 'Mesa ' + this.dataset.num;
                     });
                 });
@@ -5461,15 +6119,35 @@ document.addEventListener('click', (e) => {
         });
     });
 
+    // --- Payment buttons ---
+    document.querySelectorAll('.manual-pay-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.manual-pay-btn').forEach(b => {
+                b.style.background = 'transparent';
+                b.style.borderColor = 'var(--glass-border)';
+                b.style.color = 'var(--text-dim)';
+                b.style.boxShadow = 'none';
+            });
+            btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+            btn.style.borderColor = 'transparent';
+            btn.style.color = '#ffffff';
+            btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
+            const hiddenPay = document.getElementById('manual-cust-payment');
+            if (hiddenPay) hiddenPay.value = btn.dataset.value;
+        });
+    });
+
     function selectTakeout(btn, val) {
         document.querySelectorAll('#manual-tkout-here, #manual-tkout-later').forEach(b => {
             b.style.background = 'transparent';
             b.style.borderColor = 'var(--glass-border)';
             b.style.color = 'var(--text-dim)';
+            b.style.boxShadow = 'none';
         });
-        btn.style.background = 'rgba(247,147,30,0.15)';
-        btn.style.borderColor = 'var(--theme-accent)';
-        btn.style.color = '#fff';
+        btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+        btn.style.borderColor = 'transparent';
+        btn.style.color = '#ffffff';
+        btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
         document.getElementById('manual-takeout-val').value = val;
     }
 
@@ -6061,6 +6739,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         applyRolePermissions('owner', 'Propietario');
     }
+
+    // Pre-cargar la lista de empleados al inicio para que las referencias de roles siempre estén al día
+    if (typeof loadEmployees === 'function') loadEmployees();
 });
 
 /* =========================================
@@ -6070,6 +6751,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let currentEmployeeRole = 'admin'; // 'admin', 'mesero', 'cajero', 'cocina'
 let employeesList = [];
+try {
+    employeesList = JSON.parse(localStorage.getItem('streetfeed_employees_cache') || '[]');
+} catch (e) {}
 
 // Helper para formatear nombre a Nombre + Primer Apellido (Máx 2 palabras)
 function formatShortName(fullName) {
@@ -6141,7 +6825,9 @@ async function loadEmployees() {
                     neighborhood: emp.neighborhood || meta.neighborhood || ''
                 };
             });
+            try { localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList)); } catch (e) {}
             renderEmployeesTable();
+            if (typeof populateEmployeeDropdown === 'function') populateEmployeeDropdown();
         } else {
             const err = await res.json().catch(() => ({}));
             console.error('Error del servidor al cargar empleados:', err);
@@ -6182,10 +6868,14 @@ function getEmployeeStats(empName, filter = {}) {
     const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
     const cleanEmpName = (empName || '').toLowerCase().trim();
 
+    // Match by attendedBy (meseros, cajeros, admin) OR deliveredBy (domiciliarios)
     let empOrders = orders.filter(o => {
         const attended = (o.attendedBy || '').toLowerCase().trim();
-        if (!attended) return false;
-        return attended.includes(cleanEmpName) || cleanEmpName.includes(attended);
+        const delivered = (o.deliveredBy || '').toLowerCase().trim();
+        if (!attended && !delivered) return false;
+        const matchAttended = attended && (attended.includes(cleanEmpName) || cleanEmpName.includes(attended));
+        const matchDelivered = delivered && (delivered.includes(cleanEmpName) || cleanEmpName.includes(delivered));
+        return matchAttended || matchDelivered;
     });
 
     const now = new Date();
@@ -6260,8 +6950,15 @@ function getEmployeeStats(empName, filter = {}) {
     const empObj = (employeesList || []).find(e => e.name && e.name.toLowerCase() === empName.toLowerCase());
     const commRate = (empObj && empObj.commissionRate !== undefined && empObj.commissionRate !== '') ? parseFloat(empObj.commissionRate) : 10;
 
-    const acceptedOrders = empOrders.filter(o => o.status === 'accepted');
+    // Count both 'accepted' (local orders) and 'completed' (delivered domicilios)
+    const acceptedOrders = empOrders.filter(o => o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered' || !o.status);
     const totalSales = acceptedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalDeliveryFee = acceptedOrders.reduce((sum, o) => {
+        if (typeof o.deliveryFee === 'number') return sum + o.deliveryFee;
+        if (typeof o.shippingFee === 'number') return sum + o.shippingFee;
+        if (typeof o.delivery_fee === 'number') return sum + o.delivery_fee;
+        return sum;
+    }, 0);
     const avgTicket = acceptedOrders.length > 0 ? Math.round(totalSales / acceptedOrders.length) : 0;
     const commission = Math.round(totalSales * (commRate / 100));
 
@@ -6281,6 +6978,7 @@ function getEmployeeStats(empName, filter = {}) {
         avgTicket,
         commission,
         commissionRate: commRate,
+        totalDeliveryFee,
         lastActivityStr,
         recentOrders: empOrders.slice().reverse()
     };
@@ -6644,7 +7342,7 @@ function renderEmployeesGrid() {
                 </div>
                 <div style="padding: 0.8rem 1rem; text-align: center;">
                     <div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.2rem;">${emp.role === 'domiciliario' ? 'Domicilios' : `Comisión (${stats.commissionRate}%)`}</div>
-                    <div style="font-size: 1rem; font-weight: 900; color: #ec4899;">$${stats.commission.toLocaleString('es-CO')}</div>
+                    <div style="font-size: 1rem; font-weight: 900; color: #ec4899;">$${(emp.role === 'domiciliario' ? stats.totalDeliveryFee : stats.commission).toLocaleString('es-CO')}</div>
                 </div>
             </div>
 
@@ -6708,13 +7406,23 @@ function renderActiveProfileMetrics() {
 
     // KPIs
     const ordersEl = document.getElementById('emp-profile-orders');
-    if (ordersEl) ordersEl.textContent = stats.totalOrders;
+    if (ordersEl) ordersEl.textContent = stats.acceptedOrders;
     const salesEl = document.getElementById('emp-profile-sales');
     if (salesEl) salesEl.textContent = '$' + stats.totalSales.toLocaleString('es-CO');
     const avgEl = document.getElementById('emp-profile-avg');
     if (avgEl) avgEl.textContent = '$' + stats.avgTicket.toLocaleString('es-CO');
+
+    const isDriverRole = (emp.role === 'domiciliario' || emp.role === 'repartidor' || emp.role === 'delivery');
+    const commLabelEl = document.querySelector('#emp-profile-metrics-grid > div:nth-child(4) > div:first-child');
     const commEl = document.getElementById('emp-profile-commission');
-    if (commEl) commEl.textContent = '$' + stats.commission.toLocaleString('es-CO');
+
+    if (isDriverRole) {
+        if (commLabelEl) commLabelEl.textContent = 'Ganancias Domicilio';
+        if (commEl) commEl.textContent = '$' + (stats.totalDeliveryFee || 0).toLocaleString('es-CO');
+    } else {
+        if (commLabelEl) commLabelEl.textContent = `Comisión (${stats.commissionRate}%)`;
+        if (commEl) commEl.textContent = '$' + stats.commission.toLocaleString('es-CO');
+    }
 
     // Recent orders
     const listEl = document.getElementById('emp-profile-orders-list');
@@ -6723,13 +7431,15 @@ function renderActiveProfileMetrics() {
             listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--glass-border);">Sin pedidos registrados en este período.</div>`;
         } else {
             listEl.innerHTML = stats.recentOrders.map(o => {
-                const statusColor = o.status === 'accepted' ? '#4caf50' : (o.status === 'cancelled' ? '#ef4444' : '#f59e0b');
-                const statusLabel = o.status === 'accepted' ? 'Completado' : (o.status === 'cancelled' ? 'Cancelado' : 'En proceso');
-                const time = new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const isDone = o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered' || o.status === 'entregado';
+                const isCancelled = o.status === 'cancelled' || o.status === 'cancelado';
+                const statusColor = isDone ? '#10b981' : (isCancelled ? '#ef4444' : '#f59e0b');
+                const statusLabel = isDone ? ((o.deliveryType === 'delivery' || o.deliveredBy) ? 'Entregado' : 'Completado') : (isCancelled ? 'Cancelado' : 'En proceso');
+                const time = o.date ? new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Reciente';
                 return `
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; gap: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.8rem;">
-                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-dim); font-family: monospace; background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 5px; white-space: nowrap;">${o.id}</div>
+                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-dim); font-family: monospace; background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 5px; white-space: nowrap;">${o.id || o.orderId || 'ORD'}</div>
                         <div>
                             <div style="font-size: 0.82rem; font-weight: 700; color: var(--text);">${o.customer?.name || 'Cliente'}</div>
                             <div style="font-size: 0.72rem; color: var(--text-dim);">${time}</div>
@@ -7006,7 +7716,7 @@ window.exportSingleEmployeePDF = function() {
 
         const tableHeaders = [['# Pedido', 'Cliente', 'Fecha / Hora', 'Total ($)', 'Estado']];
         const tableBody = stats.recentOrders.map(o => {
-            const statusMap = { accepted: 'Completado', cancelled: 'Cancelado', confirmed: 'En cocina', pending: 'En espera' };
+            const statusMap = { accepted: 'Cobrado', completed: 'Entregado', cancelled: 'Cancelado', confirmed: 'En cocina', pending: 'En espera' };
             const time = new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             return [
                 o.id,
@@ -7458,6 +8168,10 @@ function _performConfirmDeleteEmployee(id, name) {
 function applyRolePermissions(role = 'owner', name = 'Propietario') {
     currentEmployeeRole = role;
 
+    // Reset notification counters on profile switch so no phantom alerts fire for the new user
+    window._prevIncomingCount = undefined;
+    window._prevDriverDispatchCount = undefined;
+
     const badgeName = document.getElementById('admin-name-display');
     if (badgeName) {
         let roleTitle = 'Propietario';
@@ -7538,10 +8252,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
             sidebar.appendChild(navDriverMetrics);
         }
 
-        // Automatically open Domicilios tab for driver
-        setTimeout(() => {
-            if (navDomiciliarios) navDomiciliarios.click();
-        }, 60);
+
     } else if (role === 'mesero') {
         if (navDriverMetrics) navDriverMetrics.style.display = 'none';
         if (navOrders) navOrders.style.display = 'flex';
@@ -7553,7 +8264,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (navExpenses) navExpenses.style.display = 'none';
         if (navStats) navStats.style.display = 'none';
         if (navMyMetrics) navMyMetrics.style.display = 'flex';
-        if (navDomiciliarios) navDomiciliarios.style.display = 'flex';
+        if (navDomiciliarios) navDomiciliarios.style.display = 'none';
         if (btnNewOrder) btnNewOrder.style.display = 'flex';
         document.querySelectorAll('.order-settings-btn').forEach(b => b.style.display = 'none');
 
@@ -7603,7 +8314,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         document.querySelectorAll('.btn-delete-item, .btn-delete-cat, .btn-add-category').forEach(el => el.style.display = '');
     }
 
-    // Filtros de Alcance ("Mis Ventas") y Sub-Pestañas para Cocina
+    // Filtros de Alcance ("Mis Ventas") y Sub-Pestañas por Rol
     const historyScopeContainer = document.getElementById('history-scope-container');
     const historyScopeMine = document.getElementById('history-scope-mine');
     const pdfScopeMine = document.getElementById('pdf-scope-mine');
@@ -7625,6 +8336,25 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (typeof window.setHistoryScope === 'function') {
             window.setHistoryScope('all');
         }
+    } else if (role === 'mesero') {
+        if (subtabUnpaidBtn) subtabUnpaidBtn.style.display = 'none';
+
+        // Si estaba seleccionado el subtab "unpaid", cambiar a "incoming"
+        const activeSubTab = document.querySelector('.sub-tab-btn.active');
+        if (activeSubTab && activeSubTab.dataset.subtab === 'unpaid') {
+            const incomingSubTabBtn = document.querySelector('.sub-tab-btn[data-subtab="incoming"]');
+            if (incomingSubTabBtn) incomingSubTabBtn.click();
+        }
+
+        if (historyScopeContainer) historyScopeContainer.style.display = 'flex';
+        if (historyScopeMine) {
+            historyScopeMine.style.display = 'inline-flex';
+            historyScopeMine.innerHTML = '<i data-lucide="user" style="width: 14px;"></i> Mis Ventas';
+        }
+        const historyScopeAll = document.getElementById('history-scope-all');
+        if (historyScopeAll) historyScopeAll.style.display = 'flex';
+        window.driverDeliveryOnlyHistory = false;
+        if (pdfScopeMine) pdfScopeMine.style.display = 'flex';
     } else if (role === 'domiciliario') {
         // Show scope container, hide "General" (all) button — driver only sees their deliveries
         if (historyScopeContainer) historyScopeContainer.style.display = 'flex';
@@ -7661,30 +8391,12 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
         if (subtabUnpaidBtn) subtabUnpaidBtn.style.display = 'flex';
     }
 
-    // --- CORRECCIÓN DE BUG DE NAVEGACIÓN POR ROL ---
-    const forbiddenTabIds = [];
-    if (role === 'domiciliario') {
-        forbiddenTabIds.push('orders-tab', 'items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab', 'my-metrics-tab');
-    } else if (role === 'mesero') {
-        forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab');
-    } else if (role === 'cocina') {
-        forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'expenses-tab', 'stats-tab', 'my-metrics-tab');
-    } else if (role === 'cajero') {
-        forbiddenTabIds.push('items-tab', 'combos-tab', 'employees-tab', 'config-tab', 'my-metrics-tab');
-    } else {
-        forbiddenTabIds.push('my-metrics-tab');
-    }
-
-    const activeSidebarBtn = document.querySelector('.sidebar-btn.active');
-    const activeTabId = activeSidebarBtn?.dataset?.tab;
-
-    if (!activeTabId || forbiddenTabIds.includes(activeTabId) || (activeSidebarBtn && activeSidebarBtn.style.display === 'none')) {
-        const defaultVisibleBtn = (role === 'domiciliario' ? document.querySelector('.sidebar-btn[data-tab="domicilios-tab"]') : null) ||
-                                 document.querySelector('.sidebar-btn[data-tab="orders-tab"]') || 
-                                 document.querySelector('.sidebar-btn:not([style*="display: none"])');
-        if (defaultVisibleBtn) {
-            defaultVisibleBtn.click();
-        }
+    // --- RESET OBLIGATORIO A LA PESTAÑA PRINCIPAL AL CAMBIAR DE PERFIL ---
+    const primaryTabId = (role === 'domiciliario') ? 'domicilios-tab' : 'orders-tab';
+    const primaryBtn = document.querySelector(`.sidebar-btn[data-tab="${primaryTabId}"]`) ||
+                       document.querySelector('.sidebar-btn:not([style*="display: none"])');
+    if (primaryBtn) {
+        primaryBtn.click();
     }
 
     if (role === 'domiciliario') {
@@ -7700,6 +8412,11 @@ let activeGpsOrderId = null;
 let adminDriverMapInstance = null;
 let adminDriverMapMarker = null;
 let adminDriverMapInterval = null;
+let adminRoutePolyline = null;
+let adminDestMarker = null;
+let adminStoreMarker = null;
+let _adminGeoCache = {};
+let _adminRouteUpdateTick = 0;
 
 // ====== ORDER ASSIGNMENT / CLAIMING SYSTEM ======
 
@@ -7725,6 +8442,13 @@ function getCurrentDriverInfo() {
     return { name: 'Domiciliario', id: 'unknown' };
 }
 
+function isAssignmentForDriver(assignment, driver) {
+    if (!assignment || !driver) return false;
+    if (assignment.driverId && driver.id && String(assignment.driverId) === String(driver.id)) return true;
+    if (assignment.driverName && driver.name && assignment.driverName.toLowerCase().trim() === driver.name.toLowerCase().trim()) return true;
+    return false;
+}
+
 function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = null) {
     const assignments = getOrderAssignments();
     const existing = assignments[orderId];
@@ -7732,7 +8456,7 @@ function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = n
         ? { name: targetDriverName, id: targetDriverId }
         : getCurrentDriverInfo();
 
-    if (existing && existing.driverId !== driver.id && !targetDriverName) {
+    if (existing && !isAssignmentForDriver(existing, driver) && !targetDriverName) {
         const elapsed = existing.claimedAt
             ? Math.round((Date.now() - new Date(existing.claimedAt).getTime()) / 60000)
             : 0;
@@ -7749,11 +8473,13 @@ function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = n
     };
     saveOrderAssignments(assignments);
 
-    // Also stamp attendedBy on the order so history filter works
+    // Stamp deliveredBy on the order so driver history works, keeping original attendedBy if present
     const allOrders = getOrders();
-    const claimIdx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
+    const claimIdx = allOrders.findIndex(o => String(o.id || o.orderId) === String(orderId));
     if (claimIdx !== -1 && driver.name) {
-        allOrders[claimIdx].attendedBy = driver.name;
+        if (!allOrders[claimIdx].attendedBy) {
+            allOrders[claimIdx].attendedBy = driver.name;
+        }
         allOrders[claimIdx].deliveredBy = driver.name;
         localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
     }
@@ -7784,7 +8510,10 @@ function getAvailableDrivers() {
     const isAllowed = (name) => {
         if (!name) return false;
         const lower = name.toLowerCase().trim();
-        // Always block known system roles
+        // Block generic system/role names that are not real people
+        if (lower === 'domiciliario' || lower === 'repartidor' || lower === 'unknown' ||
+            lower === 'cliente' || lower === 'cliente (menú digital)') return false;
+        // Always block known system roles embedded in name
         if (lower.includes('propietario') || lower.includes('administrador') || lower.includes('admin')) return false;
         // Block any employee who is NOT a driver
         if (nonDriverNames.has(lower)) return false;
@@ -7812,8 +8541,23 @@ function getAvailableDrivers() {
         });
     } catch(e) {}
 
-    // 3. From order assignments (only if not blocked)
+    const allOrders = getOrders();
+
+    // Clean up stale assignments for orders that are completed, cancelled, or no longer exist
     const assignments = getOrderAssignments();
+    let dirty = false;
+    Object.keys(assignments).forEach(id => {
+        const matchingOrder = allOrders.find(o => String(o.id || o.orderId) === String(id));
+        if (!matchingOrder || matchingOrder.status === 'completed' || matchingOrder.status === 'cancelled') {
+            delete assignments[id];
+            dirty = true;
+        }
+    });
+    if (dirty) {
+        saveOrderAssignments(assignments);
+    }
+
+    // 3. From order assignments (only if not blocked)
     Object.values(assignments).forEach(a => {
         if (a && isAllowed(a.driverName) && !driversMap.has(a.driverName.toLowerCase().trim())) {
             driversMap.set(a.driverName.toLowerCase().trim(), { id: a.driverId || a.driverName, name: a.driverName });
@@ -7821,7 +8565,6 @@ function getAvailableDrivers() {
     });
 
     // 4. From history of orders: ONLY use deliveredBy (not attendedBy — meseros attend orders too)
-    const allOrders = getOrders();
     allOrders.forEach(o => {
         const dName = (o.deliveredBy || '').trim(); // deliveredBy = stamped only by driver flow
         if (dName && isAllowed(dName) && !driversMap.has(dName.toLowerCase())) {
@@ -7829,8 +8572,12 @@ function getAvailableDrivers() {
         }
     });
 
-    // Calculate active workload per driver
-    const activeAssignments = Object.values(assignments);
+    // Calculate active workload per driver: ONLY count assignments for active/dispatched orders
+    const activeAssignments = Object.entries(assignments).filter(([id]) => {
+        const o = allOrders.find(ord => String(ord.id || ord.orderId) === String(id));
+        return o && o.status === 'dispatched';
+    }).map(([, val]) => val);
+
     return Array.from(driversMap.values()).map(d => {
         const activeCount = activeAssignments.filter(a => a && (a.driverName || '').toLowerCase().trim() === d.name.toLowerCase().trim()).length;
         return { ...d, activeCount };
@@ -7850,6 +8597,16 @@ window.openAssignDriverModal = async function(orderId) {
             }
         } catch(e) {}
     }
+
+    // Clean up any stale generic/role names from the saved drivers team
+    try {
+        const GENERIC_NAMES = ['domiciliario', 'repartidor', 'unknown', 'cliente'];
+        const savedTeam = JSON.parse(localStorage.getItem('streetfeed_drivers_team') || '[]');
+        const cleanedTeam = savedTeam.filter(n => !GENERIC_NAMES.includes((n || '').toLowerCase().trim()));
+        if (cleanedTeam.length !== savedTeam.length) {
+            localStorage.setItem('streetfeed_drivers_team', JSON.stringify(cleanedTeam));
+        }
+    } catch(e) {}
 
     const drivers = getAvailableDrivers();
 
@@ -7981,13 +8738,29 @@ window.submitManualDriver = function(orderId) {
 
 function releaseDeliveryOrder(orderId) {
     const doRelease = () => {
+        // Stop GPS transmission if this driver was tracking this order
+        if (activeGpsOrderId === orderId && activeWatchPositionId !== null) {
+            navigator.geolocation.clearWatch(activeWatchPositionId);
+            activeWatchPositionId = null;
+            activeGpsOrderId = null;
+            updateGpsStatusPill(false);
+        }
+        // Remove the assignment so the order returns to the unassigned pool
         const assignments = getOrderAssignments();
         delete assignments[orderId];
         saveOrderAssignments(assignments);
+        // Clear deliveredBy so the next driver gets a clean slate
+        const allOrders = getOrders();
+        const idx = allOrders.findIndex(o => String(o.id || o.orderId) === String(orderId));
+        if (idx !== -1) {
+            delete allOrders[idx].deliveredBy;
+            localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+        }
         if (typeof showAdminNotification === 'function') {
             showAdminNotification(`↩️ Pedido #${orderId} liberado al pool`, 'info');
         }
         renderDriverDeliveriesSection();
+        if (typeof window.renderOrders === 'function') window.renderOrders();
     };
 
     if (typeof showConfirm === 'function') {
@@ -8039,8 +8812,6 @@ function forceReassignOrder(orderId, newDriverName, newDriverId) {
 
 function buildDeliveryCard(order, idx, isDriver, assignments) {
     const orderId = order.id || order.orderId || 'ORD-0';
-    const accentColors = ['#10b981','#f59e0b','#3b82f6','#a855f7','#ef4444','#06b6d4'];
-    const accentColor = accentColors[idx % accentColors.length];
 
     let customerName = 'Cliente';
     if (typeof order.customerName === 'string' && order.customerName.trim()) customerName = order.customerName;
@@ -8052,15 +8823,17 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
     if (typeof order.customerAddress === 'string' && order.customerAddress.trim()) address = order.customerAddress;
     else if (typeof order.address === 'string' && order.address.trim()) address = order.address;
     else if (order.address && typeof order.address === 'object' && order.address.street) address = order.address.street;
+    else if (order.customer && typeof order.customer.address === 'string' && order.customer.address.trim()) address = order.customer.address;
 
     let phone = '';
     if (typeof order.customerPhone === 'string' && order.customerPhone.trim()) phone = order.customerPhone;
     else if (typeof order.phone === 'string' && order.phone.trim()) phone = order.phone;
+    else if (order.customer && typeof order.customer.phone === 'string' && order.customer.phone.trim()) phone = order.customer.phone;
 
     const barrio = (typeof order.barrio === 'string') ? order.barrio : ((typeof order.neighborhood === 'string') ? order.neighborhood : '');
     const notes = (typeof order.notes === 'string') ? order.notes : ((typeof order.observations === 'string') ? order.observations : '');
     const total = order.total || 0;
-    const payMethod = order.paymentMethod || order.payMethod || 'Efectivo';
+    const payMethod = order.customer?.payment || order.payment || order.paymentMethod || order.payMethod || 'Efectivo';
     const isTransmitting = (activeGpsOrderId === orderId);
 
     const fullAddrStr = barrio ? `${address} - B/ ${barrio}` : address;
@@ -8069,51 +8842,57 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
     const mapClickAttr = hasValidAddr ? 'target="_blank"' : `onclick="if(typeof showAdminNotification==='function') showAdminNotification('⚠️ Este pedido no especifica dirección exacta de entrega', 'warning'); return false;"`;
     const waUrl = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : '#';
 
-    const payIconMap = { 'efectivo': '💵', 'transferencia': '📲', 'tarjeta': '💳', 'nequi': '📱', 'daviplata': '📱' };
+    const payIconMap = { 'efectivo': '💵', 'transferencia': '📲', 'tarjeta': '💳', 'nequi': '📱', 'daviplata': '📱', 'transf.': '📲', 'transf': '📲' };
     const payIcon = payIconMap[(payMethod || '').toLowerCase()] || '💳';
     const initials = customerName.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || 'CL';
 
     const assignment = assignments[orderId];
     const driver = getCurrentDriverInfo();
-    const isMine = assignment && assignment.driverId === driver.id;
-    const isTakenByOther = assignment && assignment.driverId !== driver.id;
+    const isMine = isAssignmentForDriver(assignment, driver);
+    const isTakenByOther = assignment && !isMine;
+    const isAssigned = Boolean(assignment);
+
+    // Color Scheme: Orange (#f59e0b) for 'Sin asignar', Green (#10b981) for 'En camino / Asignado'
+    const statusColor = isAssigned ? '#10b981' : '#f59e0b';
+    const statusGradEnd = isAssigned ? '#059669' : '#d97706';
+    const cardBorderColor = isAssigned ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.35)';
 
     // Assignment badge for admin view
     const assignmentBadge = (() => {
-        if (!assignment) return `<span style="background:rgba(107,114,128,0.15);color:#9ca3af;padding:3px 9px;border-radius:6px;font-weight:700;font-size:0.7rem;display:inline-flex;align-items:center;gap:0.3rem;">🔘 Sin asignar</span>`;
+        if (!assignment) return `<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 9px;border-radius:6px;font-weight:800;font-size:0.71rem;display:inline-flex;align-items:center;gap:0.3rem;">🔘 Sin asignar</span>`;
         const elapsed = Math.round((Date.now() - new Date(assignment.claimedAt).getTime()) / 60000);
         const elapsedText = elapsed < 1 ? 'ahora' : `hace ${elapsed} min`;
         return `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:3px 9px;border-radius:6px;font-weight:800;font-size:0.71rem;display:inline-flex;align-items:center;gap:0.3rem;">🛵 ${escapeHtml(assignment.driverName)} · ${elapsedText}</span>`;
     })();
 
     return `
-        <div style="border-radius: 22px; overflow: hidden; border: 1px solid ${isMine ? '#10b981' : isTakenByOther ? 'rgba(239,68,68,0.3)' : 'var(--glass-border)'}; background: var(--surface-light); display: flex; flex-direction: column; box-shadow: 0 4px 24px rgba(0,0,0,0.18); transition: transform 0.2s, box-shadow 0.2s;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 32px rgba(0,0,0,0.28)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 24px rgba(0,0,0,0.18)';">
+        <div style="border-radius: 22px; overflow: hidden; border: 1.5px solid ${cardBorderColor}; background: var(--surface-light); display: flex; flex-direction: column; box-shadow: 0 8px 30px rgba(0,0,0,0.08); transition: transform 0.25s ease, box-shadow 0.25s ease;"
+             onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 14px 40px rgba(0,0,0,0.14)';"
+             onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 30px rgba(0,0,0,0.08)';">
 
-            <!-- Colored top accent bar -->
-            <div style="height: 5px; background: linear-gradient(90deg, ${isMine ? '#10b981' : isTakenByOther ? '#ef4444' : accentColor}, ${isMine ? '#059669' : isTakenByOther ? '#dc2626' : accentColor}88);"></div>
+            <!-- Colored top accent bar: Orange for Unassigned, Green for In Progress -->
+            <div style="height: 6px; background: linear-gradient(90deg, ${statusColor}, ${statusGradEnd});"></div>
 
             <!-- Card Body -->
             <div style="padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; flex: 1;">
 
                 <!-- Header row -->
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 52px; height: 52px; border-radius: 16px; background: ${accentColor}22; border: 2px solid ${accentColor}44; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 900; color: ${accentColor}; flex-shrink: 0; letter-spacing: -1px;">
+                    <div style="width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(135deg, ${statusColor}, ${statusGradEnd}); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; color: #ffffff; flex-shrink: 0; letter-spacing: -0.5px; box-shadow: 0 4px 14px ${statusColor}44;">
                         ${initials}
                     </div>
                     <div style="flex: 1; min-width: 0;">
-                        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.18rem;">
-                            <span style="background: ${accentColor}22; color: ${accentColor}; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 0.71rem; font-family: monospace;">#${escapeHtml(orderId)}</span>
-                            ${isTransmitting ? `<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:6px;font-weight:800;font-size:0.7rem;">📡 GPS Activo</span>` : ''}
+                        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.2rem;">
+                            <span style="background: ${statusColor}18; color: ${statusColor}; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 0.72rem; font-family: monospace;">#${escapeHtml(orderId)}</span>
+                            ${isTransmitting ? `<span style="background:rgba(6,182,212,0.15);color:#06b6d4;padding:2px 8px;border-radius:6px;font-weight:800;font-size:0.7rem;">📡 GPS Activo</span>` : ''}
                             ${isMine ? `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:800;font-size:0.7rem;">✋ Tuyo</span>` : ''}
                             ${!isDriver ? assignmentBadge : ''}
                         </div>
-                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(customerName)}</h4>
+                        <h4 style="margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(customerName)}</h4>
                     </div>
                     <div style="text-align: right; flex-shrink: 0;">
-                        <div style="font-size: 1.18rem; font-weight: 900; color: #10b981;">$${total.toLocaleString('es-CO')}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-dim); font-weight: 700; display: flex; align-items: center; gap: 0.22rem; justify-content: flex-end; margin-top: 2px;">
+                        <div style="font-size: 1.35rem; font-weight: 900; color: #10b981; letter-spacing: -0.5px;">$${total.toLocaleString('es-CO')}</div>
+                        <div style="font-size: 0.72rem; color: #059669; font-weight: 800; display: inline-flex; align-items: center; gap: 0.25rem; justify-content: flex-end; margin-top: 3px; background: rgba(16, 185, 129, 0.1); padding: 2px 7px; border-radius: 6px;">
                             <span>${payIcon}</span><span>${escapeHtml(payMethod)}</span>
                         </div>
                     </div>
@@ -8122,27 +8901,27 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                 <div style="height: 1px; background: var(--glass-border);"></div>
 
                 <!-- Address -->
-                <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.8rem; background: rgba(239,68,68,0.06); border-radius: 12px; border: 1px solid rgba(239,68,68,0.14);">
-                    <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(239,68,68,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #ef4444;"></i>
+                <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 0.95rem; background: rgba(59,130,246,0.07); border-radius: 14px; border: 1px solid rgba(59,130,246,0.18);">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                        <i data-lucide="map-pin" style="width: 19px; height: 19px; color: #3b82f6;"></i>
                     </div>
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #ef4444; letter-spacing: 0.5px; margin-bottom: 0.22rem;">Dirección de entrega</div>
-                        <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.4;">${escapeHtml(address)}</div>
-                        ${barrio ? `<div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 0.2rem;"><strong>Barrio:</strong> ${escapeHtml(barrio)}</div>` : ''}
+                        <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #3b82f6; letter-spacing: 0.6px; margin-bottom: 0.22rem;">Dirección de entrega</div>
+                        <div style="font-size: 0.95rem; font-weight: 800; color: var(--text); line-height: 1.35;">${escapeHtml(address)}</div>
+                        ${barrio ? `<div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem;"><strong>Barrio:</strong> ${escapeHtml(barrio)}</div>` : ''}
                     </div>
                 </div>
 
                 <!-- Phone -->
                 ${phone ? `
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; background: rgba(16,185,129,0.06); border-radius: 12px; border: 1px solid rgba(16,185,129,0.16);">
-                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                        <div style="width: 30px; height: 30px; border-radius: 8px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i data-lucide="phone" style="width: 15px; height: 15px; color: #10b981;"></i>
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.95rem; background: rgba(16,185,129,0.06); border-radius: 14px; border: 1px solid rgba(16,185,129,0.16);">
+                    <div style="display: flex; align-items: center; gap: 0.65rem;">
+                        <div style="width: 32px; height: 32px; border-radius: 9px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="phone" style="width: 16px; height: 16px; color: #10b981;"></i>
                         </div>
-                        <span style="font-size: 0.88rem; font-weight: 700; color: var(--text);">${escapeHtml(phone)}</span>
+                        <span style="font-size: 0.92rem; font-weight: 800; color: var(--text);">${escapeHtml(phone)}</span>
                     </div>
-                    <a href="${waUrl}" target="_blank" style="padding: 5px 12px; border-radius: 8px; background: rgba(37,211,102,0.14); color: #25D366; border: 1px solid rgba(37,211,102,0.3); text-decoration: none; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem;">
+                    <a href="${waUrl}" target="_blank" style="padding: 6px 14px; border-radius: 10px; background: #25D366; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem; box-shadow: 0 3px 10px rgba(37,211,102,0.3); transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='none'">
                         💬 WhatsApp
                     </a>
                 </div>
@@ -8150,76 +8929,66 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
 
                 <!-- Notes -->
                 ${notes ? `
-                <div style="padding: 0.6rem 0.85rem; background: rgba(245,158,11,0.08); border-radius: 10px; border: 1px solid rgba(245,158,11,0.22); font-size: 0.82rem; color: var(--text-dim); display: flex; align-items: flex-start; gap: 0.5rem;">
+                <div style="padding: 0.65rem 0.9rem; background: rgba(245,158,11,0.08); border-radius: 12px; border: 1px solid rgba(245,158,11,0.22); font-size: 0.85rem; color: var(--text-dim); display: flex; align-items: flex-start; gap: 0.5rem;">
                     <span style="flex-shrink: 0;">⚠️</span>
-                    <div><strong style="color: #f59e0b;">Nota:</strong> ${escapeHtml(notes)}</div>
+                    <div><strong style="color: #d97706;">Nota:</strong> ${escapeHtml(notes)}</div>
                 </div>
                 ` : ''}
             </div>
 
             <!-- Footer -->
-            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: var(--surface-light); display: flex; flex-direction: column; gap: 0.55rem;">
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); background: var(--surface-light); display: flex; flex-direction: column; gap: 0.6rem;">
                 ${isDriver ? `
                     ${isTakenByOther ? `
                         <!-- Taken by another driver -->
-                        <div style="padding: 0.9rem; border-radius: 12px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); text-align: center; font-size: 0.88rem; color: #ef4444; font-weight: 800;">
-                            🔒 Ya lo tiene <strong>${escapeHtml(assignment.driverName)}</strong>
+                        <div style="padding: 0.85rem; border-radius: 14px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.22); text-align: center; font-size: 0.88rem; color: #10b981; font-weight: 800;">
+                            🛵 En camino con <strong>${escapeHtml(assignment.driverName)}</strong>
                         </div>
                     ` : isMine ? `
-                        <!-- My claimed order: show full action buttons -->
-                        <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')"
-                            style="width:100%;padding:0.82rem 1rem;border-radius:12px;font-weight:800;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:${isTransmitting ? 'linear-gradient(135deg,#ef4444,#dc2626)' : 'linear-gradient(135deg,#10b981,#059669)'};color:#fff;border:none;cursor:pointer;box-shadow:0 4px 14px ${isTransmitting ? 'rgba(239,68,68,0.35)' : 'rgba(16,185,129,0.35)'};transition:filter 0.2s;"
-                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
-                            <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width:18px;height:18px;"></i>
-                            ${isTransmitting ? '📡 Transmitiendo GPS — Toca para detener' : '🚀 Iniciar Entrega (Activar GPS)'}
-                        </button>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-                            <a href="${wazeUrl}" ${mapClickAttr}
-                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);transition:background 0.2s;"
-                                onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
-                                <i data-lucide="navigation-2" style="width:15px;height:15px;"></i> Navegar
-                            </a>
+                        <!-- My claimed order: 2x2 grid layout -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                            <button onclick="toggleDriverGPS('${escapeHtml(orderId)}')"
+                                style="padding:0.75rem 0.5rem;border-radius:12px;font-weight:900;font-size:0.82rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:${isTransmitting ? 'linear-gradient(135deg,#06b6d4,#0891b2)' : 'linear-gradient(135deg,#10b981,#059669)'};color:#fff;border:none;cursor:pointer;box-shadow:0 4px 14px ${isTransmitting ? 'rgba(6,182,212,0.35)' : 'rgba(16,185,129,0.35)'};transition:filter 0.2s;"
+                                onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                                <i data-lucide="${isTransmitting ? 'radio' : 'navigation'}" style="width:16px;height:16px;"></i>
+                                ${isTransmitting ? '📡 Detener' : '🚀 Iniciar GPS'}
+                            </button>
                             <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
-                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(168,85,247,0.12);color:#a855f7;border:1px solid rgba(168,85,247,0.28);cursor:pointer;transition:background 0.2s;"
-                                onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'">
-                                <i data-lucide="eye" style="width:15px;height:15px;"></i> Ver en Mapa
+                                style="padding:0.75rem 0.5rem;border-radius:12px;font-size:0.82rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:linear-gradient(135deg,#0284c7,#0369a1);color:#ffffff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(2,132,199,0.35);transition:filter 0.2s;"
+                                onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                                <i data-lucide="map-pin" style="width:16px;height:16px;"></i> Ver Mapa
                             </button>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
                             <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')"
-                                style="padding:0.7rem;border-radius:10px;font-size:0.85rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.28);cursor:pointer;transition:background 0.2s;"
-                                onmouseover="this.style.background='rgba(16,185,129,0.2)'" onmouseout="this.style.background='rgba(16,185,129,0.1)'">
-                                <i data-lucide="check-circle" style="width:16px;height:16px;"></i> ✅ Entregado
+                                style="padding:0.75rem 0.5rem;border-radius:12px;font-size:0.85rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.3);transition:filter 0.2s;"
+                                onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                                <i data-lucide="check-circle" style="width:16px;height:16px;"></i> Entregado
                             </button>
                             <button onclick="releaseDeliveryOrder('${escapeHtml(orderId)}')"
-                                style="padding:0.7rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(107,114,128,0.1);color:#9ca3af;border:1px solid rgba(107,114,128,0.2);cursor:pointer;transition:background 0.2s;"
-                                onmouseover="this.style.background='rgba(107,114,128,0.2)'" onmouseout="this.style.background='rgba(107,114,128,0.1)'">
-                                <i data-lucide="x-circle" style="width:15px;height:15px;"></i> Liberar
+                                style="padding:0.75rem 0.5rem;border-radius:12px;font-size:0.82rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(239,68,68,0.08);color:#ef4444;border:1.5px solid rgba(239,68,68,0.25);cursor:pointer;transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                                <i data-lucide="user-x" style="width:15px;height:15px;"></i> Liberar
                             </button>
                         </div>
                     ` : `
-                        <!-- Available: Claim button -->
-                        <button onclick="claimDeliveryOrder('${escapeHtml(orderId)}')"
-                            style="width:100%;padding:0.9rem 1rem;border-radius:12px;font-weight:900;font-size:0.95rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.4);transition:filter 0.2s;"
-                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
-                            <i data-lucide="hand" style="width:20px;height:20px;"></i>
-                            ✋ Yo lo llevo
-                        </button>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-                            <a href="${wazeUrl}" ${mapClickAttr}
-                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.28);">
-                                <i data-lucide="map" style="width:15px;height:15px;"></i> Ver Ruta
-                            </a>
-                            ${phone ? `
-                            <a href="${waUrl}" target="_blank"
-                                style="padding:0.65rem;border-radius:10px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;text-decoration:none;background:rgba(37,211,102,0.12);color:#25D366;border:1px solid rgba(37,211,102,0.28);">
-                                💬 WhatsApp
-                            </a>
-                            ` : `<div></div>`}
+                        <!-- Available: 2-column grid layout (Left: Claim, Right: Map) -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                            <button onclick="claimDeliveryOrder('${escapeHtml(orderId)}')"
+                                style="padding:0.82rem 0.5rem;border-radius:12px;font-weight:900;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.4);transition:filter 0.2s;"
+                                onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                                <i data-lucide="hand" style="width:17px;height:17px;"></i> ✋ Yo lo llevo
+                            </button>
+                            <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
+                                style="padding:0.82rem 0.5rem;border-radius:12px;font-size:0.88rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:linear-gradient(135deg,#0284c7,#0369a1);color:#ffffff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(2,132,199,0.35);transition:filter 0.2s;"
+                                onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                                <i data-lucide="map-pin" style="width:17px;height:17px;"></i> Ver Mapa
+                            </button>
                         </div>
                     `}
                 ` : `
                     <!-- Admin / Propietario view -->
+                    ${assignment ? `
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.55rem;">
                         <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
                             style="padding:0.78rem;border-radius:12px;font-weight:800;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);transition:filter 0.2s;"
@@ -8232,26 +9001,32 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                             <i data-lucide="map" style="width:17px;height:17px;"></i> Abrir Mapa
                         </a>
                     </div>
-                    ${assignment ? `
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.55rem;">
                         <button onclick="completeDriverDelivery('${escapeHtml(orderId)}')"
                             style="padding:0.62rem;border-radius:10px;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.28);cursor:pointer;transition:background 0.2s;"
                             onmouseover="this.style.background='rgba(16,185,129,0.2)'" onmouseout="this.style.background='rgba(16,185,129,0.1)'">
-                            <i data-lucide="check-circle" style="width:15px;height:15px;"></i> ✅ Entregado
+                            <i data-lucide="check-circle" style="width:15px;height:15px;"></i> Entregado
                         </button>
                         <button onclick="releaseDeliveryOrder('${escapeHtml(orderId)}')"
-                            style="padding:0.62rem;border-radius:10px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.2);cursor:pointer;transition:background 0.2s;"
+                            style="padding:0.62rem;border-radius:10px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.22);cursor:pointer;transition:background 0.2s;"
                             onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
-                            <i data-lucide="user-x" style="width:15px;height:15px;"></i> 🔄 Liberar
+                            <i data-lucide="user-x" style="width:15px;height:15px;"></i> Liberar
                         </button>
                     </div>
                     ` : `
-                    <button onclick="openAssignDriverModal('${escapeHtml(orderId)}')"
-                        style="width:100%;padding:0.82rem 1rem;border-radius:12px;font-weight:900;font-size:0.92rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.35);transition:filter 0.2s;"
-                        onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
-                        <i data-lucide="user-plus" style="width:18px;height:18px;"></i>
-                        Asignar Domiciliario
-                    </button>
+                    <div style="display:grid;grid-template-columns:1fr 1.22fr;gap:0.5rem;">
+                        <a href="${wazeUrl}" ${mapClickAttr}
+                            style="padding:0.78rem 0.35rem;border-radius:12px;font-size:0.83rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:0.35rem;text-decoration:none;background:rgba(59,130,246,0.12);color:#3b82f6;border:1px solid rgba(59,130,246,0.3);transition:background 0.2s;"
+                            onmouseover="this.style.background='rgba(59,130,246,0.22)'" onmouseout="this.style.background='rgba(59,130,246,0.12)'">
+                            <i data-lucide="map-pin" style="width:16px;height:16px;"></i> Ver Mapa
+                        </a>
+                        <button onclick="openAssignDriverModal('${escapeHtml(orderId)}')"
+                            style="padding:0.78rem 0.35rem;border-radius:12px;font-weight:900;font-size:0.83rem;display:flex;align-items:center;justify-content:center;gap:0.35rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.35);transition:filter 0.2s;"
+                            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                            <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
+                            Asignar Domi
+                        </button>
+                    </div>
                     `}
                 `}
             </div>
@@ -8328,7 +9103,7 @@ function renderDriverDeliveriesSection() {
     const assignedList = isDriver
         ? deliveryOrders.filter(o => {
             const a = assignments[o.id || o.orderId];
-            return a && a.driverId === driver.id;
+            return isAssignmentForDriver(a, driver);
         })
         : deliveryOrders.filter(o => {
             const a = assignments[o.id || o.orderId];
@@ -8405,11 +9180,17 @@ function renderDriverDeliveriesSection() {
 
 
 
+let activeGpsInterval = null;
+
 function toggleDriverGPS(orderId) {
     if (activeGpsOrderId === orderId) {
         if (activeWatchPositionId !== null) {
             navigator.geolocation.clearWatch(activeWatchPositionId);
             activeWatchPositionId = null;
+        }
+        if (activeGpsInterval !== null) {
+            clearInterval(activeGpsInterval);
+            activeGpsInterval = null;
         }
         activeGpsOrderId = null;
         updateGpsStatusPill(false);
@@ -8423,26 +9204,51 @@ function toggleDriverGPS(orderId) {
         return;
     }
 
-    if (typeof showAdminNotification === 'function') showAdminNotification('🚀 GPS Activado. Transmitiendo ubicación...', 'success');
     activeGpsOrderId = orderId;
     updateGpsStatusPill(true);
 
-    activeWatchPositionId = navigator.geolocation.watchPosition(
-        (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            fetch('/api/driver/location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, lat, lng })
-            }).catch(e => console.log('Location update error', e));
-        },
+    const sendPos = (lat, lng) => {
+        // Save to local storage as instant backup
+        try {
+            localStorage.setItem(`streetfeed_driver_location_${orderId}`, JSON.stringify({ orderId, lat, lng, updatedAt: Date.now() }));
+        } catch(e) {}
+
+        // Send to backend
+        fetch('/api/driver/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, lat, lng })
+        }).catch(e => console.log('Location update error', e));
+    };
+
+    // Send immediate initial position
+    navigator.geolocation.getCurrentPosition(
+        (pos) => sendPos(pos.coords.latitude, pos.coords.longitude),
         (err) => {
-            console.warn('GPS position error:', err);
+            console.warn('Initial GPS error, using fallback location:', err);
+            sendPos(10.4631, -73.2532);
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+    );
+
+    // Watch position continuously
+    activeWatchPositionId = navigator.geolocation.watchPosition(
+        (pos) => sendPos(pos.coords.latitude, pos.coords.longitude),
+        (err) => {
+            console.warn('GPS watch error, fallback simulation active:', err);
+            if (!activeGpsInterval) {
+                let baseLat = 10.4631, baseLng = -73.2532;
+                activeGpsInterval = setInterval(() => {
+                    baseLat += (Math.random() - 0.5) * 0.0003;
+                    baseLng += (Math.random() - 0.5) * 0.0003;
+                    sendPos(baseLat, baseLng);
+                }, 4000);
+            }
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 
+    if (typeof showAdminNotification === 'function') showAdminNotification('🚀 GPS Activado. Transmitiendo ubicación...', 'success');
     renderDriverDeliveriesSection();
 }
 
@@ -8471,20 +9277,26 @@ function completeDriverDelivery(orderId) {
             activeGpsOrderId = null;
             updateGpsStatusPill(false);
         }
-        // Clear assignment on delivery
+        // Save assignment BEFORE clearing (to preserve driverName for deliveredBy stamp)
         const assignments = getOrderAssignments();
+        const assignedDriverName = assignments[orderId]?.driverName || null;
         delete assignments[orderId];
         saveOrderAssignments(assignments);
 
         const allOrders = getOrders();
-        const idx = allOrders.findIndex(o => (o.id || o.orderId) === orderId);
+        const idx = allOrders.findIndex(o => String(o.id || o.orderId) === String(orderId));
         if (idx !== -1) {
             allOrders[idx].status = 'completed';
-            // Stamp the driver's name so "Mis Domis" history filter works correctly
+            // Resolve driver name: prefer existing deliveredBy > assignment > getCurrentDriverInfo (only if real employee)
             const driverInfo = getCurrentDriverInfo();
-            if (driverInfo && driverInfo.name) {
-                allOrders[idx].attendedBy = driverInfo.name;
-                allOrders[idx].deliveredBy = driverInfo.name;
+            const resolvedDriver = allOrders[idx].deliveredBy ||
+                assignedDriverName ||
+                (driverInfo.id !== 'unknown' ? driverInfo.name : null);
+            if (resolvedDriver) {
+                allOrders[idx].deliveredBy = resolvedDriver;
+                if (!allOrders[idx].attendedBy) {
+                    allOrders[idx].attendedBy = resolvedDriver;
+                }
             }
             localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
         }
@@ -8506,70 +9318,352 @@ function completeDriverDelivery(orderId) {
     }
 }
 
+// Helper: geocodifica una dirección usando la Ciudad configurada en el sistema
+async function _geocodeForMap(address) {
+    if (!address || address === 'Dirección no especificada' || address.length < 4) return null;
+    const key = address.toLowerCase().trim();
+    if (_adminGeoCache[key]) return _adminGeoCache[key];
+
+    // Obtener la ciudad configurada en el negocio (por defecto Riohacha)
+    const configuredCity = (typeof state !== 'undefined' && state.config && state.config.businessCity) 
+        ? state.config.businessCity.trim() 
+        : 'Riohacha';
+
+    const cityHints = [configuredCity, `${configuredCity}, Colombia`];
+
+    for (const cityHint of cityHints) {
+        try {
+            const query = encodeURIComponent(`${address}, ${cityHint}`);
+            const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=3&countrycodes=co`;
+            const r = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+            if (!r.ok) continue;
+            const d = await r.json();
+            if (d && d[0]) {
+                const result = { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
+                _adminGeoCache[key] = result;
+                return result;
+            }
+        } catch(e) {}
+    }
+
+    return null;
+}
+
+// Helper: dibuja o actualiza la ruta entre el domiciliario y el destino
+async function _drawMapRoute(driverLatLng, destCoords) {
+    if (!adminDriverMapInstance) return;
+    const [dlat, dlng] = driverLatLng;
+    const { lat: dlat2, lng: dlng2 } = destCoords;
+
+    // Limpiar ruta anterior
+    if (adminRoutePolyline) {
+        adminDriverMapInstance.removeLayer(adminRoutePolyline);
+        adminRoutePolyline = null;
+    }
+
+    // Calcular distancia recta (Haversine aproximado)
+    const toRad = (v) => (v * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(dlat2 - dlat);
+    const dLon = toRad(dlng2 - dlng);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(dlat)) * Math.cos(toRad(dlat2)) * Math.sin(dLon / 2) ** 2;
+    const straightKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const etaEl = document.getElementById('map-eta');
+    // Helper: update the Rappi-style bottom sheet progress UI
+    const _updateDeliveryProgress = (distKm) => {
+        if (!_routeInitialDistKm) _routeInitialDistKm = parseFloat(distKm);
+        const pct = Math.min(95, Math.max(5, (1 - parseFloat(distKm) / _routeInitialDistKm) * 100));
+        const pb  = document.getElementById('map-progress-bar');
+        const pb2 = document.getElementById('map-progress-bar-2');
+        const pp  = document.getElementById('map-progress-pct');
+        const dt  = document.getElementById('map-distance-text');
+        if (pb)  pb.style.width  = `${pct}%`;
+        if (pb2) pb2.style.width = `${Math.max(0, pct - 10)}%`;
+        if (pp)  pp.textContent  = `${Math.round(pct)}% completado`;
+        if (dt)  dt.textContent  = `${parseFloat(distKm).toFixed(1)} km ·`;
+        if (pct >= 88 && pp) {
+            pp.textContent = `⚡ Llegando (${Math.round(pct)}%)`;
+        }
+    };
+
+    try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${dlng},${dlat};${dlng2},${dlat2}?overview=full&geometries=geojson`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('OSRM error');
+        const d = await r.json();
+        if (d.code === 'Ok' && d.routes && d.routes[0]) {
+            const route = d.routes[0];
+            const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+            // ── Premium route: thick base (glow) + animated flow overlay ──
+            adminRoutePolyline = L.polyline(coords, {
+                color: '#10b981',
+                weight: 7,
+                opacity: 1,
+                lineCap: 'round',
+                lineJoin: 'round',
+                className: 'gps-route-base'
+            }).addTo(adminDriverMapInstance);
+            L.polyline(coords, {
+                color: '#34d399',
+                weight: 3,
+                opacity: 0.9,
+                lineCap: 'round',
+                className: 'gps-route-anim'
+            }).addTo(adminDriverMapInstance);
+            const distKm = (route.distance / 1000).toFixed(1);
+            const etaMins = Math.ceil(route.duration / 60);
+            if (etaEl) etaEl.textContent = etaMins < 60 ? `${etaMins}` : `${Math.floor(etaMins/60)}h${etaMins%60}`;
+            _updateDeliveryProgress(distKm);
+            return;
+        }
+    } catch(e) {
+        console.warn('OSRM route failed, using straight line:', e);
+    }
+
+    // Fallback: straight amber line
+    adminRoutePolyline = L.polyline([[dlat, dlng], [dlat2, dlng2]], {
+        color: '#f59e0b',
+        weight: 5,
+        opacity: 0.9,
+        lineCap: 'round',
+        className: 'gps-route-base'
+    }).addTo(adminDriverMapInstance);
+    if (etaEl) etaEl.textContent = `~${Math.ceil(straightKm / 0.25)}`;
+    _updateDeliveryProgress(straightKm.toFixed(1));
+}
+
 function openDriverMapModal(orderId, customerName, address) {
     const modal = document.getElementById('driver-map-modal');
-    const title = document.getElementById('driver-map-title');
-    const subtitle = document.getElementById('driver-map-subtitle');
     if (!modal) return;
 
-    if (title) title.textContent = `Rastreo GPS en Vivo - #${orderId}`;
-    if (subtitle) subtitle.textContent = `Entrega a ${customerName} (${address})`;
-    modal.classList.remove('hidden');
+    const title = document.getElementById('driver-map-title');
+    const subtitle = document.getElementById('driver-map-subtitle');
+    if (title) title.textContent = `Rastreo GPS en Vivo — #${orderId}`;
+    if (subtitle) subtitle.textContent = `📦 ${customerName}${address && address !== 'Dirección no especificada' ? ' · ' + address : ''}`;
+    modal.style.display = 'flex';
+
+    // Show driver name in info card
+    const assignments = typeof getOrderAssignments === 'function' ? getOrderAssignments() : {};
+    const assignment = assignments[orderId];
+    // Populate Rappi-style delivery card with driver name + address
+    const driverName = (assignment && assignment.driverName) ? assignment.driverName : 'Domiciliario';
+    const driverNameLine = document.getElementById('map-driver-name-line');
+    const addressDisplay = document.getElementById('map-address-display');
+    if (driverNameLine) driverNameLine.textContent = `${driverName} está en camino`;
+    if (addressDisplay && address && address !== 'Dirección no especificada') {
+        addressDisplay.textContent = `📍 ${address}`;
+    }
+    // Reset progress to initial state
+    const pb0 = document.getElementById('map-progress-bar');
+    const pb02 = document.getElementById('map-progress-bar-2');
+    const pp0 = document.getElementById('map-progress-pct');
+    if (pb0)  pb0.style.width  = '5%';
+    if (pb02) pb02.style.width = '0%';
+    if (pp0)  pp0.textContent  = 'En ruta';
 
     if (window.lucide) lucide.createIcons();
 
-    setTimeout(() => {
+    setTimeout(async () => {
+        // ── Initialize or reuse map instance ──────────────────────────────
         if (!adminDriverMapInstance) {
-            adminDriverMapInstance = L.map('admin-driver-map').setView([10.4631, -73.2532], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
+            adminDriverMapInstance = L.map('admin-driver-map', {
+                zoomControl: false,
+                attributionControl: true
+            }).setView([10.4631, -73.2532], 14);
+
+            L.control.zoom({ position: 'topright' }).addTo(adminDriverMapInstance);
+
+            // CartoDB Voyager tiles — estilo día moderno (sin API key)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
             }).addTo(adminDriverMapInstance);
         } else {
+            // Clean previous markers & route for fresh state
+            if (adminRoutePolyline) { adminDriverMapInstance.removeLayer(adminRoutePolyline); adminRoutePolyline = null; }
+            if (adminDestMarker) { adminDriverMapInstance.removeLayer(adminDestMarker); adminDestMarker = null; }
+            if (adminStoreMarker) { adminDriverMapInstance.removeLayer(adminStoreMarker); adminStoreMarker = null; }
+            if (adminDriverMapMarker) { adminDriverMapInstance.removeLayer(adminDriverMapMarker); adminDriverMapMarker = null; }
             adminDriverMapInstance.invalidateSize();
         }
 
-        const scooterHtml = `<div style="background:#10b981; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; box-shadow:0 4px 15px rgba(16,185,129,0.5); border:3px solid #fff;">🛵</div>`;
-        const scooterIcon = L.divIcon({ html: scooterHtml, className: 'scooter-marker-icon', iconSize: [44, 44], iconAnchor: [22, 22] });
+        _adminRouteUpdateTick = 0;
+        _routeInitialDistKm = null;
 
-        const fetchLoc = () => {
-            fetch(`/api/driver/location/${orderId}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data && data.lat && data.lng) {
-                        const pos = [data.lat, data.lng];
-                        if (!adminDriverMapMarker) {
-                            adminDriverMapMarker = L.marker(pos, { icon: scooterIcon }).addTo(adminDriverMapInstance);
-                            adminDriverMapInstance.setView(pos, 15);
-                        } else {
-                            adminDriverMapMarker.setLatLng(pos);
-                        }
+        // ── Custom marker icons ───────────────────────────────────────────
+        // Driver: large bubble with 2 concentric animated pulse rings
+        const scooterHtml = `
+            <div style="position:relative;width:62px;height:62px;">
+                <div style="position:absolute;top:50%;left:50%;width:90px;height:90px;border-radius:50%;border:2px solid rgba(16,185,129,0.18);animation:pulseRingMap 2.4s ease-out infinite;"></div>
+                <div style="position:absolute;top:50%;left:50%;width:74px;height:74px;border-radius:50%;border:2.5px solid rgba(16,185,129,0.32);animation:pulseRingMap 2.4s ease-out 0.82s infinite;"></div>
+                <div style="position:relative;width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 6px 22px rgba(16,185,129,0.58);border:3px solid #ffffff;">🛵</div>
+            </div>`;
+        const scooterIcon = L.divIcon({ html: scooterHtml, className: '', iconSize: [90, 90], iconAnchor: [45, 45] });
+
+        // Destination: SVG teardrop/pin shape (like Rappi / Google Maps)
+        const destHtml = `
+            <div style="text-align:center;width:48px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 62" width="48" height="62" style="filter:drop-shadow(0 4px 12px rgba(239,68,68,0.45));overflow:visible;">
+                    <path d="M24 1C11.3 1 1 11.3 1 24C1 38.8 24 61 24 61C24 61 47 38.8 47 24C47 11.3 36.7 1 24 1Z" fill="#ef4444" stroke="white" stroke-width="2"/>
+                    <circle cx="24" cy="23" r="13" fill="white"/>
+                    <text x="24" y="29" text-anchor="middle" font-size="15" font-family="system-ui,sans-serif">🏠</text>
+                </svg>
+            </div>`;
+        const destIcon = L.divIcon({ html: destHtml, className: '', iconSize: [48, 62], iconAnchor: [24, 61] });
+
+        // ── Geocode destination address ───────────────────────────────────
+        let destCoords = null;
+        
+        // 1. Priorizar coordenadas GPS exactas si el cliente presionó '📍 GPS Exacto'
+        const allOrders = (typeof getOrders === 'function') ? getOrders() : [];
+        const currentOrd = allOrders.find(o => (o.id || o.orderId) === orderId);
+        if (currentOrd && currentOrd.customer && currentOrd.customer.customerCoords && currentOrd.customer.customerCoords.lat) {
+            destCoords = currentOrd.customer.customerCoords;
+        }
+
+        // 2. Si no hay GPS exacto, geocodificar limpiando texto informal (apto, piso, etc)
+        if (!destCoords && address && address !== 'Dirección no especificada') {
+            const cleanAddress = address
+                .replace(/\b(apto|apartamento|piso|local|casa|piso\s*\d+|apto\s*\d+|int|interior)\b.*$/i, '')
+                .trim();
+            destCoords = await _geocodeForMap(cleanAddress || address);
+        }
+
+        if (destCoords) {
+            adminDestMarker = L.marker([destCoords.lat, destCoords.lng], { icon: destIcon, zIndexOffset: 500 })
+                .addTo(adminDriverMapInstance);
+            adminDriverMapInstance.setView([destCoords.lat, destCoords.lng], 15);
+        }
+
+        // ── Geocode & Render Store / Restaurant Marker ───────────────────
+        const storeAddress = (typeof state !== 'undefined' && state.config && state.config.address) ? state.config.address.trim() : '';
+        if (storeAddress && storeAddress.length >= 4) {
+            const storeCoords = await _geocodeForMap(storeAddress);
+            if (storeCoords && adminDriverMapInstance) {
+                const storeHtml = `
+                    <div style="text-align:center;width:48px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 62" width="48" height="62" style="filter:drop-shadow(0 4px 14px rgba(245,158,11,0.55));overflow:visible;">
+                            <path d="M24 1C11.3 1 1 11.3 1 24C1 38.8 24 61 24 61C24 61 47 38.8 47 24C47 11.3 36.7 1 24 1Z" fill="#f59e0b" stroke="white" stroke-width="2"/>
+                            <circle cx="24" cy="23" r="13" fill="white"/>
+                            <text x="24" y="29" text-anchor="middle" font-size="15" font-family="system-ui,sans-serif">🏪</text>
+                        </svg>
+                    </div>`;
+                const storeIcon = L.divIcon({ html: storeHtml, className: '', iconSize: [48, 62], iconAnchor: [24, 61] });
+                const storeName = (state.config && state.config.restaurantName) || 'Restaurante';
+                adminStoreMarker = L.marker([storeCoords.lat, storeCoords.lng], { icon: storeIcon, zIndexOffset: 450 })
+                    .bindTooltip(`<b>🏪 ${escapeHtml(storeName)}</b><br><span style="font-size:0.75rem;">${escapeHtml(storeAddress)}</span>`, { permanent: false, direction: 'top' })
+                    .addTo(adminDriverMapInstance);
+            }
+        }
+
+        // ── Poll driver location ──────────────────────────────────────────
+        const fetchLoc = async () => {
+            let loc = null;
+            // 1. Try backend API
+            try {
+                const r = await fetch(`/api/driver/location/${orderId}`);
+                if (r.ok) {
+                    const d = await r.json();
+                    const candidate = d.location || d;
+                    if (candidate && candidate.lat) loc = candidate;
+                }
+            } catch(e) {}
+            // 2. Fallback: localStorage (set by toggleDriverGPS)
+            if (!loc || !loc.lat) {
+                try {
+                    const saved = localStorage.getItem(`streetfeed_driver_location_${orderId}`);
+                    if (saved) { const p = JSON.parse(saved); if (p && p.lat) loc = p; }
+                } catch(e) {}
+            }
+
+            const noGpsOverlay = document.getElementById('no-gps-overlay');
+
+            if (loc && loc.lat && loc.lng) {
+                if (noGpsOverlay) noGpsOverlay.style.display = 'none';
+                const driverPos = [loc.lat, loc.lng];
+
+                if (!adminDriverMapMarker) {
+                    // First fix: place scooter and fit map to show both points
+                    adminDriverMapMarker = L.marker(driverPos, { icon: scooterIcon, zIndexOffset: 1000 })
+                        .addTo(adminDriverMapInstance);
+                    adminDriverMapMarker.bindPopup(
+                        `<div style="font-family:system-ui,sans-serif;padding:0.2rem;font-weight:800;color:#1e293b;">🛵 Domiciliario en ruta</div>`,
+                        { maxWidth: 160 }
+                    );
+                    if (destCoords) {
+                        const bounds = L.latLngBounds(driverPos, [destCoords.lat, destCoords.lng]);
+                        adminDriverMapInstance.fitBounds(bounds.pad(0.25));
+                        await _drawMapRoute(driverPos, destCoords);
+                    } else {
+                        adminDriverMapInstance.setView(driverPos, 16);
                     }
-                })
-                .catch(e => console.log(e));
+                } else {
+                    // Smooth update marker position without forcing panTo (allows user to drag map freely)
+                    adminDriverMapMarker.setLatLng(driverPos);
+                    // Redraw route every ~7 ticks (~28 sec) or if not yet drawn
+                    _adminRouteUpdateTick++;
+                    if (destCoords && (_adminRouteUpdateTick % 7 === 0 || !adminRoutePolyline)) {
+                        await _drawMapRoute(driverPos, destCoords);
+                    }
+                }
+            } else {
+                if (noGpsOverlay) noGpsOverlay.style.display = 'flex';
+            }
         };
 
         fetchLoc();
         if (adminDriverMapInterval) clearInterval(adminDriverMapInterval);
         adminDriverMapInterval = setInterval(fetchLoc, 4000);
-    }, 200);
+    }, 250);
 }
 
 function closeDriverMapModal() {
     const modal = document.getElementById('driver-map-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.style.display = 'none';
-    }
+    if (modal) modal.style.display = 'none';
+
     if (adminDriverMapInterval) {
         clearInterval(adminDriverMapInterval);
         adminDriverMapInterval = null;
     }
-    // Reset map instance so it re-initializes next time
+
+    // Clean up map layers and reset instance
     if (adminDriverMapInstance) {
-        try { adminDriverMapInstance.remove(); } catch(e) {}
+        try {
+            if (adminRoutePolyline) { adminDriverMapInstance.removeLayer(adminRoutePolyline); }
+            if (adminDestMarker) { adminDriverMapInstance.removeLayer(adminDestMarker); }
+            if (adminStoreMarker) { adminDriverMapInstance.removeLayer(adminStoreMarker); }
+            if (adminDriverMapMarker) { adminDriverMapInstance.removeLayer(adminDriverMapMarker); }
+            adminDriverMapInstance.remove();
+        } catch(e) {}
         adminDriverMapInstance = null;
-        adminDriverMapMarker = null;
+    }
+    adminRoutePolyline = null;
+    adminDestMarker = null;
+    adminStoreMarker = null;
+    adminDriverMapMarker = null;
+    // Reset bottom delivery sheet collapse state
+    const deliveryCard = document.getElementById('map-delivery-card');
+    if (deliveryCard) deliveryCard.classList.remove('collapsed');
+    const arrow = document.getElementById('map-card-toggle-arrow');
+    const text = document.getElementById('map-card-toggle-text');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+    if (text) text.textContent = 'Ocultar información';
+}
+
+function recenterAdminDriverMap() {
+    if (!adminDriverMapInstance) return;
+    const points = [];
+    if (adminDriverMapMarker) points.push(adminDriverMapMarker.getLatLng());
+    if (adminDestMarker) points.push(adminDestMarker.getLatLng());
+    if (adminStoreMarker) points.push(adminStoreMarker.getLatLng());
+
+    if (points.length >= 2) {
+        const bounds = L.latLngBounds(points);
+        adminDriverMapInstance.fitBounds(bounds.pad(0.22), { animate: true, duration: 0.8 });
+    } else if (points.length === 1) {
+        adminDriverMapInstance.setView(points[0], 16, { animate: true, duration: 0.8 });
     }
 }
 
@@ -8585,11 +9679,14 @@ window.toggleDriverGPS = toggleDriverGPS;
 window.completeDriverDelivery = completeDriverDelivery;
 window.openDriverMapModal = openDriverMapModal;
 window.closeDriverMapModal = closeDriverMapModal;
+window.toggleMapDeliveryCard = toggleMapDeliveryCard;
+window.recenterAdminDriverMap = recenterAdminDriverMap;
 window.claimDeliveryOrder = claimDeliveryOrder;
 window.releaseDeliveryOrder = releaseDeliveryOrder;
 window.forceReassignOrder = forceReassignOrder;
 window.getOrderAssignments = getOrderAssignments;
 window.buildDeliveryCard = buildDeliveryCard;
+window.renderDriverMetrics = renderDriverMetrics;
 // Export GPS state so script.js can clean them up on logout
 Object.defineProperty(window, 'activeWatchPositionId', {
     get: () => activeWatchPositionId,

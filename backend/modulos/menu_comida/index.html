@@ -570,7 +570,18 @@
                             <button type="button" class="takeout-opt-btn" data-val="Paso por ella" style="flex: 1; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s;">Paso por ella</button>
                         </div>
 
-                        <input type="text" id="cust-address" maxlength="30" placeholder="Ej: Calle 123 #45-67 Barrio..." style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white;">
+                        <!-- Delivery Address & GPS Wrapper (Solo visible en Domicilio) -->
+                        <div id="delivery-address-wrapper" style="display: none; width: 100%;">
+                            <div style="position: relative; width: 100%;">
+                                <input type="text" id="cust-address" maxlength="100" placeholder="Ej: Calle 123 #45-67 Barrio..." style="width: 100%; padding: 0.8rem 110px 0.8rem 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white;">
+                                <button type="button" id="btn-get-user-gps" onclick="getUserGPSLocation()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #10b981; border-radius: 8px; padding: 0.4rem 0.65rem; font-size: 0.75rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; transition: all 0.2s;">
+                                    📍 GPS Exacto
+                                </button>
+                            </div>
+                            <div id="gps-status-msg" style="display: none; font-size: 0.72rem; color: #10b981; margin-top: 0.35rem; font-weight: 700; align-items: center; gap: 0.3rem;">
+                                <span>✅ Ubicación GPS detectada con alta precisión</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 1rem;">
@@ -717,7 +728,7 @@
         </div>
     </footer>
 
-    <script src="js/script_v9.js?v=20260612.4"></script>
+    <script src="js/script_v9.js?v=20260727.3"></script>
     <script>
         console.log("Cargando versión 9 del script");
     </script>
