@@ -3113,21 +3113,11 @@
                     </div>
                 </div>
 
-                <!-- Summary Highlight Grid (Total Recaudado & Efectivo Neto) -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.8rem;">
-                    <!-- Total Recaudado del Turno -->
-                    <div style="background: linear-gradient(135deg, rgba(var(--theme-accent-rgb, 247, 147, 30), 0.16), rgba(var(--theme-accent-rgb, 247, 147, 30), 0.04)); border: 1.5px solid rgba(var(--theme-accent-rgb, 247, 147, 30), 0.45); border-radius: 20px; padding: 1.2rem; text-align: center; box-shadow: 0 8px 25px rgba(247,147,30,0.1);">
-                        <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; color: var(--theme-accent); display: block; margin-bottom: 0.3rem;">📊 TOTAL RECAUDADO EN EL TURNO</span>
-                        <span id="cash-kpi-total-recaudado" style="font-size: 2.2rem; font-weight: 900; color: var(--text); display: block;">$0</span>
-                        <span style="font-size: 0.72rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">(Efectivo + Transferencias + Fletes)</span>
-                    </div>
-
-                    <!-- Efectivo Físico a Entregar -->
-                    <div style="background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(16,185,129,0.04)); border: 1.5px solid rgba(16,185,129,0.45); border-radius: 20px; padding: 1.2rem; text-align: center; box-shadow: 0 8px 25px rgba(16,185,129,0.1);">
-                        <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; color: #10b981; display: block; margin-bottom: 0.3rem;">💵 EFECTIVO FÍSICO A ENTREGAR</span>
-                        <span id="cash-kpi-net" style="font-size: 2.2rem; font-weight: 900; color: var(--text); display: block;">$0</span>
-                        <span style="font-size: 0.72rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">(Efectivo de Ventas + Fletes Efectivo) − Gastos del Turno</span>
-                    </div>
+                <!-- Single Hero Summary Card: TOTAL RECAUDADO EN EL TURNO -->
+                <div style="background: linear-gradient(135deg, rgba(var(--theme-accent-rgb, 247, 147, 30), 0.16), rgba(var(--theme-accent-rgb, 247, 147, 30), 0.04)); border: 1.5px solid rgba(var(--theme-accent-rgb, 247, 147, 30), 0.45); border-radius: 20px; padding: 1.5rem 1.2rem; text-align: center; margin-bottom: 1.8rem; box-shadow: 0 8px 25px rgba(var(--theme-accent-rgb, 247, 147, 30), 0.12);">
+                    <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 800; color: var(--theme-accent); display: block; margin-bottom: 0.35rem;">📊 TOTAL RECAUDADO EN EL TURNO</span>
+                    <span id="cash-kpi-total-recaudado" style="font-size: 2.5rem; font-weight: 900; color: var(--text); display: block; line-height: 1.1;">$0</span>
+                    <span style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.4rem;">(Ventas Efectivo + Transferencias + Fletes Domicilio)</span>
                 </div>
 
                 <!-- Detailed Breakdown Table -->
@@ -3158,6 +3148,6 @@
     <div id="thermal-ticket-print-area" class="thermal-print-area"></div>
 
     <script src="js/script_v9.js?v=20260727.3"></script>
-    <script src="js/admin.js?v=5.63"></script>
+    <script src="js/admin.js?v=5.64"></script>
 </body>
 </html>
