@@ -9737,7 +9737,7 @@ function updateCashCloseModalData() {
         'Efectivo': 0,
         'Nequi': 0,
         'Daviplata': 0,
-        'Bancolombia / Transferencia': 0,
+        'Transferencia': 0,
         'Tarjeta / Datáfono': 0,
         'Otro': 0
     };
@@ -9760,7 +9760,7 @@ function updateCashCloseModalData() {
             methodTotals['Daviplata'] += total;
         } else if (pMethod.includes('bancolombia') || pMethod.includes('transfer')) {
             transferSales += total;
-            methodTotals['Bancolombia / Transferencia'] += total;
+            methodTotals['Transferencia'] += total;
         } else if (pMethod.includes('tarjeta') || pMethod.includes('datafono') || pMethod.includes('pos')) {
             transferSales += total;
             methodTotals['Tarjeta / Datáfono'] += total;
