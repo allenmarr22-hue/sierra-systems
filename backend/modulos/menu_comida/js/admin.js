@@ -7057,7 +7057,7 @@ function renderEmployeesTable() {
                         </div>
                     </td>
                     <td style="padding: 1rem; color: var(--text-dim); font-family: monospace;"><span style="opacity: 0.35; font-weight: 700;">@</span>${escapeHtml(emp.username ? emp.username.replace(/^@/, '') : '')}</td>
-                    <td style="padding: 1rem; color: var(--text-dim); font-family: monospace;">${emp.pin ? '🔑 ' + '•'.repeat(String(emp.pin).length) : '—'}</td>
+                    <td style="padding: 1rem; color: var(--text-dim); font-family: monospace;">${emp.pin ? '🔑 •••••' : '—'}</td>
                     <td style="padding: 1rem;">${roleBadge}</td>
                     <td style="padding: 1rem;">${statusBadge}</td>
                     <td style="padding: 1rem; text-align: right;">
