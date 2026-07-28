@@ -7208,23 +7208,45 @@ window.exportStaffPerformancePDF = function(selectedMonth = 'all', selectedYear 
         doc.setFont('helvetica', 'normal');
         doc.text(`Total Colaboradores: ${employeesList.length}`, 145, 32);
 
-        // Table
-        const headers = [['Colaborador', 'Usuario', 'Rol', 'PIN', 'Pedidos', 'Ventas Totales', 'Comisión (10%)', 'Estado']];
-        const roleLabels = { admin: 'Admin', mesero: 'Mesero', cajero: 'Cajero', cocina: 'Cocina' };
+        // Table headers and data without confidential Usuario/PIN
+        const headers = [['Colaborador', 'Rol', 'Pedidos Atendidos', 'Ventas Totales', 'Comisión Est. (10%)', 'Estado']];
+        const roleLabels = { owner: 'Propietario', admin: 'Administrador', mesero: 'Mesero', cajero: 'Cajero', cocina: 'Cocina', domiciliario: 'Domiciliario' };
+
+        let totalOrdersSum = 0;
+        let totalSalesSum = 0;
+        let totalCommissionSum = 0;
 
         const body = employeesList.map(emp => {
             const stats = getEmployeeStats(emp.name, { month: selectedMonth === 'all' ? '' : selectedMonth });
+            const orders = stats.totalOrders || 0;
+            const sales = stats.totalSales || 0;
+            const commission = stats.commission || 0;
+
+            totalOrdersSum += orders;
+            totalSalesSum += sales;
+            totalCommissionSum += commission;
+
+            const displayRole = roleLabels[emp.role] || (emp.role ? emp.role.charAt(0).toUpperCase() + emp.role.slice(1) : 'Personal');
+
             return [
                 emp.name,
-                '@' + (emp.username || '').replace(/^@/, ''),
-                roleLabels[emp.role] || emp.role,
-                emp.pin || '—',
-                stats.totalOrders,
-                '$' + stats.totalSales.toLocaleString('es-CO'),
-                '$' + stats.commission.toLocaleString('es-CO'),
-                emp.status === 'active' ? 'Activo' : 'Inactivo'
+                displayRole,
+                orders,
+                '$' + sales.toLocaleString('es-CO'),
+                '$' + commission.toLocaleString('es-CO'),
+                emp.status === 'active' || emp.status === 'activo' || !emp.status ? 'Activo' : 'Inactivo'
             ];
         });
+
+        // Totals Summary Row
+        body.push([
+            'TOTALES GENERALES',
+            '—',
+            totalOrdersSum,
+            '$' + totalSalesSum.toLocaleString('es-CO'),
+            '$' + totalCommissionSum.toLocaleString('es-CO'),
+            '—'
+        ]);
 
         doc.autoTable({
             head: headers,
@@ -7233,7 +7255,21 @@ window.exportStaffPerformancePDF = function(selectedMonth = 'all', selectedYear 
             theme: 'grid',
             headStyles: { fillStyle: 'F', fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
             alternateRowStyles: { fillColor: [248, 250, 252] },
-            styles: { fontSize: 8.5, cellPadding: 3 }
+            styles: { fontSize: 8.5, cellPadding: 3.5 },
+            columnStyles: {
+                0: { fontStyle: 'bold' },
+                2: { halign: 'center' },
+                3: { halign: 'right' },
+                4: { halign: 'right' },
+                5: { halign: 'center' }
+            },
+            didParseCell: function (data) {
+                if (data.row.index === body.length - 1) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [247, 147, 30];
+                    data.cell.styles.textColor = [255, 255, 255];
+                }
+            }
         });
 
         const monthSlug = selectedMonth === 'all' ? 'Completo' : (monthNames[parseInt(selectedMonth, 10)] || 'Mes');
