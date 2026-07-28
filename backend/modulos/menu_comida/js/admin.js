@@ -9946,7 +9946,7 @@ function printThermalTicketZ() {
     } catch (e) {}
 
     const netCashInHand = Math.max(0, cashSales - dayExpenses);
-    const grandTotalSales = cashSales + transferSales;
+    const grandTotalSales = cashSales + transferSales + totalFees;
     const storeName = state.config?.storeName || 'STREET FEED';
     const nowStr = new Date().toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
@@ -9965,10 +9965,10 @@ function printThermalTicketZ() {
             <div class="thermal-row"><span>PEDIDOS ATENDIDOS:</span><span>${dayOrders.length}</span></div>
             <div class="thermal-row"><span>VENTAS EFECTIVO:</span><span>$${cashSales.toLocaleString('es-CO')}</span></div>
             <div class="thermal-row"><span>VENTAS TRANSFERENCIA:</span><span>$${transferSales.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-row"><span>TOTAL VENTAS:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
             <div class="thermal-row"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
             <div class="thermal-row"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>
             <div class="thermal-divider">================================</div>
+            <div class="thermal-row"><span>TOTAL RECAUDADO TURNO:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
             <div class="thermal-row thermal-total"><span>EFECTIVO EN CAJA:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
             <div class="thermal-divider">================================</div>
             <br><br>
@@ -9981,12 +9981,7 @@ function printThermalTicketZ() {
         </div>
     `;
 
-    setTimeout(() => {
-        window.print();
-        setTimeout(() => {
-            printArea.style.display = 'none';
-        }, 500);
-    }, 100);
+    window.print();
 }
 
 function exportCashClosePDF() {
@@ -9998,6 +9993,34 @@ function exportCashClosePDF() {
     const datePicker = document.getElementById('cash-close-date-picker');
     const selectedDateStr = datePicker && datePicker.value ? datePicker.value : toLocalDateString(new Date());
 
+    const allOrders = getOrders();
+    const dayOrders = allOrders.filter(o => {
+        if (o.status !== 'accepted' && o.status !== 'completed' && o.status !== 'delivered' && o.status) return false;
+        return isSameLocalDate(o.date, selectedDateStr);
+    });
+
+    let cashSales = 0, transferSales = 0, totalFees = 0, dayExpenses = 0;
+    dayOrders.forEach(o => {
+        const total = o.total || 0;
+        totalFees += (o.deliveryFee || 0);
+        const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
+        if (pMethod.includes('efectivo') || pMethod.includes('cash')) cashSales += total;
+        else transferSales += total;
+    });
+
+    try {
+        const rawExp = localStorage.getItem('streetfeed_expenses');
+        const expList = rawExp ? JSON.parse(rawExp) : [];
+        expList.forEach(item => {
+            if (isSameLocalDate(item.date, selectedDateStr)) {
+                dayExpenses += (parseFloat(item.amount) || 0);
+            }
+        });
+    } catch (e) {}
+
+    const netCashInHand = Math.max(0, cashSales - dayExpenses);
+    const grandTotalSales = cashSales + transferSales + totalFees;
+
     const doc = new JsPDFClass();
     const storeName = state.config?.storeName || 'STREET FEED';
     const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
@@ -10008,25 +10031,17 @@ function exportCashClosePDF() {
     doc.text(`Fecha del Cierre: ${selectedDateStr} | Generado por: ${cashierName}`, 14, 28);
     doc.line(14, 32, 196, 32);
 
-    const kpiCash = document.getElementById('cash-kpi-cash')?.textContent || '$0';
-    const kpiTransf = document.getElementById('cash-kpi-transf')?.textContent || '$0';
-    const kpiFees = document.getElementById('cash-kpi-fees')?.textContent || '$0';
-    const kpiExp = document.getElementById('cash-kpi-expenses')?.textContent || '$0';
-    const kpiTotalRecaudado = document.getElementById('cash-kpi-total-recaudado')?.textContent || '$0';
-    const kpiNet = document.getElementById('cash-kpi-net')?.textContent || '$0';
-    const ordersCount = document.getElementById('cash-total-orders-count')?.textContent || '0 Pedidos';
-
     doc.autoTable({
         startY: 38,
         head: [['Métrica de Turno', 'Monto']],
         body: [
-            ['Pedidos Atendidos', ordersCount],
-            ['Ventas en Efectivo', kpiCash],
-            ['Ventas por Transferencia', kpiTransf],
-            ['Total Fletes Domicilios', kpiFees],
-            ['Gastos / Salidas de Caja', kpiExp],
-            ['TOTAL RECAUDADO EN EL TURNO', kpiTotalRecaudado],
-            ['EFECTIVO FÍSICO A ENTREGAR', kpiNet]
+            ['Pedidos Atendidos', `${dayOrders.length} Pedidos Atendidos`],
+            ['Ventas en Efectivo', '$' + cashSales.toLocaleString('es-CO')],
+            ['Ventas por Transferencia', '$' + transferSales.toLocaleString('es-CO')],
+            ['Total Fletes Domicilios', '$' + totalFees.toLocaleString('es-CO')],
+            ['Gastos / Salidas de Caja', '-$' + dayExpenses.toLocaleString('es-CO')],
+            ['TOTAL RECAUDADO EN EL TURNO', '$' + grandTotalSales.toLocaleString('es-CO')],
+            ['EFECTIVO FÍSICO EN CAJA', '$' + netCashInHand.toLocaleString('es-CO')]
         ],
         theme: 'striped',
         headStyles: { fillColor: [247, 147, 30] }
