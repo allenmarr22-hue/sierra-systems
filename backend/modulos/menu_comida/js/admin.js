@@ -9692,6 +9692,18 @@ function isSameLocalDate(dateInput, targetDateStr) {
     return toLocalDateString(d) === targetDateStr;
 }
 
+function setCashCloseDate(preset) {
+    const datePicker = document.getElementById('cash-close-date-picker');
+    if (!datePicker) return;
+
+    const d = new Date();
+    if (preset === 'yesterday') {
+        d.setDate(d.getDate() - 1);
+    }
+    datePicker.value = toLocalDateString(d);
+    updateCashCloseModalData();
+}
+
 function openCashCloseModal() {
     const modal = document.getElementById('cash-close-modal');
     if (!modal) return;
@@ -9815,7 +9827,8 @@ function updateCashCloseModalData() {
             const val = methodTotals[mKey];
             if (val > 0) {
                 const icon = mKey === 'Efectivo' ? 'dollar-sign' : (mKey.includes('Tarjeta') ? 'credit-card' : 'smartphone');
-                const badgeColor = mKey === 'Efectivo' ? '#4caf50' : '#2196f3';
+                const badgeColor = mKey === 'Efectivo' ? '#10b981' : '#3b82f6';
+                const pct = grandTotalSales > 0 ? ((val / grandTotalSales) * 100).toFixed(1) + '%' : '0%';
                 html += `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
                         <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -9824,7 +9837,10 @@ function updateCashCloseModalData() {
                             </div>
                             <span style="font-size: 0.85rem; font-weight: 700; color: var(--text);">${mKey}</span>
                         </div>
-                        <span style="font-size: 0.95rem; font-weight: 900; color: ${badgeColor};">$${val.toLocaleString('es-CO')}</span>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="background: ${badgeColor}18; color: ${badgeColor}; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">${pct}</span>
+                            <span style="font-size: 0.95rem; font-weight: 900; color: ${badgeColor};">$${val.toLocaleString('es-CO')}</span>
+                        </div>
                     </div>
                 `;
             }
@@ -9992,6 +10008,7 @@ window.forceReassignOrder = forceReassignOrder;
 window.getOrderAssignments = getOrderAssignments;
 window.buildDeliveryCard = buildDeliveryCard;
 window.renderDriverMetrics = renderDriverMetrics;
+window.setCashCloseDate = setCashCloseDate;
 window.openCashCloseModal = openCashCloseModal;
 window.closeCashCloseModal = closeCashCloseModal;
 window.updateCashCloseModalData = updateCashCloseModalData;
