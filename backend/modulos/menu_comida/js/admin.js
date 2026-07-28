@@ -9751,6 +9751,27 @@ function updateCashCloseModalData() {
     const datePicker = document.getElementById('cash-close-date-picker');
     const selectedDateStr = datePicker && datePicker.value ? datePicker.value : toLocalDateString(new Date());
 
+    const btnToday = document.getElementById('cash-preset-today-btn');
+    const btnYesterday = document.getElementById('cash-preset-yesterday-btn');
+    const todayStr = toLocalDateString(new Date());
+    const yesterdayObj = new Date();
+    yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+    const yesterdayStr = toLocalDateString(yesterdayObj);
+
+    if (btnToday) {
+        const isToday = selectedDateStr === todayStr;
+        btnToday.style.background = isToday ? 'rgba(var(--theme-accent-rgb,247,147,30),0.18)' : 'rgba(255,255,255,0.06)';
+        btnToday.style.color = isToday ? 'var(--theme-accent)' : 'var(--text-dim)';
+        btnToday.style.borderColor = isToday ? 'rgba(var(--theme-accent-rgb,247,147,30),0.4)' : 'var(--glass-border)';
+    }
+
+    if (btnYesterday) {
+        const isYesterday = selectedDateStr === yesterdayStr;
+        btnYesterday.style.background = isYesterday ? 'rgba(var(--theme-accent-rgb,247,147,30),0.18)' : 'rgba(255,255,255,0.06)';
+        btnYesterday.style.color = isYesterday ? 'var(--theme-accent)' : 'var(--text-dim)';
+        btnYesterday.style.borderColor = isYesterday ? 'rgba(var(--theme-accent-rgb,247,147,30),0.4)' : 'var(--glass-border)';
+    }
+
     const subtitleEl = document.getElementById('cash-close-subtitle');
     if (subtitleEl) {
         subtitleEl.textContent = `Balance de turno para el día: ${selectedDateStr}`;
@@ -9969,14 +9990,15 @@ function printThermalTicketZ() {
 }
 
 function exportCashClosePDF() {
-    if (!window.jsPDF) {
+    const JsPDFClass = window.jsPDF || (window.jspdf && window.jspdf.jsPDF);
+    if (!JsPDFClass) {
         showToast('⚠️ Librería PDF no disponible');
         return;
     }
     const datePicker = document.getElementById('cash-close-date-picker');
     const selectedDateStr = datePicker && datePicker.value ? datePicker.value : toLocalDateString(new Date());
 
-    const doc = new window.jsPDF();
+    const doc = new JsPDFClass();
     const storeName = state.config?.storeName || 'STREET FEED';
     const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
 
@@ -9990,6 +10012,7 @@ function exportCashClosePDF() {
     const kpiTransf = document.getElementById('cash-kpi-transf')?.textContent || '$0';
     const kpiFees = document.getElementById('cash-kpi-fees')?.textContent || '$0';
     const kpiExp = document.getElementById('cash-kpi-expenses')?.textContent || '$0';
+    const kpiTotalRecaudado = document.getElementById('cash-kpi-total-recaudado')?.textContent || '$0';
     const kpiNet = document.getElementById('cash-kpi-net')?.textContent || '$0';
     const ordersCount = document.getElementById('cash-total-orders-count')?.textContent || '0 Pedidos';
 
@@ -10002,7 +10025,8 @@ function exportCashClosePDF() {
             ['Ventas por Transferencia', kpiTransf],
             ['Total Fletes Domicilios', kpiFees],
             ['Gastos / Salidas de Caja', kpiExp],
-            ['EFECTIVO NETO A ENTREGAR', kpiNet]
+            ['TOTAL RECAUDADO EN EL TURNO', kpiTotalRecaudado],
+            ['EFECTIVO FÍSICO A ENTREGAR', kpiNet]
         ],
         theme: 'striped',
         headStyles: { fillColor: [247, 147, 30] }
