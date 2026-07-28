@@ -373,7 +373,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=2.1">
-    <link rel="stylesheet" href="css/admin.css?v=4.36">
+    <link rel="stylesheet" href="css/admin.css?v=4.37">
 
     <!-- Disable public logo shimmer on admin panel -->
     <style>
@@ -580,6 +580,12 @@
                         <h2 class="font-serif" style="margin: 0; font-size: 1.6rem;">Panel de <span class="accent">Control</span></h2>
                         
                         <div style="display: flex; gap: 0.6rem; align-items: center;">
+                            <!-- Cash Register Close (Cierre Z) Button -->
+                            <button id="cash-close-btn" onclick="window.openCashCloseModal()" title="Cuadre y Cierre de Caja / Turno" class="cash-close-header-btn">
+                                <i data-lucide="receipt" style="width: 16px; height: 16px;"></i>
+                                <span class="cash-close-btn-text">Cierre de Caja</span>
+                            </button>
+
                             <!-- Sound Notification Toggle (Icon Only) -->
                             <button id="sound-toggle" class="header-action-btn" title="Activar/Silenciar alarma de pedidos" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
                                 <span id="sound-icon-container" style="display: flex; align-items: center; justify-content: center;">
@@ -3054,10 +3060,89 @@
         </div>
     </div>
 
+    <!-- MODAL DE CUADRE Y CIERRE DE CAJA (REPORTE Z) -->
+    <div id="cash-close-modal" class="modal hidden">
+        <div class="modal-content glass cash-close-modal-card" style="max-width: 680px; width: 92%; border-radius: 28px; padding: 0; overflow: hidden; border: 1px solid var(--glass-border); box-shadow: 0 20px 50px rgba(0,0,0,0.35);">
+            <!-- Modal Header -->
+            <div style="padding: 1.8rem 2rem 1.2rem; background: linear-gradient(135deg, rgba(var(--theme-accent-rgb, 247, 147, 30), 0.12), rgba(0,0,0,0.02)); border-bottom: 1px solid var(--glass-border); position: relative;">
+                <button class="modal-close" onclick="window.closeCashCloseModal()"><i data-lucide="x"></i></button>
+                <div style="display: flex; align-items: center; gap: 0.9rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(var(--theme-accent-rgb,247,147,30),0.18); border: 1px solid rgba(var(--theme-accent-rgb,247,147,30),0.3); color: var(--theme-accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="receipt" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.35rem; font-weight: 900; margin: 0; color: var(--text);">Cuadre & Cierre de Caja (Turno)</h2>
+                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-dim);" id="cash-close-subtitle">Resumen de ingresos, fletes, gastos y saldo neto a entregar.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding: 1.6rem 2rem; max-height: 65vh; overflow-y: auto;">
+                <!-- Filter Date Selection -->
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; background: rgba(255,255,255,0.03); padding: 0.8rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <i data-lucide="calendar" style="width: 16px; height: 16px; color: var(--theme-accent);"></i>
+                        <span style="font-size: 0.85rem; font-weight: 700; color: var(--text);">Fecha de Cierre:</span>
+                    </div>
+                    <input type="date" id="cash-close-date-picker" onchange="window.updateCashCloseModalData()" style="padding: 0.45rem 0.9rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.82rem; font-weight: 700; outline: none; cursor: pointer;">
+                </div>
+
+                <!-- KPIs Summary Grid (4 cards) -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.8rem; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.25); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.3rem;">💵 Efectivo</div>
+                        <div id="cash-kpi-cash" style="font-size: 1.25rem; font-weight: 900; color: #4caf50;">$0</div>
+                    </div>
+                    <div style="background: rgba(33,150,243,0.08); border: 1px solid rgba(33,150,243,0.25); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.3rem;">💳 Transferencias</div>
+                        <div id="cash-kpi-transf" style="font-size: 1.25rem; font-weight: 900; color: #2196f3;">$0</div>
+                    </div>
+                    <div style="background: rgba(236,72,153,0.08); border: 1px solid rgba(236,72,153,0.25); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.3rem;">🛵 Fletes Domicilio</div>
+                        <div id="cash-kpi-fees" style="font-size: 1.25rem; font-weight: 900; color: #ec4899;">$0</div>
+                    </div>
+                    <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 16px; padding: 1rem 0.8rem; text-align: center;">
+                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.3rem;">💸 Gastos / Salidas</div>
+                        <div id="cash-kpi-expenses" style="font-size: 1.25rem; font-weight: 900; color: #ef4444;">$0</div>
+                    </div>
+                </div>
+
+                <!-- Net Cash Box Box -->
+                <div style="background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border: 2px solid #10b981; border-radius: 20px; padding: 1.2rem; text-align: center; margin-bottom: 1.8rem;">
+                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; color: #10b981; display: block; margin-bottom: 0.3rem;">💰 EFECTIVO NETO A ENTREGAR EN CAJA</span>
+                    <span id="cash-kpi-net" style="font-size: 2.2rem; font-weight: 900; color: var(--text); display: block;">$0</span>
+                    <span style="font-size: 0.72rem; color: var(--text-dim); display: block; margin-top: 0.3rem;">(Efectivo de Ventas + Fletes Efectivo) − Gastos del Turno</span>
+                </div>
+
+                <!-- Detailed Breakdown Table -->
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
+                        <h4 style="margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);">📊 Desglose por Método de Pago & Salidas</h4>
+                        <span id="cash-total-orders-count" style="font-size: 0.78rem; font-weight: 800; color: var(--text-dim);">0 Pedidos Atendidos</span>
+                    </div>
+                    <div id="cash-close-breakdown-container" style="display: flex; flex-direction: column; gap: 0.6rem;"></div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div style="padding: 1.2rem 2rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.12); display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
+                <button onclick="window.printThermalTicketZ()" style="flex: 1; padding: 0.85rem 1rem; border-radius: 14px; border: 1px solid rgba(var(--theme-accent-rgb,247,147,30),0.4); background: rgba(var(--theme-accent-rgb,247,147,30),0.18); color: var(--theme-accent); font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;">
+                    <i data-lucide="printer" style="width: 16px; height: 16px;"></i>
+                    Imprimir Ticket Z
+                </button>
+                <button onclick="window.exportCashClosePDF()" style="flex: 1; padding: 0.85rem 1rem; border-radius: 14px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;">
+                    <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+                    Exportar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Printable Thermal Ticket Container (Hidden except during printing) -->
     <div id="thermal-ticket-print-area" class="thermal-print-area"></div>
 
     <script src="js/script_v9.js?v=20260727.3"></script>
-    <script src="js/admin.js?v=5.54"></script>
+    <script src="js/admin.js?v=5.55"></script>
 </body>
 </html>

@@ -8207,6 +8207,13 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
 
     const btnNewOrder = document.getElementById('btn-new-manual-order');
     const orderSettingsBtn = document.querySelector('.order-settings-btn');
+    const btnCashClose = document.getElementById('cash-close-btn');
+
+    if (btnCashClose) {
+        const rLower = (role || '').toLowerCase();
+        const canCloseCash = (rLower === 'cajero' || rLower === 'admin' || rLower === 'administrador' || rLower === 'owner' || rLower === 'propietario');
+        btnCashClose.style.display = canCloseCash ? 'inline-flex' : 'none';
+    }
 
     // Restore default DOM order for sidebar buttons before applying role visibility
     const sidebar = document.querySelector('.sidebar-nav');
@@ -9667,6 +9674,297 @@ function recenterAdminDriverMap() {
     }
 }
 
+// ==========================================================================
+// MÓDULO DE CUADRE & CIERRE DE CAJA (TURNO Z)
+// ==========================================================================
+
+function openCashCloseModal() {
+    const modal = document.getElementById('cash-close-modal');
+    if (!modal) return;
+
+    const datePicker = document.getElementById('cash-close-date-picker');
+    if (datePicker && !datePicker.value) {
+        datePicker.value = toLocalDateString(new Date());
+    }
+
+    updateCashCloseModalData();
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeCashCloseModal() {
+    const modal = document.getElementById('cash-close-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function updateCashCloseModalData() {
+    const datePicker = document.getElementById('cash-close-date-picker');
+    const selectedDateStr = datePicker && datePicker.value ? datePicker.value : toLocalDateString(new Date());
+
+    const subtitleEl = document.getElementById('cash-close-subtitle');
+    if (subtitleEl) {
+        subtitleEl.textContent = `Balance de turno para el día: ${selectedDateStr}`;
+    }
+
+    const allOrders = getOrders();
+    const targetDateObj = new Date(selectedDateStr + 'T00:00:00');
+
+    // Filter orders for the selected date with status accepted, completed, or delivered
+    const dayOrders = allOrders.filter(o => {
+        if (o.status !== 'accepted' && o.status !== 'completed' && o.status !== 'delivered' && o.status) return false;
+        if (!o.date) return false;
+        const d = new Date(o.date);
+        return d.getFullYear() === targetDateObj.getFullYear() &&
+               d.getMonth() === targetDateObj.getMonth() &&
+               d.getDate() === targetDateObj.getDate();
+    });
+
+    // Breakdown metrics
+    let cashSales = 0;
+    let transferSales = 0;
+    let totalDeliveryFees = 0;
+
+    const methodTotals = {
+        'Efectivo': 0,
+        'Nequi': 0,
+        'Daviplata': 0,
+        'Bancolombia / Transferencia': 0,
+        'Tarjeta / Datáfono': 0,
+        'Otro': 0
+    };
+
+    dayOrders.forEach(o => {
+        const total = o.total || 0;
+        const fee = o.deliveryFee || 0;
+        totalDeliveryFees += fee;
+
+        const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
+        
+        if (pMethod.includes('efectivo') || pMethod.includes('cash')) {
+            cashSales += total;
+            methodTotals['Efectivo'] += total;
+        } else if (pMethod.includes('nequi')) {
+            transferSales += total;
+            methodTotals['Nequi'] += total;
+        } else if (pMethod.includes('daviplata')) {
+            transferSales += total;
+            methodTotals['Daviplata'] += total;
+        } else if (pMethod.includes('bancolombia') || pMethod.includes('transfer')) {
+            transferSales += total;
+            methodTotals['Bancolombia / Transferencia'] += total;
+        } else if (pMethod.includes('tarjeta') || pMethod.includes('datafono') || pMethod.includes('pos')) {
+            transferSales += total;
+            methodTotals['Tarjeta / Datáfono'] += total;
+        } else {
+            transferSales += total;
+            methodTotals['Otro'] += total;
+        }
+    });
+
+    // Get expenses logged for selected date
+    let dayExpenses = 0;
+    try {
+        const rawExp = localStorage.getItem('streetfeed_expenses');
+        const expList = rawExp ? JSON.parse(rawExp) : [];
+        expList.forEach(item => {
+            if (!item.date) return;
+            const ed = new Date(item.date);
+            if (ed.getFullYear() === targetDateObj.getFullYear() &&
+                ed.getMonth() === targetDateObj.getMonth() &&
+                ed.getDate() === targetDateObj.getDate()) {
+                dayExpenses += (parseFloat(item.amount) || 0);
+            }
+        });
+    } catch (e) {}
+
+    const netCashInHand = Math.max(0, cashSales - dayExpenses);
+
+    // Update KPI UI
+    const kpiCash = document.getElementById('cash-kpi-cash');
+    if (kpiCash) kpiCash.textContent = '$' + cashSales.toLocaleString('es-CO');
+
+    const kpiTransf = document.getElementById('cash-kpi-transf');
+    if (kpiTransf) kpiTransf.textContent = '$' + transferSales.toLocaleString('es-CO');
+
+    const kpiFees = document.getElementById('cash-kpi-fees');
+    if (kpiFees) kpiFees.textContent = '$' + totalDeliveryFees.toLocaleString('es-CO');
+
+    const kpiExp = document.getElementById('cash-kpi-expenses');
+    if (kpiExp) kpiExp.textContent = '-$' + dayExpenses.toLocaleString('es-CO');
+
+    const kpiNet = document.getElementById('cash-kpi-net');
+    if (kpiNet) kpiNet.textContent = '$' + netCashInHand.toLocaleString('es-CO');
+
+    const countEl = document.getElementById('cash-total-orders-count');
+    if (countEl) countEl.textContent = `${dayOrders.length} Pedidos Atendidos`;
+
+    // Render detailed breakdown list
+    const container = document.getElementById('cash-close-breakdown-container');
+    if (container) {
+        let html = '';
+        Object.keys(methodTotals).forEach(mKey => {
+            const val = methodTotals[mKey];
+            if (val > 0) {
+                const icon = mKey === 'Efectivo' ? 'dollar-sign' : (mKey.includes('Tarjeta') ? 'credit-card' : 'smartphone');
+                const badgeColor = mKey === 'Efectivo' ? '#4caf50' : '#2196f3';
+                html += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <div style="width: 28px; height: 28px; border-radius: 8px; background: ${badgeColor}18; color: ${badgeColor}; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="${icon}" style="width: 14px; height: 14px;"></i>
+                            </div>
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text);">${mKey}</span>
+                        </div>
+                        <span style="font-size: 0.95rem; font-weight: 900; color: ${badgeColor};">$${val.toLocaleString('es-CO')}</span>
+                    </div>
+                `;
+            }
+        });
+
+        if (dayExpenses > 0) {
+            html += `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-radius: 12px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25);">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(239,68,68,0.18); color: #ef4444; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="minus-circle" style="width: 14px; height: 14px;"></i>
+                        </div>
+                        <span style="font-size: 0.85rem; font-weight: 700; color: #ef4444;">Salidas / Gastos de Caja</span>
+                    </div>
+                    <span style="font-size: 0.95rem; font-weight: 900; color: #ef4444;">-$${dayExpenses.toLocaleString('es-CO')}</span>
+                </div>
+            `;
+        }
+
+        if (!html) {
+            html = `<div style="text-align: center; padding: 1.5rem; color: var(--text-dim); font-size: 0.85rem;">Sin registros para la fecha seleccionada.</div>`;
+        }
+
+        container.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+function printThermalTicketZ() {
+    const datePicker = document.getElementById('cash-close-date-picker');
+    const selectedDateStr = datePicker && datePicker.value ? datePicker.value : toLocalDateString(new Date());
+    const printArea = document.getElementById('thermal-ticket-print-area');
+    if (!printArea) return;
+
+    const allOrders = getOrders();
+    const targetDateObj = new Date(selectedDateStr + 'T00:00:00');
+    const dayOrders = allOrders.filter(o => {
+        if (o.status !== 'accepted' && o.status !== 'completed' && o.status !== 'delivered' && o.status) return false;
+        if (!o.date) return false;
+        const d = new Date(o.date);
+        return d.getFullYear() === targetDateObj.getFullYear() &&
+               d.getMonth() === targetDateObj.getMonth() &&
+               d.getDate() === targetDateObj.getDate();
+    });
+
+    let cashSales = 0, transferSales = 0, totalFees = 0, dayExpenses = 0;
+    dayOrders.forEach(o => {
+        const total = o.total || 0;
+        totalFees += (o.deliveryFee || 0);
+        const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
+        if (pMethod.includes('efectivo') || pMethod.includes('cash')) cashSales += total;
+        else transferSales += total;
+    });
+
+    try {
+        const rawExp = localStorage.getItem('streetfeed_expenses');
+        const expList = rawExp ? JSON.parse(rawExp) : [];
+        expList.forEach(item => {
+            if (!item.date) return;
+            const ed = new Date(item.date);
+            if (ed.getFullYear() === targetDateObj.getFullYear() &&
+                ed.getMonth() === targetDateObj.getMonth() &&
+                ed.getDate() === targetDateObj.getDate()) {
+                dayExpenses += (parseFloat(item.amount) || 0);
+            }
+        });
+    } catch (e) {}
+
+    const netCashInHand = Math.max(0, cashSales - dayExpenses);
+    const storeName = state.config?.storeName || 'STREET FEED';
+    const nowStr = new Date().toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
+
+    printArea.innerHTML = `
+        <div class="thermal-ticket">
+            <div class="thermal-header">
+                <h2>${escapeHtml(storeName.toUpperCase())}</h2>
+                <p>=== REPORTE Z DE CIERRE DE CAJA ===</p>
+                <p>FECHA CIERRE: ${selectedDateStr}</p>
+                <p>IMPRESO: ${nowStr}</p>
+                <p>CAJERO: ${escapeHtml(cashierName)}</p>
+            </div>
+            <div class="thermal-divider">--------------------------------</div>
+            <div class="thermal-row"><span>PEDIDOS ATENDIDOS:</span><span>${dayOrders.length}</span></div>
+            <div class="thermal-row"><span>VENTAS EFECTIVO:</span><span>$${cashSales.toLocaleString('es-CO')}</span></div>
+            <div class="thermal-row"><span>VENTAS TRANSFERENCIA:</span><span>$${transferSales.toLocaleString('es-CO')}</span></div>
+            <div class="thermal-row"><span>TOTAL VENTAS:</span><span>$${(cashSales + transferSales).toLocaleString('es-CO')}</span></div>
+            <div class="thermal-row"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
+            <div class="thermal-row"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>
+            <div class="thermal-divider">================================</div>
+            <div class="thermal-row thermal-total"><span>EFECTIVO A ENTREGAR:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
+            <div class="thermal-divider">================================</div>
+            <br><br>
+            <div class="thermal-row"><span>FIRMA CAJERO: ____________________</span></div>
+            <br>
+            <div class="thermal-row"><span>FIRMA RECIBIDO: ___________________</span></div>
+            <div class="thermal-footer">
+                <p>*** CORTE DE CAJA FINALIZADO ***</p>
+            </div>
+        </div>
+    `;
+
+    window.print();
+}
+
+function exportCashClosePDF() {
+    if (!window.jsPDF) {
+        showToast('⚠️ Librería PDF no disponible');
+        return;
+    }
+    const datePicker = document.getElementById('cash-close-date-picker');
+    const selectedDateStr = datePicker && datePicker.value ? datePicker.value : toLocalDateString(new Date());
+
+    const doc = new window.jsPDF();
+    const storeName = state.config?.storeName || 'STREET FEED';
+    const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
+
+    doc.setFontSize(18);
+    doc.text(`${storeName} — Reporte Z (Cierre de Caja)`, 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Fecha del Cierre: ${selectedDateStr} | Generado por: ${cashierName}`, 14, 28);
+    doc.line(14, 32, 196, 32);
+
+    const kpiCash = document.getElementById('cash-kpi-cash')?.textContent || '$0';
+    const kpiTransf = document.getElementById('cash-kpi-transf')?.textContent || '$0';
+    const kpiFees = document.getElementById('cash-kpi-fees')?.textContent || '$0';
+    const kpiExp = document.getElementById('cash-kpi-expenses')?.textContent || '$0';
+    const kpiNet = document.getElementById('cash-kpi-net')?.textContent || '$0';
+    const ordersCount = document.getElementById('cash-total-orders-count')?.textContent || '0 Pedidos';
+
+    doc.autoTable({
+        startY: 38,
+        head: [['Métrica de Turno', 'Monto']],
+        body: [
+            ['Pedidos Atendidos', ordersCount],
+            ['Ventas en Efectivo', kpiCash],
+            ['Ventas por Transferencia', kpiTransf],
+            ['Total Fletes Domicilios', kpiFees],
+            ['Gastos / Salidas de Caja', kpiExp],
+            ['EFECTIVO NETO A ENTREGAR', kpiNet]
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [247, 147, 30] }
+    });
+
+    doc.save(`Cierre_Caja_${selectedDateStr}.pdf`);
+    showToast('📄 PDF de Cierre descargado');
+}
+
 // Exportar globalmente
 window.openNewEmployeeModal = openNewEmployeeModal;
 window.closeEmployeeModal = closeEmployeeModal;
@@ -9687,6 +9985,12 @@ window.forceReassignOrder = forceReassignOrder;
 window.getOrderAssignments = getOrderAssignments;
 window.buildDeliveryCard = buildDeliveryCard;
 window.renderDriverMetrics = renderDriverMetrics;
+window.openCashCloseModal = openCashCloseModal;
+window.closeCashCloseModal = closeCashCloseModal;
+window.updateCashCloseModalData = updateCashCloseModalData;
+window.printThermalTicketZ = printThermalTicketZ;
+window.exportCashClosePDF = exportCashClosePDF;
+
 // Export GPS state so script.js can clean them up on logout
 Object.defineProperty(window, 'activeWatchPositionId', {
     get: () => activeWatchPositionId,
