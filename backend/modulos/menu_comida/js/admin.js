@@ -9783,6 +9783,7 @@ function updateCashCloseModalData() {
     } catch (e) {}
 
     const netCashInHand = Math.max(0, cashSales - dayExpenses);
+    const grandTotalSales = cashSales + transferSales;
 
     // Update KPI UI
     const kpiCash = document.getElementById('cash-kpi-cash');
@@ -9796,6 +9797,9 @@ function updateCashCloseModalData() {
 
     const kpiExp = document.getElementById('cash-kpi-expenses');
     if (kpiExp) kpiExp.textContent = '-$' + dayExpenses.toLocaleString('es-CO');
+
+    const kpiTotalRecaudado = document.getElementById('cash-kpi-total-recaudado');
+    if (kpiTotalRecaudado) kpiTotalRecaudado.textContent = '$' + grandTotalSales.toLocaleString('es-CO');
 
     const kpiNet = document.getElementById('cash-kpi-net');
     if (kpiNet) kpiNet.textContent = '$' + netCashInHand.toLocaleString('es-CO');
@@ -9881,10 +9885,12 @@ function printThermalTicketZ() {
     } catch (e) {}
 
     const netCashInHand = Math.max(0, cashSales - dayExpenses);
+    const grandTotalSales = cashSales + transferSales;
     const storeName = state.config?.storeName || 'STREET FEED';
     const nowStr = new Date().toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
 
+    printArea.style.display = 'block';
     printArea.innerHTML = `
         <div class="thermal-ticket">
             <div class="thermal-header">
@@ -9898,11 +9904,11 @@ function printThermalTicketZ() {
             <div class="thermal-row"><span>PEDIDOS ATENDIDOS:</span><span>${dayOrders.length}</span></div>
             <div class="thermal-row"><span>VENTAS EFECTIVO:</span><span>$${cashSales.toLocaleString('es-CO')}</span></div>
             <div class="thermal-row"><span>VENTAS TRANSFERENCIA:</span><span>$${transferSales.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-row"><span>TOTAL VENTAS:</span><span>$${(cashSales + transferSales).toLocaleString('es-CO')}</span></div>
+            <div class="thermal-row"><span>TOTAL VENTAS:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
             <div class="thermal-row"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
             <div class="thermal-row"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>
             <div class="thermal-divider">================================</div>
-            <div class="thermal-row thermal-total"><span>EFECTIVO A ENTREGAR:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
+            <div class="thermal-row thermal-total"><span>EFECTIVO EN CAJA:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
             <div class="thermal-divider">================================</div>
             <br><br>
             <div class="thermal-row"><span>FIRMA CAJERO: ____________________</span></div>
@@ -9914,7 +9920,12 @@ function printThermalTicketZ() {
         </div>
     `;
 
-    window.print();
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+            printArea.style.display = 'none';
+        }, 500);
+    }, 100);
 }
 
 function exportCashClosePDF() {
