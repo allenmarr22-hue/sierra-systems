@@ -3081,15 +3081,15 @@
             <!-- Modal Body -->
             <div style="padding: 1.6rem 2rem; max-height: 65vh; overflow-y: auto;">
                 <!-- Filter Date Selection with Quick Presets -->
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; background: rgba(255,255,255,0.03); padding: 0.8rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 1.5rem; background: rgba(255,255,255,0.03); padding: 0.8rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border); flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 0.6rem;">
                         <i data-lucide="calendar" style="width: 16px; height: 16px; color: var(--theme-accent);"></i>
                         <span style="font-size: 0.85rem; font-weight: 700; color: var(--text);">Fecha de Cierre:</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                        <button type="button" onclick="window.setCashCloseDate('today')" style="padding: 0.35rem 0.8rem; border-radius: 20px; border: 1px solid var(--glass-border); background: rgba(var(--theme-accent-rgb,247,147,30),0.15); color: var(--theme-accent); font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Hoy</button>
-                        <button type="button" onclick="window.setCashCloseDate('yesterday')" style="padding: 0.35rem 0.8rem; border-radius: 20px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text-dim); font-weight: 700; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Ayer</button>
-                        <input type="date" id="cash-close-date-picker" onchange="window.updateCashCloseModalData()" style="padding: 0.45rem 0.9rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.82rem; font-weight: 700; outline: none; cursor: pointer;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; align-self: center;">
+                        <button type="button" id="cash-preset-today-btn" onclick="window.setCashCloseDate('today')" style="padding: 0.4rem 0.9rem; border-radius: 50px; border: 1px solid rgba(var(--theme-accent-rgb,247,147,30),0.4); background: rgba(var(--theme-accent-rgb,247,147,30),0.18); color: var(--theme-accent); font-weight: 800; font-size: 0.78rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;">Hoy</button>
+                        <button type="button" id="cash-preset-yesterday-btn" onclick="window.setCashCloseDate('yesterday')" style="padding: 0.4rem 0.9rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text-dim); font-weight: 700; font-size: 0.78rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;">Ayer</button>
+                        <input type="date" id="cash-close-date-picker" onchange="window.updateCashCloseModalData()" style="padding: 0.4rem 0.9rem; border-radius: 50px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.82rem; font-weight: 700; outline: none; cursor: pointer;">
                     </div>
                 </div>
 
@@ -3158,6 +3158,6 @@
     <div id="thermal-ticket-print-area" class="thermal-print-area"></div>
 
     <script src="js/script_v9.js?v=20260727.3"></script>
-    <script src="js/admin.js?v=5.60"></script>
+    <script src="js/admin.js?v=5.61"></script>
 </body>
 </html>

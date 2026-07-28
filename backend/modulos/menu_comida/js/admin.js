@@ -9696,9 +9696,33 @@ function setCashCloseDate(preset) {
     const datePicker = document.getElementById('cash-close-date-picker');
     if (!datePicker) return;
 
+    const btnToday = document.getElementById('cash-preset-today-btn');
+    const btnYesterday = document.getElementById('cash-preset-yesterday-btn');
+
     const d = new Date();
     if (preset === 'yesterday') {
         d.setDate(d.getDate() - 1);
+        if (btnToday) {
+            btnToday.style.background = 'rgba(255,255,255,0.06)';
+            btnToday.style.color = 'var(--text-dim)';
+            btnToday.style.borderColor = 'var(--glass-border)';
+        }
+        if (btnYesterday) {
+            btnYesterday.style.background = 'rgba(var(--theme-accent-rgb,247,147,30),0.18)';
+            btnYesterday.style.color = 'var(--theme-accent)';
+            btnYesterday.style.borderColor = 'rgba(var(--theme-accent-rgb,247,147,30),0.4)';
+        }
+    } else {
+        if (btnToday) {
+            btnToday.style.background = 'rgba(var(--theme-accent-rgb,247,147,30),0.18)';
+            btnToday.style.color = 'var(--theme-accent)';
+            btnToday.style.borderColor = 'rgba(var(--theme-accent-rgb,247,147,30),0.4)';
+        }
+        if (btnYesterday) {
+            btnYesterday.style.background = 'rgba(255,255,255,0.06)';
+            btnYesterday.style.color = 'var(--text-dim)';
+            btnYesterday.style.borderColor = 'var(--glass-border)';
+        }
     }
     datePicker.value = toLocalDateString(d);
     updateCashCloseModalData();
