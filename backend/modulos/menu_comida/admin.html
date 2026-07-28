@@ -580,13 +580,6 @@
                         <h2 class="font-serif" style="margin: 0; font-size: 1.6rem;">Panel de <span class="accent">Control</span></h2>
                         
                         <div style="display: flex; gap: 0.6rem; align-items: center;">
-                            <!-- Cash Register Close (Cierre Z) Button (Icon Only, 42x42px) -->
-                            <button id="cash-close-btn" class="header-action-btn" onclick="window.openCashCloseModal()" title="Cuadre y Cierre de Caja / Turno" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
-                                <span id="cash-close-icon-container" style="display: flex; align-items: center; justify-content: center;">
-                                    <i data-lucide="receipt" id="cash-close-icon" style="width: 20px; height: 20px; color: var(--theme-accent, #f7931e);"></i>
-                                </span>
-                            </button>
-
                             <!-- Sound Notification Toggle (Icon Only) -->
                             <button id="sound-toggle" class="header-action-btn" title="Activar/Silenciar alarma de pedidos" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
                                 <span id="sound-icon-container" style="display: flex; align-items: center; justify-content: center;">
@@ -598,6 +591,13 @@
                             <button id="theme-toggle" class="header-action-btn" title="Cambiar Modo Día / Noche" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
                                 <span id="theme-icon-container" style="display: flex; align-items: center; justify-content: center;">
                                     <i data-lucide="moon" id="theme-icon" style="width: 20px; height: 20px;"></i>
+                                </span>
+                            </button>
+
+                            <!-- Cash Register Close (Cierre Z) Button (Icon Only, 42x42px) -->
+                            <button id="cash-close-btn" class="header-action-btn" onclick="window.openCashCloseModal()" title="Cuadre y Cierre de Caja / Turno" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
+                                <span id="cash-close-icon-container" style="display: flex; align-items: center; justify-content: center;">
+                                    <i data-lucide="receipt" id="cash-close-icon" style="width: 20px; height: 20px; color: var(--theme-accent, #f7931e);"></i>
                                 </span>
                             </button>
 
@@ -3158,6 +3158,6 @@
     <div id="thermal-ticket-print-area" class="thermal-print-area"></div>
 
     <script src="js/script_v9.js?v=20260727.3"></script>
-    <script src="js/admin.js?v=5.62"></script>
+    <script src="js/admin.js?v=5.63"></script>
 </body>
 </html>
