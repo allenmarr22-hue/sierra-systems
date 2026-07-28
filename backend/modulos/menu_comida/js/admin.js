@@ -4843,9 +4843,11 @@ window.updateOrderStatus = function(id, newStatus) {
             window.renderOrders();
             if (typeof window.reRenderCurrentStats === 'function') window.reRenderCurrentStats();
 
-            // Impresión automática al aceptar pedido para comanda de cocina
-            if (newStatus === 'confirmed' && typeof window.printThermalTicket === 'function') {
-                setTimeout(() => window.printThermalTicket(id), 200);
+            // Impresión automática según flujo POS de restaurante
+            if (newStatus === 'confirmed' && typeof window.printKitchenTicket === 'function') {
+                setTimeout(() => window.printKitchenTicket(id), 200);
+            } else if (newStatus === 'accepted' && typeof window.printCustomerReceipt === 'function') {
+                setTimeout(() => window.printCustomerReceipt(id), 200);
             }
         },
         confirmBtn,
@@ -4932,118 +4934,19 @@ window.playDispatchChime = function() {
     }
 };
 
-window.printThermalTicket = function(id) {
-    const orders = getOrders();
-    const order = orders.find(o => String(o.id) === String(id));
-    if (!order) {
-        if (typeof showToast === 'function') showToast("Pedido no encontrado para imprimir", "error");
-        console.error("Order not found for printing:", id);
-        return;
-    }
-
-    const dateObj = order.date ? new Date(order.date) : new Date();
-    const formattedDate = dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
-    const formattedTime = dateObj.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true });
-
-    const storeName = (typeof state !== 'undefined' && state.config && state.config.storeName) || 'STREETFEED';
-    const customerName = order.customer?.name || 'Cliente';
-    const locationStr = order.customer?.address || 'Mesa 1';
-    const paymentType = order.customer?.payment || 'Efectivo';
-    const attendedBy = order.attendedBy || order.customer?.attendedBy || (order.isManual ? 'Propietario / Admin' : 'Cliente (Menú Digital)');
-
-    let itemsTotal = 0;
-    const itemsHtml = (order.items || []).map(item => {
-        const qty = item.qty || item.quantity || 1;
-        const price = item.price || 0;
-        let extraSum = 0;
-        if (item.extras && item.extras.length > 0) {
-            extraSum = item.extras.reduce((acc, e) => acc + (e.price || 0), 0);
-        }
-        const totalItem = qty * (price + extraSum);
-        itemsTotal += totalItem;
-
-        let extrasStr = '';
-        if (item.extras && item.extras.length > 0) {
-            extrasStr = `<div style="font-size: 10px; font-style: italic; padding-left: 8px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
-        }
-        return `
-            <div style="display: flex; justify-content: space-between; margin-top: 4px; font-weight: bold; font-size: 12px;">
-                <span>${qty}x ${item.name}</span>
-                <span>$${totalItem.toLocaleString('es-CO')}</span>
-            </div>
-            ${extrasStr}
-        `;
-    }).join('');
-
-    const notesHtml = order.customer?.note ? `
-        <div style="margin-top: 6px; border-top: 1px dashed #000; padding-top: 4px; font-size: 11px;">
-            <strong>NOTAS:</strong> ${order.customer.note}
-        </div>
-    ` : '';
-
-    let deliveryFee = order.deliveryFee || 0;
-    if (!deliveryFee && (order.customer?.deliveryType === 'delivery' || order.customer?.address) && order.total > itemsTotal) {
-        deliveryFee = order.total - itemsTotal;
-    }
-
-    const subtotalDeliveryHtml = deliveryFee > 0 ? `
-        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px;">
-            <span>SUBTOTAL:</span>
-            <span>$${itemsTotal.toLocaleString('es-CO')}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; margin-bottom: 2px;">
-            <span>DOMICILIO:</span>
-            <span>$${deliveryFee.toLocaleString('es-CO')}</span>
-        </div>
-        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
-    ` : '';
-
-    const ticketContent = `
-        <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 4px;">
-            ${storeName.toUpperCase()}
-        </div>
-        <div style="text-align: center; font-size: 11px; margin-bottom: 6px; letter-spacing: 1px;">
-            *** COMANDA DE COCINA ***
-        </div>
-        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
-        <div style="display: flex; justify-content: space-between;">
-            <span><strong>PEDIDO:</strong> #${order.id}</span>
-            <span>${formattedTime}</span>
-        </div>
-        <div><strong>FECHA:</strong> ${formattedDate}</div>
-        <div><strong>UBICACIÓN:</strong> ${locationStr}</div>
-        <div><strong>CLIENTE:</strong> ${customerName}</div>
-        <div><strong>ATENDIDO:</strong> ${attendedBy}</div>
-        <div><strong>PAGO:</strong> ${paymentType}</div>
-        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
-        <div><strong>PRODUCTOS:</strong></div>
-        ${itemsHtml}
-        ${notesHtml}
-        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
-        ${subtotalDeliveryHtml}
-        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; margin-top: 4px;">
-            <span>TOTAL:</span>
-            <span>$${(order.total || 0).toLocaleString('es-CO')}</span>
-        </div>
-        <div style="border-top: 1px dashed #000; margin: 8px 0 4px 0;"></div>
-        <div style="text-align: center; font-size: 10px; margin-bottom: 10px;">
-            ¡Gracias por su preferencia!
-        </div>
-    `;
-
-    // 1. Set fallback print area in DOM
+function openThermalPrintWindow(title, content) {
     const printArea = document.getElementById('thermal-ticket-print-area');
     if (printArea) {
-        printArea.innerHTML = ticketContent;
+        printArea.style.display = 'block';
+        printArea.innerHTML = content;
     }
 
-    // 2. Open clean print window for instant printing
     const printDoc = `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
-            <title>Ticket - ${order.id}</title>
+            <title>${escapeHtml(title)}</title>
             <style>
                 @page { size: auto; margin: 0mm; }
                 body {
@@ -5059,7 +4962,7 @@ window.printThermalTicket = function(id) {
             </style>
         </head>
         <body>
-            ${ticketContent}
+            ${content}
             <script>
                 window.onload = function() {
                     window.focus();
@@ -5083,10 +4986,183 @@ window.printThermalTicket = function(id) {
         console.warn("Print window open blocked, using main window print fallback:", e);
     }
 
-    // Fallback if popup blocked
     setTimeout(() => {
         window.print();
+        setTimeout(() => {
+            if (printArea) printArea.style.display = 'none';
+        }, 500);
     }, 150);
+}
+
+window.printKitchenTicket = function(id) {
+    const orders = getOrders();
+    const order = orders.find(o => String(o.id) === String(id));
+    if (!order) {
+        if (typeof showToast === 'function') showToast("Pedido no encontrado para comanda", "error");
+        return;
+    }
+
+    const dateObj = order.date ? new Date(order.date) : new Date();
+    const formattedDate = dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+    const formattedTime = dateObj.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    const storeName = (typeof state !== 'undefined' && state.config && state.config.storeName) || 'STREETFEED';
+    const customerName = order.customer?.name || 'Cliente';
+    const locationStr = order.customer?.address || 'Mesa 1';
+    const attendedBy = order.attendedBy || order.customer?.attendedBy || (order.isManual ? 'Propietario / Admin' : 'Cliente (Menú Digital)');
+
+    const itemsHtml = (order.items || []).map(item => {
+        const qty = item.qty || item.quantity || 1;
+        let extrasStr = '';
+        if (item.extras && item.extras.length > 0) {
+            extrasStr = `<div style="font-size: 11px; font-style: italic; padding-left: 10px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
+        }
+        return `
+            <div style="font-weight: 900; font-size: 14px; margin-top: 6px;">
+                <span>${qty}x ${escapeHtml(item.name)}</span>
+            </div>
+            ${extrasStr}
+        `;
+    }).join('');
+
+    const notesHtml = order.customer?.note ? `
+        <div style="margin-top: 8px; border: 1.5px solid #000; padding: 6px; font-size: 12px; border-radius: 4px;">
+            <strong>⚠️ NOTAS DE PREPARACIÓN:</strong><br>${escapeHtml(order.customer.note)}
+        </div>
+    ` : '';
+
+    const ticketContent = `
+        <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 2px;">
+            ${escapeHtml(storeName.toUpperCase())}
+        </div>
+        <div style="text-align: center; font-size: 13px; font-weight: 900; background: #000; color: #fff; padding: 3px 0; margin-bottom: 6px;">
+            *** COMANDA DE COCINA ***
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;">
+            <span>ORDEN: #${order.id}</span>
+            <span>${formattedTime}</span>
+        </div>
+        <div style="font-size: 11px;">FECHA: ${formattedDate}</div>
+        <div style="font-size: 12px; font-weight: bold;">UBICACIÓN: ${escapeHtml(locationStr)}</div>
+        <div style="font-size: 11px;">CLIENTE: ${escapeHtml(customerName)}</div>
+        <div style="font-size: 11px;">ATENDIDO: ${escapeHtml(attendedBy)}</div>
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+        <div style="font-size: 12px; font-weight: bold; margin-bottom: 4px;">ITEMS A PREPARAR:</div>
+        ${itemsHtml}
+        ${notesHtml}
+        <div style="border-top: 1px dashed #000; margin: 10px 0 4px 0;"></div>
+        <div style="text-align: center; font-size: 11px; font-weight: bold;">
+            --- FIN DE COMANDA COCINA ---
+        </div>
+    `;
+
+    openThermalPrintWindow(`Comanda - #${order.id}`, ticketContent);
+};
+
+window.printCustomerReceipt = function(id) {
+    const orders = getOrders();
+    const order = orders.find(o => String(o.id) === String(id));
+    if (!order) {
+        if (typeof showToast === 'function') showToast("Pedido no encontrado para factura", "error");
+        return;
+    }
+
+    const dateObj = order.date ? new Date(order.date) : new Date();
+    const formattedDate = dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+    const formattedTime = dateObj.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    const storeName = (typeof state !== 'undefined' && state.config && state.config.storeName) || 'STREETFEED';
+    const customerName = order.customer?.name || 'Cliente';
+    const locationStr = order.customer?.address || 'Mesa 1';
+    const paymentType = order.customer?.payment || order.paymentMethod || 'Efectivo';
+    const attendedBy = order.attendedBy || order.customer?.attendedBy || (order.isManual ? 'Propietario / Admin' : 'Cliente (Menú Digital)');
+
+    let itemsTotal = 0;
+    const itemsHtml = (order.items || []).map(item => {
+        const qty = item.qty || item.quantity || 1;
+        const price = item.price || 0;
+        let extraSum = 0;
+        if (item.extras && item.extras.length > 0) {
+            extraSum = item.extras.reduce((acc, e) => acc + (e.price || 0), 0);
+        }
+        const totalItem = qty * (price + extraSum);
+        itemsTotal += totalItem;
+
+        let extrasStr = '';
+        if (item.extras && item.extras.length > 0) {
+            extrasStr = `<div style="font-size: 10px; font-style: italic; padding-left: 8px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
+        }
+        return `
+            <div style="display: flex; justify-content: space-between; margin-top: 4px; font-weight: bold; font-size: 12px;">
+                <span>${qty}x ${escapeHtml(item.name)}</span>
+                <span>$${totalItem.toLocaleString('es-CO')}</span>
+            </div>
+            ${extrasStr}
+        `;
+    }).join('');
+
+    const notesHtml = order.customer?.note ? `
+        <div style="margin-top: 6px; border-top: 1px dashed #000; padding-top: 4px; font-size: 11px;">
+            <strong>NOTAS:</strong> ${escapeHtml(order.customer.note)}
+        </div>
+    ` : '';
+
+    let deliveryFee = order.deliveryFee || 0;
+    if (!deliveryFee && (order.customer?.deliveryType === 'delivery' || order.customer?.address) && order.total > itemsTotal) {
+        deliveryFee = order.total - itemsTotal;
+    }
+
+    const subtotalDeliveryHtml = deliveryFee > 0 ? `
+        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px;">
+            <span>SUBTOTAL:</span>
+            <span>$${itemsTotal.toLocaleString('es-CO')}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; margin-bottom: 2px;">
+            <span>DOMICILIO:</span>
+            <span>$${deliveryFee.toLocaleString('es-CO')}</span>
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+    ` : '';
+
+    const ticketContent = `
+        <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 4px;">
+            ${escapeHtml(storeName.toUpperCase())}
+        </div>
+        <div style="text-align: center; font-size: 11px; margin-bottom: 6px; letter-spacing: 1px;">
+            *** PRE-CUENTA / TICKET DE CLIENTE ***
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+        <div style="display: flex; justify-content: space-between;">
+            <span><strong>PEDIDO:</strong> #${order.id}</span>
+            <span>${formattedTime}</span>
+        </div>
+        <div><strong>FECHA:</strong> ${formattedDate}</div>
+        <div><strong>UBICACIÓN:</strong> ${escapeHtml(locationStr)}</div>
+        <div><strong>CLIENTE:</strong> ${escapeHtml(customerName)}</div>
+        <div><strong>ATENDIDO:</strong> ${escapeHtml(attendedBy)}</div>
+        <div><strong>MÉTODO DE PAGO:</strong> ${escapeHtml(paymentType)}</div>
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+        <div><strong>DETALLE DE LA CUENTA:</strong></div>
+        ${itemsHtml}
+        ${notesHtml}
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+        ${subtotalDeliveryHtml}
+        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; margin-top: 4px;">
+            <span>TOTAL A PAGAR:</span>
+            <span>$${(order.total || 0).toLocaleString('es-CO')}</span>
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 8px 0 4px 0;"></div>
+        <div style="text-align: center; font-size: 10px; margin-bottom: 10px;">
+            ¡Muchas gracias por su compra!
+        </div>
+    `;
+
+    openThermalPrintWindow(`Ticket - #${order.id}`, ticketContent);
+};
+
+window.printThermalTicket = function(id) {
+    window.printCustomerReceipt(id);
 };
 
 window.showOrderDetails = function(id) {
@@ -5232,33 +5308,39 @@ window.showOrderDetails = function(id) {
         `;
     }).join('');
 
-    const printActionBtn = `
-        <button class="admin-btn-action" style="grid-column: span 2; height: 46px; border-radius: 12px; background: rgba(var(--primary-rgb, 247, 147, 30), 0.12); color: var(--theme-accent); border: 1px solid rgba(var(--primary-rgb, 247, 147, 30), 0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;" onclick="window.printThermalTicket('${order.id}')">
-            <i data-lucide="printer" style="width: 18px; height: 18px;"></i>
-            <span>IMPRIMIR TICKET DE COMANDA</span>
-        </button>
+    const printActionBtns = `
+        <div style="grid-column: span 2; display: flex; gap: 0.6rem; margin-bottom: 0.5rem;">
+            <button class="admin-btn-action" style="flex: 1; height: 46px; border-radius: 12px; background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onclick="window.printKitchenTicket('${order.id}')" title="Imprimir comanda limpia para el cocinero (Sin precios)">
+                <i data-lucide="chef-hat" style="width: 18px; height: 18px;"></i>
+                <span>Comanda Cocina</span>
+            </button>
+            <button class="admin-btn-action" style="flex: 1; height: 46px; border-radius: 12px; background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onclick="window.printCustomerReceipt('${order.id}')" title="Imprimir pre-cuenta / ticket con precios para el cliente">
+                <i data-lucide="receipt" style="width: 18px; height: 18px;"></i>
+                <span>Ticket Cliente</span>
+            </button>
+        </div>
     `;
 
     const footer = document.getElementById('order-action-footer');
     if (currentEmployeeRole === 'mesero') {
-        footer.innerHTML = printActionBtn + `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
+        footer.innerHTML = printActionBtns + `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
     } else if (order.status === 'pending' || !order.status) {
-        footer.innerHTML = printActionBtn + `
+        footer.innerHTML = printActionBtns + `
             <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; border:1px solid #ff5252; color:#ff5252; background: transparent; font-weight: 800; cursor: pointer;" onclick="window.updateOrderStatus('${order.id}', 'cancelled'); document.getElementById('order-details-modal').classList.add('hidden');">CANCELAR</button>
             <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; background:#4caf50; color:white; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);" onclick="window.updateOrderStatus('${order.id}', 'confirmed'); document.getElementById('order-details-modal').classList.add('hidden');">ACEPTAR</button>
         `;
     } else if (order.status === 'confirmed') {
-        footer.innerHTML = printActionBtn + `
+        footer.innerHTML = printActionBtns + `
             ${currentEmployeeRole !== 'cocina' ? `<button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; border:1px solid #ff5252; color:#ff5252; background: transparent; font-weight: 800; cursor: pointer;" onclick="window.updateOrderStatus('${order.id}', 'cancelled'); document.getElementById('order-details-modal').classList.add('hidden');">CANCELAR</button>` : ''}
             <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; background:#f59e0b; color:white; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);" onclick="window.updateOrderStatus('${order.id}', 'dispatched'); document.getElementById('order-details-modal').classList.add('hidden');">DESPACHAR</button>
         `;
     } else if (order.status === 'dispatched') {
-        footer.innerHTML = printActionBtn + `
+        footer.innerHTML = printActionBtns + `
             ${currentEmployeeRole !== 'cocina' ? `<button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; border:1px solid #ff5252; color:#ff5252; background: transparent; font-weight: 800; cursor: pointer;" onclick="window.updateOrderStatus('${order.id}', 'cancelled'); document.getElementById('order-details-modal').classList.add('hidden');">CANCELAR</button>` : ''}
             <button class="admin-btn-action" style="width:100%; height: 50px; border-radius: 12px; background:#10b981; color:white; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);" onclick="window.updateOrderStatus('${order.id}', 'accepted'); document.getElementById('order-details-modal').classList.add('hidden');">COBRAR</button>
         `;
     } else {
-        footer.innerHTML = printActionBtn + `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
+        footer.innerHTML = printActionBtns + `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
     }
 
     document.getElementById('order-details-modal').classList.remove('hidden');
@@ -10111,6 +10193,8 @@ window.setCashCloseDate = setCashCloseDate;
 window.openCashCloseModal = openCashCloseModal;
 window.closeCashCloseModal = closeCashCloseModal;
 window.updateCashCloseModalData = updateCashCloseModalData;
+window.printKitchenTicket = printKitchenTicket;
+window.printCustomerReceipt = printCustomerReceipt;
 window.printThermalTicketZ = printThermalTicketZ;
 window.exportCashClosePDF = exportCashClosePDF;
 
