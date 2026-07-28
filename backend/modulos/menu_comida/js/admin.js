@@ -8212,7 +8212,7 @@ function applyRolePermissions(role = 'owner', name = 'Propietario') {
     if (btnCashClose) {
         const rLower = (role || '').toLowerCase();
         const canCloseCash = (rLower === 'cajero' || rLower === 'admin' || rLower === 'administrador' || rLower === 'owner' || rLower === 'propietario');
-        btnCashClose.style.display = canCloseCash ? 'inline-flex' : 'none';
+        btnCashClose.style.display = canCloseCash ? 'flex' : 'none';
     }
 
     // Restore default DOM order for sidebar buttons before applying role visibility
@@ -9685,6 +9685,13 @@ function toLocalDateString(d = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+function isSameLocalDate(dateInput, targetDateStr) {
+    if (!dateInput || !targetDateStr) return false;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return false;
+    return toLocalDateString(d) === targetDateStr;
+}
+
 function openCashCloseModal() {
     const modal = document.getElementById('cash-close-modal');
     if (!modal) return;
@@ -9714,16 +9721,11 @@ function updateCashCloseModalData() {
     }
 
     const allOrders = getOrders();
-    const targetDateObj = new Date(selectedDateStr + 'T00:00:00');
 
     // Filter orders for the selected date with status accepted, completed, or delivered
     const dayOrders = allOrders.filter(o => {
         if (o.status !== 'accepted' && o.status !== 'completed' && o.status !== 'delivered' && o.status) return false;
-        if (!o.date) return false;
-        const d = new Date(o.date);
-        return d.getFullYear() === targetDateObj.getFullYear() &&
-               d.getMonth() === targetDateObj.getMonth() &&
-               d.getDate() === targetDateObj.getDate();
+        return isSameLocalDate(o.date, selectedDateStr);
     });
 
     // Breakdown metrics
@@ -9774,11 +9776,7 @@ function updateCashCloseModalData() {
         const rawExp = localStorage.getItem('streetfeed_expenses');
         const expList = rawExp ? JSON.parse(rawExp) : [];
         expList.forEach(item => {
-            if (!item.date) return;
-            const ed = new Date(item.date);
-            if (ed.getFullYear() === targetDateObj.getFullYear() &&
-                ed.getMonth() === targetDateObj.getMonth() &&
-                ed.getDate() === targetDateObj.getDate()) {
+            if (isSameLocalDate(item.date, selectedDateStr)) {
                 dayExpenses += (parseFloat(item.amount) || 0);
             }
         });
@@ -9858,14 +9856,9 @@ function printThermalTicketZ() {
     if (!printArea) return;
 
     const allOrders = getOrders();
-    const targetDateObj = new Date(selectedDateStr + 'T00:00:00');
     const dayOrders = allOrders.filter(o => {
         if (o.status !== 'accepted' && o.status !== 'completed' && o.status !== 'delivered' && o.status) return false;
-        if (!o.date) return false;
-        const d = new Date(o.date);
-        return d.getFullYear() === targetDateObj.getFullYear() &&
-               d.getMonth() === targetDateObj.getMonth() &&
-               d.getDate() === targetDateObj.getDate();
+        return isSameLocalDate(o.date, selectedDateStr);
     });
 
     let cashSales = 0, transferSales = 0, totalFees = 0, dayExpenses = 0;
@@ -9881,11 +9874,7 @@ function printThermalTicketZ() {
         const rawExp = localStorage.getItem('streetfeed_expenses');
         const expList = rawExp ? JSON.parse(rawExp) : [];
         expList.forEach(item => {
-            if (!item.date) return;
-            const ed = new Date(item.date);
-            if (ed.getFullYear() === targetDateObj.getFullYear() &&
-                ed.getMonth() === targetDateObj.getMonth() &&
-                ed.getDate() === targetDateObj.getDate()) {
+            if (isSameLocalDate(item.date, selectedDateStr)) {
                 dayExpenses += (parseFloat(item.amount) || 0);
             }
         });
