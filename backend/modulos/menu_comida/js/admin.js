@@ -4846,7 +4846,7 @@ window.updateOrderStatus = function(id, newStatus) {
             // Impresión automática según flujo POS de restaurante
             if (newStatus === 'confirmed' && typeof window.printKitchenTicket === 'function') {
                 setTimeout(() => window.printKitchenTicket(id), 200);
-            } else if (newStatus === 'accepted' && typeof window.printCustomerReceipt === 'function') {
+            } else if ((newStatus === 'accepted' || newStatus === 'completed') && typeof window.printCustomerReceipt === 'function') {
                 setTimeout(() => window.printCustomerReceipt(id), 200);
             }
         },
@@ -6311,8 +6311,8 @@ document.addEventListener('click', (e) => {
         if (typeof window.renderOrders === 'function') window.renderOrders();
         if (typeof renderStats === 'function') renderStats();
         showToast('✅ Pedido manual creado y agregado a En Preparación');
-        if (typeof window.printThermalTicket === 'function') {
-            setTimeout(() => window.printThermalTicket(orderData.id), 200);
+        if (typeof window.printKitchenTicket === 'function') {
+            setTimeout(() => window.printKitchenTicket(orderData.id), 200);
         }
     });
 })();
@@ -9424,6 +9424,11 @@ function completeDriverDelivery(orderId) {
                 }
             }
             localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+            
+            // Impresión automática del Ticket de Cliente al completar entrega
+            if (typeof window.printCustomerReceipt === 'function') {
+                setTimeout(() => window.printCustomerReceipt(orderId), 200);
+            }
         }
         if (typeof showAdminNotification === 'function') showAdminNotification(`✅ Pedido #${orderId} marcado como Entregado`, 'success');
         renderDriverDeliveriesSection();
