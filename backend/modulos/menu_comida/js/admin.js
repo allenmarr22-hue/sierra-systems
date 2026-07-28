@@ -9678,6 +9678,13 @@ function recenterAdminDriverMap() {
 // MÓDULO DE CUADRE & CIERRE DE CAJA (TURNO Z)
 // ==========================================================================
 
+function toLocalDateString(d = new Date()) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function openCashCloseModal() {
     const modal = document.getElementById('cash-close-modal');
     if (!modal) return;
