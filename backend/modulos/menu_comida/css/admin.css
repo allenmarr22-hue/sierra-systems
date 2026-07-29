@@ -2503,18 +2503,18 @@ body.light-mode input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .order-settings-btn {
-    padding: 0.6rem;
+    padding: 0.8rem 1rem;
     border: 1px solid var(--glass-border);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text-dim);
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    aspect-ratio: 1;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 .order-settings-btn:hover {
     background: rgba(255, 255, 255, 0.08);
