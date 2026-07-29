@@ -10144,31 +10144,140 @@ function exportCashClosePDF() {
     const doc = new JsPDFClass();
     const storeName = state.config?.storeName || 'STREET FEED';
     const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
+    const nowStr = new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' });
 
-    doc.setFontSize(18);
-    doc.text(`${storeName} — Reporte Z (Cierre de Caja)`, 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Fecha del Cierre: ${selectedDateStr} | Generado por: ${cashierName}`, 14, 28);
-    doc.line(14, 32, 196, 32);
+    // === HEADER BANNER ===
+    doc.setFillColor(247, 147, 30);
+    doc.rect(0, 0, 210, 28, 'F');
 
-    doc.autoTable({
-        startY: 38,
-        head: [['Métrica de Turno', 'Monto']],
-        body: [
-            ['Pedidos Atendidos', `${dayOrders.length} Pedidos Atendidos`],
-            ['Ventas en Efectivo', '$' + cashSales.toLocaleString('es-CO')],
-            ['Ventas por Transferencia', '$' + transferSales.toLocaleString('es-CO')],
-            ['Total Fletes Domicilios', '$' + totalFees.toLocaleString('es-CO')],
-            ['Gastos / Salidas de Caja', '-$' + dayExpenses.toLocaleString('es-CO')],
-            ['TOTAL RECAUDADO EN EL TURNO', '$' + grandTotalSales.toLocaleString('es-CO')],
-            ['EFECTIVO FÍSICO EN CAJA', '$' + netCashInHand.toLocaleString('es-CO')]
-        ],
-        theme: 'striped',
-        headStyles: { fillColor: [247, 147, 30] }
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(storeName.toUpperCase(), 14, 13);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('REPORTE Z — CIERRE DE CAJA', 14, 21);
+    doc.text(`Generado: ${nowStr}`, 140, 21, { align: 'left' });
+
+    // === SUBTITLE BAR ===
+    doc.setFillColor(245, 245, 245);
+    doc.rect(0, 28, 210, 12, 'F');
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`FECHA DEL CIERRE: ${selectedDateStr}`, 14, 36);
+    doc.text(`CAJERO / ENCARGADO: ${cashierName}`, 130, 36);
+
+    // === KPI SUMMARY CARDS (2×2 grid) ===
+    const kpiY = 46;
+    const kpiW = 90, kpiH = 18;
+    const kpis = [
+        { label: 'Ventas en Efectivo',      value: '$' + cashSales.toLocaleString('es-CO'),      color: [16, 185, 129] },
+        { label: 'Ventas Transferencia',    value: '$' + transferSales.toLocaleString('es-CO'),   color: [59, 130, 246] },
+        { label: 'Fletes de Domicilio',     value: '$' + totalFees.toLocaleString('es-CO'),       color: [245, 158, 11] },
+        { label: 'Gastos / Salidas',        value: '-$' + dayExpenses.toLocaleString('es-CO'),    color: [239, 68, 68] },
+    ];
+    kpis.forEach((k, i) => {
+        const x = i % 2 === 0 ? 14 : 110;
+        const y = kpiY + Math.floor(i / 2) * 22;
+        doc.setFillColor(...k.color.map(v => Math.round(v)));
+        doc.roundedRect(x, y, kpiW, kpiH, 3, 3, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(k.label.toUpperCase(), x + 4, y + 6);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(k.value, x + 4, y + 14);
     });
 
+    // === HERO TOTAL RECAUDADO ===
+    const heroY = kpiY + 2 * 22 + 4;
+    doc.setFillColor(30, 41, 59);
+    doc.roundedRect(14, heroY, 182, 20, 4, 4, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('📊  TOTAL RECAUDADO EN EL TURNO', 18, heroY + 7);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('$' + grandTotalSales.toLocaleString('es-CO'), 192, heroY + 14, { align: 'right' });
+
+    doc.setFillColor(247, 147, 30);
+    doc.roundedRect(14, heroY + 24, 182, 14, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('💵  EFECTIVO FÍSICO A ENTREGAR EN CAJA', 18, heroY + 33);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('$' + netCashInHand.toLocaleString('es-CO'), 192, heroY + 33, { align: 'right' });
+
+    // === DIVIDER ===
+    const divY = heroY + 44;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, divY, 196, divY);
+
+    // === DETALLE DE PEDIDOS DEL DÍA ===
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`DETALLE DE PEDIDOS ATENDIDOS — ${dayOrders.length} pedido(s)`, 14, divY + 8);
+
+    const tableBody = dayOrders.map((o, idx) => {
+        const pMethod = o.customer?.payment || o.paymentMethod || 'Efectivo';
+        const hour = new Date(o.date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        const customer = o.customer?.name || '—';
+        const location = o.customer?.address || 'Mesa';
+        return [
+            String(idx + 1),
+            '#' + String(o.id),
+            hour,
+            customer,
+            location,
+            pMethod,
+            '$' + (o.total || 0).toLocaleString('es-CO')
+        ];
+    });
+
+    doc.autoTable({
+        startY: divY + 12,
+        head: [['#', 'Orden', 'Hora', 'Cliente', 'Ubicación', 'Método Pago', 'Total']],
+        body: tableBody.length > 0 ? tableBody : [['—', '—', '—', 'Sin pedidos para esta fecha', '—', '—', '$0']],
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        styles: { fontSize: 7.5, cellPadding: 2.5 },
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 8 },
+            1: { halign: 'center', cellWidth: 18 },
+            2: { halign: 'center', cellWidth: 16 },
+            3: { cellWidth: 38 },
+            4: { cellWidth: 40 },
+            5: { halign: 'center', cellWidth: 28 },
+            6: { halign: 'right', fontStyle: 'bold', cellWidth: 28 }
+        }
+    });
+
+    // === SIGNATURE BLOCK ===
+    const sigY = (doc.lastAutoTable?.finalY || 200) + 14;
+    doc.setDrawColor(150, 150, 150);
+    doc.line(14, sigY + 10, 80, sigY + 10);
+    doc.line(124, sigY + 10, 196, sigY + 10);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Firma del Cajero / Encargado', 47, sigY + 15, { align: 'center' });
+    doc.text('Firma de Recibido / Aprobado', 160, sigY + 15, { align: 'center' });
+
+    // === FOOTER ===
+    doc.setFontSize(7);
+    doc.setTextColor(180, 180, 180);
+    doc.text('Documento generado automáticamente por el sistema de AS Sierra Systems', 105, 290, { align: 'center' });
+
     doc.save(`Cierre_Caja_${selectedDateStr}.pdf`);
-    showToast('📄 PDF de Cierre descargado');
+    showToast('📄 PDF de Cierre descargado exitosamente ✓');
 }
 
 // Exportar globalmente
