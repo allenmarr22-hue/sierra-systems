@@ -10176,8 +10176,7 @@ function exportCashClosePDF() {
         ['Ventas por Transferencia', '$' + transferSales.toLocaleString('es-CO')],
         ['Total Fletes Domicilios', '$' + totalFees.toLocaleString('es-CO')],
         ['Gastos / Salidas de Caja', '-$' + dayExpenses.toLocaleString('es-CO')],
-        ['TOTAL RECAUDADO EN EL TURNO', '$' + grandTotalSales.toLocaleString('es-CO')],
-        ['EFECTIVO FÍSICO A ENTREGAR EN CAJA', '$' + netCashInHand.toLocaleString('es-CO')]
+        ['TOTAL RECAUDADO EN EL TURNO', '$' + grandTotalSales.toLocaleString('es-CO')]
     ];
 
     doc.autoTable({
@@ -10193,13 +10192,8 @@ function exportCashClosePDF() {
             1: { cellWidth: 62, halign: 'right', fontStyle: 'bold' }
         },
         didParseCell: function(data) {
-            if (data.row.index === summaryBody.length - 2) {
-                // TOTAL RECAUDADO EN EL TURNO
-                data.cell.styles.fillColor = [30, 41, 59];
-                data.cell.styles.textColor = [255, 255, 255];
-                data.cell.styles.fontStyle = 'bold';
-            } else if (data.row.index === summaryBody.length - 1) {
-                // EFECTIVO FISICO A ENTREGAR EN CAJA
+            if (data.row.index === summaryBody.length - 1) {
+                // TOTAL RECAUDADO EN EL TURNO (Fila Final Naranja)
                 data.cell.styles.fillColor = [247, 147, 30];
                 data.cell.styles.textColor = [255, 255, 255];
                 data.cell.styles.fontStyle = 'bold';
