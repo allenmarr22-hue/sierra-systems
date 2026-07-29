@@ -117,7 +117,7 @@ function renderAdmin(openCatIds = null) {
                             <img src="${dish.img}" class="admin-item-img" alt="${dish.name}">
                             <div class="admin-item-info">
                                 <h4>${dish.name}</h4>
-                                <p>${dish.desc.substring(0, 50)}${dish.desc.length > 50 ? '...' : ''}</p>
+                                <p>${(dish.desc || '').substring(0, 50)}${(dish.desc || '').length > 50 ? '...' : ''}</p>
                             </div>
                             <div class="admin-item-price">$ ${dish.price.toLocaleString('es-CO')}</div>
                             <div class="admin-item-status">
@@ -2400,7 +2400,8 @@ if (!localStorage.getItem('streetfeed_orders')) {
 }
 
 function getOrders() {
-    const raw = JSON.parse(localStorage.getItem('streetfeed_orders')) || [];
+    let raw;
+    try { raw = JSON.parse(localStorage.getItem('streetfeed_orders')) || []; } catch(e) { raw = []; }
     let modified = false;
     const orders = raw.map(o => {
         if (o.deliveryFee === undefined) {
@@ -4583,7 +4584,7 @@ function createOrderCard(order) {
 
     const totalDisplay = isCocina
         ? `<span style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(245,158,11,0.12); padding: 0.25rem 0.5rem; border-radius: 6px;">Comanda</span>`
-        : `<span style="font-size: 1.1rem; font-weight: 950; color: var(--text); letter-spacing: -0.5px;">$${order.total.toLocaleString()}</span>`;
+        : `<span style="font-size: 1.1rem; font-weight: 950; color: var(--text); letter-spacing: -0.5px;">$${(order.total || 0).toLocaleString()}</span>`;
 
     let actionsHtml = '';
     if (isMesero) {
@@ -4757,7 +4758,7 @@ function createOrderCard(order) {
             <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem; overflow: hidden;">
                 <div style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; flex-shrink: 0;">
                     <i data-lucide="shopping-bag" style="width: 12px; color: var(--theme-accent);"></i>
-                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--text);">${order.items.length} Prod.</span>
+                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--text);">${(order.items || []).length} Prod.</span>
                 </div>
                 ${paymentBadge}
             </div>
@@ -5081,10 +5082,10 @@ window.printCustomerReceipt = function(id) {
     let itemsTotal = 0;
     const itemsHtml = (order.items || []).map(item => {
         const qty = item.qty || item.quantity || 1;
-        const price = item.price || 0;
+        const price = parseFloat(item.price) || 0;
         let extraSum = 0;
         if (item.extras && item.extras.length > 0) {
-            extraSum = item.extras.reduce((acc, e) => acc + (e.price || 0), 0);
+            extraSum = item.extras.reduce((acc, e) => acc + (parseFloat(e.price) || 0), 0);
         }
         const totalItem = qty * (price + extraSum);
         itemsTotal += totalItem;
@@ -5274,10 +5275,10 @@ window.showOrderDetails = function(id) {
         }
     }
 
-    document.getElementById('detail-total-price').textContent = '$' + order.total.toLocaleString();
+    document.getElementById('detail-total-price').textContent = '$' + (order.total || 0).toLocaleString();
 
     const list = document.getElementById('detail-items-list');
-    list.innerHTML = order.items.map(item => {
+    list.innerHTML = (order.items || []).map(item => {
         const extras = item.extras || [];
         const extrasHtml = extras.length > 0 
             ? `<div style="margin-top: 0.4rem; padding-left: 1rem; border-left: 2px solid var(--theme-accent); opacity: 0.9;">
@@ -8035,6 +8036,12 @@ async function handleSaveEmployee(e) {
     const address = (document.getElementById('emp-address') || {}).value || '';
     const neighborhood = (document.getElementById('emp-neighborhood') || {}).value || '';
 
+    // Validar campos obligatorios
+    if (!name) { showToast('El nombre del colaborador es obligatorio.', 'error'); return; }
+    if (!username) { showToast('El usuario de acceso es obligatorio.', 'error'); return; }
+    if (!pin) { showToast('El PIN de acceso es obligatorio.', 'error'); return; }
+    if (!role) { showToast('El rol del colaborador es obligatorio.', 'error'); return; }
+
     const instanceId = getInstanceId();
 
     const token = localStorage.getItem('streetfeed_employee_token') || sessionStorage.getItem('clientSession');
@@ -9399,6 +9406,13 @@ function completeDriverDelivery(orderId) {
         if (activeGpsOrderId === orderId && activeWatchPositionId !== null) {
             navigator.geolocation.clearWatch(activeWatchPositionId);
             activeWatchPositionId = null;
+        }
+        // Limpia también el intervalo de fallback GPS para evitar memory leak
+        if (typeof activeGpsInterval !== 'undefined' && activeGpsInterval !== null) {
+            clearInterval(activeGpsInterval);
+            activeGpsInterval = null;
+        }
+        if (activeGpsOrderId === orderId) {
             activeGpsOrderId = null;
             updateGpsStatusPill(false);
         }
@@ -9923,8 +9937,8 @@ function updateCashCloseModalData() {
     };
 
     dayOrders.forEach(o => {
-        const total = o.total || 0;
-        const fee = o.deliveryFee || 0;
+        const total = parseFloat(o.total) || 0;
+        const fee = parseFloat(o.deliveryFee) || 0;
         totalDeliveryFees += fee;
 
         const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
@@ -10049,8 +10063,8 @@ function printThermalTicketZ() {
 
     let cashSales = 0, transferSales = 0, totalFees = 0, dayExpenses = 0;
     dayOrders.forEach(o => {
-        const total = o.total || 0;
-        totalFees += (o.deliveryFee || 0);
+        const total = parseFloat(o.total) || 0;
+        totalFees += (parseFloat(o.deliveryFee) || 0);
         const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
         if (pMethod.includes('efectivo') || pMethod.includes('cash')) cashSales += total;
         else transferSales += total;
@@ -10121,8 +10135,8 @@ function exportCashClosePDF() {
 
     let cashSales = 0, transferSales = 0, totalFees = 0, dayExpenses = 0;
     dayOrders.forEach(o => {
-        const total = o.total || 0;
-        totalFees += (o.deliveryFee || 0);
+        const total = parseFloat(o.total) || 0;
+        totalFees += (parseFloat(o.deliveryFee) || 0);
         const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
         if (pMethod.includes('efectivo') || pMethod.includes('cash')) cashSales += total;
         else transferSales += total;

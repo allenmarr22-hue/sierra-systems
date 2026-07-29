@@ -367,6 +367,7 @@
                 <button type="submit" class="btn-action btn-gps" style="margin-top: 0.5rem;">
                     <i data-lucide="log-in" style="width: 18px;"></i> Iniciar Sesión
                 </button>
+                <div id="login-error" style="display:none; color: #ef4444; font-size: 0.82rem; margin-top: 0.8rem; text-align: center; font-weight: 700;"></div>
             </form>
         </div>
     </div>
@@ -398,36 +399,68 @@
         function handleDriverLogin(e) {
             e.preventDefault();
             const user = document.getElementById('driver-username').value.trim();
+            const pass = document.getElementById('driver-password').value.trim();
 
-            // Check against stored employees
+            if (!user || !pass) {
+                const errEl = document.getElementById('login-error');
+                if (errEl) { errEl.textContent = 'Ingresa tu usuario y contraseña / PIN.'; errEl.style.display = 'block'; }
+                return;
+            }
+
+            // Buscar en empleados del restaurante
             const employees = JSON.parse(localStorage.getItem('restaurant_employees') || '[]');
-            const found = employees.find(emp => (emp.username === user || emp.name.toLowerCase() === user.toLowerCase()) && emp.status === 'active');
+            const found = employees.find(emp =>
+                (emp.username === user || emp.name.toLowerCase() === user.toLowerCase()) &&
+                emp.status === 'active' &&
+                String(emp.pin) === String(pass)
+            );
 
             if (found) {
                 currentDriver = found;
                 localStorage.setItem('streetfeed_driver_session', JSON.stringify(found));
                 document.getElementById('driver-label').textContent = found.name;
                 document.getElementById('login-modal').style.display = 'none';
+                const errEl = document.getElementById('login-error');
+                if (errEl) errEl.style.display = 'none';
                 loadAssignedOrders();
             } else {
-                // Allow fallback login with driver name
-                currentDriver = { id: 'driver_' + Date.now(), name: user, username: user };
-                localStorage.setItem('streetfeed_driver_session', JSON.stringify(currentDriver));
-                document.getElementById('driver-label').textContent = user;
-                document.getElementById('login-modal').style.display = 'none';
-                loadAssignedOrders();
+                const errEl = document.getElementById('login-error');
+                if (errEl) { errEl.textContent = 'Usuario o contraseña incorrectos.'; errEl.style.display = 'block'; }
             }
         }
 
         function loadAssignedOrders() {
             const container = document.getElementById('orders-container');
-            const allOrders = JSON.parse(localStorage.getItem('restaurant_orders') || '[]');
-            
-            // Filter delivery orders assigned to this driver or active delivery orders
+            // Leer pedidos desde la clave correcta de localStorage del sistema admin
+            let allOrders = [];
+            try {
+                allOrders = JSON.parse(localStorage.getItem('streetfeed_orders') || localStorage.getItem('restaurant_orders') || '[]');
+            } catch(e) { allOrders = []; }
+
+            // Leer asignaciones del admin para filtrar solo los pedidos del repartidor actual
+            let assignments = {};
+            try {
+                assignments = JSON.parse(localStorage.getItem('streetfeed_order_assignments') || '{}');
+            } catch(e) {}
+
+            const myId = currentDriver?.id || '';
+            const myName = (currentDriver?.name || '').toLowerCase();
+
+            // Filtrar: solo domicilios, no cancelados/completados, asignados a este repartidor
             const pendingDeliveries = allOrders.filter(o => {
                 const isDelivery = o.customer?.deliveryType === 'delivery' || o.deliveryFee > 0 || (o.customer?.address && o.customer.address !== 'Mesa 1');
-                const isPending = o.status !== 'delivered' && o.status !== 'cancelled';
-                return isDelivery && isPending;
+                const isPending = o.status !== 'delivered' && o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'accepted';
+                if (!isDelivery || !isPending) return false;
+                // Verificar asignación
+                const orderId = String(o.id || o.orderId);
+                const assigned = assignments[orderId];
+                if (assigned) {
+                    return assigned.driverId === myId || (assigned.driverName || '').toLowerCase() === myName;
+                }
+                // Si no hay asignaciones, mostrar solo si deliveredBy coincide
+                if (o.deliveredBy) return o.deliveredBy.toLowerCase() === myName;
+                // Si tampoco hay deliveredBy, mostrar todos los domicilios sin asignar (fallback)
+                return !assigned;
             });
 
             if (pendingDeliveries.length === 0) {
@@ -539,7 +572,14 @@
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     
-                    // Post to backend GPS endpoint
+                    // Guardar posición en localStorage para que el admin la vea
+                    try {
+                        const gpsData = JSON.parse(localStorage.getItem('streetfeed_driver_gps') || '{}');
+                        gpsData[orderId] = { lat, lng, driverId: currentDriver?.id, driverName: currentDriver?.name, ts: Date.now() };
+                        localStorage.setItem('streetfeed_driver_gps', JSON.stringify(gpsData));
+                    } catch(e) {}
+                    
+                    // También intentar endpoint backend si existe
                     fetch('/api/driver/location', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -550,16 +590,27 @@
                             lat: lat,
                             lng: lng
                         })
-                    }).catch(err => console.warn("GPS update fetch error:", err));
+                    }).catch(() => { /* Endpoint opcional, no crítico */ });
                 },
                 (err) => {
                     console.warn("GPS Watch Error:", err);
+                    // Mostrar error visual al domiciliario
+                    const banner = document.querySelector('.gps-transmitting-banner');
+                    if (banner) banner.innerHTML = '⚠️ GPS no disponible. Verifica los permisos de ubicación en tu navegador.';
+                    alert('No se pudo activar el GPS. Por favor, permite el acceso a tu ubicación en el navegador.');
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
 
             loadAssignedOrders();
         }
+
+        // Auto-actualizar pantalla cuando el admin asigna un pedido o cambia estado
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'streetfeed_orders' || e.key === 'restaurant_orders' || e.key === 'streetfeed_order_assignments') {
+                loadAssignedOrders();
+            }
+        });
 
         function openExternalMaps(addressQuery) {
             const url = `https://www.google.com/maps/search/?api=1&query=${addressQuery}`;
