@@ -10040,8 +10040,6 @@ function updateCashCloseModalData() {
 function printThermalTicketZ() {
     const datePicker = document.getElementById('cash-close-date-picker');
     const selectedDateStr = datePicker && datePicker.value ? datePicker.value : toLocalDateString(new Date());
-    const printArea = document.getElementById('thermal-ticket-print-area');
-    if (!printArea) return;
 
     const allOrders = getOrders();
     const dayOrders = allOrders.filter(o => {
@@ -10074,37 +10072,36 @@ function printThermalTicketZ() {
     const nowStr = new Date().toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
 
-    printArea.style.display = 'block';
-    printArea.innerHTML = `
+    const ticketContent = `
         <div class="thermal-ticket">
-            <div class="thermal-header">
-                <h2>${escapeHtml(storeName.toUpperCase())}</h2>
-                <p>=== REPORTE Z DE CIERRE DE CAJA ===</p>
-                <p>FECHA CIERRE: ${selectedDateStr}</p>
-                <p>IMPRESO: ${nowStr}</p>
-                <p>CAJERO: ${escapeHtml(cashierName)}</p>
+            <div class="thermal-header" style="text-align: center; margin-bottom: 8px;">
+                <h2 style="font-size: 16px; font-weight: 900; margin: 0 0 4px 0;">${escapeHtml(storeName.toUpperCase())}</h2>
+                <p style="font-size: 11px; margin: 2px 0;">=== REPORTE Z DE CIERRE DE CAJA ===</p>
+                <p style="font-size: 11px; margin: 2px 0;">FECHA CIERRE: ${selectedDateStr}</p>
+                <p style="font-size: 11px; margin: 2px 0;">IMPRESO: ${nowStr}</p>
+                <p style="font-size: 11px; margin: 2px 0;">CAJERO: ${escapeHtml(cashierName)}</p>
             </div>
-            <div class="thermal-divider">--------------------------------</div>
-            <div class="thermal-row"><span>PEDIDOS ATENDIDOS:</span><span>${dayOrders.length}</span></div>
-            <div class="thermal-row"><span>VENTAS EFECTIVO:</span><span>$${cashSales.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-row"><span>VENTAS TRANSFERENCIA:</span><span>$${transferSales.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-row"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-row"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-divider">================================</div>
-            <div class="thermal-row"><span>TOTAL RECAUDADO TURNO:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-row thermal-total"><span>EFECTIVO EN CAJA:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
-            <div class="thermal-divider">================================</div>
+            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>PEDIDOS ATENDIDOS:</span><span>${dayOrders.length}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>VENTAS EFECTIVO:</span><span>$${cashSales.toLocaleString('es-CO')}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>VENTAS TRANSFERENCIA:</span><span>$${transferSales.toLocaleString('es-CO')}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>
+            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-bottom: 4px;"><span>TOTAL RECAUDADO TURNO:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-bottom: 4px;"><span>EFECTIVO EN CAJA:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
+            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
             <br><br>
-            <div class="thermal-row"><span>FIRMA CAJERO: ____________________</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px;"><span>FIRMA CAJERO: ____________________</span></div>
             <br>
-            <div class="thermal-row"><span>FIRMA RECIBIDO: ___________________</span></div>
-            <div class="thermal-footer">
+            <div style="display: flex; justify-content: space-between; font-size: 11px;"><span>FIRMA RECIBIDO: ___________________</span></div>
+            <div style="text-align: center; font-size: 11px; margin-top: 10px;">
                 <p>*** CORTE DE CAJA FINALIZADO ***</p>
             </div>
         </div>
     `;
 
-    window.print();
+    openThermalPrintWindow(`Reporte Z - ${selectedDateStr}`, ticketContent);
 }
 
 function exportCashClosePDF() {
