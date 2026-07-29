@@ -3475,6 +3475,7 @@ window.setHistoryScope = function(scope) {
         }
     }
     window.renderOrders();
+    if (typeof updateTablesBadge === 'function') updateTablesBadge();
 };
 
 function renderMyMetrics(range = 'today', specificMonth = null, specificDate = null) {
@@ -4420,15 +4421,36 @@ window.renderOrders = function() {
         });
     }
 
-    // Filtro por Búsqueda principal (Pedidos: Entrantes, En Preparación y Por Cobrar)
+    // Filtro por Búsqueda principal con modo de filtro activo
     const mainSearchInput = document.getElementById('orders-search-input');
     if (mainSearchInput && mainSearchInput.value.trim() !== '') {
         const q = mainSearchInput.value.toLowerCase().trim();
+        const filterMode = window._orderFilterMode || 'all';
         const filterFn = o => {
-            const nameMatch = (o.customer?.name || '').toLowerCase().includes(q);
-            const phoneMatch = (o.customer?.phone || '').toLowerCase().includes(q);
-            const idMatch = String(o.id || '').toLowerCase().includes(q);
-            return nameMatch || phoneMatch || idMatch;
+            if (filterMode === 'id')      return String(o.id || '').toLowerCase().includes(q);
+            if (filterMode === 'name')    return (o.customer?.name || '').toLowerCase().includes(q);
+            if (filterMode === 'phone')   return (o.customer?.phone || '').toLowerCase().includes(q);
+            if (filterMode === 'table') {
+                const tNum = extractTableNumber ? extractTableNumber(o) : null;
+                const addr = (o.customer?.address || '').toLowerCase();
+                return (tNum && tNum.includes(q.replace(/mesa/i,'').trim())) || addr.includes(q);
+            }
+            if (filterMode === 'type') {
+                const addr = (o.customer?.address || o.address || '').toLowerCase();
+                const dtype = (o.deliveryType || o.type || o.customer?.deliveryType || '').toLowerCase();
+                return addr.includes(q) || dtype.includes(q);
+            }
+            if (filterMode === 'payment') {
+                const pay = (o.customer?.payment || o.paymentMethod || '').toLowerCase();
+                return pay.includes(q);
+            }
+            // mode === 'all'
+            const nameMatch    = (o.customer?.name || '').toLowerCase().includes(q);
+            const phoneMatch   = (o.customer?.phone || '').toLowerCase().includes(q);
+            const idMatch      = String(o.id || '').toLowerCase().includes(q);
+            const tableMatch   = (o.customer?.address || '').toLowerCase().includes(q);
+            const payMatch     = (o.customer?.payment || o.paymentMethod || '').toLowerCase().includes(q);
+            return nameMatch || phoneMatch || idMatch || tableMatch || payMatch;
         };
         incoming = incoming.filter(filterFn);
         preparing = preparing.filter(filterFn);
@@ -4842,6 +4864,7 @@ window.updateOrderStatus = function(id, newStatus) {
             showToast(toastMsg);
 
             window.renderOrders();
+            if (typeof updateTablesBadge === 'function') updateTablesBadge();
             if (typeof window.reRenderCurrentStats === 'function') window.reRenderCurrentStats();
 
             // Impresión automática según flujo POS de restaurante
@@ -5862,6 +5885,301 @@ window.switchOrderSettingsTab = function(tab) {
         }
     }
 };
+
+// =============================================================================
+// SISTEMA DE MESAS — Mapa visual en tiempo real del salón
+// =============================================================================
+
+/** Obtiene cuántas mesas tiene configurado el restaurante */
+function getTablesCount() {
+    try {
+        const saved = localStorage.getItem('streetfeed_tables_config');
+        if (saved) {
+            const cfg = JSON.parse(saved);
+            return Math.max(1, Math.min(40, parseInt(cfg.count) || 10));
+        }
+    } catch(e) {}
+    return (typeof state !== 'undefined' && state.config && state.config.tableCount) ? state.config.tableCount : 10;
+}
+
+/** Extrae el número de mesa de un pedido */
+function extractTableNumber(order) {
+    // Fuente 1: campo order.table (número directo)
+    if (order.table) return String(order.table);
+    // Fuente 2: order.customer.address con formato "Mesa X"
+    const addr = order.customer?.address || order.address || '';
+    const match = addr.match(/mesa\s*(\d+)/i);
+    if (match) return match[1];
+    // Fuente 3: order.tableNumber
+    if (order.tableNumber) return String(order.tableNumber);
+    return null;
+}
+
+/**
+ * Devuelve un mapa: { "1": {status, orderId, total, customerName, payMethod},  ... }
+ * status: 'occupied' (en cocina) | 'unpaid' (por cobrar) | 'free'
+ */
+function getTablesStatusMap() {
+    let orders = [];
+    try { orders = getOrders(); } catch(e) {}
+
+    const occupied = {};  // tableNum → order info
+
+    orders.forEach(o => {
+        const tableNum = extractTableNumber(o);
+        if (!tableNum) return;
+
+        // Solo pedidos activos (no cancelados, no cobrados)
+        if (o.status === 'cancelled' || o.status === 'accepted' || o.status === 'completed') return;
+
+        const current = occupied[tableNum];
+        const priority = { confirmed: 2, dispatched: 3, pending: 1 };
+        const orderPriority = priority[o.status] || 0;
+        const currentPriority = current ? (priority[current.rawStatus] || 0) : -1;
+
+        if (!current || orderPriority > currentPriority) {
+            occupied[tableNum] = {
+                rawStatus: o.status,
+                status: (o.status === 'dispatched') ? 'unpaid' : 'occupied',
+                orderId: o.id,
+                total: parseFloat(o.total) || 0,
+                customerName: o.customer?.name || 'Cliente',
+                payMethod: o.customer?.payment || o.paymentMethod || 'Efectivo',
+                itemCount: (o.items || []).length
+            };
+        }
+    });
+
+    return occupied;
+}
+
+/** Actualiza el badge de mesas ocupadas en el botón del tab */
+function updateTablesBadge() {
+    const badge = document.getElementById('badge-tables-occupied');
+    const btn = document.getElementById('btn-tables-view');
+    if (!badge || !btn) return;
+
+    const statusMap = getTablesStatusMap();
+    const occupiedCount = Object.keys(statusMap).length;
+
+    if (occupiedCount > 0) {
+        badge.textContent = occupiedCount;
+        badge.style.display = 'inline-block';
+        btn.style.borderColor = 'rgba(239,68,68,0.4)';
+        btn.style.color = '#ef4444';
+        btn.style.background = 'rgba(239,68,68,0.08)';
+    } else {
+        badge.style.display = 'none';
+        btn.style.borderColor = 'var(--glass-border)';
+        btn.style.color = 'var(--text-dim)';
+        btn.style.background = 'transparent';
+    }
+}
+
+/** Renderiza el grid de tarjetas de mesa en el modal */
+function renderTablesModal() {
+    const grid = document.getElementById('tables-grid');
+    const statFree = document.getElementById('tables-stat-free');
+    const statOccupied = document.getElementById('tables-stat-occupied');
+    const statPct = document.getElementById('tables-stat-pct');
+    const statRevenue = document.getElementById('tables-stat-revenue');
+    if (!grid) return;
+
+    const totalTables = getTablesCount();
+    const statusMap = getTablesStatusMap();
+
+    // Actualizar input de configuración
+    const countInput = document.getElementById('tables-count-input');
+    if (countInput) countInput.value = totalTables;
+
+    let freeCount = 0, occupiedCount = 0, totalRevenue = 0;
+    let html = '';
+
+    for (let i = 1; i <= totalTables; i++) {
+        const num = String(i);
+        const tableInfo = statusMap[num];
+
+        if (tableInfo) {
+            occupiedCount++;
+            totalRevenue += tableInfo.total;
+
+            if (tableInfo.status === 'unpaid') {
+                // Estado: Por Cobrar (amarillo)
+                html += `
+                <div onclick="window.closeTablesModal(); document.querySelector('[data-subtab=\\'unpaid\\']')?.click();"
+                     style="border-radius:18px; background:linear-gradient(145deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04)); border:1.5px solid rgba(245,158,11,0.4); padding:1.2rem 1rem; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.5rem; min-height:130px;"
+                     onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 8px 30px rgba(245,158,11,0.25)';"
+                     onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                    <div style="position:absolute; top:-8px; right:-8px; width:50px; height:50px; background:radial-gradient(circle, rgba(245,158,11,0.3) 0%, transparent 70%);"></div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.5); color:#f59e0b; font-weight:900; font-size:0.72rem; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.5px;">Por Cobrar</div>
+                        <div style="width:8px; height:8px; border-radius:50%; background:#f59e0b; box-shadow:0 0 8px rgba(245,158,11,0.8);"></div>
+                    </div>
+                    <div style="font-size:2rem; font-weight:900; color:#f59e0b; line-height:1; margin-top:0.2rem;">Mesa ${i}</div>
+                    <div style="font-size:0.72rem; color:rgba(245,158,11,0.8); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tableInfo.customerName}</div>
+                    <div style="font-size:0.78rem; color:rgba(245,158,11,0.9); font-weight:900; margin-top:auto;">$${tableInfo.total.toLocaleString('es-CO')}</div>
+                </div>`;
+            } else {
+                // Estado: En Preparación / Ocupada (rojo)
+                html += `
+                <div onclick="window.closeTablesModal(); document.querySelector('[data-subtab=\\'preparing\\']')?.click();"
+                     style="border-radius:18px; background:linear-gradient(145deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04)); border:1.5px solid rgba(239,68,68,0.4); padding:1.2rem 1rem; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.5rem; min-height:130px;"
+                     onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 8px 30px rgba(239,68,68,0.25)';"
+                     onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                    <div style="position:absolute; top:-8px; right:-8px; width:50px; height:50px; background:radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%);"></div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#ef4444; font-weight:900; font-size:0.72rem; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.5px;">Ocupada</div>
+                        <div style="width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow:0 0 8px rgba(239,68,68,0.8); animation: tbl-pulse 1.5s infinite;"></div>
+                    </div>
+                    <div style="font-size:2rem; font-weight:900; color:#ef4444; line-height:1; margin-top:0.2rem;">Mesa ${i}</div>
+                    <div style="font-size:0.72rem; color:rgba(239,68,68,0.8); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tableInfo.customerName}</div>
+                    <div style="font-size:0.78rem; color:rgba(239,68,68,0.9); font-weight:900; margin-top:auto;">$${tableInfo.total.toLocaleString('es-CO')}</div>
+                </div>`;
+            }
+        } else {
+            // Estado: Libre (verde)
+            freeCount++;
+            html += `
+            <div style="border-radius:18px; background:linear-gradient(145deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02)); border:1.5px solid rgba(16,185,129,0.25); padding:1.2rem 1rem; transition:all 0.25s; position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.5rem; min-height:130px; opacity:0.75;"
+                 onmouseover="this.style.opacity='1'; this.style.borderColor='rgba(16,185,129,0.5)';"
+                 onmouseout="this.style.opacity='0.75'; this.style.borderColor='rgba(16,185,129,0.25)';">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#10b981; font-weight:900; font-size:0.72rem; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.5px;">Libre</div>
+                    <div style="width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 6px rgba(16,185,129,0.5);"></div>
+                </div>
+                <div style="font-size:2rem; font-weight:900; color:#10b981; line-height:1; margin-top:0.2rem;">Mesa ${i}</div>
+                <div style="font-size:0.72rem; color:rgba(16,185,129,0.6); font-weight:600; margin-top:auto;">Disponible</div>
+            </div>`;
+        }
+    }
+
+    grid.innerHTML = html;
+
+    // Actualizar estadísticas
+    if (statFree) statFree.textContent = freeCount;
+    if (statOccupied) statOccupied.textContent = occupiedCount;
+    if (statPct) statPct.textContent = totalTables > 0 ? Math.round((occupiedCount / totalTables) * 100) + '%' : '0%';
+    if (statRevenue) statRevenue.textContent = '$' + totalRevenue.toLocaleString('es-CO');
+
+    // Inyectar animación pulse si no existe
+    if (!document.getElementById('tbl-pulse-style')) {
+        const s = document.createElement('style');
+        s.id = 'tbl-pulse-style';
+        s.textContent = `@keyframes tbl-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }`;
+        document.head.appendChild(s);
+    }
+
+    if (window.lucide) lucide.createIcons({ nodes: grid.querySelectorAll('[data-lucide]') });
+}
+
+/** Abre el modal de mesas y lo renderiza */
+window.openTablesModal = function() {
+    const modal = document.getElementById('tables-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    renderTablesModal();
+};
+
+/** Cierra el modal de mesas */
+window.closeTablesModal = function() {
+    const modal = document.getElementById('tables-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+/** Aplica la configuración del número de mesas */
+window.applyTablesConfig = function() {
+    const input = document.getElementById('tables-count-input');
+    const count = Math.max(1, Math.min(40, parseInt(input?.value) || 10));
+    try {
+        localStorage.setItem('streetfeed_tables_config', JSON.stringify({ count }));
+        // Actualizar también el state.config para que el selector de mesas en nuevos pedidos lo use
+        if (typeof state !== 'undefined' && state.config) {
+            state.config.tableCount = count;
+            if (typeof saveStateToLocal === 'function') saveStateToLocal();
+        }
+    } catch(e) {}
+    renderTablesModal();
+    updateTablesBadge();
+    if (typeof showToast === 'function') showToast(`✅ Configuración guardada: ${count} mesas`, 'success');
+};
+
+// Cerrar el modal de mesas al clicar el fondo
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('tables-modal');
+    if (modal && modal.style.display === 'flex' && e.target === modal) {
+        window.closeTablesModal();
+    }
+});
+
+// =============================================================================
+// FILTRO DESPLEGABLE DE PEDIDOS
+// =============================================================================
+
+// Estado actual del filtro (qué campo usar al buscar)
+window._orderFilterMode = 'all';
+
+/** Abre/cierra el panel desplegable de filtro */
+window.toggleOrderFilterPanel = function() {
+    const panel = document.getElementById('orders-filter-panel');
+    const chevron = document.getElementById('orders-filter-chevron');
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+};
+
+/** Establece el modo de filtro activo y actualiza la UI */
+window.setOrderFilter = function(mode, label) {
+    window._orderFilterMode = mode;
+
+    // Actualizar label del botón principal
+    const lbl = document.getElementById('orders-filter-label');
+    if (lbl) lbl.textContent = mode === 'all' ? 'Filtrar' : label;
+
+    // Actualizar estado visual de los botones del panel
+    document.querySelectorAll('.filter-opt-btn').forEach(btn => {
+        const isActive = btn.dataset.filter === mode;
+        btn.style.borderColor = isActive ? 'var(--theme-accent)' : 'var(--glass-border)';
+        btn.style.background = isActive ? 'rgba(247,147,30,0.12)' : 'transparent';
+        btn.style.color = isActive ? 'var(--theme-accent)' : 'var(--text-dim)';
+    });
+
+    // Actualizar placeholder del buscador
+    const input = document.getElementById('orders-search-input');
+    if (input) {
+        const placeholders = {
+            all:     'Buscar por nombre, teléfono, #pedido...',
+            id:      'Buscar por número de orden (ej: 12)...',
+            name:    'Buscar por nombre del cliente...',
+            phone:   'Buscar por teléfono del cliente...',
+            table:   'Buscar por mesa (ej: Mesa 3)...',
+            type:    'Buscar tipo: domicilio, mesa, llevar...',
+            payment: 'Buscar método: efectivo, nequi, transferencia...'
+        };
+        input.placeholder = placeholders[mode] || 'Buscar...';
+        input.focus();
+    }
+
+    // Cerrar panel
+    const panel = document.getElementById('orders-filter-panel');
+    const chevron = document.getElementById('orders-filter-chevron');
+    if (panel) panel.style.display = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+
+    // Re-renderizar con nuevo filtro
+    if (typeof window.renderOrders === 'function') window.renderOrders();
+};
+
+// Cerrar panel de filtro al clicar fuera
+document.addEventListener('click', function(e) {
+    const panel = document.getElementById('orders-filter-panel');
+    const btn = document.getElementById('orders-filter-btn');
+    if (panel && panel.style.display !== 'none' && btn && !btn.contains(e.target) && !panel.contains(e.target)) {
+        panel.style.display = 'none';
+        const chevron = document.getElementById('orders-filter-chevron');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+});
 
 window.openOrderSettingsModal = function(initialTab = 'delivery') {
     const modal = document.getElementById('order-settings-modal');
