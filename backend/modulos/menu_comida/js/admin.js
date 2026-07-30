@@ -6512,16 +6512,56 @@ document.addEventListener('click', (e) => {
         }
 
         if (order.customer) {
-            selectedDelivery = order.customer.deliveryType || 'dine-in';
+            const delType = order.customer.deliveryType || 'dine-in';
+            const payVal = order.customer.payment || 'Efectivo';
+            const addressVal = order.customer.address || '';
+            const noteVal = order.customer.note || '';
+
             const nameInp = document.getElementById('manual-cust-name');
             const phoneInp = document.getElementById('manual-cust-phone');
+            const noteInp = document.getElementById('manual-cust-note');
             const payInp = document.getElementById('manual-cust-payment');
-            const tableInp = document.getElementById('manual-table-val');
 
             if (nameInp) nameInp.value = order.customer.name || '';
             if (phoneInp) phoneInp.value = order.customer.phone || '';
-            if (payInp) payInp.value = order.customer.payment || 'Efectivo';
-            if (tableInp) tableInp.value = order.customer.address || '';
+            if (noteInp) noteInp.value = noteVal;
+            if (payInp) payInp.value = payVal;
+
+            // Activar botón del tipo de servicio (En Mesa, Para Llevar, Domicilio)
+            const delBtn = document.querySelector(`.manual-delivery-btn[data-type="${delType}"]`);
+            if (delBtn) delBtn.click();
+
+            // Precargar detalle de mesa/dirección
+            if (delType === 'dine-in') {
+                const tableValInp = document.getElementById('manual-table-val');
+                if (tableValInp) tableValInp.value = addressVal;
+                const numMatch = addressVal.match(/\d+/);
+                if (numMatch) {
+                    const tableBtn = document.querySelector(`.manual-table-num-btn[data-num="${numMatch[0]}"]`);
+                    if (tableBtn) {
+                        tableBtn.style.background = 'var(--theme-accent)';
+                        tableBtn.style.borderColor = 'transparent';
+                        tableBtn.style.color = '#ffffff';
+                    }
+                }
+            } else if (delType === 'takeout') {
+                const tkValInp = document.getElementById('manual-takeout-val');
+                if (tkValInp) tkValInp.value = addressVal;
+            } else if (delType === 'delivery') {
+                const addrInp = document.getElementById('manual-address-inp');
+                if (addrInp) addrInp.value = addressVal;
+            }
+
+            // Activar botón del método de pago (Efectivo, Transferencia, Datáfono)
+            let matchPayValue = 'Efectivo';
+            if (payVal === 'Transferencia' || payVal === 'Nequi' || payVal === 'Daviplata') {
+                matchPayValue = 'Transferencia';
+            } else if (payVal === 'Tarjeta' || payVal === 'Datáfono' || payVal.toLowerCase().includes('datafono') || payVal.toLowerCase().includes('tarjeta')) {
+                matchPayValue = 'Tarjeta';
+            }
+
+            const payBtn = document.querySelector(`.manual-pay-btn[data-value="${matchPayValue}"]`);
+            if (payBtn) payBtn.click();
         }
 
         // Pre-cargar los productos actuales del pedido en el carrito manual
