@@ -4875,9 +4875,9 @@ function createOrderCard(order) {
 
             <!-- 3. Pedido (Productos + Pago) -->
             <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem; overflow: hidden;">
-                <div style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; flex-shrink: 0;">
-                    <i data-lucide="shopping-bag" style="width: 12px; color: var(--theme-accent);"></i>
-                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--text);">${(order.items || []).length} Prod.</span>
+                <div onclick="event.stopPropagation(); window.openManualOrderForAddition('${order.id}');" title="Anexar productos a este pedido" style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; flex-shrink: 0; cursor: pointer; padding: 3px 8px; border-radius: 8px; background: rgba(var(--theme-accent-rgb, 255,83,123), 0.12); border: 1px dashed var(--theme-accent); transition: all 0.2s;" onmouseover="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.22)'" onmouseout="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.12)'">
+                    <i data-lucide="plus-circle" style="width: 12px; color: var(--theme-accent);"></i>
+                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--theme-accent);">${(order.items || []).length} Prod. ➕</span>
                 </div>
                 ${paymentBadge}
             </div>
@@ -5287,6 +5287,7 @@ window.printThermalTicket = function(id) {
 };
 
 window.showOrderDetails = function(id) {
+    window.currentDetailOrderId = String(id);
     const orders = getOrders();
     const order = orders.find(o => String(o.id) === String(id));
     if (!order) {
@@ -6337,10 +6338,68 @@ document.addEventListener('click', (e) => {
     };
 
     window.closeManualModal = function() {
+        additionTargetOrderId = null;
         const modalEl = document.getElementById('manual-order-modal');
         if (modalEl) {
             modalEl.classList.add('hidden');
         }
+        const step1Title = document.querySelector('#manual-step-1 h3');
+        if (step1Title) step1Title.textContent = 'Nuevo Pedido Manual (POS)';
+        const btnConfirm = document.getElementById('btn-confirm-manual-order');
+        if (btnConfirm) {
+            btnConfirm.innerHTML = `<i data-lucide="printer" style="width:18px; height:18px;"></i> Confirmar e Imprimir Pedido`;
+            if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btnConfirm] });
+        }
+    };
+
+    let additionTargetOrderId = null;
+
+    window.openManualOrderForAddition = function(orderId) {
+        const targetId = orderId || window.currentDetailOrderId;
+        if (!targetId) {
+            showToast('No se especificó un pedido válido', 'error');
+            return;
+        }
+
+        const orders = getOrders();
+        const order = orders.find(o => String(o.id) === String(targetId));
+        if (!order) {
+            showToast('Pedido no encontrado', 'error');
+            return;
+        }
+
+        additionTargetOrderId = String(order.id);
+
+        const detailModal = document.getElementById('order-detail-modal');
+        if (detailModal) detailModal.style.display = 'none';
+
+        window.openManualOrderModal();
+
+        const step1Title = document.querySelector('#manual-step-1 h3');
+        if (step1Title) {
+            step1Title.innerHTML = `<span style="color:var(--theme-accent);">➕ Adición a Pedido ${order.id}</span> <span style="font-size:0.85rem; color:var(--text-dim); font-weight:700;">(${order.customer?.name || 'Cliente'} - ${order.customer?.address || 'Mesa'})</span>`;
+        }
+
+        if (order.customer) {
+            selectedDelivery = order.customer.deliveryType || 'dine-in';
+            const nameInp = document.getElementById('manual-cust-name');
+            const phoneInp = document.getElementById('manual-cust-phone');
+            const payInp = document.getElementById('manual-cust-payment');
+            const tableInp = document.getElementById('manual-table-val');
+
+            if (nameInp) nameInp.value = order.customer.name || '';
+            if (phoneInp) phoneInp.value = order.customer.phone || '';
+            if (payInp) payInp.value = order.customer.payment || 'Efectivo';
+            if (tableInp) tableInp.value = order.customer.address || '';
+        }
+
+        const btnConfirm = document.getElementById('btn-confirm-manual-order');
+        if (btnConfirm) {
+            btnConfirm.innerHTML = `<i data-lucide="plus-circle" style="width:18px; height:18px;"></i> Guardar y Anexar al Pedido`;
+            if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btnConfirm] });
+        }
+
+        showToast(`Modo Adición activado para el Pedido ${order.id} ➕`);
     };
 
     window.openManualOrderModal = function() {
@@ -6767,6 +6826,54 @@ document.addEventListener('click', (e) => {
     if (btnConfirm) {
         btnConfirm.addEventListener('click', () => {
             if (manualCart.length === 0) { showToast('Agrega al menos un producto', 'error'); return; }
+
+            if (additionTargetOrderId) {
+                // Modo Adición: Anexar a pedido existente
+                const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
+                const orderIndex = orders.findIndex(o => String(o.id) === String(additionTargetOrderId));
+                if (orderIndex === -1) {
+                    showToast('Error: No se encontró el pedido a anexar', 'error');
+                    additionTargetOrderId = null;
+                    return;
+                }
+
+                const targetOrder = orders[orderIndex];
+                const newItems = manualCart.map(i => ({ ...i, extras: [], isAddition: true }));
+                targetOrder.items = (targetOrder.items || []).concat(newItems);
+                
+                const additionBaseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
+                targetOrder.baseTotal = (parseFloat(targetOrder.baseTotal) || 0) + additionBaseTotal;
+                targetOrder.total = (parseFloat(targetOrder.total) || 0) + additionBaseTotal;
+
+                if (!targetOrder.additions) targetOrder.additions = [];
+                targetOrder.additions.push({
+                    date: new Date().toISOString(),
+                    items: newItems,
+                    total: additionBaseTotal,
+                    addedBy: getAttendedByInfo(true)
+                });
+
+                orders[orderIndex] = targetOrder;
+                state.orders = orders;
+                localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+
+                const updatedTargetId = targetOrder.id;
+                additionTargetOrderId = null;
+                closeManualModal();
+
+                if (typeof window.renderOrders === 'function') window.renderOrders();
+                if (typeof renderStats === 'function') renderStats();
+                if (typeof renderTablesModal === 'function') renderTablesModal();
+
+                showToast(`✅ Adición agregada con éxito al Pedido ${updatedTargetId}`);
+
+                setTimeout(() => {
+                    window.showOrderDetails(updatedTargetId);
+                }, 150);
+
+                return;
+            }
+
             if (!selectedDelivery) { showToast('Selecciona el tipo de servicio (Mesa, Llevar o Domicilio)', 'error'); return; }
 
             let address = '';

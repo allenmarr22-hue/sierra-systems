@@ -2510,7 +2510,12 @@
                         </div>
                     </div>
                     <div class="detail-section">
-                        <h4 style="color: var(--theme-accent); margin-bottom: 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800;">Detalle del Pedido</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="color: var(--theme-accent); margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800;">Detalle del Pedido</h4>
+                            <button type="button" id="btn-add-items-to-order" onclick="window.openManualOrderForAddition()" style="padding: 0.45rem 0.9rem; border-radius: 50px; background: rgba(var(--theme-accent-rgb, 255,83,123), 0.14); border: 1px solid var(--theme-accent); color: var(--theme-accent); font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s; box-shadow: 0 4px 12px rgba(var(--theme-accent-rgb, 255,83,123), 0.2);">
+                                <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Agregar Producto
+                            </button>
+                        </div>
                         <div id="detail-items-list" style="display: grid; gap: 0.8rem; margin-bottom: 2rem;">
                             <!-- Items dinámicos -->
                         </div>
