@@ -597,12 +597,15 @@
 
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label style="display: block; margin-bottom: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--theme-accent);">Método de Pago</label>
-                        <div style="display: flex; gap: 0.8rem;">
-                            <button type="button" class="client-pay-btn" data-value="Efectivo" onclick="selectClientPayment(this)" style="flex: 1; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; font-size: 0.9rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                            <button type="button" class="client-pay-btn" data-value="Efectivo" onclick="selectClientPayment(this)" style="padding: 0.75rem 0.3rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; font-size: 0.82rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; white-space: nowrap;">
                                 💵 Efectivo
                             </button>
-                            <button type="button" class="client-pay-btn" data-value="Transferencia" onclick="selectClientPayment(this)" style="flex: 1; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; font-size: 0.9rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <button type="button" class="client-pay-btn" data-value="Transferencia" onclick="selectClientPayment(this)" style="padding: 0.75rem 0.3rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; font-size: 0.82rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; white-space: nowrap;">
                                 📲 Transferencia
+                            </button>
+                            <button type="button" class="client-pay-btn" data-value="Tarjeta" onclick="selectClientPayment(this)" style="padding: 0.75rem 0.3rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; font-size: 0.82rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; white-space: nowrap;">
+                                💳 Datáfono
                             </button>
                         </div>
                         <input type="hidden" name="payment" id="cust-payment" value="">
