@@ -1401,23 +1401,16 @@
                                 <!-- Modal Tabs Navigation -->
                                 <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.8rem;">
                                     <button type="button" id="modal-tab-btn-delivery" onclick="switchOrderSettingsTab('delivery')" style="padding: 0.55rem 1rem; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; border: none; background: var(--theme-accent); color: #fff; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
-                                        <i data-lucide="truck" style="width: 16px; height: 16px;"></i> Domicilio y Mesas
+                                        <i data-lucide="truck" style="width: 16px; height: 16px;"></i> Domicilio y Ubicación
                                     </button>
                                     <button type="button" id="modal-tab-btn-wa" onclick="switchOrderSettingsTab('wa')" style="padding: 0.55rem 1rem; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
                                         <i data-lucide="message-square" style="width: 16px; height: 16px;"></i> Plantilla WhatsApp
                                     </button>
                                 </div>
 
-                                <!-- Section 1: Delivery & Tables -->
+                                <!-- Section 1: Delivery & Business Info -->
                                 <div id="modal-sec-delivery" class="modal-settings-sec">
                                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                                        <div class="form-group">
-                                            <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Cantidad de Mesas</label>
-                                            <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--surface); padding: 0.4rem 1.2rem; border-radius: 16px; border: 1px solid var(--glass-border);" class="input-focus-accent">
-                                                <i data-lucide="utensils" style="width: 20px; color: var(--theme-accent); opacity: 0.7;"></i>
-                                                <input type="number" id="config-table-count" placeholder="10" style="width: 100%; padding: 0.8rem 0; border: none; background: transparent; color: white; outline: none; font-weight: 800; font-size: 1.1rem;">
-                                            </div>
-                                        </div>
 
                                         <div class="form-group">
                                             <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; font-size: 0.9rem; color: var(--text-dim);">Precio del Domicilio</label>
@@ -3281,6 +3274,6 @@
     <div id="thermal-ticket-print-area" class="thermal-print-area"></div>
 
     <script src="js/script_v9.js?v=20260727.3"></script>
-    <script src="js/admin.js?v=5.75"></script>
+    <script src="js/admin.js?v=5.76"></script>
 </body>
 </html>

@@ -6185,15 +6185,12 @@ window.openOrderSettingsModal = function(initialTab = 'delivery') {
     const modal = document.getElementById('order-settings-modal');
     if (!modal) return;
     const currentFee = (typeof state !== 'undefined' && state.config && state.config.deliveryFee !== undefined) ? state.config.deliveryFee : 5000;
-    const currentTables = (typeof state !== 'undefined' && state.config && state.config.tableCount !== undefined) ? state.config.tableCount : 10;
     const currentCity = (typeof state !== 'undefined' && state.config && state.config.businessCity) ? state.config.businessCity : 'Riohacha';
-    
+
     const priceInput = document.getElementById('config-delivery-price');
-    const tableInput = document.getElementById('config-table-count');
     const cityInput  = document.getElementById('config-business-city');
-    
+
     if (priceInput) priceInput.value = currentFee.toLocaleString('es-CO');
-    if (tableInput) tableInput.value = currentTables;
     if (cityInput)  cityInput.value  = currentCity;
 
     window.switchOrderSettingsTab(initialTab);
@@ -6209,13 +6206,13 @@ document.addEventListener('click', (e) => {
     if (e.target.id === 'save-order-settings' || e.target.closest('#save-order-settings')) {
         const priceStr = document.getElementById('config-delivery-price').value.replace(/\./g, '');
         const price = parseInt(priceStr) || 0;
-        const tables = parseInt(document.getElementById('config-table-count').value) || 10;
         const city   = (document.getElementById('config-business-city')?.value || 'Riohacha').trim();
-        
+
         state.config.deliveryFee = price;
-        state.config.tableCount = tables;
+        // Sincronizar tableCount desde el modal de Mesas (localStorage)
+        state.config.tableCount = typeof getTablesCount === 'function' ? getTablesCount() : (state.config.tableCount || 10);
         state.config.businessCity = city;
-        
+
         // Clear geocode cache so new city is used immediately
         _adminGeoCache = {};
 
