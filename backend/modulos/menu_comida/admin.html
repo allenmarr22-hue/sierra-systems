@@ -1878,7 +1878,7 @@
                                     </div>
 
                                     <!-- 4. Icons Accordion -->
-                                    <div class="admin-cat-group" id="icons-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1.5rem;">
+                                    <div class="admin-cat-group" id="icons-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); margin-bottom: 1.5rem; position: relative; z-index: 10;">
                                         <button type="button" class="admin-cat-header" id="toggle-icons-btn" style="background: rgba(255,255,255,0.03);">
                                             <div class="admin-cat-title">
                                                 <i data-lucide="shopping-bag"></i>
@@ -1886,21 +1886,21 @@
                                             </div>
                                             <i data-lucide="chevron-down" class="accordion-icon"></i>
                                         </button>
-                                        <div class="admin-cat-content" id="icons-wrapper" style="padding: 1.5rem; display: none;">
+                                        <div class="admin-cat-content" id="icons-wrapper" style="padding: 1.5rem; display: none; overflow: visible !important;">
                                             <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">Explora cientos de iconos organizados por categoría para tu marca.</p>
                                             
-                                            <div class="icon-browser-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center;">
-                                                <div class="custom-dropdown" id="icon-cat-dropdown" style="min-width: 220px; position: relative; z-index: 100;">
-                                                    <div class="dropdown-trigger" id="icon-cat-trigger" style="padding: 0.6rem 1rem; border-radius: 14px; font-size: 0.85rem; font-weight: 800; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); display: flex; align-items: center; justify-content: space-between; cursor: pointer; backdrop-filter: blur(10px); transition: all 0.2s;">
+                                            <div class="icon-browser-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; position: relative; z-index: 100;">
+                                                <div class="custom-dropdown" id="icon-cat-dropdown" style="min-width: 240px; position: relative; z-index: 10050;">
+                                                    <div class="dropdown-trigger" id="icon-cat-trigger" style="padding: 0.6rem 1rem; border-radius: 14px; font-size: 0.85rem; font-weight: 800; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); display: flex; align-items: center; justify-content: space-between; cursor: pointer; backdrop-filter: blur(10px); transition: all 0.2s; white-space: nowrap;">
                                                         <span id="icon-cat-current">🍔 Comida y Productos</span>
-                                                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; color: var(--theme-accent); margin-left: 6px;"></i>
+                                                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; color: var(--theme-accent); margin-left: 8px; flex-shrink: 0;"></i>
                                                     </div>
-                                                    <ul class="dropdown-menu" id="icon-cat-menu" style="position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--glass-border); border-radius: 16px; padding: 0.4rem; list-style: none; margin: 0; box-shadow: 0 15px 35px rgba(0,0,0,0.5); backdrop-filter: blur(20px); z-index: 100010; display: none;">
-                                                        <li data-value="comida" class="custom-dropdown-opt active" style="padding: 0.6rem 0.85rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s;">🍔 Comida y Productos</li>
-                                                        <li data-value="dulces" class="custom-dropdown-opt" style="padding: 0.6rem 0.85rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s;">🍦 Helados y Dulces</li>
-                                                        <li data-value="bebidas" class="custom-dropdown-opt" style="padding: 0.6rem 0.85rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s;">🥤 Bebidas</li>
-                                                        <li data-value="tienda" class="custom-dropdown-opt" style="padding: 0.6rem 0.85rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s;">🛍️ Tienda y Envío</li>
-                                                        <li data-value="premium" class="custom-dropdown-opt" style="padding: 0.6rem 0.85rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s;">✨ Premium y Otros</li>
+                                                    <ul class="dropdown-menu" id="icon-cat-menu" style="position: absolute; top: calc(100% + 6px); left: 0; min-width: 100%; width: max-content; background: var(--surface); border: 1px solid var(--glass-border); border-radius: 16px; padding: 0.4rem; list-style: none; margin: 0; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(20px); z-index: 100050; display: none; white-space: nowrap;">
+                                                        <li data-value="comida" class="custom-dropdown-opt active" style="padding: 0.65rem 0.9rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s; white-space: nowrap;">🍔 Comida y Productos</li>
+                                                        <li data-value="dulces" class="custom-dropdown-opt" style="padding: 0.65rem 0.9rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s; white-space: nowrap;">🍦 Helados y Dulces</li>
+                                                        <li data-value="bebidas" class="custom-dropdown-opt" style="padding: 0.65rem 0.9rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s; white-space: nowrap;">🥤 Bebidas</li>
+                                                        <li data-value="tienda" class="custom-dropdown-opt" style="padding: 0.65rem 0.9rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s; white-space: nowrap;">🛍️ Tienda y Envío</li>
+                                                        <li data-value="premium" class="custom-dropdown-opt" style="padding: 0.65rem 0.9rem; border-radius: 10px; font-size: 0.84rem; font-weight: 700; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.2s; white-space: nowrap;">✨ Premium y Otros</li>
                                                     </ul>
                                                     <input type="hidden" id="icon-cat-filter" value="comida">
                                                 </div>
