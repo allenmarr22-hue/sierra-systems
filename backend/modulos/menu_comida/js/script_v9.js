@@ -2504,11 +2504,11 @@ function initCheckout() {
                     o.style.transform = 'scale(1)';
                     o.style.boxShadow = 'none';
                 });
-                opt.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+                opt.style.background = 'var(--theme-accent)';
                 opt.style.borderColor = 'transparent';
                 opt.style.color = '#ffffff';
                 opt.style.transform = 'scale(1.06)';
-                opt.style.boxShadow = '0 4px 12px rgba(245,158,11,0.4)';
+                opt.style.boxShadow = '0 4px 14px rgba(var(--theme-accent-rgb,255,83,123),0.35)';
                 input.value = `Mesa ${i}`;
             };
             
@@ -2980,10 +2980,10 @@ function selectClientPayment(btn) {
         b.style.color = 'white';
         b.style.boxShadow = 'none';
     });
-    btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+    btn.style.background = 'var(--theme-accent)';
     btn.style.borderColor = 'transparent';
     btn.style.color = '#ffffff';
-    btn.style.boxShadow = '0 4px 12px rgba(245,158,11,0.4)';
+    btn.style.boxShadow = '0 4px 14px rgba(var(--theme-accent-rgb,255,83,123),0.35)';
     const hiddenInput = document.getElementById('cust-payment');
     if (hiddenInput) hiddenInput.value = btn.dataset.value;
 }

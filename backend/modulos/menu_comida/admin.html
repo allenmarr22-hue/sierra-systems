@@ -1309,7 +1309,7 @@
                                 <!-- Header del Modal -->
                                 <div style="padding: 1.8rem 2rem 1.2rem; border-bottom: 1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                                     <div style="display:flex; align-items:center; gap:1rem;">
-                                        <div style="width:46px; height:46px; border-radius:14px; background:linear-gradient(135deg, rgba(247,147,30,0.2), rgba(247,147,30,0.05)); border:1px solid rgba(247,147,30,0.3); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <div style="width:46px; height:46px; border-radius:14px; background:rgba(var(--theme-accent-rgb),0.18); border:1px solid rgba(var(--theme-accent-rgb),0.3); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                                             <i data-lucide="layout-grid" style="width:22px; height:22px; color:var(--theme-accent);"></i>
                                         </div>
                                         <div>
@@ -2529,7 +2529,7 @@
                     <!-- Header Paso 1 -->
                     <div style="padding: 1.1rem 1.6rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: rgba(255,255,255,0.02);">
                         <div style="display: flex; align-items: center; gap: 0.8rem;">
-                            <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(247,147,30,0.15); border: 1px solid rgba(247,147,30,0.3); display: flex; align-items: center; justify-content: center; color: var(--theme-accent); flex-shrink: 0;">
+                            <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(var(--theme-accent-rgb,255,83,123),0.18); border: 1px solid rgba(var(--theme-accent-rgb,255,83,123),0.3); display: flex; align-items: center; justify-content: center; color: var(--theme-accent); flex-shrink: 0;">
                                 <i data-lucide="shopping-bag" style="width: 20px; height: 20px;"></i>
                             </div>
                             <div>
@@ -2574,7 +2574,7 @@
                         <div id="manual-order-cart-section" style="flex: 0.8; min-width: 270px; max-width: 320px; background: rgba(0,0,0,0.18); display: flex; flex-direction: column; overflow: hidden;">
                             <div style="padding: 0.8rem 1rem; font-size: 0.78rem; color: var(--theme-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--glass-border); background: rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: space-between;">
                                 <span>🛒 Pedido Actual:</span>
-                                <span id="manual-cart-sidebar-count" style="background: rgba(247,147,30,0.2); color: var(--theme-accent); padding: 2px 8px; border-radius: 12px; font-size: 0.72rem;">0 ítems</span>
+                                <span id="manual-cart-sidebar-count" style="background: rgba(var(--theme-accent-rgb,255,83,123),0.2); color: var(--theme-accent); padding: 2px 8px; border-radius: 12px; font-size: 0.72rem;">0 ítems</span>
                             </div>
                             <div id="manual-order-cart-items" style="flex: 1; overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.5rem; overscroll-behavior: contain;">
                                 <!-- Ítems agregados dinámicamente -->
@@ -2594,7 +2594,7 @@
                                 <div style="font-size: 1.2rem; font-weight: 900; color: var(--theme-accent);"><span id="manual-cart-count-badge">0</span> productos · <span id="manual-order-total-step1">$0</span></div>
                             </div>
                         </div>
-                        <button type="button" onclick="window.goToManualStep(2)" style="padding: 0.85rem 1.8rem; border: none; border-radius: 14px; background: var(--theme-accent); color: #fff; font-weight: 900; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.25s; box-shadow: 0 6px 20px rgba(247,147,30,0.3);">
+                        <button type="button" onclick="window.goToManualStep(2)" style="padding: 0.85rem 1.8rem; border: none; border-radius: 14px; background: var(--theme-accent); color: #fff; font-weight: 900; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: all 0.25s; box-shadow: 0 6px 20px rgba(var(--theme-accent-rgb,255,83,123),0.35);">
                             <span>Continuar a Datos y Pago</span>
                             <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
                         </button>
@@ -2606,7 +2606,7 @@
                     <!-- Header Paso 2 -->
                     <div style="padding: 1.1rem 1.6rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: rgba(255,255,255,0.02); gap: 1rem;">
                         <div style="display: flex; align-items: center; gap: 0.8rem; min-width: 0;">
-                            <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(247,147,30,0.15); border: 1px solid rgba(247,147,30,0.3); display: flex; align-items: center; justify-content: center; color: var(--theme-accent); flex-shrink: 0;">
+                            <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(var(--theme-accent-rgb,255,83,123),0.18); border: 1px solid rgba(var(--theme-accent-rgb,255,83,123),0.3); display: flex; align-items: center; justify-content: center; color: var(--theme-accent); flex-shrink: 0;">
                                 <i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i>
                             </div>
                             <div style="min-width: 0;">
@@ -2616,7 +2616,7 @@
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0;">
-                            <button type="button" onclick="window.goToManualStep(1)" style="padding: 0.5rem 0.95rem; border-radius: 12px; background: rgba(247,147,30,0.12); border: 1px solid rgba(247,147,30,0.3); color: var(--theme-accent); cursor: pointer; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; font-size: 0.82rem; transition: all 0.2s; white-space: nowrap;" title="Volver al catálogo para modificar productos">
+                            <button type="button" onclick="window.goToManualStep(1)" style="padding: 0.5rem 0.95rem; border-radius: 12px; background: rgba(var(--theme-accent-rgb,255,83,123),0.18); border: 1px solid rgba(var(--theme-accent-rgb,255,83,123),0.3); color: var(--theme-accent); cursor: pointer; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; font-size: 0.82rem; transition: all 0.2s; white-space: nowrap;" title="Volver al catálogo para modificar productos">
                                 <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
                                 <span>Modificar Productos</span>
                             </button>

@@ -6370,8 +6370,8 @@ document.addEventListener('click', (e) => {
             const card = document.createElement('div');
             card.className = 'manual-product-card';
             card.style.cssText = `
-                background: ${isSelected ? 'rgba(247,147,30,0.1)' : 'rgba(255,255,255,0.03)'};
-                border: 1px solid ${isSelected ? 'rgba(247,147,30,0.5)' : 'var(--glass-border)'};
+                background: ${isSelected ? 'rgba(var(--theme-accent-rgb,255,83,123),0.12)' : 'rgba(255,255,255,0.03)'};
+                border: 1px solid ${isSelected ? 'var(--theme-accent)' : 'var(--glass-border)'};
                 border-radius: 16px;
                 padding: 0.9rem;
                 display: flex;
@@ -6379,7 +6379,7 @@ document.addEventListener('click', (e) => {
                 justify-content: space-between;
                 gap: 0.8rem;
                 transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
-                box-shadow: ${isSelected ? '0 8px 25px rgba(247,147,30,0.15)' : 'none'};
+                box-shadow: ${isSelected ? '0 8px 25px rgba(var(--theme-accent-rgb,255,83,123),0.2)' : 'none'};
             `;
 
             card.innerHTML = `
@@ -6521,10 +6521,10 @@ document.addEventListener('click', (e) => {
                 b.style.color = 'var(--text-dim)';
                 b.style.boxShadow = 'none';
             });
-            btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+            btn.style.background = 'var(--theme-accent)';
             btn.style.borderColor = 'transparent';
             btn.style.color = '#ffffff';
-            btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
+            btn.style.boxShadow = '0 4px 14px rgba(var(--theme-accent-rgb,255,83,123),0.35)';
 
             const deliveryDetailEl = document.getElementById('manual-delivery-detail');
             if (!deliveryDetailEl) return;
@@ -6612,9 +6612,9 @@ document.addEventListener('click', (e) => {
                             b.style.boxShadow = 'none';
                         });
                         this.style.border = '1.5px solid transparent';
-                        this.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+                        this.style.background = 'var(--theme-accent)';
                         this.style.color = '#ffffff';
-                        this.style.boxShadow = '0 4px 12px rgba(245,158,11,0.4)';
+                        this.style.boxShadow = '0 4px 14px rgba(var(--theme-accent-rgb,255,83,123),0.35)';
                         document.getElementById('manual-table-val').value = 'Mesa ' + this.dataset.num;
                     });
                 });
@@ -6639,10 +6639,10 @@ document.addEventListener('click', (e) => {
                 b.style.color = 'var(--text-dim)';
                 b.style.boxShadow = 'none';
             });
-            btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+            btn.style.background = 'var(--theme-accent)';
             btn.style.borderColor = 'transparent';
             btn.style.color = '#ffffff';
-            btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
+            btn.style.boxShadow = '0 4px 14px rgba(var(--theme-accent-rgb,255,83,123),0.35)';
             const hiddenPay = document.getElementById('manual-cust-payment');
             if (hiddenPay) hiddenPay.value = btn.dataset.value;
         });
