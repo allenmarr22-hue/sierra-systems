@@ -4846,10 +4846,42 @@ function createOrderCard(order) {
             </div>`;
     }
 
+    let payColor = '#4caf50';
+    let payShadow = 'rgba(76, 175, 80, 0.2)';
+    let payIcon = 'banknote';
+    let payLabel = 'EFECTIVO';
+    const payVal = order.customer?.payment || order.paymentMethod || 'Efectivo';
+
+    if (payVal === 'Transferencia' || payVal === 'Nequi' || payVal === 'Daviplata') {
+        payColor = '#2563eb';
+        payShadow = 'rgba(37, 99, 235, 0.2)';
+        payIcon = 'smartphone';
+        payLabel = 'TRANSF.';
+    } else if (payVal === 'Tarjeta') {
+        payColor = '#8b5cf6';
+        payShadow = 'rgba(139, 92, 246, 0.2)';
+        payIcon = 'credit-card';
+        payLabel = 'TARJETA';
+    }
+
     const paymentBadge = !isCocina ? `
-        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${order.customer?.payment === 'Efectivo' ? '#4caf50' : '#2563eb'}; box-shadow: 0 4px 10px ${order.customer?.payment === 'Efectivo' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(37, 99, 235, 0.2)'}; white-space: nowrap;">
-            <i data-lucide="${order.customer?.payment === 'Efectivo' ? 'banknote' : 'smartphone'}" style="width: 12px; color: #fff;"></i>
-            <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">${order.customer?.payment === 'Efectivo' ? 'EFECTIVO' : 'TRANSF.'}</span>
+        <div class="payment-badge-wrapper" style="position: relative; display: inline-block;">
+            <div onclick="event.stopPropagation(); window.togglePaymentDropdown('${order.id}', event);" title="Cambiar método de pago" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${payColor}; box-shadow: 0 4px 10px ${payShadow}; white-space: nowrap; cursor: pointer; transition: all 0.2s;">
+                <i data-lucide="${payIcon}" style="width: 12px; color: #fff;"></i>
+                <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">${payLabel}</span>
+                <i data-lucide="chevron-down" style="width: 10px; color: rgba(255,255,255,0.8); margin-left: 1px;"></i>
+            </div>
+            <div id="pay-drop-${order.id}" class="payment-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; min-width: 145px; background: #1e293b; border: 1px solid var(--glass-border); border-radius: 10px; padding: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100050;">
+                <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${order.id}', 'Efectivo');" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 800; color: #4caf50; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.15)'" onmouseout="this.style.background='transparent'">
+                    <i data-lucide="banknote" style="width: 12px;"></i> Efectivo
+                </div>
+                <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${order.id}', 'Transferencia');" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 800; color: #3b82f6; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
+                    <i data-lucide="smartphone" style="width: 12px;"></i> Transferencia
+                </div>
+                <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${order.id}', 'Tarjeta');" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 800; color: #a855f7; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
+                    <i data-lucide="credit-card" style="width: 12px;"></i> Tarjeta / Datáfono
+                </div>
+            </div>
         </div>` : '';
 
     return `
@@ -5286,6 +5318,50 @@ window.printThermalTicket = function(id) {
     window.printCustomerReceipt(id);
 };
 
+window.changeOrderPaymentMethod = function(orderId, newMethod) {
+    const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
+    const orderIndex = orders.findIndex(o => String(o.id) === String(orderId));
+    if (orderIndex === -1) return;
+
+    orders[orderIndex].customer = {
+        ...(orders[orderIndex].customer || {}),
+        payment: newMethod
+    };
+    orders[orderIndex].paymentMethod = newMethod;
+
+    state.orders = orders;
+    localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+
+    if (typeof window.renderOrders === 'function') window.renderOrders();
+    if (typeof renderStats === 'function') renderStats();
+    if (typeof renderTablesModal === 'function') renderTablesModal();
+
+    // Si el modal de detalles está abierto para este pedido, actualizar su vista
+    if (window.currentDetailOrderId === String(orderId)) {
+        window.showOrderDetails(orderId);
+    }
+
+    showToast(`Método de pago actualizado a: ${newMethod} ✅`);
+};
+
+window.togglePaymentDropdown = function(orderId, e) {
+    if (e) e.stopPropagation();
+    document.querySelectorAll('.payment-dropdown-menu').forEach(m => {
+        if (m.id !== `pay-drop-${orderId}`) m.style.display = 'none';
+    });
+
+    const menu = document.getElementById(`pay-drop-${orderId}`);
+    if (menu) {
+        const isHidden = menu.style.display === 'none' || !menu.style.display;
+        menu.style.display = isHidden ? 'block' : 'none';
+        if (isHidden && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [menu] });
+    }
+};
+
+document.addEventListener('click', function() {
+    document.querySelectorAll('.payment-dropdown-menu').forEach(m => m.style.display = 'none');
+});
+
 window.showOrderDetails = function(id) {
     window.currentDetailOrderId = String(id);
     const orders = getOrders();
@@ -5320,7 +5396,11 @@ window.showOrderDetails = function(id) {
     if (noteEl) noteEl.textContent = order.customer?.note || 'Sin notas adicionales.';
     
     const paymentEl = document.getElementById('detail-customer-payment');
-    if (paymentEl) paymentEl.textContent = order.customer?.payment || 'No especificado';
+    if (paymentEl) {
+        const curPay = order.customer?.payment || 'Efectivo';
+        const pColor = (curPay === 'Transferencia' || curPay === 'Nequi' || curPay === 'Daviplata') ? '#3b82f6' : (curPay === 'Tarjeta' ? '#a855f7' : '#4caf50');
+        paymentEl.innerHTML = `<span style="font-weight: 800; cursor: pointer; color: ${pColor}; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--glass-border);" onclick="window.togglePaymentDropdown('${order.id}', event);" title="Hacer clic para cambiar método de pago">${curPay} ▾</span>`;
+    }
 
     const waiterEl = document.getElementById('detail-customer-waiter');
     const waiterRow = document.getElementById('detail-customer-waiter-row');
