@@ -2367,9 +2367,11 @@ function initCheckout() {
             const infoGroup = document.getElementById('delivery-info-group');
 
             if (infoGroup) infoGroup.style.display = 'block';
-            
+            const legendDots = document.getElementById('table-legend-client-dots');
+
             if (type === 'delivery') {
                 label.textContent = 'Dirección de Entrega';
+                if (legendDots) legendDots.style.display = 'none';
                 if (input) {
                     input.placeholder = 'Ej: Calle 123 #45-67 Barrio...';
                     input.style.display = 'block';
@@ -2379,6 +2381,7 @@ function initCheckout() {
                 if (takeoutSelWrapper) takeoutSelWrapper.style.display = 'none';
             } else if (type === 'dine-in') {
                 label.textContent = 'Selecciona tu Mesa';
+                if (legendDots) legendDots.style.display = 'flex';
                 if (input) input.style.display = 'none';
                 if (delAddressWrapper) delAddressWrapper.style.display = 'none';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'flex';
@@ -2386,6 +2389,7 @@ function initCheckout() {
                 renderTableSelector();
             } else {
                 label.textContent = '¿Cuándo recoges tu pedido?';
+                if (legendDots) legendDots.style.display = 'none';
                 if (input) input.style.display = 'none';
                 if (delAddressWrapper) delAddressWrapper.style.display = 'none';
                 if (tableSelWrapper) tableSelWrapper.style.display = 'none';
@@ -2396,6 +2400,33 @@ function initCheckout() {
             updateCheckoutTotal();
         });
     });
+
+    function getClientTablesStatusMap() {
+        let orders = [];
+        try {
+            orders = JSON.parse(localStorage.getItem('streetfeed_orders')) || state.orders || [];
+        } catch(e) {
+            orders = state.orders || [];
+        }
+
+        const occupied = {};
+        orders.forEach(o => {
+            let tableNum = null;
+            if (o.table) tableNum = String(o.table);
+            else if (o.tableNumber) tableNum = String(o.tableNumber);
+            else if (o.customer && o.customer.address) {
+                const m = String(o.customer.address).match(/Mesa\s*(\d+)/i);
+                if (m) tableNum = m[1];
+            }
+
+            if (!tableNum) return;
+            if (o.status === 'cancelled' || o.status === 'accepted' || o.status === 'completed') return;
+
+            occupied[tableNum] = true;
+        });
+
+        return occupied;
+    }
 
     function renderTakeoutSelector() {
         const input = document.getElementById('cust-address');
@@ -2421,38 +2452,63 @@ function initCheckout() {
         const tableCount = state.config.tableCount || 10;
         
         if (!container) return;
+
+        const statusMap = getClientTablesStatusMap();
         
         container.innerHTML = '';
         for (let i = 1; i <= tableCount; i++) {
+            const isOccupied = !!statusMap[String(i)] || !!statusMap[i];
             const opt = document.createElement('div');
-            opt.className = 'table-option';
+            opt.className = 'table-option' + (isOccupied ? ' is-occupied' : '');
+            opt.dataset.num = i;
+            opt.dataset.occupied = isOccupied;
             opt.textContent = i;
+            opt.title = isOccupied ? `Mesa ${i} está ocupada` : `Mesa ${i} está libre`;
+
+            const bg = isOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.15)';
+            const border = isOccupied ? '1.5px solid rgba(239, 68, 68, 0.4)' : '1.5px solid #10b981';
+            const textColor = isOccupied ? 'rgba(239, 68, 68, 0.65)' : '#10b981';
+            const cursorStyle = isOccupied ? 'not-allowed' : 'pointer';
+            const opacityStyle = isOccupied ? '0.55' : '1';
+
             opt.style.cssText = `
-                flex: 0 0 50px;
-                height: 50px;
+                flex: 0 0 46px;
+                height: 46px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: rgba(255,255,255,0.05);
-                border: 1px solid var(--glass-border);
+                background: ${bg};
+                border: ${border};
                 border-radius: 12px;
-                font-weight: 800;
-                cursor: pointer;
+                font-weight: 900;
+                font-size: 0.95rem;
+                cursor: ${cursorStyle};
+                opacity: ${opacityStyle};
                 transition: all 0.2s;
-                color: white;
+                color: ${textColor};
             `;
             
             opt.onclick = () => {
+                if (isOccupied) {
+                    if (typeof showToast === 'function') {
+                        showToast(`La Mesa ${i} está ocupada. Por favor selecciona una libre.`, 'error');
+                    }
+                    return;
+                }
+
                 container.querySelectorAll('.table-option').forEach(o => {
-                    o.style.background = 'rgba(255,255,255,0.05)';
-                    o.style.borderColor = 'var(--glass-border)';
-                    o.style.color = 'white';
+                    const wasOccupied = o.dataset.occupied === 'true';
+                    o.style.background = wasOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.15)';
+                    o.style.borderColor = wasOccupied ? 'rgba(239, 68, 68, 0.4)' : '#10b981';
+                    o.style.color = wasOccupied ? 'rgba(239, 68, 68, 0.65)' : '#10b981';
                     o.style.transform = 'scale(1)';
+                    o.style.boxShadow = 'none';
                 });
-                opt.style.background = 'var(--theme-accent)';
+                opt.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
                 opt.style.borderColor = 'transparent';
-                opt.style.color = '#000';
-                opt.style.transform = 'scale(1.1)';
+                opt.style.color = '#ffffff';
+                opt.style.transform = 'scale(1.06)';
+                opt.style.boxShadow = '0 4px 12px rgba(245,158,11,0.4)';
                 input.value = `Mesa ${i}`;
             };
             
