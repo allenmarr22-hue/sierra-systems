@@ -5893,7 +5893,7 @@ function generatePDF(monthIdx) {
         o.customer?.name || '---',
         o.attendedBy || o.customer?.attendedBy || (o.isManual ? 'Propietario' : 'Menú Digital'),
         (o.customer?.payment || o.paymentMethod || 'EFECTIVO').toUpperCase(),
-        o.status === 'delivered' || o.status === 'completed' ? 'ENTREGADO' : 'COBRADO',
+        'COBRADO',
         `$${(parseFloat(o.total) || 0).toLocaleString('es-CO')}`
     ]);
 
