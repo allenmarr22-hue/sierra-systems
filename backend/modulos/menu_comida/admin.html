@@ -2604,18 +2604,24 @@
                 <!-- PASO 2: DATOS DEL CLIENTE, SERVICIO Y PAGO -->
                 <div id="manual-step-2" style="display: none; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
                     <!-- Header Paso 2 -->
-                    <div style="padding: 1.1rem 1.6rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: rgba(255,255,255,0.02);">
-                        <div style="display: flex; align-items: center; gap: 0.8rem;">
-                            <button type="button" onclick="window.goToManualStep(1)" style="padding: 0.45rem 0.85rem; border-radius: 10px; background: rgba(247,147,30,0.12); border: 1px solid rgba(247,147,30,0.3); color: var(--theme-accent); cursor: pointer; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; font-size: 0.82rem; transition: all 0.2s;" title="Volver al catálogo para modificar productos">
-                                <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
-                                <span>Modificar Productos</span>
-                            </button>
-                            <div>
-                                <h3 class="font-serif" style="margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--text);">Datos del Pedido</h3>
-                                <p style="margin: 0; font-size: 0.75rem; color: var(--theme-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;">PASO 2 DE 2: CLIENTE Y FORMA DE PAGO</p>
+                    <div style="padding: 1.1rem 1.6rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: rgba(255,255,255,0.02); gap: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.8rem; min-width: 0;">
+                            <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(247,147,30,0.15); border: 1px solid rgba(247,147,30,0.3); display: flex; align-items: center; justify-content: center; color: var(--theme-accent); flex-shrink: 0;">
+                                <i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i>
+                            </div>
+                            <div style="min-width: 0;">
+                                <h3 class="font-serif" style="margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Datos del Pedido</h3>
+                                <p style="margin: 0; font-size: 0.75rem; color: var(--theme-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">PASO 2 DE 2: CLIENTE Y FORMA DE PAGO</p>
                             </div>
                         </div>
-                        <button class="modal-close" onclick="document.getElementById('manual-order-modal').classList.add('hidden')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"><i data-lucide="x" style="width: 18px;"></i></button>
+
+                        <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
+                            <button type="button" onclick="window.goToManualStep(1)" style="padding: 0.5rem 0.9rem; border-radius: 12px; background: rgba(247,147,30,0.12); border: 1px solid rgba(247,147,30,0.3); color: var(--theme-accent); cursor: pointer; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; font-size: 0.8rem; transition: all 0.2s; white-space: nowrap;" title="Volver al catálogo para modificar productos">
+                                <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
+                                <span>Modificar Productos</span>
+                            </button>
+                            <button class="modal-close" onclick="document.getElementById('manual-order-modal').classList.add('hidden')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;" title="Cerrar modal"><i data-lucide="x" style="width: 18px;"></i></button>
+                        </div>
                     </div>
 
                     <!-- Área de Formulario Espacioso -->
