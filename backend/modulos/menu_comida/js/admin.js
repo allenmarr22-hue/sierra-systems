@@ -768,7 +768,29 @@ async function handleFileUpload(inputId, previewId, callback) {
 document.addEventListener('DOMContentLoaded', () => {
     // Only run if we are on the admin page
     if (!window.location.pathname.endsWith('admin.html')) return;
-    if (window.lucide) lucide.createIcons();
+    // Abrir selector de calendario al hacer clic en cualquier lugar del campo de fecha o su contenedor
+    document.addEventListener('click', (e) => {
+        const input = e.target.closest('input[type="date"], input[type="datetime-local"]');
+        if (input) {
+            try {
+                if (typeof input.showPicker === 'function') {
+                    input.showPicker();
+                }
+            } catch (err) {}
+            return;
+        }
+        const wrapper = e.target.closest('.date-picker-mini, .date-picker-container, [data-date-wrapper]');
+        if (wrapper) {
+            const childInput = wrapper.querySelector('input[type="date"], input[type="datetime-local"]');
+            if (childInput) {
+                try {
+                    if (typeof childInput.showPicker === 'function') {
+                        childInput.showPicker();
+                    }
+                } catch (err) {}
+            }
+        }
+    });
 
     // Sidebar Tabs navigation
     document.querySelectorAll('.sidebar-btn[data-tab]').forEach(btn => {
