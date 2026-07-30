@@ -3750,6 +3750,16 @@ body.light-mode .combo-admin-card {
 /* ======================================================
    LIGHT MODE FIXES FOR MANUAL ORDER MODAL
    ====================================================== */
+body.light-mode #manual-order-modal .modal-content {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode #manual-order-modal h3 {
+    color: #0f172a !important;
+}
+
 body.light-mode #manual-order-cat-filter,
 body.light-mode #manual-cat-trigger,
 body.light-mode #manual-product-search,
@@ -3759,47 +3769,44 @@ body.light-mode #manual-cust-note {
     background: #ffffff !important;
     border-color: #cbd5e1 !important;
     color: #0f172a !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
 }
 
-body.light-mode #manual-order-modal .modal-content > div:nth-child(2) {
+body.light-mode #manual-product-search::placeholder,
+body.light-mode #manual-cust-name::placeholder,
+body.light-mode #manual-cust-phone::placeholder,
+body.light-mode #manual-cust-note::placeholder {
+    color: #94a3b8 !important;
+}
+
+/* Header bars in Step 1 and Step 2 */
+body.light-mode #manual-step-1 > div:first-child,
+body.light-mode #manual-step-2 > div:first-child {
+    background: #f8fafc !important;
+    border-bottom-color: #e2e8f0 !important;
+}
+
+/* Filter bar top in Step 1 */
+body.light-mode #manual-step-1 > div:nth-child(2) > div:first-child > div:first-child {
     background: #f1f5f9 !important;
+    border-bottom-color: #e2e8f0 !important;
 }
 
+/* Split container border */
+body.light-mode #manual-step-1 > div:nth-child(2) > div:first-child {
+    border-right-color: #e2e8f0 !important;
+}
+
+/* Cart sidebar Step 1 */
 body.light-mode #manual-order-cart-section {
     background: #f8fafc !important;
+    border-left-color: #e2e8f0 !important;
 }
 
 body.light-mode #manual-order-cart-section > div:first-child {
-    background: #e2e8f0 !important;
-    border-bottom: 1px solid #cbd5e1 !important;
+    background: #f1f5f9 !important;
+    border-bottom-color: #e2e8f0 !important;
     color: var(--theme-accent) !important;
-}
-
-body.light-mode #manual-order-modal .modal-content > div:nth-child(4) {
-    background: #f8fafc !important;
-    border-top-color: #cbd5e1 !important;
-}
-
-body.light-mode .manual-delivery-btn {
-    background: #ffffff !important;
-    border-color: #cbd5e1 !important;
-    color: #475569 !important;
-}
-
-body.light-mode #manual-order-modal .modal-content > div:nth-child(4) > div:nth-child(4) {
-    background: #ffffff !important;
-    border-color: #cbd5e1 !important;
-}
-
-body.light-mode .manual-pay-btn {
-    color: #475569 !important;
-}
-
-body.light-mode .manual-pay-btn[style*="var(--theme-accent)"] {
-    background: rgba(var(--primary-rgb, 247, 147, 30), 0.15) !important;
-    border-color: var(--theme-accent) !important;
-    color: #b45309 !important;
 }
 
 body.light-mode #manual-order-cart-items > div {
@@ -3808,19 +3815,22 @@ body.light-mode #manual-order-cart-items > div {
     box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
 }
 
-body.light-mode #manual-order-cart-items > div span:first-child {
+body.light-mode #manual-order-cart-items > div span {
     color: #0f172a !important;
 }
 
-body.light-mode #manual-order-products > div {
+/* Product cards Step 1 */
+body.light-mode #manual-order-products-container {
+    background: #ffffff !important;
+}
+
+body.light-mode .manual-product-card {
+    background: #ffffff !important;
     border-color: #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
 }
 
-body.light-mode #manual-order-products > div > div:nth-child(1) {
-    border-color: #cbd5e1 !important;
-}
-
-body.light-mode #manual-order-products > div > div:nth-child(2) > div:nth-child(1) {
+body.light-mode .manual-product-card h4 {
     color: #0f172a !important;
 }
 
@@ -3834,8 +3844,54 @@ body.light-mode .manual-qty-display {
     color: #0f172a !important;
 }
 
+/* Sticky Bottom Bar Step 1 & Step 2 */
+body.light-mode #manual-step-1 > div:last-child,
+body.light-mode #manual-step-2 > div:last-child {
+    background: #f8fafc !important;
+    border-top-color: #e2e8f0 !important;
+}
+
+body.light-mode #manual-step-1 > div:last-child > div > div:first-child,
+body.light-mode #manual-step-2 > div:last-child > div > div:first-child {
+    color: #64748b !important;
+}
+
+body.light-mode #manual-cart-count-badge,
+body.light-mode #manual-order-total-step1,
 body.light-mode #manual-order-total {
-    color: #b45309 !important; /* Better contrast for light mode */
+    color: var(--theme-accent) !important;
+    font-weight: 900 !important;
+}
+
+/* Step 2 Form Controls */
+body.light-mode #manual-step-2 label {
+    color: #475569 !important;
+}
+
+body.light-mode .manual-delivery-btn,
+body.light-mode .manual-pay-btn {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #334155 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+/* Active Service, Payment & Confirm Buttons in Light Mode */
+body.light-mode .manual-delivery-btn[style*="var(--theme-accent)"],
+body.light-mode .manual-pay-btn[style*="var(--theme-accent)"],
+body.light-mode .manual-table-num-btn[style*="var(--theme-accent)"],
+body.light-mode #manual-tkout-here[style*="var(--theme-accent)"],
+body.light-mode #manual-tkout-later[style*="var(--theme-accent)"] {
+    background: var(--theme-accent) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(var(--theme-accent-rgb,255,83,123),0.35) !important;
+}
+
+body.light-mode #btn-confirm-manual-order {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 20px rgba(16,185,129,0.35) !important;
 }
 
 /* ======================================================
@@ -3851,18 +3907,7 @@ body.light-mode #month-all-btn {
     color: #ffffff !important;
 }
 
-/* Delivery Buttons Active State (White on yellow fix) */
-body.light-mode .manual-delivery-btn[style*="var(--theme-accent)"], body.light-mode .manual-table-num-btn[style*="var(--theme-accent)"], body.light-mode #manual-tkout-here[style*="var(--theme-accent)"], body.light-mode #manual-tkout-later[style*="var(--theme-accent)"] {
-    background: rgba(247, 147, 30, 0.15) !important;
-    border-color: #f7931e !important;
-    color: #b45309 !important; /* Dark orange text for contrast */
-}
 
-/* Confirm Order Button */
-body.light-mode #btn-confirm-manual-order {
-    background: #0f172a !important; /* Dark Slate background */
-    color: #ffffff !important; /* White text */
-}
 
 /* Ocultar mesa/dirección en landscape para tablets y móviles */
 /* REGLA MAESTRA: Solo para dispositivos TÁCTILES (Tablets/Phones) en modo horizontal */
@@ -4750,92 +4795,3 @@ body.light-mode .cash-close-modal-card [style*="background: rgba(255,255,255,0.0
         justify-content: center;
     }
 }
-
-/* ================================================
-   LIGHT MODE ULTRA-CLEAN MODALS & FOOTERS POLISH
-   ================================================ */
-body.light-mode #manual-order-modal .modal-content,
-body.light-mode #cash-close-modal .modal-content,
-body.light-mode #emp-profile-modal .modal-content {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    box-shadow: 0 25px 80px rgba(15, 23, 42, 0.15) !important;
-}
-
-/* Header containers in Light Mode */
-body.light-mode #manual-step-1 > div:first-child,
-body.light-mode #manual-step-2 > div:first-child {
-    background: #f8fafc !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-}
-
-body.light-mode #manual-order-cat-dropdown .dropdown-trigger,
-body.light-mode #manual-product-search {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #0f172a !important;
-}
-
-body.light-mode #manual-order-products-container {
-    background: #ffffff !important;
-}
-
-/* Cart Sidebar (Right) in Light Mode */
-body.light-mode #manual-order-cart-section {
-    background: #f8fafc !important;
-    border-left: 1px solid #e2e8f0 !important;
-}
-
-body.light-mode #manual-order-cart-section > div:first-child {
-    background: #f1f5f9 !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-}
-
-/* Footers & Bottom Bars in Light Mode */
-body.light-mode #manual-step-1 > div:last-child,
-body.light-mode #emp-profile-footer,
-body.light-mode #cash-close-modal .modal-content > div:last-child {
-    background: #f8fafc !important;
-    border-top: 1px solid #e2e8f0 !important;
-}
-
-body.light-mode #emp-profile-edit-btn,
-body.light-mode #cash-close-modal button[onclick*="exportCashClosePDF"] {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #0f172a !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
-}
-
-body.light-mode #emp-profile-edit-btn:hover,
-body.light-mode #cash-close-modal button[onclick*="exportCashClosePDF"]:hover {
-    background: #f1f5f9 !important;
-    border-color: #94a3b8 !important;
-}
-
-body.light-mode .manual-product-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-}
-
-body.light-mode .manual-product-card h4 {
-    color: #0f172a !important;
-}
-
-body.light-mode #emp-profile-hero {
-    background: linear-gradient(135deg, rgba(var(--theme-accent-rgb,255,83,123),0.08) 0%, rgba(99,102,241,0.04) 100%) !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-}
-
-body.light-mode #emp-profile-hero h2 {
-    color: #0f172a !important;
-}
-
-body.light-mode #emp-profile-header-pdf-btn {
-    background: #ffffff !important;
-    border: 1px solid var(--theme-accent) !important;
-    color: var(--theme-accent) !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
-}
-
