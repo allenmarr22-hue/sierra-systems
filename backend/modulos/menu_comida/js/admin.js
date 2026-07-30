@@ -6208,65 +6208,85 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// =====================================================
-// MANUAL ORDER SYSTEM
-// =====================================================
+// =============================================================================
+// MODAL DE PEDIDO MANUAL — VISTA POS PRO 2 PASOS (A PRUEBA DE ERRORES)
+// =============================================================================
 (function() {
-    const modal        = document.getElementById('manual-order-modal');
-    const btnOpen      = document.getElementById('btn-new-manual-order');
-    const btnClose     = document.getElementById('close-manual-order-modal');
-    const btnConfirm   = document.getElementById('btn-confirm-manual-order');
-    const catContainer = document.getElementById('manual-order-categories');
-    const prodContainer= document.getElementById('manual-order-products');
-    const cartSection  = document.getElementById('manual-order-cart-section');
-    const cartItems    = document.getElementById('manual-order-cart-items');
-    const totalEl      = document.getElementById('manual-order-total');
-    const deliveryDetailEl = document.getElementById('manual-delivery-detail');
+    let manualCart = [];
+    let selectedDelivery = null;
 
-    // Listen for search input in the permanently visible search bar
-    const searchInput = document.getElementById('orders-search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', () => {
-                if (typeof window.renderOrders === 'function') window.renderOrders();
-            });
+    /** Conmutación de pasos en el pedido manual */
+    window.goToManualStep = function(step) {
+        const step1 = document.getElementById('manual-step-1');
+        const step2 = document.getElementById('manual-step-2');
+        if (!step1 || !step2) return;
+
+        if (step === 2) {
+            if (manualCart.length === 0) {
+                showToast('Agrega al menos 1 producto para continuar', 'error');
+                return;
+            }
+            step1.style.display = 'none';
+            step2.style.display = 'flex';
+            renderStep2CartList();
+        } else {
+            step1.style.display = 'flex';
+            step2.style.display = 'none';
         }
-    if (!modal || !btnOpen) return;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
 
-    // --- State ---
-    let manualCart = [];      // { id, name, price, qty }
-    let selectedDelivery = '';
+    window.closeManualModal = function() {
+        const modalEl = document.getElementById('manual-order-modal');
+        if (modalEl) {
+            modalEl.classList.add('hidden');
+        }
+    };
 
-    // --- Open / Close ---
-    btnOpen.addEventListener('click', openManualModal);
-    btnClose.addEventListener('click', closeManualModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeManualModal(); });
+    window.openManualOrderModal = function() {
+        const modalEl = document.getElementById('manual-order-modal');
+        if (!modalEl) return;
 
-    function openManualModal() {
         manualCart = [];
-        selectedDelivery = '';
-        document.getElementById('manual-cust-name').value = '';
-        document.getElementById('manual-cust-phone').value = '';
-        document.getElementById('manual-cust-payment').value = '';
-        document.getElementById('manual-cust-note').value = '';
-        deliveryDetailEl.style.display = 'none';
-        deliveryDetailEl.innerHTML = '';
+        selectedDelivery = null;
+        if (document.getElementById('manual-cust-name')) document.getElementById('manual-cust-name').value = '';
+        if (document.getElementById('manual-cust-phone')) document.getElementById('manual-cust-phone').value = '';
+        if (document.getElementById('manual-cust-note')) document.getElementById('manual-cust-note').value = '';
+        if (document.getElementById('manual-cust-payment')) document.getElementById('manual-cust-payment').value = '';
+        if (document.getElementById('manual-product-search')) document.getElementById('manual-product-search').value = '';
+        
+        const deliveryDetailEl = document.getElementById('manual-delivery-detail');
+        if (deliveryDetailEl) { deliveryDetailEl.innerHTML = ''; deliveryDetailEl.style.display = 'none'; }
+
         document.querySelectorAll('.manual-delivery-btn, .manual-pay-btn').forEach(b => {
             b.style.background = 'transparent';
             b.style.borderColor = 'var(--glass-border)';
             b.style.color = 'var(--text-dim)';
             b.style.boxShadow = 'none';
         });
+
+        window.goToManualStep(1);
         renderManualCategories();
         updateManualCart();
-        modal.classList.remove('hidden');
+
+        modalEl.classList.remove('hidden');
         if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    };
 
-    function closeManualModal() {
-        modal.classList.add('hidden');
-    }
+    // Delegación global de clic para asegurar apertura/cierre siempre funcionen
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('#btn-new-manual-order');
+        if (btn) {
+            e.preventDefault();
+            window.openManualOrderModal();
+        }
+        const closeBtn = e.target.closest('#close-manual-order-modal');
+        if (closeBtn) {
+            e.preventDefault();
+            window.closeManualModal();
+        }
+    });
 
-    // --- Categories dropdown ---
     function renderManualCategories() {
         const cats = (state.categories || []).filter(c => c.id !== 'todos');
         const catMenu = document.getElementById('manual-cat-menu');
@@ -6316,8 +6336,11 @@ document.addEventListener('click', (e) => {
         renderManualProducts();
     }
 
-    // --- Products as compact rows ---
+    // --- Tarjetas de Productos en Grid (Paso 1) ---
     function renderManualProducts() {
+        const prodContainer = document.getElementById('manual-order-products');
+        if (!prodContainer) return;
+
         const catFilter = document.getElementById('manual-order-cat-filter');
         const searchEl  = document.getElementById('manual-product-search');
         const catId  = catFilter ? catFilter.value : null;
@@ -6325,9 +6348,8 @@ document.addEventListener('click', (e) => {
 
         let dishes = (state.dishes || []).filter(d => d.active !== false);
         
-        // Si hay búsqueda, ignoramos la categoría para que busque en todo el menú
         if (query) {
-            dishes = dishes.filter(d => d.name.toLowerCase().includes(query));
+            dishes = dishes.filter(d => d.name.toLowerCase().includes(query) || (d.desc && d.desc.toLowerCase().includes(query)));
         } else if (catId) {
             dishes = dishes.filter(d => String(d.cat) === String(catId));
         }
@@ -6335,43 +6357,59 @@ document.addEventListener('click', (e) => {
         prodContainer.innerHTML = '';
 
         if (dishes.length === 0) {
-            prodContainer.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;text-align:center;padding:2rem 0;">Sin productos</p>';
+            prodContainer.innerHTML = '<div style="grid-column: 1 / -1; color:var(--text-dim);font-size:0.9rem;text-align:center;padding:3rem 0;"><i data-lucide="package-search" style="width:36px; height:36px; opacity:0.3; margin-bottom:0.5rem; display:block; margin-left:auto; margin-right:auto;"></i>Sin productos que coincidan.</div>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             return;
         }
 
         dishes.forEach(dish => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;gap:0.7rem;padding:0.45rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s;';
-            row.innerHTML = `
-                <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.05);flex-shrink:0;border:1px solid var(--glass-border);">
-                    <img src="${dish.img || 'img/placeholder.jpg'}" style="width:100%;height:100%;object-fit:cover;">
+            const cartItem = manualCart.find(i => i.id === dish.id);
+            const qty = cartItem ? cartItem.qty : 0;
+            const isSelected = qty > 0;
+
+            const card = document.createElement('div');
+            card.className = 'manual-product-card';
+            card.style.cssText = `
+                background: ${isSelected ? 'rgba(247,147,30,0.1)' : 'rgba(255,255,255,0.03)'};
+                border: 1px solid ${isSelected ? 'rgba(247,147,30,0.5)' : 'var(--glass-border)'};
+                border-radius: 16px;
+                padding: 0.9rem;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                gap: 0.8rem;
+                transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+                box-shadow: ${isSelected ? '0 8px 25px rgba(247,147,30,0.15)' : 'none'};
+            `;
+
+            card.innerHTML = `
+                <div style="display: flex; gap: 0.8rem; align-items: center;">
+                    <div style="width: 52px; height: 52px; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.05); flex-shrink: 0; border: 1px solid var(--glass-border);">
+                        <img src="${dish.img || 'img/placeholder.jpg'}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <h4 style="margin: 0 0 0.2rem 0; font-size: 0.92rem; font-weight: 900; color: var(--text); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${dish.name}</h4>
+                        <div style="font-size: 0.88rem; font-weight: 900; color: var(--theme-accent);">$${(dish.price || 0).toLocaleString('es-CO')}</div>
+                    </div>
                 </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:0.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${dish.name}</div>
-                    <div style="font-size:0.78rem;color:var(--theme-accent);font-weight:800;">$${(dish.price||0).toLocaleString('es-CO')}</div>
-                </div>
-                <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
-                    <button class="manual-minus" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--glass-border);background:transparent;color:var(--text-dim);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;">−</button>
-                    <span class="manual-qty-display" style="font-weight:800;font-size:0.9rem;min-width:18px;text-align:center;">0</span>
-                    <button class="manual-plus" style="width:24px;height:24px;border-radius:50%;border:none;background:#4caf50;color:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;">+</button>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <span style="font-size: 0.75rem; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text-dim)'}; font-weight: 800;">${isSelected ? 'Seleccionados:' : 'Cantidad:'}</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 3px 6px; border-radius: 10px; border: 1px solid var(--glass-border);">
+                        <button type="button" class="manual-minus" style="width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1;">-</button>
+                        <span class="manual-qty-display" style="font-weight: 900; font-size: 0.95rem; min-width: 20px; text-align: center; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text)'};">${qty}</span>
+                        <button type="button" class="manual-plus" style="width: 26px; height: 26px; border-radius: 8px; border: none; background: var(--theme-accent); color: #fff; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1;">+</button>
+                    </div>
                 </div>
             `;
 
-            row.querySelector('.manual-plus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, 1); refreshCardQty(row, dish.id); });
-            row.querySelector('.manual-minus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, -1); refreshCardQty(row, dish.id); });
+            card.querySelector('.manual-plus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, 1); });
+            card.querySelector('.manual-minus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, -1); });
 
-            refreshCardQty(row, dish.id);
-            prodContainer.appendChild(row);
+            prodContainer.appendChild(card);
         });
-    }
 
-    function refreshCardQty(card, dishId) {
-        const item = manualCart.find(i => i.id === dishId);
-        const qty = item ? item.qty : 0;
-        const display = card.querySelector('.manual-qty-display');
-        if (display) display.textContent = qty;
-        card.style.borderColor = qty > 0 ? 'var(--theme-accent)' : 'var(--glass-border)';
-        card.style.background = qty > 0 ? 'rgba(247,147,30,0.08)' : 'rgba(255,255,255,0.03)';
+        if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [prodContainer] });
     }
 
     function changeQty(dish, delta) {
@@ -6384,53 +6422,60 @@ document.addEventListener('click', (e) => {
             if (item.qty <= 0) manualCart = manualCart.filter(i => i.id !== dish.id);
         }
         updateManualCart();
+        renderManualProducts();
     }
 
-    function updateManualCart() {
-        const hasItems = manualCart.length > 0;
-        cartSection.style.display = 'flex'; // Always show side column
-
-        if (!hasItems) {
-            cartItems.innerHTML = `
-                <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-dim); gap:0.5rem; opacity:0.5; padding-top:2rem;">
-                    <i data-lucide="shopping-cart" style="width:24px; height:24px;"></i>
-                    <span style="font-size:0.75rem;">Sin productos</span>
-                </div>`;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        } else {
-            cartItems.innerHTML = manualCart.map(item => `
-                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:0.4rem 0.6rem;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.02);">
-                    <span style="color:var(--text-dim);font-weight:600;">${item.qty}x ${item.name}</span>
-                    <div style="display:flex;align-items:center;gap:0.7rem;">
-                        <span style="font-weight:800;color:var(--theme-accent);">$${(item.price * item.qty).toLocaleString('es-CO')}</span>
-                        <button type="button" class="manual-cart-del" data-id="${item.id}" style="background:rgba(255,0,0,0.1);border:none;color:#ff4444;cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
-                    </div>
-                </div>
-            `).join('');
+    function renderStep2CartList() {
+        const step2CartList = document.getElementById('manual-step2-cart-list');
+        if (!step2CartList) return;
+        if (manualCart.length === 0) {
+            step2CartList.innerHTML = `<p style="color:var(--text-dim); font-size:0.85rem; margin:0;">No has seleccionado productos.</p>`;
+            return;
         }
+        step2CartList.innerHTML = manualCart.map(item => `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 0.6rem 0.9rem; border-radius: 10px; border: 1px solid var(--glass-border);">
+                <div style="display: flex; align-items: center; gap: 0.7rem;">
+                    <span style="font-weight: 900; color: var(--theme-accent); font-size: 0.9rem;">${item.qty}x</span>
+                    <span style="font-weight: 700; font-size: 0.88rem; color: var(--text);">${item.name}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <span style="font-weight: 900; color: var(--text); font-size: 0.9rem;">$${(item.price * item.qty).toLocaleString('es-CO')}</span>
+                    <button type="button" class="manual-step2-del" data-id="${item.id}" style="background: rgba(239,68,68,0.15); border: none; color: #ef4444; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+                </div>
+            </div>
+        `).join('');
 
-        // Listeners for cart item deletion (must re-bind after each render)
-        cartItems.querySelectorAll('.manual-cart-del').forEach(btn => {
+        step2CartList.querySelectorAll('.manual-step2-del').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
                 manualCart = manualCart.filter(i => String(i.id) !== String(id));
                 updateManualCart();
-                renderManualProducts();
+                renderStep2CartList();
             };
         });
 
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [step2CartList] });
+    }
 
+    function updateManualCart() {
+        const badgeCountEl = document.getElementById('manual-cart-count-badge');
+        const totalStep1El = document.getElementById('manual-order-total-step1');
+        const totalEl      = document.getElementById('manual-order-total');
+
+        const count = manualCart.reduce((s, i) => s + i.qty, 0);
         const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
         const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
-        totalEl.textContent = '$' + (baseTotal + delFee).toLocaleString('es-CO');
+        const grandTotal = baseTotal + delFee;
+
+        if (badgeCountEl) badgeCountEl.textContent = count;
+        if (totalStep1El) totalStep1El.textContent = '$' + baseTotal.toLocaleString('es-CO');
+        if (totalEl) totalEl.textContent = '$' + grandTotal.toLocaleString('es-CO');
     }
 
     // --- Delivery buttons ---
     document.querySelectorAll('.manual-delivery-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            // Reset previous data
             selectedDelivery = btn.dataset.type;
             
             document.querySelectorAll('.manual-delivery-btn').forEach(b => {
@@ -6444,9 +6489,11 @@ document.addEventListener('click', (e) => {
             btn.style.color = '#ffffff';
             btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
 
-            // Clear dynamic inputs area to ensure fresh state
+            const deliveryDetailEl = document.getElementById('manual-delivery-detail');
+            if (!deliveryDetailEl) return;
             deliveryDetailEl.innerHTML = '';
             deliveryDetailEl.style.display = 'block';
+
             if (selectedDelivery === 'dine-in') {
                 const tables = state.config.tableCount || 10;
                 let btns = '';
@@ -6466,7 +6513,6 @@ document.addEventListener('click', (e) => {
                         <input type="hidden" id="manual-table-val" value="">
                     </div>`;
 
-                // Add style to hide scrollbar
                 const styleId = 'hide-manual-scroll';
                 if (!document.getElementById(styleId)) {
                     const style = document.createElement('style');
@@ -6475,7 +6521,6 @@ document.addEventListener('click', (e) => {
                     document.head.appendChild(style);
                 }
 
-                // Control de desbordamiento (flechas de desplazamiento)
                 const listEl = document.getElementById('manual-table-list');
                 const prevBtn = document.getElementById('manual-table-nav-prev');
                 const nextBtn = document.getElementById('manual-table-nav-next');
@@ -6493,12 +6538,8 @@ document.addEventListener('click', (e) => {
                 }
 
                 if (listEl && prevBtn && nextBtn) {
-                    prevBtn.addEventListener('click', () => {
-                        listEl.scrollBy({ left: -180, behavior: 'smooth' });
-                    });
-                    nextBtn.addEventListener('click', () => {
-                        listEl.scrollBy({ left: 180, behavior: 'smooth' });
-                    });
+                    prevBtn.addEventListener('click', () => { listEl.scrollBy({ left: -180, behavior: 'smooth' }); });
+                    nextBtn.addEventListener('click', () => { listEl.scrollBy({ left: 180, behavior: 'smooth' }); });
                     listEl.addEventListener('scroll', updateTableNavVisibility);
                     setTimeout(updateTableNavVisibility, 80);
                 }
@@ -6562,88 +6603,92 @@ document.addEventListener('click', (e) => {
         document.getElementById('manual-takeout-val').value = val;
     }
 
-    // --- Confirm ---
-    btnConfirm.addEventListener('click', () => {
-        if (manualCart.length === 0) { showToast('Agrega al menos un producto', 'error'); return; }
-        if (!selectedDelivery) { showToast('Selecciona cómo recibirá el pedido', 'error'); return; }
+    // --- Confirmación Final del Pedido ---
+    const btnConfirm = document.getElementById('btn-confirm-manual-order');
+    if (btnConfirm) {
+        btnConfirm.addEventListener('click', () => {
+            if (manualCart.length === 0) { showToast('Agrega al menos un producto', 'error'); return; }
+            if (!selectedDelivery) { showToast('Selecciona el tipo de servicio (Mesa, Llevar o Domicilio)', 'error'); return; }
 
-        let address = '';
-        if (selectedDelivery === 'dine-in') {
-            address = (document.getElementById('manual-table-val') || {}).value || '';
-            if (!address) { showToast('Selecciona el número de mesa', 'error'); return; }
-        } else if (selectedDelivery === 'takeout') {
-            address = (document.getElementById('manual-takeout-val') || {}).value || '';
-            if (!address) { showToast('Selecciona cuándo recoge el pedido', 'error'); return; }
-        } else if (selectedDelivery === 'delivery') {
-            address = (document.getElementById('manual-address-inp') || {}).value || '';
-            if (!address) { showToast('Ingresa la dirección de entrega', 'error'); return; }
-        }
+            let address = '';
+            if (selectedDelivery === 'dine-in') {
+                address = (document.getElementById('manual-table-val') || {}).value || '';
+                if (!address) { showToast('Selecciona el número de mesa', 'error'); return; }
+            } else if (selectedDelivery === 'takeout') {
+                address = (document.getElementById('manual-takeout-val') || {}).value || '';
+                if (!address) { showToast('Selecciona cuándo se recoge el pedido', 'error'); return; }
+            } else if (selectedDelivery === 'delivery') {
+                address = (document.getElementById('manual-address-inp') || {}).value || '';
+                if (!address) { showToast('Ingresa la dirección de entrega', 'error'); return; }
+            }
 
-        const name    = document.getElementById('manual-cust-name').value.trim() || 'Presencial';
-        const phone   = document.getElementById('manual-cust-phone').value.trim() || '---';
-        const payment = document.getElementById('manual-cust-payment').value;
-        const note    = document.getElementById('manual-cust-note').value.trim();
+            const nameInput = document.getElementById('manual-cust-name')?.value.trim();
+            const name    = nameInput || (selectedDelivery === 'dine-in' ? address : 'Presencial');
+            const phone   = document.getElementById('manual-cust-phone')?.value.trim() || '---';
+            const payment = document.getElementById('manual-cust-payment')?.value;
+            const note    = document.getElementById('manual-cust-note')?.value.trim();
 
-        if (!payment) { showToast('Selecciona el método de pago', 'error'); return; }
+            if (!payment) { showToast('Selecciona el método de pago', 'error'); return; }
 
-        const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
-        const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
+            const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
+            const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
 
-        let orderCounter = parseInt(localStorage.getItem('streetfeed_order_counter') || '0');
-        orderCounter++;
-        localStorage.setItem('streetfeed_order_counter', orderCounter.toString());
+            let orderCounter = parseInt(localStorage.getItem('streetfeed_order_counter') || '0');
+            orderCounter++;
+            localStorage.setItem('streetfeed_order_counter', orderCounter.toString());
 
-        const getAttendedByInfo = (isManual = false) => {
-            try {
-                const empStr = localStorage.getItem('streetfeed_employee_user');
-                if (empStr) {
-                    const emp = JSON.parse(empStr);
+            const getAttendedByInfo = (isManual = false) => {
+                try {
+                    const empStr = localStorage.getItem('streetfeed_employee_user');
+                    if (empStr) {
+                        const emp = JSON.parse(empStr);
                         const rMap = { 'mesero': 'Mesero', 'cajero': 'Cajero', 'cocina': 'Cocina', 'domiciliario': 'Domiciliario', 'owner': 'Propietario', 'propietario': 'Propietario', 'admin': 'Administrador' };
                         const roleTitle = rMap[emp.role] || 'Colaborador';
                         return `${formatShortName(emp.name)} (${roleTitle})`;
+                    }
+                } catch(e) {}
+                if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
+                    return 'Propietario / Administrador';
                 }
-            } catch(e) {}
-            if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
-                return 'Propietario / Administrador';
+                return isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)';
+            };
+
+            const orderData = {
+                id: 'ORD-' + orderCounter,
+                date: new Date().toISOString(),
+                items: manualCart.map(i => ({ ...i, extras: [] })),
+                baseTotal: baseTotal,
+                deliveryFee: delFee,
+                total: baseTotal + delFee,
+                isManual: true,
+                attendedBy: getAttendedByInfo(true),
+                status: 'confirmed',   // Va directo a Pendientes (Preparación)
+                customer: {
+                    name, phone, address,
+                    deliveryType: selectedDelivery,
+                    payment: payment || 'No especificado',
+                    note: note || ''
+                }
+            };
+
+            const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
+            orders.push(orderData);
+            state.orders = orders;
+            localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+
+            // Switch to Pendientes and refresh
+            const pendingBtn = document.querySelector('.sub-tab-btn[data-subtab="pending"]');
+            if (pendingBtn) pendingBtn.click();
+
+            closeManualModal();
+            if (typeof window.renderOrders === 'function') window.renderOrders();
+            if (typeof renderStats === 'function') renderStats();
+            showToast('✅ Pedido manual creado y agregado a En Preparación');
+            if (typeof window.printKitchenTicket === 'function') {
+                setTimeout(() => window.printKitchenTicket(orderData.id), 200);
             }
-            return isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)';
-        };
-
-        const orderData = {
-            id: 'ORD-' + orderCounter,
-            date: new Date().toISOString(),
-            items: manualCart.map(i => ({ ...i, extras: [] })),
-            baseTotal: baseTotal,
-            deliveryFee: delFee,
-            total: baseTotal + delFee,
-            isManual: true,
-            attendedBy: getAttendedByInfo(true),
-            status: 'confirmed',   // Va directo a Pendientes (Preparación)
-            customer: {
-                name, phone, address,
-                deliveryType: selectedDelivery,
-                payment: payment || 'No especificado',
-                note: note || ''
-            }
-        };
-
-        const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
-        orders.push(orderData);
-        state.orders = orders;
-        localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
-
-        // Switch to Pendientes and refresh
-        const pendingBtn = document.querySelector('.sub-tab-btn[data-subtab="pending"]');
-        if (pendingBtn) pendingBtn.click();
-
-        closeManualModal();
-        if (typeof window.renderOrders === 'function') window.renderOrders();
-        if (typeof renderStats === 'function') renderStats();
-        showToast('✅ Pedido manual creado y agregado a En Preparación');
-        if (typeof window.printKitchenTicket === 'function') {
-            setTimeout(() => window.printKitchenTicket(orderData.id), 200);
-        }
-    });
+        });
+    }
 })();
 
 // =============================================
