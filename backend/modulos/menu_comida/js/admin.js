@@ -6402,6 +6402,18 @@ document.addEventListener('click', (e) => {
             if (tableInp) tableInp.value = order.customer.address || '';
         }
 
+        // Pre-cargar los productos actuales del pedido en el carrito manual
+        manualCart = (order.items || []).map(i => ({
+            id: i.id,
+            name: i.name,
+            price: parseFloat(i.price) || 0,
+            qty: i.qty || i.quantity || 1,
+            img: i.img || ''
+        }));
+
+        updateManualCart();
+        renderManualProducts();
+
         const btnConfirm = document.getElementById('btn-confirm-manual-order');
         if (btnConfirm) {
             btnConfirm.innerHTML = `<i data-lucide="plus-circle" style="width:18px; height:18px;"></i> Guardar y Anexar al Pedido`;
@@ -6837,7 +6849,7 @@ document.addEventListener('click', (e) => {
             if (manualCart.length === 0) { showToast('Agrega al menos un producto', 'error'); return; }
 
             if (additionTargetOrderId) {
-                // Modo Adición: Anexar a pedido existente
+                // Modo Adición / Edición: Actualizar pedido existente con los productos precargados y nuevos
                 const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
                 const orderIndex = orders.findIndex(o => String(o.id) === String(additionTargetOrderId));
                 if (orderIndex === -1) {
@@ -6847,20 +6859,13 @@ document.addEventListener('click', (e) => {
                 }
 
                 const targetOrder = orders[orderIndex];
-                const newItems = manualCart.map(i => ({ ...i, extras: [], isAddition: true }));
-                targetOrder.items = (targetOrder.items || []).concat(newItems);
-                
-                const additionBaseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
-                targetOrder.baseTotal = (parseFloat(targetOrder.baseTotal) || 0) + additionBaseTotal;
-                targetOrder.total = (parseFloat(targetOrder.total) || 0) + additionBaseTotal;
+                targetOrder.items = manualCart.map(i => ({ ...i, extras: i.extras || [] }));
 
-                if (!targetOrder.additions) targetOrder.additions = [];
-                targetOrder.additions.push({
-                    date: new Date().toISOString(),
-                    items: newItems,
-                    total: additionBaseTotal,
-                    addedBy: getAttendedByInfo(true)
-                });
+                const updatedBaseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
+                const delFee = targetOrder.customer?.deliveryType === 'delivery' ? (targetOrder.deliveryFee || state.config.deliveryFee || 0) : 0;
+
+                targetOrder.baseTotal = updatedBaseTotal;
+                targetOrder.total = updatedBaseTotal + delFee;
 
                 orders[orderIndex] = targetOrder;
                 state.orders = orders;
@@ -6874,7 +6879,7 @@ document.addEventListener('click', (e) => {
                 if (typeof renderStats === 'function') renderStats();
                 if (typeof renderTablesModal === 'function') renderTablesModal();
 
-                showToast(`✅ Adición agregada con éxito al Pedido ${updatedTargetId}`);
+                showToast(`✅ Pedido ${updatedTargetId} actualizado con éxito`);
 
                 setTimeout(() => {
                     window.showOrderDetails(updatedTargetId);
