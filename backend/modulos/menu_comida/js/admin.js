@@ -6537,19 +6537,20 @@ document.addEventListener('click', (e) => {
                 let btns = '';
                 for (let i = 1; i <= tables; i++) {
                     const isOccupied = !!statusMap[String(i)] || !!statusMap[i];
-                    const bg = isOccupied ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
-                    const border = isOccupied ? '1.5px solid #ef4444' : '1.5px solid #10b981';
-                    const textColor = isOccupied ? '#ef4444' : '#10b981';
+                    const bg = isOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.15)';
+                    const border = isOccupied ? '1.5px solid rgba(239, 68, 68, 0.4)' : '1.5px solid #10b981';
+                    const textColor = isOccupied ? 'rgba(239, 68, 68, 0.65)' : '#10b981';
+                    const cursorStyle = isOccupied ? 'cursor: not-allowed; opacity: 0.55;' : 'cursor: pointer;';
 
-                    btns += `<button type="button" class="manual-table-num-btn" data-num="${i}" data-occupied="${isOccupied}" style="min-width:44px; height:44px; border-radius:12px; border:${border}; background:${bg}; color:${textColor}; cursor:pointer; font-weight:900; font-size:1rem; flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center;">${i}</button>`;
+                    btns += `<button type="button" class="manual-table-num-btn ${isOccupied ? 'is-occupied' : ''}" data-num="${i}" data-occupied="${isOccupied}" style="min-width:44px; height:44px; border-radius:12px; border:${border}; background:${bg}; color:${textColor}; ${cursorStyle} font-weight:900; font-size:1rem; flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center;" title="${isOccupied ? `Mesa ${i} está ocupada` : `Mesa ${i} está libre`}">${i}</button>`;
                 }
                 deliveryDetailEl.innerHTML = `
                     <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.4rem;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <label style="font-size:0.78rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Seleccionar Mesa:</label>
                             <div style="display:flex; gap:0.8rem; font-size:0.72rem; font-weight:800;">
-                                <span style="color:#10b981; display:flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block;"></span> Libre (Verde)</span>
-                                <span style="color:#ef4444; display:flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; border-radius:50%; background:#ef4444; display:inline-block;"></span> Ocupada (Rojo)</span>
+                                <span style="color:#10b981; display:flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block;"></span> Libre</span>
+                                <span style="color:#ef4444; display:flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; border-radius:50%; background:#ef4444; display:inline-block;"></span> Ocupada</span>
                             </div>
                         </div>
                         <div style="position:relative; display:flex; align-items:center; gap:0.4rem;">
@@ -6595,11 +6596,19 @@ document.addEventListener('click', (e) => {
                 
                 deliveryDetailEl.querySelectorAll('.manual-table-num-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
+                        const isOccupied = this.dataset.occupied === 'true';
+                        if (isOccupied) {
+                            if (typeof showToast === 'function') {
+                                showToast(`La Mesa ${this.dataset.num} está ocupada. Por favor selecciona una libre.`, 'error');
+                            }
+                            return;
+                        }
+
                         deliveryDetailEl.querySelectorAll('.manual-table-num-btn').forEach(b => {
                             const wasOccupied = b.dataset.occupied === 'true';
-                            b.style.border = wasOccupied ? '1.5px solid #ef4444' : '1.5px solid #10b981';
-                            b.style.background = wasOccupied ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
-                            b.style.color = wasOccupied ? '#ef4444' : '#10b981';
+                            b.style.border = wasOccupied ? '1.5px solid rgba(239, 68, 68, 0.4)' : '1.5px solid #10b981';
+                            b.style.background = wasOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.15)';
+                            b.style.color = wasOccupied ? 'rgba(239, 68, 68, 0.65)' : '#10b981';
                             b.style.boxShadow = 'none';
                         });
                         this.style.border = '1.5px solid transparent';
