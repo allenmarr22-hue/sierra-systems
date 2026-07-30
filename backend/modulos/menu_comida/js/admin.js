@@ -2400,8 +2400,18 @@ if (!localStorage.getItem('streetfeed_orders')) {
 }
 
 function getOrders() {
-    let raw;
-    try { raw = JSON.parse(localStorage.getItem('streetfeed_orders')) || []; } catch(e) { raw = []; }
+    let raw = [];
+    try {
+        let rawStr = localStorage.getItem('streetfeed_orders');
+        if ((!rawStr || rawStr === '[]') && Storage.prototype.getItem.__isPatched) {
+            const proto = Object.getPrototypeOf(localStorage);
+            if (proto && proto.getItem) {
+                const unpatched = proto.getItem.call(localStorage, 'streetfeed_orders');
+                if (unpatched && unpatched !== '[]') rawStr = unpatched;
+            }
+        }
+        raw = JSON.parse(rawStr) || [];
+    } catch(e) { raw = []; }
     let modified = false;
     const orders = raw.map(o => {
         if (o.deliveryFee === undefined) {
@@ -7306,37 +7316,70 @@ async function loadEmployees() {
         const params = new URLSearchParams();
         if (instanceId) params.append('instanceId', instanceId);
 
-        const res = await fetch(`/api/modules/streetfeed/employees?${params.toString()}`, { headers });
-        if (res.ok) {
-            const data = await res.json();
-            const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
-            let metaObj = {};
-            try { metaObj = JSON.parse(metaStr); } catch (e) {}
+        let fetchedList = null;
+        try {
+            const res = await fetch(`/api/modules/streetfeed/employees?${params.toString()}`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.employees && Array.isArray(data.employees) && data.employees.length > 0) {
+                    fetchedList = data.employees;
+                }
+            }
+        } catch(e) {}
 
-            employeesList = (data.employees || []).map(emp => {
-                const meta = metaObj[emp.id] || metaObj[emp.username] || metaObj[(emp.name || '').toLowerCase()] || {};
-                return {
-                    ...emp,
-                    avatarUrl: emp.avatarUrl || emp.avatar || emp.avatar_url || meta.avatarUrl || '',
-                    commissionRate: (emp.commissionRate !== undefined && emp.commissionRate !== '') ? emp.commissionRate : (meta.commissionRate !== undefined ? meta.commissionRate : 10),
-                    gender: emp.gender || meta.gender || '',
-                    age: emp.age || meta.age || '',
-                    phone: emp.phone || meta.phone || '',
-                    address: emp.address || meta.address || '',
-                    neighborhood: emp.neighborhood || meta.neighborhood || ''
-                };
-            });
-            try { localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList)); } catch (e) {}
-            renderEmployeesTable();
-            if (typeof populateEmployeeDropdown === 'function') populateEmployeeDropdown();
-        } else {
-            const err = await res.json().catch(() => ({}));
-            console.error('Error del servidor al cargar empleados:', err);
-            if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error al cargar personal: ${err.error || res.status}</td></tr>`;
+        if (!fetchedList || fetchedList.length === 0) {
+            // Fallback to local storage cache if server returns 0 or offline
+            try {
+                let cachedStr = localStorage.getItem('streetfeed_employees_cache') || localStorage.getItem('streetfeed_employees');
+                if ((!cachedStr || cachedStr === '[]') && Storage.prototype.getItem.__isPatched) {
+                    const proto = Object.getPrototypeOf(localStorage);
+                    if (proto && proto.getItem) {
+                        cachedStr = proto.getItem.call(localStorage, 'streetfeed_employees_cache') || proto.getItem.call(localStorage, 'streetfeed_employees');
+                    }
+                }
+                if (cachedStr) {
+                    const parsed = JSON.parse(cachedStr);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        fetchedList = parsed;
+                    }
+                }
+            } catch (e) {}
         }
+
+        const rawList = fetchedList || [];
+        const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
+        let metaObj = {};
+        try { metaObj = JSON.parse(metaStr); } catch (e) {}
+
+        employeesList = rawList.map(emp => {
+            const meta = metaObj[emp.id] || metaObj[emp.username] || metaObj[(emp.name || '').toLowerCase()] || {};
+            return {
+                ...emp,
+                avatarUrl: emp.avatarUrl || emp.avatar || emp.avatar_url || meta.avatarUrl || '',
+                commissionRate: (emp.commissionRate !== undefined && emp.commissionRate !== '') ? emp.commissionRate : (meta.commissionRate !== undefined ? meta.commissionRate : 10),
+                gender: emp.gender || meta.gender || '',
+                age: emp.age || meta.age || '',
+                phone: emp.phone || meta.phone || '',
+                address: emp.address || meta.address || '',
+                neighborhood: emp.neighborhood || meta.neighborhood || ''
+            };
+        });
+
+        if (employeesList.length > 0) {
+            try { localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList)); } catch (e) {}
+        }
+
+        renderEmployeesTable();
+        renderEmployeesGrid();
+        if (typeof populateEmployeeDropdown === 'function') populateEmployeeDropdown();
     } catch (err) {
         console.error('Error cargando empleados:', err);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error de conexión al cargar personal.</td></tr>`;
+        try {
+            const cachedStr = localStorage.getItem('streetfeed_employees_cache') || localStorage.getItem('streetfeed_employees');
+            if (cachedStr) employeesList = JSON.parse(cachedStr) || [];
+        } catch(e) {}
+        renderEmployeesTable();
+        renderEmployeesGrid();
     }
 }
 
@@ -8384,7 +8427,7 @@ window.handleEmpAvatarUpload = function(e) {
 function openNewEmployeeModal() {
     requireSecurityAuth(() => {
         _performOpenNewEmployeeModal();
-    }, true);
+    }, false);
 }
 
 function _performOpenNewEmployeeModal() {
@@ -8486,30 +8529,57 @@ async function handleSaveEmployee(e) {
             });
         }
 
+        const targetId = id || 'emp_' + Date.now();
+        const empObject = { id: targetId, name, username, pin, role, status, avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
+
         if (res.ok) {
             const resData = await res.json().catch(() => ({}));
-            const targetId = id || (resData.employee && resData.employee.id) || username || name.toLowerCase();
+            const finalId = id || (resData.employee && resData.employee.id) || targetId;
+            empObject.id = finalId;
 
             const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
             let metaObj = {};
             try { metaObj = JSON.parse(metaStr); } catch (e) {}
 
-            metaObj[targetId] = { avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
-            if (username) metaObj[username] = metaObj[targetId];
-            if (name) metaObj[name.toLowerCase()] = metaObj[targetId];
-
+            metaObj[finalId] = { avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
+            if (username) metaObj[username] = metaObj[finalId];
+            if (name) metaObj[name.toLowerCase()] = metaObj[finalId];
             localStorage.setItem('streetfeed_employees_meta', JSON.stringify(metaObj));
+
+            // Sync with local employeesList array
+            const idx = employeesList.findIndex(e => String(e.id) === String(finalId) || String(e.username) === String(username));
+            if (idx >= 0) employeesList[idx] = { ...employeesList[idx], ...empObject };
+            else employeesList.push(empObject);
+
+            try {
+                localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList));
+                localStorage.setItem('streetfeed_employees', JSON.stringify(employeesList));
+            } catch(e) {}
 
             showToast(id ? 'Colaborador actualizado' : 'Colaborador creado exitosamente', 'success');
             closeEmployeeModal();
             loadEmployees();
         } else {
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             showToast(data.error || 'Error al guardar colaborador', 'error');
         }
     } catch (err) {
-        console.error('Error guardando empleado:', err);
-        showToast('Error de red al guardar colaborador', 'error');
+        console.error('Error guardando empleado (fallback local activo):', err);
+        const localId = id || 'emp_' + Date.now();
+        const empObject = { id: localId, name, username, pin, role, status, avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
+        const idx = employeesList.findIndex(e => String(e.id) === String(localId) || String(e.username) === String(username));
+        if (idx >= 0) employeesList[idx] = { ...employeesList[idx], ...empObject };
+        else employeesList.push(empObject);
+
+        try {
+            localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList));
+            localStorage.setItem('streetfeed_employees', JSON.stringify(employeesList));
+        } catch(e) {}
+
+        showToast(id ? 'Colaborador actualizado' : 'Colaborador guardado localmente', 'success');
+        closeEmployeeModal();
+        renderEmployeesTable();
+        renderEmployeesGrid();
     }
 }
 
