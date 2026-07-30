@@ -780,25 +780,7 @@ function updateUIFromConfig() {
     if (heroHours) heroHours.textContent = c.footerText;
 
     // Update Cart Icons (Stickers)
-    const newIcon = c.cartIcon || '🛒';
-    const cartIcons = document.querySelectorAll('.cart-icon-main');
-    cartIcons.forEach(icon => {
-        const isEmoji = /\p{Emoji}/u.test(newIcon);
-        if (isEmoji) {
-            icon.innerHTML = newIcon;
-            icon.removeAttribute('data-lucide');
-            icon.style.fontStyle = 'normal';
-            icon.style.fontSize = '2.2rem'; /* Increased for better visibility */
-            icon.style.display = 'flex';
-            icon.style.alignItems = 'center';
-            icon.style.justifyContent = 'center';
-            icon.style.lineHeight = '1';
-        } else {
-            icon.setAttribute('data-lucide', newIcon);
-            icon.innerHTML = '';
-        }
-    });
-    if (window.lucide) lucide.createIcons();
+    updateCartIconInDOM(c.cartIcon);
     
     applyTheme(c.themeAccent, c.themeBg, c.themeLogo);
 
@@ -2989,8 +2971,42 @@ function selectClientPayment(btn) {
 }
 window.selectClientPayment = selectClientPayment;
 
-// ====== LISTENER DE CIERRE DE SESIÓN EN TIEMPO REAL DESDE EL PORTAL ======
+function updateCartIconInDOM(iconVal) {
+    const icon = iconVal || (typeof state !== 'undefined' && state.config && state.config.cartIcon) || '🛒';
+    const isEmoji = /\p{Emoji}/u.test(icon);
+    const cartIcons = document.querySelectorAll('.cart-icon-main');
+    cartIcons.forEach(el => {
+        if (isEmoji) {
+            el.innerHTML = `<span class="cart-emoji-render" style="font-size: 2.2rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; font-style: normal;">${icon}</span>`;
+        } else {
+            el.innerHTML = `<i data-lucide="${icon}" style="width: 28px; height: 28px; color: var(--accent, var(--theme-accent));"></i>`;
+        }
+    });
+    if (window.lucide) window.lucide.createIcons();
+}
+window.updateCartIconInDOM = updateCartIconInDOM;
+
+window.addEventListener('cartIconUpdated', (e) => {
+    if (e.detail && e.detail.icon) {
+        updateCartIconInDOM(e.detail.icon);
+    }
+});
+
+// ====== ESCUCHA CAMBIO DE ÍCONO DEL CARRITO EN TIEMPO REAL DESDE EL ADMIN ======
 window.addEventListener('storage', (e) => {
+    if (e.key === 'sf_cartIconUpdate') {
+        try {
+            const data = JSON.parse(e.newValue);
+            if (data && data.icon) {
+                updateCartIconInDOM(data.icon);
+                // Also update state so the next applyConfig call keeps it
+                if (typeof state !== 'undefined' && state.config) {
+                    state.config.cartIcon = data.icon;
+                }
+            }
+        } catch (_) {}
+        return;
+    }
     const urlParams = new URLSearchParams(window.location.search);
     const instanceId = urlParams.get('instanceId');
     const sessionKey = instanceId ? `streetfeed_isLoggedIn_${instanceId}` : 'streetfeed_isLoggedIn';

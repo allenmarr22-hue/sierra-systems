@@ -1567,16 +1567,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             saveStateToLocal();
                             iconContainer.querySelectorAll('.icon-item-btn').forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');
-                            
-                            const mainCartIcon = document.querySelector('.cart-icon-main');
-                            if (mainCartIcon) {
-                                if (/\p{Emoji}/u.test(icon)) {
-                                    mainCartIcon.innerHTML = `<span style="font-size: 24px;">${icon}</span>`;
+
+                            // Update all .cart-icon-main in this page
+                            const isEmoji = /\p{Emoji}/u.test(icon);
+                            document.querySelectorAll('.cart-icon-main').forEach(el => {
+                                if (isEmoji) {
+                                    el.innerHTML = `<span style="font-size: 2.2rem; line-height:1; display:inline-flex; align-items:center; justify-content:center; font-style:normal;">${icon}</span>`;
                                 } else {
-                                    mainCartIcon.innerHTML = `<i data-lucide="${icon}" style="width: 28px; height: 28px; color: var(--accent);"></i>`;
-                                    if (window.lucide) lucide.createIcons();
+                                    el.innerHTML = `<i data-lucide="${icon}" style="width:28px; height:28px; color:var(--accent, var(--theme-accent));"></i>`;
                                 }
-                            }
+                            });
+                            if (!isEmoji && window.lucide) window.lucide.createIcons();
+
+                            // Notify index.html in real time via localStorage event
+                            localStorage.setItem('sf_cartIconUpdate', JSON.stringify({ icon, ts: Date.now() }));
+
                             showToast('Ícono del carrito actualizado ✅');
                         };
                     });
