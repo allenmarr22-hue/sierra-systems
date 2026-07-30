@@ -6003,39 +6003,22 @@ function renderTablesModal() {
             occupiedCount++;
             totalRevenue += tableInfo.total;
 
-            if (tableInfo.status === 'unpaid') {
-                // Estado: Por Cobrar (amarillo)
-                html += `
-                <div onclick="window.closeTablesModal(); document.querySelector('[data-subtab=\\'unpaid\\']')?.click();"
-                     style="border-radius:18px; background:linear-gradient(145deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04)); border:1.5px solid rgba(245,158,11,0.4); padding:1.2rem 1rem; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.5rem; min-height:130px;"
-                     onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 8px 30px rgba(245,158,11,0.25)';"
-                     onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-                    <div style="position:absolute; top:-8px; right:-8px; width:50px; height:50px; background:radial-gradient(circle, rgba(245,158,11,0.3) 0%, transparent 70%);"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.5); color:#f59e0b; font-weight:900; font-size:0.72rem; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.5px;">Por Cobrar</div>
-                        <div style="width:8px; height:8px; border-radius:50%; background:#f59e0b; box-shadow:0 0 8px rgba(245,158,11,0.8);"></div>
-                    </div>
-                    <div style="font-size:2rem; font-weight:900; color:#f59e0b; line-height:1; margin-top:0.2rem;">Mesa ${i}</div>
-                    <div style="font-size:0.72rem; color:rgba(245,158,11,0.8); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tableInfo.customerName}</div>
-                    <div style="font-size:0.78rem; color:rgba(245,158,11,0.9); font-weight:900; margin-top:auto;">$${tableInfo.total.toLocaleString('es-CO')}</div>
-                </div>`;
-            } else {
-                // Estado: En Preparación / Ocupada (rojo)
-                html += `
-                <div onclick="window.closeTablesModal(); document.querySelector('[data-subtab=\\'preparing\\']')?.click();"
-                     style="border-radius:18px; background:linear-gradient(145deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04)); border:1.5px solid rgba(239,68,68,0.4); padding:1.2rem 1rem; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.5rem; min-height:130px;"
-                     onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 8px 30px rgba(239,68,68,0.25)';"
-                     onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-                    <div style="position:absolute; top:-8px; right:-8px; width:50px; height:50px; background:radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%);"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#ef4444; font-weight:900; font-size:0.72rem; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.5px;">Ocupada</div>
-                        <div style="width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow:0 0 8px rgba(239,68,68,0.8); animation: tbl-pulse 1.5s infinite;"></div>
-                    </div>
-                    <div style="font-size:2rem; font-weight:900; color:#ef4444; line-height:1; margin-top:0.2rem;">Mesa ${i}</div>
-                    <div style="font-size:0.72rem; color:rgba(239,68,68,0.8); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tableInfo.customerName}</div>
-                    <div style="font-size:0.78rem; color:rgba(239,68,68,0.9); font-weight:900; margin-top:auto;">$${tableInfo.total.toLocaleString('es-CO')}</div>
-                </div>`;
-            }
+            // Estado: Ocupada (rojo) — para cualquier pedido activo (en preparación o por cobrar)
+            const targetSubtab = tableInfo.rawStatus === 'dispatched' ? 'unpaid' : (tableInfo.rawStatus === 'confirmed' ? 'preparing' : 'incoming');
+            html += `
+            <div onclick="window.closeTablesModal(); document.querySelector('[data-subtab=\\'${targetSubtab}\\']')?.click();"
+                 style="border-radius:18px; background:linear-gradient(145deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04)); border:1.5px solid rgba(239,68,68,0.4); padding:1.2rem 1rem; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.5rem; min-height:130px;"
+                 onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 8px 30px rgba(239,68,68,0.25)';"
+                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                <div style="position:absolute; top:-8px; right:-8px; width:50px; height:50px; background:radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%);"></div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#ef4444; font-weight:900; font-size:0.72rem; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.5px;">Ocupada</div>
+                    <div style="width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow:0 0 8px rgba(239,68,68,0.8); animation: tbl-pulse 1.5s infinite;"></div>
+                </div>
+                <div style="font-size:2rem; font-weight:900; color:#ef4444; line-height:1; margin-top:0.2rem;">Mesa ${i}</div>
+                <div style="font-size:0.72rem; color:rgba(239,68,68,0.8); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tableInfo.customerName}</div>
+                <div style="font-size:0.78rem; color:rgba(239,68,68,0.9); font-weight:900; margin-top:auto;">$${tableInfo.total.toLocaleString('es-CO')}</div>
+            </div>`;
         } else {
             // Estado: Libre (verde)
             freeCount++;
