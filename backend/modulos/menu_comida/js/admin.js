@@ -4893,7 +4893,7 @@ function createOrderCard(order) {
             </div>
 
             <!-- 3. Pedido (Productos + Pago) -->
-            <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem 0 0.6rem; overflow: visible;">
                 <div onclick="event.stopPropagation(); window.openManualOrderForAddition('${order.id}');" title="Anexar productos a este pedido" class="order-add-prod-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: rgba(var(--theme-accent-rgb, 255,83,123), 0.12); border: 1px dashed var(--theme-accent); transition: all 0.2s; white-space: nowrap; flex-shrink: 0; cursor: pointer;" onmouseover="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.22)'" onmouseout="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.12)'">
                     <i data-lucide="plus-circle" style="width: 12px; color: var(--theme-accent);"></i>
                     <span style="font-weight: 800; font-size: 0.78rem; color: var(--text);">${(order.items || []).length} Prod.</span>
@@ -5358,7 +5358,7 @@ window.togglePaymentDropdown = function(orderId, e) {
 
     menu.dataset.activeOrderId = String(orderId);
     menu.innerHTML = `
-        <div style="font-size:0.68rem; color:var(--text-dim); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:4px 8px 6px 8px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">Cambiar Pago (#${orderId})</div>
+        <div style="font-size:0.68rem; color:var(--text-dim); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:4px 8px 6px 8px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">Cambiar Pago</div>
         <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Efectivo');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #4caf50; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.15)'" onmouseout="this.style.background='transparent'">
             <i data-lucide="banknote" style="width: 14px; height: 14px;"></i> Efectivo
         </div>
