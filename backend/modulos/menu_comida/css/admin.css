@@ -3830,14 +3830,29 @@ body.light-mode .manual-product-card {
     box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
 }
 
+.manual-qty-capsule {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid var(--glass-border);
+}
+
 body.light-mode .manual-product-card h4 {
     color: #0f172a !important;
+}
+
+body.light-mode .manual-product-card > div:nth-child(2) {
+    border-top-color: #e2e8f0 !important;
+}
+
+body.light-mode .manual-qty-capsule {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
 }
 
 body.light-mode .manual-minus {
     color: #0f172a !important;
     border-color: #cbd5e1 !important;
     background: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
 }
 
 body.light-mode .manual-qty-display {

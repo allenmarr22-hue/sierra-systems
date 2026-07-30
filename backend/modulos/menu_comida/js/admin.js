@@ -6395,7 +6395,7 @@ document.addEventListener('click', (e) => {
 
                 <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.05);">
                     <span style="font-size: 0.75rem; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text-dim)'}; font-weight: 800;">${isSelected ? 'Seleccionados:' : 'Cantidad:'}</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 3px 6px; border-radius: 10px; border: 1px solid var(--glass-border);">
+                    <div class="manual-qty-capsule" style="display: flex; align-items: center; gap: 0.5rem; padding: 3px 6px; border-radius: 10px;">
                         <button type="button" class="manual-minus" style="width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1;">-</button>
                         <span class="manual-qty-display" style="font-weight: 900; font-size: 0.95rem; min-width: 20px; text-align: center; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text)'};">${qty}</span>
                         <button type="button" class="manual-plus" style="width: 26px; height: 26px; border-radius: 8px; border: none; background: var(--theme-accent); color: #fff; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1;">+</button>
