@@ -4865,23 +4865,10 @@ function createOrderCard(order) {
     }
 
     const paymentBadge = !isCocina ? `
-        <div class="payment-badge-wrapper" style="position: relative; display: inline-block;">
-            <div onclick="event.stopPropagation(); window.togglePaymentDropdown('${order.id}', event);" title="Cambiar método de pago" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${payColor}; box-shadow: 0 4px 10px ${payShadow}; white-space: nowrap; cursor: pointer; transition: all 0.2s;">
-                <i data-lucide="${payIcon}" style="width: 12px; color: #fff;"></i>
-                <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">${payLabel}</span>
-                <i data-lucide="chevron-down" style="width: 10px; color: rgba(255,255,255,0.8); margin-left: 1px;"></i>
-            </div>
-            <div id="pay-drop-${order.id}" class="payment-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; min-width: 145px; background: #1e293b; border: 1px solid var(--glass-border); border-radius: 10px; padding: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100050;">
-                <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${order.id}', 'Efectivo');" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 800; color: #4caf50; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.15)'" onmouseout="this.style.background='transparent'">
-                    <i data-lucide="banknote" style="width: 12px;"></i> Efectivo
-                </div>
-                <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${order.id}', 'Transferencia');" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 800; color: #3b82f6; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
-                    <i data-lucide="smartphone" style="width: 12px;"></i> Transferencia
-                </div>
-                <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${order.id}', 'Tarjeta');" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 800; color: #a855f7; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
-                    <i data-lucide="credit-card" style="width: 12px;"></i> Tarjeta / Datáfono
-                </div>
-            </div>
+        <div onclick="event.stopPropagation(); window.togglePaymentDropdown('${order.id}', event);" title="Cambiar método de pago" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${payColor}; box-shadow: 0 4px 10px ${payShadow}; white-space: nowrap; cursor: pointer; transition: all 0.2s;">
+            <i data-lucide="${payIcon}" style="width: 12px; color: #fff;"></i>
+            <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">${payLabel}</span>
+            <i data-lucide="chevron-down" style="width: 10px; color: rgba(255,255,255,0.8); margin-left: 1px;"></i>
         </div>` : '';
 
     return `
@@ -5319,6 +5306,9 @@ window.printThermalTicket = function(id) {
 };
 
 window.changeOrderPaymentMethod = function(orderId, newMethod) {
+    const menu = document.getElementById('global-payment-dropdown');
+    if (menu) menu.style.display = 'none';
+
     const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
     const orderIndex = orders.findIndex(o => String(o.id) === String(orderId));
     if (orderIndex === -1) return;
@@ -5336,7 +5326,6 @@ window.changeOrderPaymentMethod = function(orderId, newMethod) {
     if (typeof renderStats === 'function') renderStats();
     if (typeof renderTablesModal === 'function') renderTablesModal();
 
-    // Si el modal de detalles está abierto para este pedido, actualizar su vista
     if (window.currentDetailOrderId === String(orderId)) {
         window.showOrderDetails(orderId);
     }
@@ -5345,21 +5334,68 @@ window.changeOrderPaymentMethod = function(orderId, newMethod) {
 };
 
 window.togglePaymentDropdown = function(orderId, e) {
-    if (e) e.stopPropagation();
-    document.querySelectorAll('.payment-dropdown-menu').forEach(m => {
-        if (m.id !== `pay-drop-${orderId}`) m.style.display = 'none';
-    });
-
-    const menu = document.getElementById(`pay-drop-${orderId}`);
-    if (menu) {
-        const isHidden = menu.style.display === 'none' || !menu.style.display;
-        menu.style.display = isHidden ? 'block' : 'none';
-        if (isHidden && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [menu] });
+    if (e) {
+        if (e.preventDefault) e.preventDefault();
+        if (e.stopPropagation) e.stopPropagation();
     }
+
+    let menu = document.getElementById('global-payment-dropdown');
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = 'global-payment-dropdown';
+        menu.style.cssText = 'display:none; position:fixed; min-width:160px; background:#1e293b; border:1px solid var(--glass-border); border-radius:12px; padding:6px; box-shadow:0 15px 35px rgba(0,0,0,0.65); z-index:100090;';
+        document.body.appendChild(menu);
+    }
+
+    const currentActive = menu.dataset.activeOrderId;
+    const isCurrentlyVisible = menu.style.display === 'block';
+
+    if (isCurrentlyVisible && currentActive === String(orderId)) {
+        menu.style.display = 'none';
+        menu.dataset.activeOrderId = '';
+        return;
+    }
+
+    menu.dataset.activeOrderId = String(orderId);
+    menu.innerHTML = `
+        <div style="font-size:0.68rem; color:var(--text-dim); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:4px 8px 6px 8px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">Cambiar Pago (#${orderId})</div>
+        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Efectivo');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #4caf50; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.15)'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="banknote" style="width: 14px; height: 14px;"></i> Efectivo
+        </div>
+        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Transferencia');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #3b82f6; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i> Transferencia
+        </div>
+        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Tarjeta');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #a855f7; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="credit-card" style="width: 14px; height: 14px;"></i> Tarjeta / Datáfono
+        </div>
+    `;
+
+    const targetEl = e ? e.currentTarget : null;
+    if (targetEl) {
+        const rect = targetEl.getBoundingClientRect();
+        let top = rect.bottom + 6;
+        let left = rect.left;
+
+        if (top + 160 > window.innerHeight) {
+            top = rect.top - 160;
+        }
+        if (left + 160 > window.innerWidth) {
+            left = window.innerWidth - 170;
+        }
+
+        menu.style.top = top + 'px';
+        menu.style.left = left + 'px';
+    }
+
+    menu.style.display = 'block';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [menu] });
 };
 
-document.addEventListener('click', function() {
-    document.querySelectorAll('.payment-dropdown-menu').forEach(m => m.style.display = 'none');
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('global-payment-dropdown');
+    if (menu && !e.target.closest('#global-payment-dropdown')) {
+        menu.style.display = 'none';
+    }
 });
 
 window.showOrderDetails = function(id) {
