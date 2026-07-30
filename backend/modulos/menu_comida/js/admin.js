@@ -6121,7 +6121,7 @@ window.setOrderFilter = function(mode, label) {
     document.querySelectorAll('.filter-opt-btn').forEach(btn => {
         const isActive = btn.dataset.filter === mode;
         btn.style.borderColor = isActive ? 'var(--theme-accent)' : 'var(--glass-border)';
-        btn.style.background = isActive ? 'rgba(247,147,30,0.12)' : 'transparent';
+        btn.style.background = isActive ? 'rgba(var(--theme-accent-rgb,255,83,123),0.14)' : 'transparent';
         btn.style.color = isActive ? 'var(--theme-accent)' : 'var(--text-dim)';
     });
 
@@ -6655,10 +6655,10 @@ document.addEventListener('click', (e) => {
             b.style.color = 'var(--text-dim)';
             b.style.boxShadow = 'none';
         });
-        btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+        btn.style.background = 'var(--theme-accent)';
         btn.style.borderColor = 'transparent';
         btn.style.color = '#ffffff';
-        btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
+        btn.style.boxShadow = '0 4px 14px rgba(var(--theme-accent-rgb,255,83,123),0.35)';
         document.getElementById('manual-takeout-val').value = val;
     }
 
