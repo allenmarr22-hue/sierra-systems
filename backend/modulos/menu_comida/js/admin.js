@@ -6546,7 +6546,14 @@ document.addEventListener('click', (e) => {
                 }
             } else if (delType === 'takeout') {
                 const tkValInp = document.getElementById('manual-takeout-val');
-                if (tkValInp) tkValInp.value = addressVal;
+                if (tkValInp) tkValInp.value = addressVal || 'Estoy aquí';
+                if (addressVal.toLowerCase().includes('paso') || addressVal.toLowerCase().includes('later')) {
+                    const tkLater = document.getElementById('manual-tkout-later');
+                    if (tkLater) tkLater.click();
+                } else {
+                    const tkHere = document.getElementById('manual-tkout-here');
+                    if (tkHere) tkHere.click();
+                }
             } else if (delType === 'delivery') {
                 const addrInp = document.getElementById('manual-address-inp');
                 if (addrInp) addrInp.value = addressVal;
