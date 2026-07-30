@@ -3909,6 +3909,28 @@ body.light-mode #btn-confirm-manual-order {
     box-shadow: 0 6px 20px rgba(16,185,129,0.35) !important;
 }
 
+/* Employee Profile Modal Light Mode */
+body.light-mode #employee-profile-modal .modal-content {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode #emp-profile-hero {
+    background: linear-gradient(135deg, rgba(var(--theme-accent-rgb,255,83,123),0.1) 0%, rgba(99,102,241,0.06) 100%) !important;
+    border-bottom-color: #e2e8f0 !important;
+}
+
+body.light-mode #emp-profile-orders-list > div {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
+}
+
+body.light-mode #emp-profile-history h4 {
+    color: #475569 !important;
+}
+
 /* ======================================================
    LIGHT MODE FIXES FOR BUTTONS (CONTRAST)
    ====================================================== */

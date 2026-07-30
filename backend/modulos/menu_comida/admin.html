@@ -2041,7 +2041,7 @@
             <div id="employee-profile-modal" class="modal hidden" style="z-index: 100010;">
                 <div class="modal-content glass" style="max-width: 620px; padding: 0; overflow: hidden; border-radius: 28px;">
                     <!-- Header / Hero -->
-                    <div id="emp-profile-hero" style="padding: 2.2rem 2.2rem 1.8rem; background: linear-gradient(135deg, rgba(var(--theme-accent-rgb,247,147,30),0.12) 0%, rgba(99,102,241,0.08) 100%); border-bottom: 1px solid var(--glass-border); position: relative;">
+                    <div id="emp-profile-hero" style="padding: 2.2rem 2.2rem 1.8rem; background: linear-gradient(135deg, rgba(var(--theme-accent-rgb,255,83,123),0.12) 0%, rgba(99,102,241,0.08) 100%); border-bottom: 1px solid var(--glass-border); position: relative;">
                         <button onclick="document.getElementById('employee-profile-modal').classList.add('hidden')" style="position: absolute; top: 1.2rem; right: 1.2rem; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255,255,255,0.08); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Cerrar">
                             <i data-lucide="x" style="width: 16px;"></i>
                         </button>
@@ -2142,9 +2142,9 @@
                             </div>
                         </div>
                         <!-- Recent Orders -->
-                        <div id="emp-profile-history">
-                            <h4 style="margin: 0 0 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);">📋 Últimas Atenciones</h4>
-                            <div id="emp-profile-orders-list" style="display: flex; flex-direction: column; gap: 0.6rem;"></div>
+                        <div id="emp-profile-history" style="margin-top: 1.8rem; margin-bottom: 2rem; padding-bottom: 0.5rem;">
+                            <h4 style="margin: 0 0 1.2rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">📋 Últimas Atenciones</h4>
+                            <div id="emp-profile-orders-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
                         </div>
                     </div>
                     <!-- Footer (Perfil Personal mode) -->
@@ -3326,7 +3326,7 @@
 
             <!-- Footer Actions -->
             <div style="padding: 1.2rem 2rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.12); display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
-                <button onclick="window.printThermalTicketZ()" style="flex: 1; padding: 0.85rem 1rem; border-radius: 14px; border: 1px solid rgba(var(--theme-accent-rgb,255,83,123),0.4); background: rgba(var(--theme-accent-rgb,255,83,123),0.18); color: var(--theme-accent); font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;">
+                <button onclick="window.printThermalTicketZ()" style="flex: 1; padding: 0.85rem 1rem; border-radius: 14px; border: 1px solid rgba(var(--theme-accent-rgb,247,147,30),0.4); background: rgba(var(--theme-accent-rgb,247,147,30),0.18); color: var(--theme-accent); font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;">
                     <i data-lucide="printer" style="width: 16px; height: 16px;"></i>
                     Imprimir Ticket Z
                 </button>
