@@ -5981,8 +5981,6 @@ function renderTablesModal() {
     const grid = document.getElementById('tables-grid');
     const statFree = document.getElementById('tables-stat-free');
     const statOccupied = document.getElementById('tables-stat-occupied');
-    const statPct = document.getElementById('tables-stat-pct');
-    const statRevenue = document.getElementById('tables-stat-revenue');
     if (!grid) return;
 
     const totalTables = getTablesCount();
@@ -6458,8 +6456,12 @@ document.addEventListener('click', (e) => {
                 deliveryDetailEl.innerHTML = `
                     <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.4rem;">
                         <label style="font-size:0.78rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Seleccionar Mesa:</label>
-                        <div id="manual-table-list" style="display:flex; gap:0.6rem; overflow-x:auto; padding: 0.4rem 0.2rem 0.8rem 0; scrollbar-width:none; -ms-overflow-style:none;">
-                            ${btns}
+                        <div style="position:relative; display:flex; align-items:center; gap:0.4rem;">
+                            <button type="button" id="manual-table-nav-prev" style="display:none; min-width:32px; height:32px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--theme-accent); cursor:pointer; flex-shrink:0; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; transition:all 0.2s;" title="Mesas anteriores">‹</button>
+                            <div id="manual-table-list" style="display:flex; gap:0.6rem; overflow-x:auto; scroll-behavior:smooth; padding: 0.4rem 0.2rem 0.8rem 0; scrollbar-width:none; -ms-overflow-style:none; flex-grow:1;">
+                                ${btns}
+                            </div>
+                            <button type="button" id="manual-table-nav-next" style="display:none; min-width:32px; height:32px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--theme-accent); cursor:pointer; flex-shrink:0; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; transition:all 0.2s;" title="Más mesas">›</button>
                         </div>
                         <input type="hidden" id="manual-table-val" value="">
                     </div>`;
@@ -6471,6 +6473,34 @@ document.addEventListener('click', (e) => {
                     style.id = styleId;
                     style.textContent = '#manual-table-list::-webkit-scrollbar { display: none; }';
                     document.head.appendChild(style);
+                }
+
+                // Control de desbordamiento (flechas de desplazamiento)
+                const listEl = document.getElementById('manual-table-list');
+                const prevBtn = document.getElementById('manual-table-nav-prev');
+                const nextBtn = document.getElementById('manual-table-nav-next');
+
+                function updateTableNavVisibility() {
+                    if (!listEl || !prevBtn || !nextBtn) return;
+                    const isOverflowing = listEl.scrollWidth > listEl.clientWidth;
+                    if (isOverflowing) {
+                        prevBtn.style.display = listEl.scrollLeft > 4 ? 'flex' : 'none';
+                        nextBtn.style.display = (listEl.scrollLeft + listEl.clientWidth) < (listEl.scrollWidth - 4) ? 'flex' : 'none';
+                    } else {
+                        prevBtn.style.display = 'none';
+                        nextBtn.style.display = 'none';
+                    }
+                }
+
+                if (listEl && prevBtn && nextBtn) {
+                    prevBtn.addEventListener('click', () => {
+                        listEl.scrollBy({ left: -180, behavior: 'smooth' });
+                    });
+                    nextBtn.addEventListener('click', () => {
+                        listEl.scrollBy({ left: 180, behavior: 'smooth' });
+                    });
+                    listEl.addEventListener('scroll', updateTableNavVisibility);
+                    setTimeout(updateTableNavVisibility, 80);
                 }
                 
                 deliveryDetailEl.querySelectorAll('.manual-table-num-btn').forEach(btn => {
