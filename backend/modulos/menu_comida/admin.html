@@ -1889,14 +1889,21 @@
                                         <div class="admin-cat-content" id="icons-wrapper" style="padding: 1.5rem; display: none;">
                                             <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">Explora cientos de iconos organizados por categoría para tu marca.</p>
                                             
-                                            <div class="icon-browser-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center;">
-                                                <select id="icon-cat-filter" class="admin-select" style="max-width: 200px; margin-bottom: 0;">
-                                                    <option value="comida">🍔 Comida y Productos</option>
-                                                    <option value="dulces">🍦 Helados y Dulces</option>
-                                                    <option value="bebidas">🥤 Bebidas</option>
-                                                    <option value="tienda">🛍️ Tienda y Envío</option>
-                                                    <option value="premium">✨ Premium y Otros</option>
-                                                </select>
+                                            <div class="icon-browser-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                                                <div class="custom-dropdown" id="icon-cat-dropdown" style="min-width: 220px; position: relative; z-index: 100050;">
+                                                    <div class="dropdown-trigger" id="icon-cat-trigger" style="padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.88rem; font-weight: 700; height: 42px; min-width: 220px; justify-content: space-between; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); display: flex; align-items: center; cursor: pointer; transition: all 0.2s;">
+                                                        <span id="icon-cat-current">🍔 Comida y Productos</span>
+                                                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; color: var(--theme-accent); margin-left: 6px;"></i>
+                                                    </div>
+                                                    <ul class="dropdown-menu" id="icon-cat-menu" style="max-height: 250px; overflow-y: auto; z-index: 100010; background: var(--surface); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.4rem; box-shadow: 0 15px 40px rgba(0,0,0,0.5); backdrop-filter: blur(20px);">
+                                                        <li data-value="comida" class="active">🍔 Comida y Productos</li>
+                                                        <li data-value="dulces">🍦 Helados y Dulces</li>
+                                                        <li data-value="bebidas">🥤 Bebidas</li>
+                                                        <li data-value="tienda">🛍️ Tienda y Envío</li>
+                                                        <li data-value="premium">✨ Premium y Otros</li>
+                                                    </ul>
+                                                    <input type="hidden" id="icon-cat-filter" value="comida">
+                                                </div>
                                                 <div class="icon-nav-arrows" style="display: flex; gap: 0.5rem;">
                                                     <button type="button" id="prev-icon-pg" class="wp-arrow" title="Anterior"><i data-lucide="chevron-left"></i></button>
                                                     <button type="button" id="next-icon-pg" class="wp-arrow" title="Siguiente"><i data-lucide="chevron-right"></i></button>

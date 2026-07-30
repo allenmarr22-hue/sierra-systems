@@ -1171,16 +1171,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const ICON_LIBRARY = {
-        comida: ['utensils', 'pizza', '🍔', '🍕', '🍖', '🍗', '🥩', '🥓', '🍟', '🥪', '🌮', '🌯', '🥙', '🧆', '🍳', '🥘', '🍲', '🥗', '🍿', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍣', '🍤', '🍥', '🍡', '🥟', '🥠', '🥡', '🍱', '🥨', '🥯', '🥞', '🧇'],
-        dulces: ['ice-cream', 'cake-slice', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '🥐', '🍞', '🥖', '🥨', '🥯', '🥞', '🧇', '🧀', '🍓', '🍒', '🍎', '🍉', '🍑', '🍍', '🥭'],
-        bebidas: ['cup-soda', 'coffee', '🥤', '🧋', '🧃', '🧉', '🥛', '☕', '🍵', '🍶', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🧊', '🍶', '🍾', '🧂'],
-        tienda: ['shopping-bag', 'shopping-cart', 'shopping-basket', '🛍️', '🛒', '🧺', '🚚', '🚛', '🚀', '🏪', '📦', '🎁', '📍', '🗺️', '⌚', '📅', '🔔', '📣', '📞', '🎧', '📱', '💳', '💰', '💸', '💎', '🔑', '🔒', '🛡️', '✅', '🏠', '🏢'],
-        premium: ['shopping-cart', 'shopping-bag', 'shopping-basket', 'package', 'store', 'star', 'crown', 'diamond', 'flame', 'zap', 'trophy', 'medal', '👑', '💎', '⭐', '🔥', '⚡', '🏆', '🎖️', '✨', '🪄', '💖', '💝', '💘', '🤩', '😎', '🥳', '🚀', '🌈', '🍀', '🧿', '🧿', '💎', '🎨', '🎬', '🎧', '🎸', '🎹']
+        comida: ['utensils', 'pizza', '🍔', '🍕', '🍖', '🍗', '🥩', '🥓', '🍟', '🥪', '🌮', '🌯', '🥙', '🧆', '🍳', '🥘', '🍲', '🥗', '🍿', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍣', '🍤', '🍥', '🍡', '🥟', '🥠', '🥡', '🍱', '🥨', '🥯', '🥞', '🧇', '🌭', '🥪', '🍖', '🍗'],
+        dulces: ['ice-cream', 'cake-slice', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '🥐', '🍞', '🥖', '🥨', '🥯', '🥞', '🧇', '🧀', '🍓', '🍒', '🍎', '🍉', '🍑', '🍍', '🥭', '🍇', '🍉'],
+        bebidas: ['cup-soda', 'coffee', '🥤', '🧋', '🧃', '🧉', '🥛', '☕', '🍵', '🍶', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🧊', '🍶', '🍾', '🧂', '🧃', '🥤', '🍸', '🍹', '🍷', '🥂', '🍾', '🍺', '🍻', '☕', '🧋'],
+        tienda: ['shopping-bag', 'shopping-cart', 'shopping-basket', '🛍️', '🛒', '🧺', '🚚', '🚛', '🚀', '🏪', '📦', '🎁', '📍', '🗺️', '⌚', '📅', '🔔', '📣', '📞', '🎧', '📱', '💳', '💰', '💸', '💎', '🔑', '🔒', '🛡️', '✅', '🏠', '🏢', '🏷️'],
+        premium: ['shopping-cart', 'shopping-bag', 'shopping-basket', 'package', 'store', 'star', 'crown', 'diamond', 'flame', 'zap', 'trophy', 'medal', '👑', '💎', '⭐', '🔥', '⚡', '🏆', '🎖️', '✨', '🪄', '💖', '💝', '💘', '🤩', '😎', '🥳', '🚀', '🌈', '🍀', '🧿', '💎', '🎨', '🎬', '🎧', '🎸', '🎹', '🥇', '🥈', '🥉']
     };
 
     let iconCat = 'comida';
     let iconPage = 0;
-    const ICONS_PER_PAGE = 12;
+    const ICONS_PER_PAGE = 16;
 
     // ── LOGO UPLOAD (independent — never blocked by other accordion states) ──
     function initLogoUpload() {
@@ -1450,13 +1450,44 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPromoConfig();
 
             // 1. Icon Selector (Customization that remains separate from master themes)
-            if (iconContainer && catFilter) {
-                catFilter.value = iconCat;
-                catFilter.onchange = (e) => {
-                    iconCat = e.target.value;
-                    iconPage = 0;
-                    renderIconsPage();
-                };
+            if (iconContainer) {
+                const iconDropdown = document.getElementById('icon-cat-dropdown');
+                const iconTrigger  = document.getElementById('icon-cat-trigger');
+                const iconCurrent  = document.getElementById('icon-cat-current');
+                const iconMenu     = document.getElementById('icon-cat-menu');
+                
+                if (catFilter) catFilter.value = iconCat;
+
+                if (iconTrigger && iconMenu && iconDropdown) {
+                    iconTrigger.onclick = (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.custom-dropdown').forEach(d => {
+                            if (d !== iconDropdown) d.classList.remove('open');
+                        });
+                        iconDropdown.classList.toggle('open');
+                    };
+
+                    iconMenu.querySelectorAll('li').forEach(li => {
+                        li.onclick = (e) => {
+                            e.stopPropagation();
+                            iconMenu.querySelectorAll('li').forEach(l => l.classList.remove('active'));
+                            li.classList.add('active');
+                            if (iconCurrent) iconCurrent.textContent = li.textContent;
+                            if (catFilter) catFilter.value = li.dataset.value;
+                            iconDropdown.classList.remove('open');
+                            
+                            iconCat = li.dataset.value;
+                            iconPage = 0;
+                            renderIconsPage();
+                        };
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        if (iconDropdown && !iconDropdown.contains(e.target)) {
+                            iconDropdown.classList.remove('open');
+                        }
+                    });
+                }
 
                 function renderIconsPage() {
                     const currentIcons = ICON_LIBRARY[iconCat] || [];
