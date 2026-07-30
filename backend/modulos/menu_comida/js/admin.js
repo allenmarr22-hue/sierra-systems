@@ -6459,9 +6459,11 @@ document.addEventListener('click', (e) => {
     }
 
     function updateManualCart() {
-        const badgeCountEl = document.getElementById('manual-cart-count-badge');
-        const totalStep1El = document.getElementById('manual-order-total-step1');
-        const totalEl      = document.getElementById('manual-order-total');
+        const badgeCountEl   = document.getElementById('manual-cart-count-badge');
+        const sidebarCountEl = document.getElementById('manual-cart-sidebar-count');
+        const cartItems      = document.getElementById('manual-order-cart-items');
+        const totalStep1El   = document.getElementById('manual-order-total-step1');
+        const totalEl        = document.getElementById('manual-order-total');
 
         const count = manualCart.reduce((s, i) => s + i.qty, 0);
         const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -6469,8 +6471,43 @@ document.addEventListener('click', (e) => {
         const grandTotal = baseTotal + delFee;
 
         if (badgeCountEl) badgeCountEl.textContent = count;
+        if (sidebarCountEl) sidebarCountEl.textContent = `${count} ítem${count === 1 ? '' : 's'}`;
         if (totalStep1El) totalStep1El.textContent = '$' + baseTotal.toLocaleString('es-CO');
         if (totalEl) totalEl.textContent = '$' + grandTotal.toLocaleString('es-CO');
+
+        // Renderizado del carrito lateral en tiempo real (Paso 1)
+        if (cartItems) {
+            if (manualCart.length === 0) {
+                cartItems.innerHTML = `
+                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-dim); gap:0.5rem; opacity:0.5; padding-top:3rem;">
+                        <i data-lucide="shopping-cart" style="width:28px; height:28px;"></i>
+                        <span style="font-size:0.8rem; font-weight:700;">Sin productos</span>
+                    </div>`;
+            } else {
+                cartItems.innerHTML = manualCart.map(item => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; padding:0.5rem 0.7rem; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.04);">
+                        <div style="display:flex; flex-direction:column; min-width:0; flex:1; padding-right:0.5rem;">
+                            <span style="color:var(--text); font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</span>
+                            <span style="font-size:0.75rem; color:var(--theme-accent); font-weight:800;">${item.qty}x · $${(item.price * item.qty).toLocaleString('es-CO')}</span>
+                        </div>
+                        <button type="button" class="manual-cart-del-btn" data-id="${item.id}" style="background:rgba(239,68,68,0.15); border:none; color:#ef4444; cursor:pointer; padding:4px 6px; border-radius:6px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Eliminar del pedido">
+                            <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+                        </button>
+                    </div>
+                `).join('');
+
+                cartItems.querySelectorAll('.manual-cart-del-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const id = btn.dataset.id;
+                        manualCart = manualCart.filter(i => String(i.id) !== String(id));
+                        updateManualCart();
+                        renderManualProducts();
+                    };
+                });
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [cartItems] });
+        }
     }
 
     // --- Delivery buttons ---
