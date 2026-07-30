@@ -10730,6 +10730,7 @@ function updateCashCloseModalData() {
     // Breakdown metrics
     let cashSales = 0;
     let transferSales = 0;
+    let cardSales = 0;
     let totalDeliveryFees = 0;
 
     const methodTotals = {
@@ -10751,6 +10752,9 @@ function updateCashCloseModalData() {
         if (pMethod.includes('efectivo') || pMethod.includes('cash')) {
             cashSales += total;
             methodTotals['Efectivo'] += total;
+        } else if (pMethod.includes('tarjeta') || pMethod.includes('datafono') || pMethod.includes('pos')) {
+            cardSales += total;
+            methodTotals['Tarjeta / Datáfono'] += total;
         } else if (pMethod.includes('nequi')) {
             transferSales += total;
             methodTotals['Nequi'] += total;
@@ -10760,9 +10764,6 @@ function updateCashCloseModalData() {
         } else if (pMethod.includes('bancolombia') || pMethod.includes('transfer')) {
             transferSales += total;
             methodTotals['Transferencia'] += total;
-        } else if (pMethod.includes('tarjeta') || pMethod.includes('datafono') || pMethod.includes('pos')) {
-            transferSales += total;
-            methodTotals['Tarjeta / Datáfono'] += total;
         } else {
             transferSales += total;
             methodTotals['Otro'] += total;
@@ -10782,7 +10783,7 @@ function updateCashCloseModalData() {
     } catch (e) {}
 
     const netCashInHand = Math.max(0, cashSales - dayExpenses);
-    const grandTotalSales = cashSales + transferSales;
+    const grandTotalSales = cashSales + transferSales + cardSales;
 
     // Update KPI UI
     const kpiCash = document.getElementById('cash-kpi-cash');
@@ -10790,6 +10791,9 @@ function updateCashCloseModalData() {
 
     const kpiTransf = document.getElementById('cash-kpi-transf');
     if (kpiTransf) kpiTransf.textContent = '$' + transferSales.toLocaleString('es-CO');
+
+    const kpiCard = document.getElementById('cash-kpi-card');
+    if (kpiCard) kpiCard.textContent = '$' + cardSales.toLocaleString('es-CO');
 
     const kpiFees = document.getElementById('cash-kpi-fees');
     if (kpiFees) kpiFees.textContent = '$' + totalDeliveryFees.toLocaleString('es-CO');
@@ -10866,12 +10870,13 @@ function printThermalTicketZ() {
         return isSameLocalDate(o.date, selectedDateStr);
     });
 
-    let cashSales = 0, transferSales = 0, totalFees = 0, dayExpenses = 0;
+    let cashSales = 0, transferSales = 0, cardSales = 0, totalFees = 0, dayExpenses = 0;
     dayOrders.forEach(o => {
         const total = parseFloat(o.total) || 0;
         totalFees += (parseFloat(o.deliveryFee) || 0);
         const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
         if (pMethod.includes('efectivo') || pMethod.includes('cash')) cashSales += total;
+        else if (pMethod.includes('tarjeta') || pMethod.includes('datafono') || pMethod.includes('pos')) cardSales += total;
         else transferSales += total;
     });
 
@@ -10886,7 +10891,7 @@ function printThermalTicketZ() {
     } catch (e) {}
 
     const netCashInHand = Math.max(0, cashSales - dayExpenses);
-    const grandTotalSales = cashSales + transferSales + totalFees;
+    const grandTotalSales = cashSales + transferSales + cardSales;
     const storeName = state.config?.storeName || 'STREET FEED';
     const nowStr = new Date().toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const cashierName = document.getElementById('admin-name-display')?.textContent || 'Cajero';
@@ -10904,6 +10909,7 @@ function printThermalTicketZ() {
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>PEDIDOS ATENDIDOS:</span><span>${dayOrders.length}</span></div>
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>VENTAS EFECTIVO:</span><span>$${cashSales.toLocaleString('es-CO')}</span></div>
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>VENTAS TRANSFERENCIA:</span><span>$${transferSales.toLocaleString('es-CO')}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>VENTAS DATÁFONO:</span><span>$${cardSales.toLocaleString('es-CO')}</span></div>
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>
             <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
@@ -10938,12 +10944,13 @@ function exportCashClosePDF() {
         return isSameLocalDate(o.date, selectedDateStr);
     });
 
-    let cashSales = 0, transferSales = 0, totalFees = 0, dayExpenses = 0;
+    let cashSales = 0, transferSales = 0, cardSales = 0, totalFees = 0, dayExpenses = 0;
     dayOrders.forEach(o => {
         const total = parseFloat(o.total) || 0;
         totalFees += (parseFloat(o.deliveryFee) || 0);
         const pMethod = (o.customer?.payment || o.paymentMethod || 'Efectivo').toLowerCase();
         if (pMethod.includes('efectivo') || pMethod.includes('cash')) cashSales += total;
+        else if (pMethod.includes('tarjeta') || pMethod.includes('datafono') || pMethod.includes('pos')) cardSales += total;
         else transferSales += total;
     });
 
@@ -10958,7 +10965,7 @@ function exportCashClosePDF() {
     } catch (e) {}
 
     const netCashInHand = Math.max(0, cashSales - dayExpenses);
-    const grandTotalSales = cashSales + transferSales + totalFees;
+    const grandTotalSales = cashSales + transferSales + cardSales;
 
     const doc = new JsPDFClass();
     const storeName = state.config?.storeName || 'STREET FEED';
@@ -10993,6 +11000,7 @@ function exportCashClosePDF() {
         ['Pedidos Atendidos', `${dayOrders.length} pedido(s)`],
         ['Ventas en Efectivo', '$' + cashSales.toLocaleString('es-CO')],
         ['Ventas por Transferencia', '$' + transferSales.toLocaleString('es-CO')],
+        ['Ventas por Datáfono / Tarjeta', '$' + cardSales.toLocaleString('es-CO')],
         ['Total Fletes Domicilios', '$' + totalFees.toLocaleString('es-CO')],
         ['Gastos / Salidas de Caja', '-$' + dayExpenses.toLocaleString('es-CO')],
         ['TOTAL RECAUDADO EN EL TURNO', '$' + grandTotalSales.toLocaleString('es-CO')]

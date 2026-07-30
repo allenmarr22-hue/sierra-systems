@@ -2673,12 +2673,15 @@
                         <!-- Método de Pago -->
                         <div>
                             <label style="display: block; font-size: 0.78rem; color: var(--text-dim); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Método de Pago</label>
-                            <div style="display: flex; gap: 0.8rem;">
-                                <button type="button" class="manual-pay-btn" data-value="Efectivo" style="flex: 1; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.9rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;">
+                                <button type="button" class="manual-pay-btn" data-value="Efectivo" style="padding: 0.75rem 0.4rem; border-radius: 12px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.85rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap;">
                                     💵 Efectivo
                                 </button>
-                                <button type="button" class="manual-pay-btn" data-value="Transferencia" style="flex: 1; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.9rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                <button type="button" class="manual-pay-btn" data-value="Transferencia" style="padding: 0.75rem 0.4rem; border-radius: 12px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.85rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap;">
                                     📲 Transferencia
+                                </button>
+                                <button type="button" class="manual-pay-btn" data-value="Tarjeta" style="padding: 0.75rem 0.4rem; border-radius: 12px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.85rem; font-weight: 800; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap;">
+                                    💳 Datáfono
                                 </button>
                             </div>
                             <input type="hidden" id="manual-cust-payment" value="">
@@ -3313,9 +3316,9 @@
                         <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.3rem;">🛵 Fletes Domicilio</div>
                         <div id="cash-kpi-fees" style="font-size: 1.25rem; font-weight: 900; color: #ec4899;">$0</div>
                     </div>
-                    <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 16px; padding: 1rem 0.8rem; text-align: center; transition: all 0.2s;">
-                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.3rem;">💸 Gastos / Salidas</div>
-                        <div id="cash-kpi-expenses" style="font-size: 1.25rem; font-weight: 900; color: #ef4444;">$0</div>
+                    <div style="background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25); border-radius: 16px; padding: 1rem 0.8rem; text-align: center; transition: all 0.2s;">
+                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.3rem;">💳 Datáfono</div>
+                        <div id="cash-kpi-card" style="font-size: 1.25rem; font-weight: 900; color: #8b5cf6;">$0</div>
                     </div>
                 </div>
 
@@ -3323,7 +3326,7 @@
                 <div style="background: linear-gradient(135deg, rgba(var(--theme-accent-rgb, 247, 147, 30), 0.16), rgba(var(--theme-accent-rgb, 247, 147, 30), 0.04)); border: 1.5px solid rgba(var(--theme-accent-rgb, 247, 147, 30), 0.45); border-radius: 20px; padding: 1.5rem 1.2rem; text-align: center; margin-bottom: 1.8rem; box-shadow: 0 8px 25px rgba(var(--theme-accent-rgb, 247, 147, 30), 0.12);">
                     <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 800; color: var(--theme-accent); display: block; margin-bottom: 0.35rem;">📊 TOTAL RECAUDADO EN EL TURNO</span>
                     <span id="cash-kpi-total-recaudado" style="font-size: 2.5rem; font-weight: 900; color: var(--text); display: block; line-height: 1.1;">$0</span>
-                    <span style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.4rem;">(Ventas Efectivo + Transferencias + Fletes Domicilio)</span>
+                    <span style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.4rem;">(Ventas Efectivo + Transferencias + Datáfono + Fletes Domicilio)</span>
                 </div>
 
                 <!-- Detailed Breakdown Table -->
