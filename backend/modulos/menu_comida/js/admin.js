@@ -5753,7 +5753,7 @@ window.exportHistoryPDF = function() {
             const activeEmpName = getCurrentActiveEmployeeName();
 
             let ordersForMonth = getOrders().filter(o =>
-                o.status !== 'pending' && new Date(o.date).getMonth() === monthIdx
+                (o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered') && new Date(o.date).getMonth() === monthIdx
             );
 
             if (isMine && activeEmpName) {
@@ -5796,7 +5796,7 @@ window.exportHistoryPDF = function() {
         const isMine = window.pdfScope === 'mine';
         const activeEmpName = getCurrentActiveEmployeeName();
 
-        let allOrders = getOrders().filter(o => o.status !== 'pending');
+        let allOrders = getOrders().filter(o => o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered');
         if (isMine && activeEmpName) {
             const activeName = activeEmpName.toLowerCase().trim();
             const firstName = activeName.split(' ')[0];
@@ -5835,7 +5835,7 @@ window.exportHistoryPDF = function() {
 function generatePDF(monthIdx) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    let orders = getOrders().filter(o => o.status !== 'pending');
+    let orders = getOrders().filter(o => o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered');
 
     const isMine = window.pdfScope === 'mine';
     const activeEmpName = getCurrentActiveEmployeeName();
@@ -5854,7 +5854,7 @@ function generatePDF(monthIdx) {
     }
 
     if (orders.length === 0) {
-        showToast('No hay pedidos que coincidan con el filtro seleccionado.', 'error');
+        showToast('No hay pedidos finalizados que coincidan con el filtro.', 'error');
         return;
     }
 
@@ -5868,7 +5868,7 @@ function generatePDF(monthIdx) {
 
     if (orders.length === 0) {
         const periodLabel = monthIdx !== null ? monthNames[monthIdx] : 'el periodo seleccionado';
-        showToast(`No hay pedidos registrados para ${periodLabel}.`, 'warning');
+        showToast(`No hay pedidos finalizados registrados para ${periodLabel}.`, 'warning');
         return;
     }
 
@@ -5876,29 +5876,29 @@ function generatePDF(monthIdx) {
     const scopeLabel = isMine ? `MIS VENTAS (${activeEmpName.toUpperCase()})` : 'GENERAL (TODAS LAS VENTAS)';
     const title = `REPORTE DE VENTAS - ${restName}`;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setTextColor(40);
-    doc.text(title, 105, 20, { align: 'center' });
+    doc.text(title, 105, 18, { align: 'center' });
 
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 30);
-    doc.text(`Periodo: ${reportTitleMonth}`, 14, 35);
+    doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 28);
+    doc.text(`Periodo: ${reportTitleMonth}`, 14, 34);
     doc.text(`Alcance: ${scopeLabel}`, 14, 40);
-    doc.text(`Establecimiento: ${state.config.restaurantName || "STREETFEED"}`, 14, 40);
+    doc.text(`Establecimiento: ${state.config.restaurantName || "STREETFEED"}`, 14, 46);
 
     const tableData = orders.map(o => [
         o.id,
         new Date(o.date).toLocaleString([], {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}),
         o.customer?.name || '---',
         o.attendedBy || o.customer?.attendedBy || (o.isManual ? 'Propietario' : 'Menú Digital'),
-        o.customer?.payment?.toUpperCase() || '---',
-        o.status === 'accepted' ? 'COBRADO' : (o.status === 'completed' ? 'ENTREGADO' : 'CANCELADO'),
-        `$${o.total.toLocaleString()}`
+        (o.customer?.payment || o.paymentMethod || 'EFECTIVO').toUpperCase(),
+        o.status === 'delivered' || o.status === 'completed' ? 'ENTREGADO' : 'COBRADO',
+        `$${(parseFloat(o.total) || 0).toLocaleString('es-CO')}`
     ]);
 
     doc.autoTable({
-        startY: 45,
+        startY: 52,
         head: [['ID', 'Fecha/Hora', 'Cliente', 'Atendido Por', 'Método Pago', 'Estado', 'Total']],
         body: tableData,
         headStyles: { fillColor: [38, 50, 56], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -5906,24 +5906,25 @@ function generatePDF(monthIdx) {
         styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: {
             4: { fontStyle: 'bold' },
-            5: { halign: 'right', fontStyle: 'bold' }
+            5: { fontStyle: 'bold' },
+            6: { halign: 'right', fontStyle: 'bold' }
         }
     });
 
-    const totalAccepted = orders.filter(o => o.status === 'accepted').reduce((sum, o) => sum + (o.total || 0), 0);
-    const finalY = (doc.lastAutoTable?.finalY || 45) + 15;
+    const totalFinalized = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+    const finalY = (doc.lastAutoTable?.finalY || 52) + 12;
     
     doc.setDrawColor(200, 200, 200);
-    doc.line(14, finalY - 5, 196, finalY - 5);
+    doc.line(14, finalY - 4, 196, finalY - 4);
     
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(38, 50, 56);
     doc.text(`RESUMEN FINANCIERO`, 14, finalY);
     
-    doc.setFontSize(12);
-    doc.setTextColor(76, 175, 80);
-    doc.text(`GANANCIAS TOTALES (Pedidos Aceptados): $${totalAccepted.toLocaleString()}`, 14, finalY + 10);
+    doc.setFontSize(11);
+    doc.setTextColor(16, 185, 129);
+    doc.text(`GANANCIAS TOTALES (Pedidos Finalizados): $${totalFinalized.toLocaleString('es-CO')}`, 14, finalY + 8);
 
     doc.save(`reporte_ventas_${reportTitleMonth.replace(/ /g, '_').toLowerCase()}.pdf`);
     showToast("📊 PDF Generado con éxito");
