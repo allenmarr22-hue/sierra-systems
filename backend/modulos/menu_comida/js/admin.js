@@ -1182,6 +1182,39 @@ document.addEventListener('DOMContentLoaded', () => {
     let iconPage = 0;
     const ICONS_PER_PAGE = 16;
 
+    window.toggleIconCatDropdown = function(e) {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        const dropdown = document.getElementById('icon-cat-dropdown');
+        if (!dropdown) return;
+        document.querySelectorAll('.custom-dropdown').forEach(d => {
+            if (d !== dropdown) d.classList.remove('open');
+        });
+        dropdown.classList.toggle('open');
+    };
+
+    window.selectIconCatOption = function(li, val, e) {
+        if (e) e.stopPropagation();
+        const dropdown = document.getElementById('icon-cat-dropdown');
+        const currentSpan = document.getElementById('icon-cat-current');
+        const filterInput = document.getElementById('icon-cat-filter');
+
+        if (dropdown) dropdown.classList.remove('open');
+        if (currentSpan && li) currentSpan.textContent = li.textContent;
+        if (filterInput) filterInput.value = val;
+
+        document.querySelectorAll('#icon-cat-menu li').forEach(l => l.classList.remove('active'));
+        if (li) li.classList.add('active');
+
+        iconCat = val;
+        iconPage = 0;
+        if (typeof window.renderIconsPageRef === 'function') {
+            window.renderIconsPageRef();
+        }
+    };
+
     // ── LOGO UPLOAD (independent — never blocked by other accordion states) ──
     function initLogoUpload() {
         const logoInput    = document.getElementById('conf-logo-file');
@@ -1451,47 +1484,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Icon Selector (Customization that remains separate from master themes)
             if (iconContainer) {
-                const iconDropdown = document.getElementById('icon-cat-dropdown');
-                const iconTrigger  = document.getElementById('icon-cat-trigger');
-                const iconCurrent  = document.getElementById('icon-cat-current');
-                const iconMenu     = document.getElementById('icon-cat-menu');
-                
                 if (catFilter) catFilter.value = iconCat;
 
-                window.toggleIconCatDropdown = function(e) {
-                    if (e) e.stopPropagation();
-                    const dropdown = document.getElementById('icon-cat-dropdown');
-                    if (!dropdown) return;
-                    document.querySelectorAll('.custom-dropdown').forEach(d => {
-                        if (d !== dropdown) d.classList.remove('open');
-                    });
-                    dropdown.classList.toggle('open');
+                window.renderIconsPageRef = function() {
+                    renderIconsPage();
                 };
-
-                if (iconTrigger && iconMenu && iconDropdown) {
-                    iconTrigger.onclick = window.toggleIconCatDropdown;
-
-                    iconMenu.querySelectorAll('li').forEach(li => {
-                        li.onclick = (e) => {
-                            e.stopPropagation();
-                            iconMenu.querySelectorAll('li').forEach(l => l.classList.remove('active'));
-                            li.classList.add('active');
-                            if (iconCurrent) iconCurrent.textContent = li.textContent;
-                            if (catFilter) catFilter.value = li.dataset.value;
-                            iconDropdown.classList.remove('open');
-                            
-                            iconCat = li.dataset.value;
-                            iconPage = 0;
-                            renderIconsPage();
-                        };
-                    });
-
-                    document.addEventListener('click', (e) => {
-                        if (iconDropdown && !iconDropdown.contains(e.target)) {
-                            iconDropdown.classList.remove('open');
-                        }
-                    });
-                }
 
                 function renderIconsPage() {
                     const currentIcons = ICON_LIBRARY[iconCat] || [];
