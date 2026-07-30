@@ -4857,11 +4857,11 @@ function createOrderCard(order) {
         payShadow = 'rgba(37, 99, 235, 0.2)';
         payIcon = 'smartphone';
         payLabel = 'TRANSF.';
-    } else if (payVal === 'Tarjeta') {
+    } else if (payVal === 'Tarjeta' || payVal === 'Datáfono' || payVal.toLowerCase().includes('tarjeta') || payVal.toLowerCase().includes('datafono')) {
         payColor = '#8b5cf6';
         payShadow = 'rgba(139, 92, 246, 0.2)';
         payIcon = 'credit-card';
-        payLabel = 'TARJETA';
+        payLabel = 'DATÁFONO';
     }
 
     const paymentBadge = !isCocina ? `
@@ -5366,7 +5366,7 @@ window.togglePaymentDropdown = function(orderId, e) {
             <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i> Transferencia
         </div>
         <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Tarjeta');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #a855f7; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
-            <i data-lucide="credit-card" style="width: 14px; height: 14px;"></i> Tarjeta / Datáfono
+            <i data-lucide="credit-card" style="width: 14px; height: 14px;"></i> Datáfono
         </div>
     `;
 
