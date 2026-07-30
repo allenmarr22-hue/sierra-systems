@@ -2400,18 +2400,8 @@ if (!localStorage.getItem('streetfeed_orders')) {
 }
 
 function getOrders() {
-    let raw = [];
-    try {
-        let rawStr = localStorage.getItem('streetfeed_orders');
-        if ((!rawStr || rawStr === '[]') && Storage.prototype.getItem.__isPatched) {
-            const proto = Object.getPrototypeOf(localStorage);
-            if (proto && proto.getItem) {
-                const unpatched = proto.getItem.call(localStorage, 'streetfeed_orders');
-                if (unpatched && unpatched !== '[]') rawStr = unpatched;
-            }
-        }
-        raw = JSON.parse(rawStr) || [];
-    } catch(e) { raw = []; }
+    let raw;
+    try { raw = JSON.parse(localStorage.getItem('streetfeed_orders')) || []; } catch(e) { raw = []; }
     let modified = false;
     const orders = raw.map(o => {
         if (o.deliveryFee === undefined) {
@@ -5754,17 +5744,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateSoundUI();
 
-        window.toggleSoundMode = function() {
-            const current = window.isSoundEnabled ? window.isSoundEnabled() : true;
-            localStorage.setItem('streetfeed_sound_enabled', (!current).toString());
-            updateSoundUI();
-            if (!current && typeof window.playNewOrderChime === 'function') {
-                window.playNewOrderChime();
-            }
-        };
-
         if (soundToggle) {
-            soundToggle.addEventListener('click', window.toggleSoundMode);
+            soundToggle.addEventListener('click', () => {
+                const current = window.isSoundEnabled ? window.isSoundEnabled() : true;
+                localStorage.setItem('streetfeed_sound_enabled', (!current).toString());
+                updateSoundUI();
+                if (!current && typeof window.playNewOrderChime === 'function') {
+                    window.playNewOrderChime();
+                }
+            });
         }
 
         // Logic for Theme Toggle (Icon Only - Sun/Moon)
@@ -5807,38 +5795,36 @@ document.addEventListener('DOMContentLoaded', () => {
         
         updateThemeUI(isLightInitial);
 
-        window.toggleThemeMode = function() {
-            const current = localStorage.getItem('streetfeed_admin_theme') || 'dark';
-            const nextIsLight = current !== 'light';
-            
-            localStorage.setItem('streetfeed_admin_theme', nextIsLight ? 'light' : 'dark');
-            
-            // Force color-scheme on html element so OS switches I-beam cursor color
-            document.documentElement.style.colorScheme = nextIsLight ? 'light' : 'dark';
-            
-            if (typeof applyTheme === 'function') {
-                applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
-            }
-            
-            updateThemeUI(nextIsLight);
-            updateSoundUI();
-            
-            if (typeof window.reRenderCurrentStats === 'function') {
-                window.reRenderCurrentStats();
-            }
-            if (typeof window.reRenderCurrentMyMetrics === 'function') {
-                window.reRenderCurrentMyMetrics();
-            }
-            if (typeof renderDriverMetrics === 'function') {
-                renderDriverMetrics();
-            }
-            if (typeof renderExpenses === 'function') {
-                renderExpenses();
-            }
-        };
-
         if (themeToggle) {
-            themeToggle.addEventListener('click', window.toggleThemeMode);
+            themeToggle.addEventListener('click', () => {
+                const current = localStorage.getItem('streetfeed_admin_theme') || 'dark';
+                const nextIsLight = current !== 'light';
+                
+                localStorage.setItem('streetfeed_admin_theme', nextIsLight ? 'light' : 'dark');
+                
+                // Force color-scheme on html element so OS switches I-beam cursor color
+                document.documentElement.style.colorScheme = nextIsLight ? 'light' : 'dark';
+                
+                if (typeof applyTheme === 'function') {
+                    applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
+                }
+                
+                updateThemeUI(nextIsLight);
+                updateSoundUI();
+                
+                if (typeof window.reRenderCurrentStats === 'function') {
+                    window.reRenderCurrentStats();
+                }
+                if (typeof window.reRenderCurrentMyMetrics === 'function') {
+                    window.reRenderCurrentMyMetrics();
+                }
+                if (typeof renderDriverMetrics === 'function') {
+                    renderDriverMetrics();
+                }
+                if (typeof renderExpenses === 'function') {
+                    renderExpenses();
+                }
+            });
         }
     }
 });
@@ -6222,90 +6208,65 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// =============================================================================
-// MODAL DE PEDIDO MANUAL — VISTA POS PRO 2 PASOS (A PRUEBA DE ERRORES)
-// =============================================================================
+// =====================================================
+// MANUAL ORDER SYSTEM
+// =====================================================
 (function() {
-    let manualCart = [];
-    let selectedDelivery = null;
+    const modal        = document.getElementById('manual-order-modal');
+    const btnOpen      = document.getElementById('btn-new-manual-order');
+    const btnClose     = document.getElementById('close-manual-order-modal');
+    const btnConfirm   = document.getElementById('btn-confirm-manual-order');
+    const catContainer = document.getElementById('manual-order-categories');
+    const prodContainer= document.getElementById('manual-order-products');
+    const cartSection  = document.getElementById('manual-order-cart-section');
+    const cartItems    = document.getElementById('manual-order-cart-items');
+    const totalEl      = document.getElementById('manual-order-total');
+    const deliveryDetailEl = document.getElementById('manual-delivery-detail');
 
-    /** Conmutación de pasos en el pedido manual */
-    window.goToManualStep = function(step) {
-        const step1 = document.getElementById('manual-step-1');
-        const step2 = document.getElementById('manual-step-2');
-        if (!step1 || !step2) return;
-
-        if (step === 2) {
-            if (manualCart.length === 0) {
-                showToast('Agrega al menos 1 producto para continuar', 'error');
-                return;
-            }
-            step1.style.display = 'none';
-            step2.style.display = 'flex';
-            renderStep2CartList();
-        } else {
-            step1.style.display = 'flex';
-            step2.style.display = 'none';
+    // Listen for search input in the permanently visible search bar
+    const searchInput = document.getElementById('orders-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                if (typeof window.renderOrders === 'function') window.renderOrders();
+            });
         }
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    };
+    if (!modal || !btnOpen) return;
 
-    window.closeManualModal = function() {
-        const modalEl = document.getElementById('manual-order-modal');
-        if (modalEl) {
-            modalEl.classList.add('hidden');
-            modalEl.style.display = 'none';
-        }
-    };
+    // --- State ---
+    let manualCart = [];      // { id, name, price, qty }
+    let selectedDelivery = '';
 
-    window.openManualOrderModal = function() {
-        const modalEl = document.getElementById('manual-order-modal');
-        if (!modalEl) {
-            console.error('[POS Pro] Modal #manual-order-modal no encontrado en el DOM.');
-            return;
-        }
+    // --- Open / Close ---
+    btnOpen.addEventListener('click', openManualModal);
+    btnClose.addEventListener('click', closeManualModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeManualModal(); });
 
+    function openManualModal() {
         manualCart = [];
-        selectedDelivery = null;
-        if (document.getElementById('manual-cust-name')) document.getElementById('manual-cust-name').value = '';
-        if (document.getElementById('manual-cust-phone')) document.getElementById('manual-cust-phone').value = '';
-        if (document.getElementById('manual-cust-note')) document.getElementById('manual-cust-note').value = '';
-        if (document.getElementById('manual-cust-payment')) document.getElementById('manual-cust-payment').value = '';
-        if (document.getElementById('manual-product-search')) document.getElementById('manual-product-search').value = '';
-        
-        const deliveryDetailEl = document.getElementById('manual-delivery-detail');
-        if (deliveryDetailEl) { deliveryDetailEl.innerHTML = ''; deliveryDetailEl.style.display = 'none'; }
-
+        selectedDelivery = '';
+        document.getElementById('manual-cust-name').value = '';
+        document.getElementById('manual-cust-phone').value = '';
+        document.getElementById('manual-cust-payment').value = '';
+        document.getElementById('manual-cust-note').value = '';
+        deliveryDetailEl.style.display = 'none';
+        deliveryDetailEl.innerHTML = '';
         document.querySelectorAll('.manual-delivery-btn, .manual-pay-btn').forEach(b => {
             b.style.background = 'transparent';
             b.style.borderColor = 'var(--glass-border)';
             b.style.color = 'var(--text-dim)';
             b.style.boxShadow = 'none';
         });
-
-        window.goToManualStep(1);
         renderManualCategories();
         updateManualCart();
-
-        modalEl.classList.remove('hidden');
-        modalEl.style.display = 'flex';
+        modal.classList.remove('hidden');
         if (typeof lucide !== 'undefined') lucide.createIcons();
-    };
+    }
 
-    // Delegación global de clic para asegurar que abrir pedido manual NUNCA falle
-    document.addEventListener('click', function(e) {
-        const btn = e.target.closest('#btn-new-manual-order');
-        if (btn) {
-            e.preventDefault();
-            window.openManualOrderModal();
-        }
-        const closeBtn = e.target.closest('#close-manual-order-modal');
-        if (closeBtn) {
-            e.preventDefault();
-            window.closeManualModal();
-        }
-    });
+    function closeManualModal() {
+        modal.classList.add('hidden');
+    }
 
+    // --- Categories dropdown ---
     function renderManualCategories() {
         const cats = (state.categories || []).filter(c => c.id !== 'todos');
         const catMenu = document.getElementById('manual-cat-menu');
@@ -6355,20 +6316,18 @@ document.addEventListener('click', (e) => {
         renderManualProducts();
     }
 
-    // --- Tarjetas de Productos en Grid (Paso 1) ---
+    // --- Products as compact rows ---
     function renderManualProducts() {
-        const prodContainer = document.getElementById('manual-order-products');
-        if (!prodContainer) return;
-
         const catFilter = document.getElementById('manual-order-cat-filter');
         const searchEl  = document.getElementById('manual-product-search');
         const catId  = catFilter ? catFilter.value : null;
         const query  = searchEl  ? searchEl.value.toLowerCase().trim() : '';
 
-        let dishes = (typeof state !== 'undefined' && state.dishes) ? state.dishes.filter(d => d.active !== false) : [];
+        let dishes = (state.dishes || []).filter(d => d.active !== false);
         
+        // Si hay búsqueda, ignoramos la categoría para que busque en todo el menú
         if (query) {
-            dishes = dishes.filter(d => d.name.toLowerCase().includes(query) || (d.desc && d.desc.toLowerCase().includes(query)));
+            dishes = dishes.filter(d => d.name.toLowerCase().includes(query));
         } else if (catId) {
             dishes = dishes.filter(d => String(d.cat) === String(catId));
         }
@@ -6376,153 +6335,102 @@ document.addEventListener('click', (e) => {
         prodContainer.innerHTML = '';
 
         if (dishes.length === 0) {
-            prodContainer.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--text-dim);">
-                    <i data-lucide="utensils-crossed" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i>
-                    <p style="font-size: 1rem; font-weight: 600; margin: 0;">No se encontraron productos</p>
-                </div>`;
-            if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [prodContainer] });
+            prodContainer.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;text-align:center;padding:2rem 0;">Sin productos</p>';
             return;
         }
 
         dishes.forEach(dish => {
-            const item = manualCart.find(i => i.id === dish.id);
-            const qty = item ? item.qty : 0;
-            const isSelected = qty > 0;
-
-            const card = document.createElement('div');
-            card.className = 'manual-prod-card';
-            card.style.cssText = `
-                border-radius: 18px;
-                background: ${isSelected ? 'rgba(247,147,30,0.1)' : 'rgba(255,255,255,0.03)'};
-                border: 1.5px solid ${isSelected ? 'rgba(247,147,30,0.5)' : 'var(--glass-border)'};
-                padding: 1rem;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                gap: 0.8rem;
-                transition: all 0.2s ease;
-                box-shadow: ${isSelected ? '0 8px 25px rgba(247,147,30,0.15)' : 'none'};
-            `;
-
-            card.innerHTML = `
-                <div style="display: flex; gap: 0.9rem; align-items: flex-start;">
-                    <div style="width: 54px; height: 54px; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,0.05); flex-shrink: 0; border: 1px solid var(--glass-border);">
-                        <img src="${dish.img || 'img/placeholder.jpg'}" style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                        <h4 style="margin: 0 0 0.25rem 0; font-size: 0.95rem; font-weight: 800; color: var(--text); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${dish.name}</h4>
-                        <div style="font-size: 0.95rem; color: var(--theme-accent); font-weight: 900;">$${(dish.price || 0).toLocaleString('es-CO')}</div>
-                    </div>
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:0.7rem;padding:0.45rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s;';
+            row.innerHTML = `
+                <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.05);flex-shrink:0;border:1px solid var(--glass-border);">
+                    <img src="${dish.img || 'img/placeholder.jpg'}" style="width:100%;height:100%;object-fit:cover;">
                 </div>
-                
-                <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: auto;">
-                    <span style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700;">${isSelected ? 'Seleccionados:' : 'Cantidad:'}</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.25rem 0.4rem; border-radius: 10px; border: 1px solid var(--glass-border);">
-                        <button type="button" class="manual-minus" style="width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1; transition: all 0.2s;">−</button>
-                        <span class="manual-qty-display" style="font-weight: 900; font-size: 0.95rem; min-width: 22px; text-align: center; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text)'}">${qty}</span>
-                        <button type="button" class="manual-plus" style="width: 28px; height: 28px; border-radius: 8px; border: none; background: var(--theme-accent); color: #fff; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1; transition: all 0.2s; box-shadow: 0 3px 8px rgba(247,147,30,0.3);">+</button>
-                    </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:0.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${dish.name}</div>
+                    <div style="font-size:0.78rem;color:var(--theme-accent);font-weight:800;">$${(dish.price||0).toLocaleString('es-CO')}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                    <button class="manual-minus" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--glass-border);background:transparent;color:var(--text-dim);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;">−</button>
+                    <span class="manual-qty-display" style="font-weight:800;font-size:0.9rem;min-width:18px;text-align:center;">0</span>
+                    <button class="manual-plus" style="width:24px;height:24px;border-radius:50%;border:none;background:#4caf50;color:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;">+</button>
                 </div>
             `;
 
-            card.querySelector('.manual-plus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, 1, card); });
-            card.querySelector('.manual-minus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, -1, card); });
+            row.querySelector('.manual-plus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, 1); refreshCardQty(row, dish.id); });
+            row.querySelector('.manual-minus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, -1); refreshCardQty(row, dish.id); });
 
-            prodContainer.appendChild(card);
+            refreshCardQty(row, dish.id);
+            prodContainer.appendChild(row);
         });
-
-        if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [prodContainer] });
     }
 
-    function changeQty(dish, delta, card) {
+    function refreshCardQty(card, dishId) {
+        const item = manualCart.find(i => i.id === dishId);
+        const qty = item ? item.qty : 0;
+        const display = card.querySelector('.manual-qty-display');
+        if (display) display.textContent = qty;
+        card.style.borderColor = qty > 0 ? 'var(--theme-accent)' : 'var(--glass-border)';
+        card.style.background = qty > 0 ? 'rgba(247,147,30,0.08)' : 'rgba(255,255,255,0.03)';
+    }
+
+    function changeQty(dish, delta) {
         let item = manualCart.find(i => i.id === dish.id);
         if (!item) {
             if (delta < 1) return;
-            item = { id: dish.id, name: dish.name, price: dish.price || 0, qty: 1, img: dish.img || '' };
-            manualCart.push(item);
+            manualCart.push({ id: dish.id, name: dish.name, price: dish.price || 0, qty: 1, img: dish.img || '' });
         } else {
             item.qty += delta;
-            if (item.qty <= 0) {
-                manualCart = manualCart.filter(i => i.id !== dish.id);
-                item = null;
-            }
+            if (item.qty <= 0) manualCart = manualCart.filter(i => i.id !== dish.id);
         }
         updateManualCart();
-
-        if (card) {
-            const qty = item ? item.qty : 0;
-            const isSelected = qty > 0;
-            const qtyDisplay = card.querySelector('.manual-qty-display');
-            const labelSpan = card.querySelector('span');
-            if (qtyDisplay) {
-                qtyDisplay.textContent = qty;
-                qtyDisplay.style.color = isSelected ? 'var(--theme-accent)' : 'var(--text)';
-            }
-            if (labelSpan) {
-                labelSpan.textContent = isSelected ? 'Seleccionados:' : 'Cantidad:';
-            }
-            card.style.background = isSelected ? 'rgba(247,147,30,0.1)' : 'rgba(255,255,255,0.03)';
-            card.style.borderColor = isSelected ? 'rgba(247,147,30,0.5)' : 'var(--glass-border)';
-            card.style.boxShadow = isSelected ? '0 8px 25px rgba(247,147,30,0.15)' : 'none';
-        }
     }
-
-    function renderStep2CartList() {
-        const step2CartList = document.getElementById('manual-step2-cart-list');
-        if (!step2CartList) return;
-        if (manualCart.length === 0) {
-            step2CartList.innerHTML = `<p style="color:var(--text-dim); font-size:0.85rem; margin:0;">No has seleccionado productos.</p>`;
-            return;
-        }
-
-        step2CartList.innerHTML = manualCart.map(item => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.8rem; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);">
-                <div style="display: flex; align-items: center; gap: 0.7rem;">
-                    <span style="font-weight: 900; color: var(--theme-accent); font-size: 0.9rem;">${item.qty}x</span>
-                    <span style="font-weight: 700; color: var(--text); font-size: 0.85rem;">${item.name}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.8rem;">
-                    <span style="font-weight: 900; color: var(--text); font-size: 0.88rem;">$${(item.price * item.qty).toLocaleString('es-CO')}</span>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
-                        <button type="button" onclick="window.modManualQty('${item.id}', -1)" style="width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); cursor: pointer; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">-</button>
-                        <button type="button" onclick="window.modManualQty('${item.id}', 1)" style="width: 22px; height: 22px; border-radius: 6px; border: none; background: var(--theme-accent); color: #fff; cursor: pointer; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">+</button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    window.modManualQty = function(id, delta) {
-        const item = manualCart.find(i => String(i.id) === String(id));
-        if (item) {
-            item.qty += delta;
-            if (item.qty <= 0) manualCart = manualCart.filter(i => String(i.id) !== String(id));
-            updateManualCart();
-            renderStep2CartList();
-            renderManualProducts();
-            if (manualCart.length === 0) window.goToManualStep(1);
-        }
-    };
 
     function updateManualCart() {
-        const badgeCountEl = document.getElementById('manual-cart-count-badge');
-        const totalStep1El = document.getElementById('manual-order-total-step1');
-        const totalEl      = document.getElementById('manual-order-total');
+        const hasItems = manualCart.length > 0;
+        cartSection.style.display = 'flex'; // Always show side column
 
-        const count = manualCart.reduce((s, i) => s + i.qty, 0);
+        if (!hasItems) {
+            cartItems.innerHTML = `
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-dim); gap:0.5rem; opacity:0.5; padding-top:2rem;">
+                    <i data-lucide="shopping-cart" style="width:24px; height:24px;"></i>
+                    <span style="font-size:0.75rem;">Sin productos</span>
+                </div>`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+            cartItems.innerHTML = manualCart.map(item => `
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:0.4rem 0.6rem;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.02);">
+                    <span style="color:var(--text-dim);font-weight:600;">${item.qty}x ${item.name}</span>
+                    <div style="display:flex;align-items:center;gap:0.7rem;">
+                        <span style="font-weight:800;color:var(--theme-accent);">$${(item.price * item.qty).toLocaleString('es-CO')}</span>
+                        <button type="button" class="manual-cart-del" data-id="${item.id}" style="background:rgba(255,0,0,0.1);border:none;color:#ff4444;cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Listeners for cart item deletion (must re-bind after each render)
+        cartItems.querySelectorAll('.manual-cart-del').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                manualCart = manualCart.filter(i => String(i.id) !== String(id));
+                updateManualCart();
+                renderManualProducts();
+            };
+        });
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
         const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
-        const grandTotal = baseTotal + delFee;
-
-        if (badgeCountEl) badgeCountEl.textContent = count;
-        if (totalStep1El) totalStep1El.textContent = '$' + baseTotal.toLocaleString('es-CO');
-        if (totalEl) totalEl.textContent = '$' + grandTotal.toLocaleString('es-CO');
+        totalEl.textContent = '$' + (baseTotal + delFee).toLocaleString('es-CO');
     }
 
     // --- Delivery buttons ---
     document.querySelectorAll('.manual-delivery-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            // Reset previous data
             selectedDelivery = btn.dataset.type;
             
             document.querySelectorAll('.manual-delivery-btn').forEach(b => {
@@ -6534,30 +6442,31 @@ document.addEventListener('click', (e) => {
             btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
             btn.style.borderColor = 'transparent';
             btn.style.color = '#ffffff';
-            btn.style.boxShadow = '0 4px 14px rgba(245,158,11,0.35)';
+            btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
 
+            // Clear dynamic inputs area to ensure fresh state
             deliveryDetailEl.innerHTML = '';
             deliveryDetailEl.style.display = 'block';
-
             if (selectedDelivery === 'dine-in') {
                 const tables = state.config.tableCount || 10;
                 let btns = '';
                 for (let i = 1; i <= tables; i++) {
-                    btns += `<button type="button" class="manual-table-num-btn" data-num="${i}" style="min-width:44px; height:44px; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.04); color:var(--text); cursor:pointer; font-weight:800; font-size:0.95rem; flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center;">${i}</button>`;
+                    btns += `<button type="button" class="manual-table-num-btn" data-num="${i}" style="min-width:42px; height:42px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color:var(--text-dim); cursor:pointer; font-weight:800; font-size:0.95rem; flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center;">${i}</button>`;
                 }
                 deliveryDetailEl.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                    <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.4rem;">
                         <label style="font-size:0.78rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Seleccionar Mesa:</label>
                         <div style="position:relative; display:flex; align-items:center; gap:0.4rem;">
-                            <button type="button" id="manual-table-nav-prev" style="display:none; min-width:34px; height:34px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--theme-accent); cursor:pointer; flex-shrink:0; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; transition:all 0.2s;" title="Mesas anteriores">‹</button>
+                            <button type="button" id="manual-table-nav-prev" style="display:none; min-width:32px; height:32px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--theme-accent); cursor:pointer; flex-shrink:0; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; transition:all 0.2s;" title="Mesas anteriores">‹</button>
                             <div id="manual-table-list" style="display:flex; gap:0.6rem; overflow-x:auto; scroll-behavior:smooth; padding: 0.4rem 0.2rem 0.8rem 0; scrollbar-width:none; -ms-overflow-style:none; flex-grow:1;">
                                 ${btns}
                             </div>
-                            <button type="button" id="manual-table-nav-next" style="display:none; min-width:34px; height:34px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--theme-accent); cursor:pointer; flex-shrink:0; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; transition:all 0.2s;" title="Más mesas">›</button>
+                            <button type="button" id="manual-table-nav-next" style="display:none; min-width:32px; height:32px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--theme-accent); cursor:pointer; flex-shrink:0; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; transition:all 0.2s;" title="Más mesas">›</button>
                         </div>
                         <input type="hidden" id="manual-table-val" value="">
                     </div>`;
 
+                // Add style to hide scrollbar
                 const styleId = 'hide-manual-scroll';
                 if (!document.getElementById(styleId)) {
                     const style = document.createElement('style');
@@ -6566,6 +6475,7 @@ document.addEventListener('click', (e) => {
                     document.head.appendChild(style);
                 }
 
+                // Control de desbordamiento (flechas de desplazamiento)
                 const listEl = document.getElementById('manual-table-list');
                 const prevBtn = document.getElementById('manual-table-nav-prev');
                 const nextBtn = document.getElementById('manual-table-nav-next');
@@ -6583,8 +6493,12 @@ document.addEventListener('click', (e) => {
                 }
 
                 if (listEl && prevBtn && nextBtn) {
-                    prevBtn.addEventListener('click', () => { listEl.scrollBy({ left: -180, behavior: 'smooth' }); });
-                    nextBtn.addEventListener('click', () => { listEl.scrollBy({ left: 180, behavior: 'smooth' }); });
+                    prevBtn.addEventListener('click', () => {
+                        listEl.scrollBy({ left: -180, behavior: 'smooth' });
+                    });
+                    nextBtn.addEventListener('click', () => {
+                        listEl.scrollBy({ left: 180, behavior: 'smooth' });
+                    });
                     listEl.addEventListener('scroll', updateTableNavVisibility);
                     setTimeout(updateTableNavVisibility, 80);
                 }
@@ -6593,38 +6507,23 @@ document.addEventListener('click', (e) => {
                     btn.addEventListener('click', function() {
                         deliveryDetailEl.querySelectorAll('.manual-table-num-btn').forEach(b => {
                             b.style.borderColor = 'var(--glass-border)';
-                            b.style.background = 'rgba(255,255,255,0.04)';
-                            b.style.color = 'var(--text)';
+                            b.style.background = 'rgba(255,255,255,0.03)';
+                            b.style.color = 'var(--text-dim)';
                             b.style.boxShadow = 'none';
                         });
                         this.style.borderColor = 'transparent';
                         this.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
                         this.style.color = '#ffffff';
-                        this.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
+                        this.style.boxShadow = '0 3px 8px rgba(245,158,11,0.35)';
                         document.getElementById('manual-table-val').value = 'Mesa ' + this.dataset.num;
-                        
-                        const nameInp = document.getElementById('manual-cust-name');
-                        if (nameInp && !nameInp.value.trim()) {
-                            nameInp.value = 'Mesa ' + this.dataset.num;
-                        }
                     });
                 });
             } else if (selectedDelivery === 'takeout') {
-                deliveryDetailEl.innerHTML = `
-                    <label style="font-size:0.78rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:0.4rem;">¿Cuándo recoge?</label>
-                    <div style="display:flex; gap:0.6rem;">
-                        <button type="button" id="manual-tkout-here" style="flex:1; padding:0.65rem; border-radius:12px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-weight:800; font-size:0.85rem;">Estoy aquí en el local</button>
-                        <button type="button" id="manual-tkout-later" style="flex:1; padding:0.65rem; border-radius:12px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-weight:800; font-size:0.85rem;">Paso a recoger en unos min</button>
-                    </div>
-                    <input type="hidden" id="manual-takeout-val" value="">`;
-
-                document.getElementById('manual-tkout-here').addEventListener('click', function(){ selectTakeout(this, 'Estoy en el local'); });
+                deliveryDetailEl.innerHTML = `<label style="font-size:0.75rem;color:var(--theme-accent);font-weight:700;display:block;margin-bottom:0.3rem;">¿Cuándo recoge?</label><div style="display:flex;gap:0.5rem;"><button type="button" id="manual-tkout-here" style="flex:1;padding:0.55rem;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-dim);cursor:pointer;font-weight:700;font-size:0.82rem;">Estoy aquí</button><button type="button" id="manual-tkout-later" style="flex:1;padding:0.55rem;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-dim);cursor:pointer;font-weight:700;font-size:0.82rem;">Paso por ella</button></div><input type="hidden" id="manual-takeout-val" value="">`;
+                document.getElementById('manual-tkout-here').addEventListener('click', function(){ selectTakeout(this, 'Estoy aquí'); });
                 document.getElementById('manual-tkout-later').addEventListener('click', function(){ selectTakeout(this, 'Paso por ella'); });
             } else if (selectedDelivery === 'delivery') {
-                deliveryDetailEl.innerHTML = `
-                    <label style="font-size:0.78rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:0.4rem;">Dirección de Entrega</label>
-                    <input type="text" id="manual-address-inp" maxlength="40" placeholder="Ej: Calle 10 #5-23 Apt 201" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:inherit; font-size:0.88rem; box-sizing:border-box; font-weight:700;">
-                    <p style="font-size:0.75rem; color:var(--text-dim); margin-top:0.4rem; font-weight:600;">+ Tarifa de domicilio: <span style="color:var(--theme-accent); font-weight:900;">$${(state.config.deliveryFee||0).toLocaleString('es-CO')}</span></p>`;
+                deliveryDetailEl.innerHTML = `<label style="font-size:0.75rem;color:var(--theme-accent);font-weight:700;display:block;margin-bottom:0.3rem;">Dirección (máx. 30 caracteres)</label><input type="text" id="manual-address-inp" maxlength="30" placeholder="Ej: Calle 10 #5-23" style="width:100%;padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.05);color:inherit;font-size:0.85rem;box-sizing:border-box;"><p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.4rem;font-weight:600;">+ Costo domicilio: <span style="color:var(--theme-accent);">$${(state.config.deliveryFee||0).toLocaleString('es-CO')}</span></p>`;
             }
 
             updateManualCart();
@@ -6643,7 +6542,7 @@ document.addEventListener('click', (e) => {
             btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
             btn.style.borderColor = 'transparent';
             btn.style.color = '#ffffff';
-            btn.style.boxShadow = '0 4px 14px rgba(245,158,11,0.35)';
+            btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
             const hiddenPay = document.getElementById('manual-cust-payment');
             if (hiddenPay) hiddenPay.value = btn.dataset.value;
         });
@@ -6659,58 +6558,56 @@ document.addEventListener('click', (e) => {
         btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
         btn.style.borderColor = 'transparent';
         btn.style.color = '#ffffff';
-        btn.style.boxShadow = '0 4px 14px rgba(245,158,11,0.35)';
+        btn.style.boxShadow = '0 3px 10px rgba(245,158,11,0.35)';
         document.getElementById('manual-takeout-val').value = val;
     }
 
-    // --- Confirmación Final del Pedido ---
-    if (btnConfirm) {
-        btnConfirm.addEventListener('click', () => {
-            if (manualCart.length === 0) { showToast('Agrega al menos un producto', 'error'); return; }
-            if (!selectedDelivery) { showToast('Selecciona el tipo de servicio (Mesa, Llevar o Domicilio)', 'error'); return; }
+    // --- Confirm ---
+    btnConfirm.addEventListener('click', () => {
+        if (manualCart.length === 0) { showToast('Agrega al menos un producto', 'error'); return; }
+        if (!selectedDelivery) { showToast('Selecciona cómo recibirá el pedido', 'error'); return; }
 
-            let address = '';
-            if (selectedDelivery === 'dine-in') {
-                address = (document.getElementById('manual-table-val') || {}).value || '';
-                if (!address) { showToast('Selecciona el número de mesa', 'error'); return; }
-            } else if (selectedDelivery === 'takeout') {
-                address = (document.getElementById('manual-takeout-val') || {}).value || '';
-                if (!address) { showToast('Selecciona cuándo se recoge el pedido', 'error'); return; }
-            } else if (selectedDelivery === 'delivery') {
-                address = (document.getElementById('manual-address-inp') || {}).value || '';
-                if (!address) { showToast('Ingresa la dirección de entrega', 'error'); return; }
-            }
+        let address = '';
+        if (selectedDelivery === 'dine-in') {
+            address = (document.getElementById('manual-table-val') || {}).value || '';
+            if (!address) { showToast('Selecciona el número de mesa', 'error'); return; }
+        } else if (selectedDelivery === 'takeout') {
+            address = (document.getElementById('manual-takeout-val') || {}).value || '';
+            if (!address) { showToast('Selecciona cuándo recoge el pedido', 'error'); return; }
+        } else if (selectedDelivery === 'delivery') {
+            address = (document.getElementById('manual-address-inp') || {}).value || '';
+            if (!address) { showToast('Ingresa la dirección de entrega', 'error'); return; }
+        }
 
-            const nameInput = document.getElementById('manual-cust-name')?.value.trim();
-            const name    = nameInput || (selectedDelivery === 'dine-in' ? address : 'Presencial');
-            const phone   = document.getElementById('manual-cust-phone')?.value.trim() || '---';
-            const payment = document.getElementById('manual-cust-payment')?.value;
-            const note    = document.getElementById('manual-cust-note')?.value.trim();
+        const name    = document.getElementById('manual-cust-name').value.trim() || 'Presencial';
+        const phone   = document.getElementById('manual-cust-phone').value.trim() || '---';
+        const payment = document.getElementById('manual-cust-payment').value;
+        const note    = document.getElementById('manual-cust-note').value.trim();
 
-            if (!payment) { showToast('Selecciona el método de pago', 'error'); return; }
+        if (!payment) { showToast('Selecciona el método de pago', 'error'); return; }
 
-            const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
-            const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
+        const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
+        const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
 
-            let orderCounter = parseInt(localStorage.getItem('streetfeed_order_counter') || '0');
-            orderCounter++;
-            localStorage.setItem('streetfeed_order_counter', orderCounter.toString());
+        let orderCounter = parseInt(localStorage.getItem('streetfeed_order_counter') || '0');
+        orderCounter++;
+        localStorage.setItem('streetfeed_order_counter', orderCounter.toString());
 
-            const getAttendedByInfo = (isManual = false) => {
-                try {
-                    const empStr = localStorage.getItem('streetfeed_employee_user');
-                    if (empStr) {
-                        const emp = JSON.parse(empStr);
+        const getAttendedByInfo = (isManual = false) => {
+            try {
+                const empStr = localStorage.getItem('streetfeed_employee_user');
+                if (empStr) {
+                    const emp = JSON.parse(empStr);
                         const rMap = { 'mesero': 'Mesero', 'cajero': 'Cajero', 'cocina': 'Cocina', 'domiciliario': 'Domiciliario', 'owner': 'Propietario', 'propietario': 'Propietario', 'admin': 'Administrador' };
                         const roleTitle = rMap[emp.role] || 'Colaborador';
                         return `${formatShortName(emp.name)} (${roleTitle})`;
-                    }
-                } catch(e) {}
-                if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
-                    return 'Propietario / Administrador';
                 }
-                return isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)';
-            };
+            } catch(e) {}
+            if (localStorage.getItem('streetfeed_isLoggedIn') === 'true') {
+                return 'Propietario / Administrador';
+            }
+            return isManual ? 'Propietario / Administrador' : 'Cliente (Menú Digital)';
+        };
 
         const orderData = {
             id: 'ORD-' + orderCounter,
@@ -6747,16 +6644,14 @@ document.addEventListener('click', (e) => {
             setTimeout(() => window.printKitchenTicket(orderData.id), 200);
         }
     });
-}
 })();
 
 // =============================================
 // LIBRETITA DE GASTOS - LOGIC & PERSISTENCE
 // =============================================
 window.checkExpensesLockState = function() {
-    const configuredPass = (typeof state !== 'undefined' && state.auth && state.auth.expensePass) ? state.auth.expensePass : '';
-    const isLoggedIn = (typeof state !== 'undefined' && state.isLoggedIn) || localStorage.getItem('streetfeed_isLoggedIn') === 'true';
-    if (!configuredPass || configuredPass === '' || isLoggedIn) {
+    const configuredPass = state.auth.expensePass || '';
+    if (configuredPass === '') {
         sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
     }
 
@@ -6765,24 +6660,12 @@ window.checkExpensesLockState = function() {
     const content = document.getElementById('expenses-ledger-content');
     
     if (isUnlocked) {
-        if (lockscreen) {
-            lockscreen.classList.add('hidden');
-            lockscreen.style.display = 'none';
-        }
-        if (content) {
-            content.classList.remove('hidden');
-            content.style.display = 'block';
-        }
+        if (lockscreen) lockscreen.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
         renderExpenses();
     } else {
-        if (lockscreen) {
-            lockscreen.classList.remove('hidden');
-            lockscreen.style.display = 'flex';
-        }
-        if (content) {
-            content.classList.add('hidden');
-            content.style.display = 'none';
-        }
+        if (lockscreen) lockscreen.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
         const passInp = document.getElementById('expenses-pass-input');
         if (passInp) {
             passInp.value = '';
@@ -6795,10 +6678,15 @@ window.verifyExpensesPassword = function() {
     const passInp = document.getElementById('expenses-pass-input');
     if (!passInp) return;
     const password = passInp.value.trim();
-    const configuredPass = (typeof state !== 'undefined' && state.auth && state.auth.expensePass) ? state.auth.expensePass : '';
-    const masterPass = (typeof state !== 'undefined' && state.auth && state.auth.pass) ? state.auth.pass : '123456';
+    const configuredPass = state.auth.expensePass || '';
     
-    if (!configuredPass || configuredPass === '' || password === configuredPass || password === masterPass) {
+    if (configuredPass === '') {
+        sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
+        checkExpensesLockState();
+        return;
+    }
+    
+    if (password === configuredPass) {
         sessionStorage.setItem('streetfeed_expenses_unlocked', 'true');
         showToast('¡Acceso autorizado con éxito!', 'success');
         checkExpensesLockState();
@@ -7328,70 +7216,37 @@ async function loadEmployees() {
         const params = new URLSearchParams();
         if (instanceId) params.append('instanceId', instanceId);
 
-        let fetchedList = null;
-        try {
-            const res = await fetch(`/api/modules/streetfeed/employees?${params.toString()}`, { headers });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.employees && Array.isArray(data.employees) && data.employees.length > 0) {
-                    fetchedList = data.employees;
-                }
-            }
-        } catch(e) {}
+        const res = await fetch(`/api/modules/streetfeed/employees?${params.toString()}`, { headers });
+        if (res.ok) {
+            const data = await res.json();
+            const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
+            let metaObj = {};
+            try { metaObj = JSON.parse(metaStr); } catch (e) {}
 
-        if (!fetchedList || fetchedList.length === 0) {
-            // Fallback to local storage cache if server returns 0 or offline
-            try {
-                let cachedStr = localStorage.getItem('streetfeed_employees_cache') || localStorage.getItem('streetfeed_employees');
-                if ((!cachedStr || cachedStr === '[]') && Storage.prototype.getItem.__isPatched) {
-                    const proto = Object.getPrototypeOf(localStorage);
-                    if (proto && proto.getItem) {
-                        cachedStr = proto.getItem.call(localStorage, 'streetfeed_employees_cache') || proto.getItem.call(localStorage, 'streetfeed_employees');
-                    }
-                }
-                if (cachedStr) {
-                    const parsed = JSON.parse(cachedStr);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        fetchedList = parsed;
-                    }
-                }
-            } catch (e) {}
-        }
-
-        const rawList = fetchedList || [];
-        const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
-        let metaObj = {};
-        try { metaObj = JSON.parse(metaStr); } catch (e) {}
-
-        employeesList = rawList.map(emp => {
-            const meta = metaObj[emp.id] || metaObj[emp.username] || metaObj[(emp.name || '').toLowerCase()] || {};
-            return {
-                ...emp,
-                avatarUrl: emp.avatarUrl || emp.avatar || emp.avatar_url || meta.avatarUrl || '',
-                commissionRate: (emp.commissionRate !== undefined && emp.commissionRate !== '') ? emp.commissionRate : (meta.commissionRate !== undefined ? meta.commissionRate : 10),
-                gender: emp.gender || meta.gender || '',
-                age: emp.age || meta.age || '',
-                phone: emp.phone || meta.phone || '',
-                address: emp.address || meta.address || '',
-                neighborhood: emp.neighborhood || meta.neighborhood || ''
-            };
-        });
-
-        if (employeesList.length > 0) {
+            employeesList = (data.employees || []).map(emp => {
+                const meta = metaObj[emp.id] || metaObj[emp.username] || metaObj[(emp.name || '').toLowerCase()] || {};
+                return {
+                    ...emp,
+                    avatarUrl: emp.avatarUrl || emp.avatar || emp.avatar_url || meta.avatarUrl || '',
+                    commissionRate: (emp.commissionRate !== undefined && emp.commissionRate !== '') ? emp.commissionRate : (meta.commissionRate !== undefined ? meta.commissionRate : 10),
+                    gender: emp.gender || meta.gender || '',
+                    age: emp.age || meta.age || '',
+                    phone: emp.phone || meta.phone || '',
+                    address: emp.address || meta.address || '',
+                    neighborhood: emp.neighborhood || meta.neighborhood || ''
+                };
+            });
             try { localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList)); } catch (e) {}
+            renderEmployeesTable();
+            if (typeof populateEmployeeDropdown === 'function') populateEmployeeDropdown();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            console.error('Error del servidor al cargar empleados:', err);
+            if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error al cargar personal: ${err.error || res.status}</td></tr>`;
         }
-
-        renderEmployeesTable();
-        renderEmployeesGrid();
-        if (typeof populateEmployeeDropdown === 'function') populateEmployeeDropdown();
     } catch (err) {
         console.error('Error cargando empleados:', err);
-        try {
-            const cachedStr = localStorage.getItem('streetfeed_employees_cache') || localStorage.getItem('streetfeed_employees');
-            if (cachedStr) employeesList = JSON.parse(cachedStr) || [];
-        } catch(e) {}
-        renderEmployeesTable();
-        renderEmployeesGrid();
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error de conexión al cargar personal.</td></tr>`;
     }
 }
 
@@ -8439,7 +8294,7 @@ window.handleEmpAvatarUpload = function(e) {
 function openNewEmployeeModal() {
     requireSecurityAuth(() => {
         _performOpenNewEmployeeModal();
-    }, false);
+    }, true);
 }
 
 function _performOpenNewEmployeeModal() {
@@ -8541,57 +8396,30 @@ async function handleSaveEmployee(e) {
             });
         }
 
-        const targetId = id || 'emp_' + Date.now();
-        const empObject = { id: targetId, name, username, pin, role, status, avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
-
         if (res.ok) {
             const resData = await res.json().catch(() => ({}));
-            const finalId = id || (resData.employee && resData.employee.id) || targetId;
-            empObject.id = finalId;
+            const targetId = id || (resData.employee && resData.employee.id) || username || name.toLowerCase();
 
             const metaStr = localStorage.getItem('streetfeed_employees_meta') || '{}';
             let metaObj = {};
             try { metaObj = JSON.parse(metaStr); } catch (e) {}
 
-            metaObj[finalId] = { avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
-            if (username) metaObj[username] = metaObj[finalId];
-            if (name) metaObj[name.toLowerCase()] = metaObj[finalId];
+            metaObj[targetId] = { avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
+            if (username) metaObj[username] = metaObj[targetId];
+            if (name) metaObj[name.toLowerCase()] = metaObj[targetId];
+
             localStorage.setItem('streetfeed_employees_meta', JSON.stringify(metaObj));
-
-            // Sync with local employeesList array
-            const idx = employeesList.findIndex(e => String(e.id) === String(finalId) || String(e.username) === String(username));
-            if (idx >= 0) employeesList[idx] = { ...employeesList[idx], ...empObject };
-            else employeesList.push(empObject);
-
-            try {
-                localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList));
-                localStorage.setItem('streetfeed_employees', JSON.stringify(employeesList));
-            } catch(e) {}
 
             showToast(id ? 'Colaborador actualizado' : 'Colaborador creado exitosamente', 'success');
             closeEmployeeModal();
             loadEmployees();
         } else {
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json();
             showToast(data.error || 'Error al guardar colaborador', 'error');
         }
     } catch (err) {
-        console.error('Error guardando empleado (fallback local activo):', err);
-        const localId = id || 'emp_' + Date.now();
-        const empObject = { id: localId, name, username, pin, role, status, avatarUrl, commissionRate, gender, age, phone, address, neighborhood };
-        const idx = employeesList.findIndex(e => String(e.id) === String(localId) || String(e.username) === String(username));
-        if (idx >= 0) employeesList[idx] = { ...employeesList[idx], ...empObject };
-        else employeesList.push(empObject);
-
-        try {
-            localStorage.setItem('streetfeed_employees_cache', JSON.stringify(employeesList));
-            localStorage.setItem('streetfeed_employees', JSON.stringify(employeesList));
-        } catch(e) {}
-
-        showToast(id ? 'Colaborador actualizado' : 'Colaborador guardado localmente', 'success');
-        closeEmployeeModal();
-        renderEmployeesTable();
-        renderEmployeesGrid();
+        console.error('Error guardando empleado:', err);
+        showToast('Error de red al guardar colaborador', 'error');
     }
 }
 
