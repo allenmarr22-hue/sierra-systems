@@ -5367,7 +5367,7 @@ window.togglePaymentDropdown = function(orderId, e) {
     if (!menu) {
         menu = document.createElement('div');
         menu.id = 'global-payment-dropdown';
-        menu.style.cssText = 'display:none; position:fixed; min-width:160px; background:#1e293b; border:1px solid var(--glass-border); border-radius:12px; padding:6px; box-shadow:0 15px 35px rgba(0,0,0,0.65); z-index:100090;';
+        menu.style.cssText = 'display:none; position:fixed; width:140px; background:#1e293b; border:1px solid var(--glass-border); border-radius:12px; padding:4px; box-shadow:0 15px 35px rgba(0,0,0,0.65); z-index:100090;';
         document.body.appendChild(menu);
     }
 
@@ -5382,37 +5382,40 @@ window.togglePaymentDropdown = function(orderId, e) {
 
     menu.dataset.activeOrderId = String(orderId);
     menu.innerHTML = `
-        <div style="font-size:0.68rem; color:var(--text-dim); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:4px 8px 6px 8px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">Cambiar Pago</div>
-        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Efectivo');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #4caf50; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.15)'" onmouseout="this.style.background='transparent'">
-            <i data-lucide="banknote" style="width: 14px; height: 14px;"></i> Efectivo
+        <div style="font-size:0.65rem; color:var(--text-dim); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:4px 6px 5px 6px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">Cambiar Pago</div>
+        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Efectivo');" style="padding: 6px 8px; font-size: 0.75rem; font-weight: 800; color: #4caf50; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 7px; transition: background 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.15)'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="banknote" style="width: 13px; height: 13px;"></i> Efectivo
         </div>
-        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Transferencia');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #3b82f6; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
-            <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i> Transferencia
+        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Transferencia');" style="padding: 6px 8px; font-size: 0.75rem; font-weight: 800; color: #3b82f6; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 7px; transition: background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="smartphone" style="width: 13px; height: 13px;"></i> Transferencia
         </div>
-        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Tarjeta');" style="padding: 8px 10px; font-size: 0.78rem; font-weight: 800; color: #a855f7; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
-            <i data-lucide="credit-card" style="width: 14px; height: 14px;"></i> Datáfono
+        <div onclick="event.stopPropagation(); window.changeOrderPaymentMethod('${orderId}', 'Tarjeta');" style="padding: 6px 8px; font-size: 0.75rem; font-weight: 800; color: #a855f7; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 7px; transition: background 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="credit-card" style="width: 13px; height: 13px;"></i> Datáfono
         </div>
     `;
+
+    menu.style.display = 'block';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [menu] });
 
     const targetEl = e ? e.currentTarget : null;
     if (targetEl) {
         const rect = targetEl.getBoundingClientRect();
-        let top = rect.bottom + 6;
+        const menuWidth = menu.offsetWidth || 140;
+        let top = rect.bottom + 4;
         let left = rect.left;
 
-        if (top + 160 > window.innerHeight) {
-            top = rect.top - 160;
+        if (left + menuWidth > window.innerWidth - 10) {
+            left = window.innerWidth - menuWidth - 10;
         }
-        if (left + 160 > window.innerWidth) {
-            left = window.innerWidth - 170;
+        if (left < 10) left = 10;
+
+        if (top + 150 > window.innerHeight) {
+            top = rect.top - 150;
         }
 
         menu.style.top = top + 'px';
         menu.style.left = left + 'px';
     }
-
-    menu.style.display = 'block';
-    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [menu] });
 };
 
 document.addEventListener('click', function(e) {
