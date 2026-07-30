@@ -6236,7 +6236,7 @@ function renderTablesModal() {
                 </div>
                 <div style="font-size:2rem; font-weight:900; color:#ef4444; line-height:1; margin-top:0.2rem;">Mesa ${i}</div>
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:0.4rem; margin-top:auto;">
-                    <span style="font-size:0.72rem; color:rgba(239,68,68,0.85); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1;">${tableInfo.customerName}</span>
+                    <span style="font-size:0.78rem; color:rgba(239,68,68,0.95); font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1;">${tableInfo.customerName}</span>
                     <span style="font-size:0.78rem; color:rgba(239,68,68,1); font-weight:900; white-space:nowrap; flex-shrink:0;">$${tableInfo.total.toLocaleString('es-CO')}</span>
                 </div>
             </div>`;
