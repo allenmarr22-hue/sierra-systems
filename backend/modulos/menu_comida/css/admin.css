@@ -1229,11 +1229,78 @@ body.light-mode .dropdown-menu li:hover {
     border: 1px solid var(--glass-border);
 }
 
+/* Icon Selector Dropdown & Grid Fix */
+#appearance-tab,
+.config-card,
+.admin-cat-group,
+.admin-cat-content,
+#icons-accordion,
+#icons-wrapper,
+.icon-browser-controls {
+    overflow: visible !important;
+}
+
+#icon-cat-dropdown .dropdown-menu {
+    display: none !important;
+    position: absolute !important;
+    top: calc(100% + 6px) !important;
+    left: 0 !important;
+    min-width: 220px !important;
+    background: #131626 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 14px !important;
+    padding: 0.5rem !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8) !important;
+    z-index: 999999 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+body.light-mode #icon-cat-dropdown .dropdown-menu {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+#icon-cat-dropdown.open .dropdown-menu {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+}
+
+#icon-cat-dropdown .dropdown-menu li {
+    padding: 0.7rem 1rem !important;
+    border-radius: 10px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+#icon-cat-dropdown .dropdown-menu li:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+body.light-mode #icon-cat-dropdown .dropdown-menu li:hover {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+
+#icon-cat-dropdown .dropdown-menu li.active {
+    background: rgba(var(--theme-accent-rgb, 255, 83, 123), 0.18) !important;
+    color: var(--theme-accent) !important;
+    font-weight: 700 !important;
+}
+
 .icon-item-btn {
     aspect-ratio: 1/1 !important;
-    background: rgba(255, 255, 255, 0.07) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 16px !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 14px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -1243,11 +1310,12 @@ body.light-mode .dropdown-menu li:hover {
     filter: none !important;
     -webkit-filter: none !important;
     box-shadow: none !important;
+    text-shadow: none !important;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .icon-item-btn span {
-    font-size: 1.85rem !important;
+    font-size: 1.9rem !important;
     line-height: 1 !important;
     opacity: 1 !important;
     filter: none !important;
@@ -1259,8 +1327,8 @@ body.light-mode .dropdown-menu li:hover {
 }
 
 .icon-item-btn i {
-    width: 22px !important;
-    height: 22px !important;
+    width: 24px !important;
+    height: 24px !important;
     color: #ffffff !important;
     opacity: 1 !important;
     filter: none !important;
@@ -1268,21 +1336,20 @@ body.light-mode .dropdown-menu li:hover {
 }
 
 .icon-item-btn:hover span {
-    transform: scale(1.18) !important;
+    transform: scale(1.2) !important;
 }
 
 .icon-item-btn:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
     transform: translateY(-2px) !important;
-    border-color: var(--theme-accent) !important;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.3) !important;
 }
 
 .icon-item-btn.active {
-    background: rgba(var(--theme-accent-rgb, 255, 83, 123), 0.25) !important;
-    border-color: var(--theme-accent) !important;
+    background: rgba(var(--theme-accent-rgb, 255, 83, 123), 0.2) !important;
+    border: 1.5px solid var(--theme-accent) !important;
     color: var(--theme-accent) !important;
-    box-shadow: 0 0 16px rgba(var(--theme-accent-rgb, 255, 83, 123), 0.4) !important;
+    box-shadow: 0 0 14px rgba(var(--theme-accent-rgb, 255, 83, 123), 0.3) !important;
 }
 
 .icon-item-btn.active i {
