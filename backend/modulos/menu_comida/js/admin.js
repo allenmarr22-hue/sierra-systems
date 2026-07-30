@@ -6733,6 +6733,7 @@ document.addEventListener('click', (e) => {
             setTimeout(() => window.printKitchenTicket(orderData.id), 200);
         }
     });
+}
 })();
 
 // =============================================
