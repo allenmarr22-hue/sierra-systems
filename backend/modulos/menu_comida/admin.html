@@ -581,14 +581,14 @@
                         
                         <div style="display: flex; gap: 0.6rem; align-items: center;">
                             <!-- Sound Notification Toggle (Icon Only) -->
-                            <button id="sound-toggle" class="header-action-btn" title="Activar/Silenciar alarma de pedidos" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
+                            <button id="sound-toggle" onclick="window.toggleSoundMode()" class="header-action-btn" title="Activar/Silenciar alarma de pedidos" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
                                 <span id="sound-icon-container" style="display: flex; align-items: center; justify-content: center;">
                                     <i data-lucide="bell" id="sound-icon" style="width: 20px; height: 20px; color: #10b981;"></i>
                                 </span>
                             </button>
 
                             <!-- Theme Toggle (Icon Only) -->
-                            <button id="theme-toggle" class="header-action-btn" title="Cambiar Modo Día / Noche" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
+                            <button id="theme-toggle" onclick="window.toggleThemeMode()" class="header-action-btn" title="Cambiar Modo Día / Noche" style="width: 42px; height: 42px; border-radius: 12px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.2s;">
                                 <span id="theme-icon-container" style="display: flex; align-items: center; justify-content: center;">
                                     <i data-lucide="moon" id="theme-icon" style="width: 20px; height: 20px;"></i>
                                 </span>
