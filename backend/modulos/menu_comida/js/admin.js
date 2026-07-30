@@ -5436,18 +5436,28 @@ window.showOrderDetails = function(id) {
     const paymentEl = document.getElementById('detail-customer-payment');
     if (paymentEl) {
         const curPay = order.customer?.payment || 'Efectivo';
-        let displayLabel = 'Efectivo';
+        let displayLabel = 'EFECTIVO';
         let pColor = '#4caf50';
+        let pIcon = 'banknote';
 
         if (curPay === 'Transferencia' || curPay === 'Nequi' || curPay === 'Daviplata') {
-            displayLabel = 'Transf.';
+            displayLabel = 'TRANSF.';
             pColor = '#3b82f6';
+            pIcon = 'smartphone';
         } else if (curPay === 'Tarjeta' || curPay === 'Datáfono' || curPay.toLowerCase().includes('datafono') || curPay.toLowerCase().includes('tarjeta')) {
-            displayLabel = 'Datáfono';
+            displayLabel = 'DATÁFONO';
             pColor = '#8b5cf6';
+            pIcon = 'credit-card';
         }
 
-        paymentEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 800; cursor: pointer; color: ${pColor}; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--glass-border); white-space: nowrap;" onclick="window.togglePaymentDropdown('${order.id}', event);" title="Hacer clic para cambiar método de pago"><span>${displayLabel}</span><i data-lucide="chevron-down" style="width: 10px; height: 10px; color: ${pColor}; flex-shrink: 0;"></i></span>`;
+        const payIconEl = document.getElementById('detail-customer-payment-icon');
+        if (payIconEl) {
+            payIconEl.setAttribute('data-lucide', pIcon);
+            payIconEl.style.color = pColor;
+            if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [payIconEl] });
+        }
+
+        paymentEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 900; font-size: 0.72rem; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; color: ${pColor}; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--glass-border); white-space: nowrap;" onclick="window.togglePaymentDropdown('${order.id}', event);" title="Hacer clic para cambiar método de pago"><span>${displayLabel}</span><i data-lucide="chevron-down" style="width: 10px; height: 10px; color: ${pColor}; flex-shrink: 0;"></i></span>`;
     }
 
     const waiterEl = document.getElementById('detail-customer-waiter');
