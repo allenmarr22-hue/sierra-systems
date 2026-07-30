@@ -1458,14 +1458,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (catFilter) catFilter.value = iconCat;
 
+                window.toggleIconCatDropdown = function(e) {
+                    if (e) e.stopPropagation();
+                    const dropdown = document.getElementById('icon-cat-dropdown');
+                    if (!dropdown) return;
+                    document.querySelectorAll('.custom-dropdown').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('open');
+                    });
+                    dropdown.classList.toggle('open');
+                };
+
                 if (iconTrigger && iconMenu && iconDropdown) {
-                    iconTrigger.onclick = (e) => {
-                        e.stopPropagation();
-                        document.querySelectorAll('.custom-dropdown').forEach(d => {
-                            if (d !== iconDropdown) d.classList.remove('open');
-                        });
-                        iconDropdown.classList.toggle('open');
-                    };
+                    iconTrigger.onclick = window.toggleIconCatDropdown;
 
                     iconMenu.querySelectorAll('li').forEach(li => {
                         li.onclick = (e) => {

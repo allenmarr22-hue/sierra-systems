@@ -1532,41 +1532,7 @@ body.light-mode input[type="date"]::-webkit-calendar-picker-indicator {
     }
 }
 
-.icon-selector-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-    gap: 1rem;
-}
 
-.icon-item-btn {
-    aspect-ratio: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(var(--text-rgb), 0.05);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    color: var(--text-dim);
-    transition: all 0.3s ease;
-}
-
-.icon-item-btn i {
-    width: 24px;
-    height: 24px;
-}
-
-.icon-item-btn:hover {
-    background: rgba(var(--text-rgb), 0.1);
-    transform: translateY(-2px);
-    color: var(--text);
-}
-
-.icon-item-btn.active {
-    background: var(--primary-glow);
-    border-color: var(--primary);
-    color: var(--primary);
-    box-shadow: 0 0 15px var(--primary-glow);
-}
 
 /* ====================================================
    FLUTTER-INSPIRED MOBILE UI (Phones ≤ 768px)

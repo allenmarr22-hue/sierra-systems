@@ -1878,7 +1878,7 @@
                                     </div>
 
                                     <!-- 4. Icons Accordion -->
-                                    <div class="admin-cat-group" id="icons-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1.5rem;">
+                                    <div class="admin-cat-group" id="icons-accordion" style="margin-top: 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: visible !important; margin-bottom: 1.5rem; position: relative;">
                                         <button type="button" class="admin-cat-header" id="toggle-icons-btn" style="background: rgba(255,255,255,0.03);">
                                             <div class="admin-cat-title">
                                                 <i data-lucide="shopping-bag"></i>
@@ -1886,16 +1886,16 @@
                                             </div>
                                             <i data-lucide="chevron-down" class="accordion-icon"></i>
                                         </button>
-                                        <div class="admin-cat-content" id="icons-wrapper" style="padding: 1.5rem; display: none;">
+                                        <div class="admin-cat-content" id="icons-wrapper" style="padding: 1.5rem; display: none; overflow: visible !important; position: relative;">
                                             <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">Explora cientos de iconos organizados por categoría para tu marca.</p>
                                             
-                                            <div class="icon-browser-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                                            <div class="icon-browser-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap; overflow: visible !important; position: relative;">
                                                 <div class="custom-dropdown" id="icon-cat-dropdown" style="min-width: 220px; position: relative; z-index: 100050;">
-                                                    <div class="dropdown-trigger" id="icon-cat-trigger" style="padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.88rem; font-weight: 700; height: 42px; min-width: 220px; justify-content: space-between; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); display: flex; align-items: center; cursor: pointer; transition: all 0.2s;">
+                                                    <div class="dropdown-trigger" id="icon-cat-trigger" onclick="window.toggleIconCatDropdown(event)" style="padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.88rem; font-weight: 700; height: 42px; min-width: 220px; justify-content: space-between; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); display: flex; align-items: center; cursor: pointer; transition: all 0.2s;">
                                                         <span id="icon-cat-current">🍔 Comida y Productos</span>
                                                         <i data-lucide="chevron-down" style="width: 16px; height: 16px; color: var(--theme-accent); margin-left: 6px;"></i>
                                                     </div>
-                                                    <ul class="dropdown-menu" id="icon-cat-menu" style="max-height: 250px; overflow-y: auto; z-index: 100010; background: var(--surface); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.4rem; box-shadow: 0 15px 40px rgba(0,0,0,0.5); backdrop-filter: blur(20px);">
+                                                    <ul class="dropdown-menu" id="icon-cat-menu" style="max-height: 250px; overflow-y: auto; z-index: 100010; background: var(--surface, #131626); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.4rem; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(20px);">
                                                         <li data-value="comida" class="active">🍔 Comida y Productos</li>
                                                         <li data-value="dulces">🍦 Helados y Dulces</li>
                                                         <li data-value="bebidas">🥤 Bebidas</li>
