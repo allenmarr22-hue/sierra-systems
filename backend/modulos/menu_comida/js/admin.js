@@ -6537,15 +6537,11 @@ document.addEventListener('click', (e) => {
                 let btns = '';
                 for (let i = 1; i <= tables; i++) {
                     const isOccupied = !!statusMap[String(i)] || !!statusMap[i];
-                    const bg = isOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)';
-                    const border = isOccupied ? '1.5px solid rgba(239, 68, 68, 0.5)' : '1.5px solid rgba(16, 185, 129, 0.5)';
+                    const bg = isOccupied ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+                    const border = isOccupied ? '1.5px solid #ef4444' : '1.5px solid #10b981';
                     const textColor = isOccupied ? '#ef4444' : '#10b981';
-                    const statusText = isOccupied ? 'Ocupada' : 'Libre';
 
-                    btns += `<button type="button" class="manual-table-num-btn" data-num="${i}" data-occupied="${isOccupied}" style="min-width:54px; height:48px; border-radius:12px; border:${border}; background:${bg}; color:${textColor}; cursor:pointer; font-weight:900; font-size:0.92rem; flex-shrink:0; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:0 0.4rem;">
-                        <span>Mesa ${i}</span>
-                        <span style="font-size:0.62rem; font-weight:800; opacity:0.9; text-transform:uppercase;">${statusText}</span>
-                    </button>`;
+                    btns += `<button type="button" class="manual-table-num-btn" data-num="${i}" data-occupied="${isOccupied}" style="min-width:44px; height:44px; border-radius:12px; border:${border}; background:${bg}; color:${textColor}; cursor:pointer; font-weight:900; font-size:1rem; flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center;">${i}</button>`;
                 }
                 deliveryDetailEl.innerHTML = `
                     <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.4rem;">
@@ -6601,12 +6597,12 @@ document.addEventListener('click', (e) => {
                     btn.addEventListener('click', function() {
                         deliveryDetailEl.querySelectorAll('.manual-table-num-btn').forEach(b => {
                             const wasOccupied = b.dataset.occupied === 'true';
-                            b.style.borderColor = wasOccupied ? '1.5px solid rgba(239, 68, 68, 0.5)' : '1.5px solid rgba(16, 185, 129, 0.5)';
-                            b.style.background = wasOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)';
+                            b.style.border = wasOccupied ? '1.5px solid #ef4444' : '1.5px solid #10b981';
+                            b.style.background = wasOccupied ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
                             b.style.color = wasOccupied ? '#ef4444' : '#10b981';
                             b.style.boxShadow = 'none';
                         });
-                        this.style.borderColor = 'transparent';
+                        this.style.border = '1.5px solid transparent';
                         this.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
                         this.style.color = '#ffffff';
                         this.style.boxShadow = '0 4px 12px rgba(245,158,11,0.4)';
