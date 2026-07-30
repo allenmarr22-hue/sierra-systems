@@ -5465,7 +5465,11 @@ window.showOrderDetails = function(id) {
         footer.innerHTML = printActionBtns + `<button class="admin-btn-action" style="grid-column: span 2; height: 50px; border-radius: 12px; background: rgba(var(--text-rgb), 0.1); color: var(--text); border: 1px solid var(--glass-border); font-weight: 800; cursor: pointer;" onclick="document.getElementById('order-details-modal').classList.add('hidden')">CERRAR DETALLES</button>`;
     }
 
-    document.getElementById('order-details-modal').classList.remove('hidden');
+    const detailsModal = document.getElementById('order-details-modal');
+    if (detailsModal) {
+        detailsModal.classList.remove('hidden');
+        detailsModal.style.display = '';
+    }
     const modalBody = document.querySelector('#order-details-modal .modal-body-pro');
     if (modalBody) modalBody.scrollTop = 0;
     if (window.lucide) lucide.createIcons();
@@ -6370,10 +6374,15 @@ document.addEventListener('click', (e) => {
 
         additionTargetOrderId = String(order.id);
 
-        const detailModal = document.getElementById('order-detail-modal');
-        if (detailModal) detailModal.style.display = 'none';
+        const detailModal = document.getElementById('order-details-modal');
+        if (detailModal) {
+            detailModal.classList.add('hidden');
+            detailModal.style.display = 'none';
+        }
 
         window.openManualOrderModal();
+        const manualModal = document.getElementById('manual-order-modal');
+        if (manualModal) manualModal.style.zIndex = '100010';
 
         const step1Title = document.querySelector('#manual-step-1 h3');
         if (step1Title) {
