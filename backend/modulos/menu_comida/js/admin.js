@@ -6412,8 +6412,8 @@ document.addEventListener('click', (e) => {
                 </div>
             `;
 
-            card.querySelector('.manual-plus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, 1); });
-            card.querySelector('.manual-minus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, -1); });
+            card.querySelector('.manual-plus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, 1, card); });
+            card.querySelector('.manual-minus').addEventListener('click', (e) => { e.stopPropagation(); changeQty(dish, -1, card); });
 
             prodContainer.appendChild(card);
         });
@@ -6421,17 +6421,37 @@ document.addEventListener('click', (e) => {
         if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [prodContainer] });
     }
 
-    function changeQty(dish, delta) {
+    function changeQty(dish, delta, card) {
         let item = manualCart.find(i => i.id === dish.id);
         if (!item) {
             if (delta < 1) return;
-            manualCart.push({ id: dish.id, name: dish.name, price: dish.price || 0, qty: 1, img: dish.img || '' });
+            item = { id: dish.id, name: dish.name, price: dish.price || 0, qty: 1, img: dish.img || '' };
+            manualCart.push(item);
         } else {
             item.qty += delta;
-            if (item.qty <= 0) manualCart = manualCart.filter(i => i.id !== dish.id);
+            if (item.qty <= 0) {
+                manualCart = manualCart.filter(i => i.id !== dish.id);
+                item = null;
+            }
         }
         updateManualCart();
-        renderManualProducts();
+
+        if (card) {
+            const qty = item ? item.qty : 0;
+            const isSelected = qty > 0;
+            const qtyDisplay = card.querySelector('.manual-qty-display');
+            const labelSpan = card.querySelector('span');
+            if (qtyDisplay) {
+                qtyDisplay.textContent = qty;
+                qtyDisplay.style.color = isSelected ? 'var(--theme-accent)' : 'var(--text)';
+            }
+            if (labelSpan) {
+                labelSpan.textContent = isSelected ? 'Seleccionados:' : 'Cantidad:';
+            }
+            card.style.background = isSelected ? 'rgba(247,147,30,0.1)' : 'rgba(255,255,255,0.03)';
+            card.style.borderColor = isSelected ? 'rgba(247,147,30,0.5)' : 'var(--glass-border)';
+            card.style.boxShadow = isSelected ? '0 8px 25px rgba(247,147,30,0.15)' : 'none';
+        }
     }
 
     function renderStep2CartList() {
