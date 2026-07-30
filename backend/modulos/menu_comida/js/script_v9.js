@@ -2286,15 +2286,15 @@ function initCheckout() {
         modal.classList.remove('hidden');
         document.body.classList.add('scroll-lock');
         
-        // Reset payment selector to placeholder state
-        const pLabel = document.getElementById('payment-select-label');
+        // Reset payment selector
         const pHidden = document.getElementById('cust-payment');
-        if (pLabel) {
-            pLabel.textContent = 'Seleccionar método de pago';
-            pLabel.style.opacity = '0.6';
-        }
         if (pHidden) pHidden.value = '';
-        document.querySelectorAll('#payment-select-options .custom-select-option').forEach(o => o.classList.remove('selected'));
+        document.querySelectorAll('.client-pay-btn').forEach(b => {
+            b.style.background = 'rgba(255,255,255,0.05)';
+            b.style.borderColor = 'var(--glass-border)';
+            b.style.color = 'white';
+            b.style.boxShadow = 'none';
+        });
 
         // Reiniciar selector de entrega (nada preseleccionado)
         document.querySelectorAll('.del-type-btn').forEach(b => b.classList.remove('active'));
@@ -2973,37 +2973,21 @@ document.addEventListener('DOMContentLoaded', () => {
 // ================================================
 // CUSTOM SELECT DROPDOWN - Método de Pago
 // ================================================
-function togglePaymentDropdown() {
-    const wrapper = document.getElementById('payment-select-wrapper');
-    if (wrapper) wrapper.classList.toggle('open');
-}
-
-function selectPaymentOption(el) {
-    // Quitar "selected" de todas las opciones
-    document.querySelectorAll('#payment-select-options .custom-select-option').forEach(o => o.classList.remove('selected'));
-    // Marcar la seleccionada
-    el.classList.add('selected');
-    // Actualizar el label visible y el input oculto
-    const value = el.getAttribute('data-value');
-    const label = document.getElementById('payment-select-label');
+function selectClientPayment(btn) {
+    document.querySelectorAll('.client-pay-btn').forEach(b => {
+        b.style.background = 'rgba(255,255,255,0.05)';
+        b.style.borderColor = 'var(--glass-border)';
+        b.style.color = 'white';
+        b.style.boxShadow = 'none';
+    });
+    btn.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+    btn.style.borderColor = 'transparent';
+    btn.style.color = '#ffffff';
+    btn.style.boxShadow = '0 4px 12px rgba(245,158,11,0.4)';
     const hiddenInput = document.getElementById('cust-payment');
-    if (label) {
-        label.textContent = value;
-        label.style.opacity = '1';
-    }
-    if (hiddenInput) hiddenInput.value = value;
-    // Cerrar el dropdown
-    const wrapper = document.getElementById('payment-select-wrapper');
-    if (wrapper) wrapper.classList.remove('open');
+    if (hiddenInput) hiddenInput.value = btn.dataset.value;
 }
-
-// Cerrar el dropdown al hacer click fuera de él
-document.addEventListener('click', function(e) {
-    const wrapper = document.getElementById('payment-select-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-        wrapper.classList.remove('open');
-    }
-});
+window.selectClientPayment = selectClientPayment;
 
 // ====== LISTENER DE CIERRE DE SESIÓN EN TIEMPO REAL DESDE EL PORTAL ======
 window.addEventListener('storage', (e) => {
