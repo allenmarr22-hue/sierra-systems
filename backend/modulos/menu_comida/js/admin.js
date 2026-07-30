@@ -6209,19 +6209,9 @@ document.addEventListener('click', (e) => {
 });
 
 // =============================================================================
-// MODAL DE PEDIDO MANUAL — VISTA POS PRO 2 PASOS
+// MODAL DE PEDIDO MANUAL — VISTA POS PRO 2 PASOS (A PRUEBA DE ERRORES)
 // =============================================================================
 (function() {
-    const modal          = document.getElementById('manual-order-modal');
-    const closeBtn       = document.getElementById('close-manual-order-modal');
-    const prodContainer  = document.getElementById('manual-order-products');
-    const totalEl        = document.getElementById('manual-order-total');
-    const totalStep1El   = document.getElementById('manual-order-total-step1');
-    const badgeCountEl   = document.getElementById('manual-cart-count-badge');
-    const step2CartList  = document.getElementById('manual-step2-cart-list');
-    const btnConfirm     = document.getElementById('btn-confirm-manual-order');
-    const deliveryDetailEl = document.getElementById('manual-delivery-detail');
-
     let manualCart = [];
     let selectedDelivery = null;
 
@@ -6246,7 +6236,21 @@ document.addEventListener('click', (e) => {
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
 
+    window.closeManualModal = function() {
+        const modalEl = document.getElementById('manual-order-modal');
+        if (modalEl) {
+            modalEl.classList.add('hidden');
+            modalEl.style.display = 'none';
+        }
+    };
+
     window.openManualOrderModal = function() {
+        const modalEl = document.getElementById('manual-order-modal');
+        if (!modalEl) {
+            console.error('[POS Pro] Modal #manual-order-modal no encontrado en el DOM.');
+            return;
+        }
+
         manualCart = [];
         selectedDelivery = null;
         if (document.getElementById('manual-cust-name')) document.getElementById('manual-cust-name').value = '';
@@ -6254,6 +6258,8 @@ document.addEventListener('click', (e) => {
         if (document.getElementById('manual-cust-note')) document.getElementById('manual-cust-note').value = '';
         if (document.getElementById('manual-cust-payment')) document.getElementById('manual-cust-payment').value = '';
         if (document.getElementById('manual-product-search')) document.getElementById('manual-product-search').value = '';
+        
+        const deliveryDetailEl = document.getElementById('manual-delivery-detail');
         if (deliveryDetailEl) { deliveryDetailEl.innerHTML = ''; deliveryDetailEl.style.display = 'none'; }
 
         document.querySelectorAll('.manual-delivery-btn, .manual-pay-btn').forEach(b => {
@@ -6266,14 +6272,25 @@ document.addEventListener('click', (e) => {
         window.goToManualStep(1);
         renderManualCategories();
         updateManualCart();
-        modal.classList.remove('hidden');
+
+        modalEl.classList.remove('hidden');
+        modalEl.style.display = 'flex';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     };
 
-    function closeManualModal() {
-        modal.classList.add('hidden');
-    }
-
-    if (closeBtn) closeBtn.onclick = closeManualModal;
+    // Delegación global de clic para asegurar que abrir pedido manual NUNCA falle
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('#btn-new-manual-order');
+        if (btn) {
+            e.preventDefault();
+            window.openManualOrderModal();
+        }
+        const closeBtn = e.target.closest('#close-manual-order-modal');
+        if (closeBtn) {
+            e.preventDefault();
+            window.closeManualModal();
+        }
+    });
 
     function renderManualCategories() {
         const cats = (state.categories || []).filter(c => c.id !== 'todos');
@@ -6326,12 +6343,15 @@ document.addEventListener('click', (e) => {
 
     // --- Tarjetas de Productos en Grid (Paso 1) ---
     function renderManualProducts() {
+        const prodContainer = document.getElementById('manual-order-products');
+        if (!prodContainer) return;
+
         const catFilter = document.getElementById('manual-order-cat-filter');
         const searchEl  = document.getElementById('manual-product-search');
         const catId  = catFilter ? catFilter.value : null;
         const query  = searchEl  ? searchEl.value.toLowerCase().trim() : '';
 
-        let dishes = (state.dishes || []).filter(d => d.active !== false);
+        let dishes = (typeof state !== 'undefined' && state.dishes) ? state.dishes.filter(d => d.active !== false) : [];
         
         if (query) {
             dishes = dishes.filter(d => d.name.toLowerCase().includes(query) || (d.desc && d.desc.toLowerCase().includes(query)));
@@ -6339,7 +6359,6 @@ document.addEventListener('click', (e) => {
             dishes = dishes.filter(d => String(d.cat) === String(catId));
         }
 
-        if (!prodContainer) return;
         prodContainer.innerHTML = '';
 
         if (dishes.length === 0) {
@@ -6416,6 +6435,7 @@ document.addEventListener('click', (e) => {
     }
 
     function renderStep2CartList() {
+        const step2CartList = document.getElementById('manual-step2-cart-list');
         if (!step2CartList) return;
         if (manualCart.length === 0) {
             step2CartList.innerHTML = `<p style="color:var(--text-dim); font-size:0.85rem; margin:0;">No has seleccionado productos.</p>`;
@@ -6452,6 +6472,10 @@ document.addEventListener('click', (e) => {
     };
 
     function updateManualCart() {
+        const badgeCountEl = document.getElementById('manual-cart-count-badge');
+        const totalStep1El = document.getElementById('manual-order-total-step1');
+        const totalEl      = document.getElementById('manual-order-total');
+
         const count = manualCart.reduce((s, i) => s + i.qty, 0);
         const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
         const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
