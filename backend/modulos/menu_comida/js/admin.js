@@ -4877,7 +4877,7 @@ function createOrderCard(order) {
             <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem; overflow: hidden;">
                 <div onclick="event.stopPropagation(); window.openManualOrderForAddition('${order.id}');" title="Anexar productos a este pedido" style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; flex-shrink: 0; cursor: pointer; padding: 3px 8px; border-radius: 8px; background: rgba(var(--theme-accent-rgb, 255,83,123), 0.12); border: 1px dashed var(--theme-accent); transition: all 0.2s;" onmouseover="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.22)'" onmouseout="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.12)'">
                     <i data-lucide="plus-circle" style="width: 12px; color: var(--theme-accent);"></i>
-                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--theme-accent);">${(order.items || []).length} Prod. ➕</span>
+                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--theme-accent);">${(order.items || []).length} Prod.</span>
                 </div>
                 ${paymentBadge}
             </div>
