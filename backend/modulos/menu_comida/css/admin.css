@@ -4750,3 +4750,92 @@ body.light-mode .cash-close-modal-card [style*="background: rgba(255,255,255,0.0
         justify-content: center;
     }
 }
+
+/* ================================================
+   LIGHT MODE ULTRA-CLEAN MODALS & FOOTERS POLISH
+   ================================================ */
+body.light-mode #manual-order-modal .modal-content,
+body.light-mode #cash-close-modal .modal-content,
+body.light-mode #emp-profile-modal .modal-content {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 25px 80px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* Header containers in Light Mode */
+body.light-mode #manual-step-1 > div:first-child,
+body.light-mode #manual-step-2 > div:first-child {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode #manual-order-cat-dropdown .dropdown-trigger,
+body.light-mode #manual-product-search {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode #manual-order-products-container {
+    background: #ffffff !important;
+}
+
+/* Cart Sidebar (Right) in Light Mode */
+body.light-mode #manual-order-cart-section {
+    background: #f8fafc !important;
+    border-left: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode #manual-order-cart-section > div:first-child {
+    background: #f1f5f9 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* Footers & Bottom Bars in Light Mode */
+body.light-mode #manual-step-1 > div:last-child,
+body.light-mode #emp-profile-footer,
+body.light-mode #cash-close-modal .modal-content > div:last-child {
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode #emp-profile-edit-btn,
+body.light-mode #cash-close-modal button[onclick*="exportCashClosePDF"] {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
+}
+
+body.light-mode #emp-profile-edit-btn:hover,
+body.light-mode #cash-close-modal button[onclick*="exportCashClosePDF"]:hover {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+}
+
+body.light-mode .manual-product-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+}
+
+body.light-mode .manual-product-card h4 {
+    color: #0f172a !important;
+}
+
+body.light-mode #emp-profile-hero {
+    background: linear-gradient(135deg, rgba(var(--theme-accent-rgb,255,83,123),0.08) 0%, rgba(99,102,241,0.04) 100%) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode #emp-profile-hero h2 {
+    color: #0f172a !important;
+}
+
+body.light-mode #emp-profile-header-pdf-btn {
+    background: #ffffff !important;
+    border: 1px solid var(--theme-accent) !important;
+    color: var(--theme-accent) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
+}
+
