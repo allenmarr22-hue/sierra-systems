@@ -5399,6 +5399,8 @@ document.addEventListener('click', function(e) {
 });
 
 window.showOrderDetails = function(id) {
+    const payMenu = document.getElementById('global-payment-dropdown');
+    if (payMenu) payMenu.style.display = 'none';
     window.currentDetailOrderId = String(id);
     const orders = getOrders();
     const order = orders.find(o => String(o.id) === String(id));
@@ -6458,6 +6460,8 @@ document.addEventListener('click', (e) => {
     };
 
     window.closeManualModal = function() {
+        const payMenu = document.getElementById('global-payment-dropdown');
+        if (payMenu) payMenu.style.display = 'none';
         additionTargetOrderId = null;
         const modalEl = document.getElementById('manual-order-modal');
         if (modalEl) {
@@ -6475,6 +6479,8 @@ document.addEventListener('click', (e) => {
     let additionTargetOrderId = null;
 
     window.openManualOrderForAddition = function(orderId) {
+        const payMenu = document.getElementById('global-payment-dropdown');
+        if (payMenu) payMenu.style.display = 'none';
         const targetId = orderId || window.currentDetailOrderId;
         if (!targetId) {
             showToast('No se especificó un pedido válido', 'error');
@@ -6540,6 +6546,8 @@ document.addEventListener('click', (e) => {
     };
 
     window.openManualOrderModal = function() {
+        const payMenu = document.getElementById('global-payment-dropdown');
+        if (payMenu) payMenu.style.display = 'none';
         const modalEl = document.getElementById('manual-order-modal');
         if (!modalEl) return;
 
