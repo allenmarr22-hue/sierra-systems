@@ -6533,13 +6533,29 @@ document.addEventListener('click', (e) => {
 
             if (selectedDelivery === 'dine-in') {
                 const tables = state.config.tableCount || 10;
+                const statusMap = typeof getTablesStatusMap === 'function' ? getTablesStatusMap() : {};
                 let btns = '';
                 for (let i = 1; i <= tables; i++) {
-                    btns += `<button type="button" class="manual-table-num-btn" data-num="${i}" style="min-width:42px; height:42px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color:var(--text-dim); cursor:pointer; font-weight:800; font-size:0.95rem; flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center;">${i}</button>`;
+                    const isOccupied = !!statusMap[String(i)] || !!statusMap[i];
+                    const bg = isOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)';
+                    const border = isOccupied ? '1.5px solid rgba(239, 68, 68, 0.5)' : '1.5px solid rgba(16, 185, 129, 0.5)';
+                    const textColor = isOccupied ? '#ef4444' : '#10b981';
+                    const statusText = isOccupied ? 'Ocupada' : 'Libre';
+
+                    btns += `<button type="button" class="manual-table-num-btn" data-num="${i}" data-occupied="${isOccupied}" style="min-width:54px; height:48px; border-radius:12px; border:${border}; background:${bg}; color:${textColor}; cursor:pointer; font-weight:900; font-size:0.92rem; flex-shrink:0; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:0 0.4rem;">
+                        <span>Mesa ${i}</span>
+                        <span style="font-size:0.62rem; font-weight:800; opacity:0.9; text-transform:uppercase;">${statusText}</span>
+                    </button>`;
                 }
                 deliveryDetailEl.innerHTML = `
                     <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.4rem;">
-                        <label style="font-size:0.78rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Seleccionar Mesa:</label>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:0.78rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Seleccionar Mesa:</label>
+                            <div style="display:flex; gap:0.8rem; font-size:0.72rem; font-weight:800;">
+                                <span style="color:#10b981; display:flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block;"></span> Libre (Verde)</span>
+                                <span style="color:#ef4444; display:flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; border-radius:50%; background:#ef4444; display:inline-block;"></span> Ocupada (Rojo)</span>
+                            </div>
+                        </div>
                         <div style="position:relative; display:flex; align-items:center; gap:0.4rem;">
                             <button type="button" id="manual-table-nav-prev" style="display:none; min-width:32px; height:32px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--theme-accent); cursor:pointer; flex-shrink:0; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; transition:all 0.2s;" title="Mesas anteriores">‹</button>
                             <div id="manual-table-list" style="display:flex; gap:0.6rem; overflow-x:auto; scroll-behavior:smooth; padding: 0.4rem 0.2rem 0.8rem 0; scrollbar-width:none; -ms-overflow-style:none; flex-grow:1;">
@@ -6584,15 +6600,16 @@ document.addEventListener('click', (e) => {
                 deliveryDetailEl.querySelectorAll('.manual-table-num-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
                         deliveryDetailEl.querySelectorAll('.manual-table-num-btn').forEach(b => {
-                            b.style.borderColor = 'var(--glass-border)';
-                            b.style.background = 'rgba(255,255,255,0.03)';
-                            b.style.color = 'var(--text-dim)';
+                            const wasOccupied = b.dataset.occupied === 'true';
+                            b.style.borderColor = wasOccupied ? '1.5px solid rgba(239, 68, 68, 0.5)' : '1.5px solid rgba(16, 185, 129, 0.5)';
+                            b.style.background = wasOccupied ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)';
+                            b.style.color = wasOccupied ? '#ef4444' : '#10b981';
                             b.style.boxShadow = 'none';
                         });
                         this.style.borderColor = 'transparent';
                         this.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
                         this.style.color = '#ffffff';
-                        this.style.boxShadow = '0 3px 8px rgba(245,158,11,0.35)';
+                        this.style.boxShadow = '0 4px 12px rgba(245,158,11,0.4)';
                         document.getElementById('manual-table-val').value = 'Mesa ' + this.dataset.num;
                     });
                 });
