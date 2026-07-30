@@ -5309,8 +5309,9 @@ window.changeOrderPaymentMethod = function(orderId, newMethod) {
     const menu = document.getElementById('global-payment-dropdown');
     if (menu) menu.style.display = 'none';
 
-    const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
-    const orderIndex = orders.findIndex(o => String(o.id) === String(orderId));
+    const orders = (typeof getOrders === 'function') ? getOrders() : (JSON.parse(localStorage.getItem('streetfeed_orders') || '[]'));
+    const cleanTargetId = String(orderId).replace('ORD-', '');
+    const orderIndex = orders.findIndex(o => String(o.id) === String(orderId) || String(o.id).replace('ORD-', '') === cleanTargetId);
     if (orderIndex === -1) return;
 
     orders[orderIndex].customer = {
@@ -5319,16 +5320,39 @@ window.changeOrderPaymentMethod = function(orderId, newMethod) {
     };
     orders[orderIndex].paymentMethod = newMethod;
 
-    state.orders = orders;
+    if (typeof state !== 'undefined') state.orders = orders;
     localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
+
+    // Actualización inmediata del DOM si la ventana de detalles está abierta
+    const paymentEl = document.getElementById('detail-customer-payment');
+    if (paymentEl && window.currentDetailOrderId && String(window.currentDetailOrderId).replace('ORD-', '') === cleanTargetId) {
+        let displayLabel = 'EFECTIVO';
+        let pColor = '#4caf50';
+        let pIcon = 'banknote';
+
+        if (newMethod === 'Transferencia' || newMethod === 'Nequi' || newMethod === 'Daviplata') {
+            displayLabel = 'TRANSF.';
+            pColor = '#3b82f6';
+            pIcon = 'smartphone';
+        } else if (newMethod === 'Tarjeta' || newMethod === 'Datáfono' || newMethod.toLowerCase().includes('datafono') || newMethod.toLowerCase().includes('tarjeta')) {
+            displayLabel = 'DATÁFONO';
+            pColor = '#8b5cf6';
+            pIcon = 'credit-card';
+        }
+
+        const payIconEl = document.getElementById('detail-customer-payment-icon');
+        if (payIconEl) {
+            payIconEl.setAttribute('data-lucide', pIcon);
+            payIconEl.style.color = pColor;
+            if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [payIconEl] });
+        }
+
+        paymentEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 900; font-size: 0.72rem; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; color: ${pColor}; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--glass-border); white-space: nowrap;" onclick="window.togglePaymentDropdown('${orderId}', event);" title="Hacer clic para cambiar método de pago"><span>${displayLabel}</span><i data-lucide="chevron-down" style="width: 10px; height: 10px; color: ${pColor}; flex-shrink: 0;"></i></span>`;
+    }
 
     if (typeof window.renderOrders === 'function') window.renderOrders();
     if (typeof renderStats === 'function') renderStats();
     if (typeof renderTablesModal === 'function') renderTablesModal();
-
-    if (window.currentDetailOrderId === String(orderId)) {
-        window.showOrderDetails(orderId);
-    }
 
     showToast(`Método de pago actualizado a: ${newMethod} ✅`);
 };
