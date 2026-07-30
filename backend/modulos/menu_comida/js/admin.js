@@ -6861,6 +6861,34 @@ document.addEventListener('click', (e) => {
                 const targetOrder = orders[orderIndex];
                 targetOrder.items = manualCart.map(i => ({ ...i, extras: i.extras || [] }));
 
+                // Actualizar datos del cliente (nombre, teléfono, mesa/dirección, pago, nota)
+                let address = targetOrder.customer?.address || '';
+                if (selectedDelivery === 'dine-in') {
+                    const tableVal = (document.getElementById('manual-table-val') || {}).value;
+                    if (tableVal) address = tableVal;
+                } else if (selectedDelivery === 'takeout') {
+                    const tkVal = (document.getElementById('manual-takeout-val') || {}).value;
+                    if (tkVal) address = tkVal;
+                } else if (selectedDelivery === 'delivery') {
+                    const addrInp = (document.getElementById('manual-address-inp') || {}).value;
+                    if (addrInp) address = addrInp;
+                }
+
+                const nameInput = document.getElementById('manual-cust-name')?.value.trim();
+                const phoneInput = document.getElementById('manual-cust-phone')?.value.trim();
+                const payInput = document.getElementById('manual-cust-payment')?.value;
+                const noteInput = document.getElementById('manual-cust-note')?.value.trim();
+
+                targetOrder.customer = {
+                    ...targetOrder.customer,
+                    name: nameInput || targetOrder.customer?.name || (selectedDelivery === 'dine-in' ? address : 'Presencial'),
+                    phone: phoneInput || targetOrder.customer?.phone || '---',
+                    address: address || targetOrder.customer?.address || '---',
+                    deliveryType: selectedDelivery || targetOrder.customer?.deliveryType || 'dine-in',
+                    payment: payInput || targetOrder.customer?.payment || 'Efectivo',
+                    note: noteInput !== undefined ? noteInput : (targetOrder.customer?.note || '')
+                };
+
                 const updatedBaseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
                 const delFee = targetOrder.customer?.deliveryType === 'delivery' ? (targetOrder.deliveryFee || state.config.deliveryFee || 0) : 0;
 
