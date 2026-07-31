@@ -6674,6 +6674,7 @@ document.addEventListener('click', (e) => {
         window.goToManualStep(1);
         renderManualCategories();
         updateManualCart();
+        renderManualProducts();
 
         modalEl.classList.remove('hidden');
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -6745,17 +6746,26 @@ document.addEventListener('click', (e) => {
     let posTargetExtraItemId = null;
 
     window.setPosExtraTarget = function(itemId) {
+        const catMenu   = document.getElementById('manual-cat-menu');
+        const catCurrent = document.getElementById('manual-cat-current');
+        const hiddenInput = document.getElementById('manual-order-cat-filter');
+
         if (posTargetExtraItemId === String(itemId)) {
-            // Toggle off — deseleccionar
+            // Toggle off — deseleccionar y restaurar primera categoría
             posTargetExtraItemId = null;
+            if (catMenu) {
+                const liItems = catMenu.querySelectorAll('li');
+                if (liItems.length > 0) {
+                    liItems.forEach(l => l.classList.remove('active'));
+                    liItems[0].classList.add('active');
+                    if (catCurrent) catCurrent.textContent = liItems[0].textContent;
+                    if (hiddenInput) hiddenInput.value = liItems[0].dataset.value;
+                }
+            }
         } else {
             posTargetExtraItemId = String(itemId);
 
             // Cambiar el filtro al dropdown custom de categorías buscando la de Extras
-            const catMenu = document.getElementById('manual-cat-menu');
-            const catCurrent = document.getElementById('manual-cat-current');
-            const hiddenInput = document.getElementById('manual-order-cat-filter');
-
             if (catMenu) {
                 const liItems = catMenu.querySelectorAll('li');
                 let extraLi = null;
@@ -6767,7 +6777,6 @@ document.addEventListener('click', (e) => {
                 });
 
                 if (extraLi) {
-                    // Simular clic para activar el filtro correctamente
                     liItems.forEach(l => l.classList.remove('active'));
                     extraLi.classList.add('active');
                     if (catCurrent) catCurrent.textContent = extraLi.textContent;
@@ -6879,7 +6888,7 @@ document.addEventListener('click', (e) => {
                 </div>
 
                 <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.05);">
-                    <span style="font-size: 0.75rem; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text-dim)'}; font-weight: 800;">${posTargetExtraItemId ? 'Adicionados:' : (isSelected ? 'Seleccionados:' : 'Cantidad:')}</span>
+                    <span style="font-size: 0.75rem; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text-dim)'}; font-weight: 800;">${(posTargetExtraItemId && isSelected) ? 'Adicionados:' : ((!posTargetExtraItemId && isSelected) ? 'Seleccionados:' : 'Cantidad:')}</span>
                     <div class="manual-qty-capsule" style="display: flex; align-items: center; gap: 0.5rem; padding: 3px 6px; border-radius: 10px;">
                         <button type="button" class="manual-minus" style="width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1;">-</button>
                         <span class="manual-qty-display" style="font-weight: 900; font-size: 0.95rem; min-width: 20px; text-align: center; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text)'};">${qty}</span>
@@ -11147,7 +11156,8 @@ function printThermalTicketZ() {
 
     const allOrders = getOrders();
     const dayOrders = allOrders.filter(o => {
-        if (o.status !== 'accepted' && o.status !== 'completed' && o.status !== 'delivered' && o.status) return false;
+        const validStatus = ['accepted', 'completed', 'delivered'];
+        if (o.status && !validStatus.includes(o.status)) return false;
         return isSameLocalDate(o.date, selectedDateStr);
     });
 
