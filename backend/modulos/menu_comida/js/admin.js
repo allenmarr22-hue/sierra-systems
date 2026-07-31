@@ -4690,7 +4690,7 @@ function createOrderCard(order) {
     const isIncoming = order.status === 'pending' || !order.status;
     const isPreparing = order.status === 'confirmed';
     const isUnpaid = order.status === 'dispatched';
-    const isHistory = order.status === 'accepted' || order.status === 'cancelled';
+    const isHistory = order.status === 'accepted' || order.status === 'completed' || order.status === 'delivered' || order.status === 'cancelled';
     const statusClass = `status-${order.status || 'pending'}`;
     const date = new Date(order.date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
     const isCocina = currentEmployeeRole === 'cocina';
