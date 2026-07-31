@@ -10838,7 +10838,7 @@ function updateCashCloseModalData() {
         'Nequi': 0,
         'Daviplata': 0,
         'Transferencia': 0,
-        'Tarjeta / Datáfono': 0,
+        'Datáfono': 0,
         'Otro': 0
     };
 
@@ -10854,7 +10854,7 @@ function updateCashCloseModalData() {
             methodTotals['Efectivo'] += total;
         } else if (pMethod.includes('tarjeta') || pMethod.includes('datafono') || pMethod.includes('pos')) {
             cardSales += total;
-            methodTotals['Tarjeta / Datáfono'] += total;
+            methodTotals['Datáfono'] += total;
         } else if (pMethod.includes('nequi')) {
             transferSales += total;
             methodTotals['Nequi'] += total;
@@ -10917,8 +10917,8 @@ function updateCashCloseModalData() {
         Object.keys(methodTotals).forEach(mKey => {
             const val = methodTotals[mKey];
             if (val > 0) {
-                const icon = mKey === 'Efectivo' ? 'dollar-sign' : (mKey.includes('Tarjeta') ? 'credit-card' : 'smartphone');
-                const badgeColor = mKey === 'Efectivo' ? '#10b981' : '#3b82f6';
+                const icon = mKey === 'Efectivo' ? 'dollar-sign' : (mKey.includes('Datáfono') || mKey.includes('Tarjeta') ? 'credit-card' : 'smartphone');
+                const badgeColor = mKey === 'Efectivo' ? '#10b981' : (mKey.includes('Datáfono') || mKey.includes('Tarjeta') ? '#8b5cf6' : '#3b82f6');
                 const pct = grandTotalSales > 0 ? ((val / grandTotalSales) * 100).toFixed(1) + '%' : '0%';
                 html += `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
