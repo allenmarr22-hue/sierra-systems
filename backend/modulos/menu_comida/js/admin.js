@@ -6719,6 +6719,12 @@ document.addEventListener('click', (e) => {
                         if (catCurrent) catCurrent.textContent = li.textContent;
                         if (hiddenInput) hiddenInput.value = li.dataset.value;
                         if (catDropdown) catDropdown.classList.remove('open');
+
+                        const txt = li.textContent.toLowerCase();
+                        if (!txt.includes('extra') && !txt.includes('adicion') && !txt.includes('adicione')) {
+                            posTargetExtraItemId = null;
+                            updateManualCart();
+                        }
                         renderManualProducts();
                     };
                 });
