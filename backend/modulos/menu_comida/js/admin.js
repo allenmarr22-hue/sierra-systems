@@ -6746,18 +6746,32 @@ document.addEventListener('click', (e) => {
 
     window.setPosExtraTarget = function(itemId) {
         if (posTargetExtraItemId === String(itemId)) {
+            // Toggle off — deseleccionar
             posTargetExtraItemId = null;
         } else {
             posTargetExtraItemId = String(itemId);
-            const catFilter = document.getElementById('manual-order-cat-filter');
-            if (catFilter) {
-                let extraOpt = Array.from(catFilter.options).find(opt => 
-                    opt.text.toLowerCase().includes('extra') || 
-                    opt.text.toLowerCase().includes('adicion') || 
-                    opt.value.toLowerCase().includes('extra')
-                );
-                if (extraOpt) {
-                    catFilter.value = extraOpt.value;
+
+            // Cambiar el filtro al dropdown custom de categorías buscando la de Extras
+            const catMenu = document.getElementById('manual-cat-menu');
+            const catCurrent = document.getElementById('manual-cat-current');
+            const hiddenInput = document.getElementById('manual-order-cat-filter');
+
+            if (catMenu) {
+                const liItems = catMenu.querySelectorAll('li');
+                let extraLi = null;
+                liItems.forEach(li => {
+                    const txt = li.textContent.toLowerCase();
+                    if (txt.includes('extra') || txt.includes('adicion') || txt.includes('adicione')) {
+                        extraLi = li;
+                    }
+                });
+
+                if (extraLi) {
+                    // Simular clic para activar el filtro correctamente
+                    liItems.forEach(l => l.classList.remove('active'));
+                    extraLi.classList.add('active');
+                    if (catCurrent) catCurrent.textContent = extraLi.textContent;
+                    if (hiddenInput) hiddenInput.value = extraLi.dataset.value;
                 }
             }
         }
