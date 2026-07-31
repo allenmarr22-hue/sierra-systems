@@ -11011,7 +11011,7 @@ function printThermalTicketZ() {
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>VENTAS TRANSFERENCIA:</span><span>$${transferSales.toLocaleString('es-CO')}</span></div>
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>VENTAS DATÁFONO:</span><span>$${cardSales.toLocaleString('es-CO')}</span></div>
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>
+            ${dayExpenses > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>` : ''}
             <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-bottom: 4px;"><span>TOTAL RECAUDADO TURNO:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
             <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-bottom: 4px;"><span>EFECTIVO EN CAJA:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
@@ -11100,11 +11100,15 @@ function exportCashClosePDF() {
         ['Pedidos Atendidos', `${dayOrders.length} pedido(s)`],
         ['Ventas en Efectivo', '$' + cashSales.toLocaleString('es-CO')],
         ['Ventas por Transferencia', '$' + transferSales.toLocaleString('es-CO')],
-        ['Ventas por Datáfono / Tarjeta', '$' + cardSales.toLocaleString('es-CO')],
-        ['Total Fletes Domicilios', '$' + totalFees.toLocaleString('es-CO')],
-        ['Gastos / Salidas de Caja', '-$' + dayExpenses.toLocaleString('es-CO')],
-        ['TOTAL RECAUDADO EN EL TURNO', '$' + grandTotalSales.toLocaleString('es-CO')]
+        ['Ventas por Datáfono', '$' + cardSales.toLocaleString('es-CO')],
+        ['Total Fletes Domicilios', '$' + totalFees.toLocaleString('es-CO')]
     ];
+
+    if (dayExpenses > 0) {
+        summaryBody.push(['Gastos / Salidas de Caja', '-$' + dayExpenses.toLocaleString('es-CO')]);
+    }
+
+    summaryBody.push(['TOTAL RECAUDADO EN EL TURNO', '$' + grandTotalSales.toLocaleString('es-CO')]);
 
     doc.autoTable({
         startY: 42,
