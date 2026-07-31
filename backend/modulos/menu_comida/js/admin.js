@@ -4894,10 +4894,15 @@ function createOrderCard(order) {
 
             <!-- 3. Pedido (Productos + Pago) -->
             <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem 0 0.6rem; overflow: visible;">
+                ${isHistory ? `
+                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.65rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); white-space: nowrap; flex-shrink: 0;" title="${(order.items || []).length} productos en este pedido">
+                    <i data-lucide="package" style="width: 12px; color: var(--text-dim);"></i>
+                    <span style="font-weight: 800; font-size: 0.78rem; color: var(--text-dim);">${(order.items || []).length} Prod.</span>
+                </div>` : `
                 <div onclick="event.stopPropagation(); window.openManualOrderForAddition('${order.id}');" title="Anexar productos a este pedido" class="order-add-prod-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: rgba(var(--theme-accent-rgb, 255,83,123), 0.12); border: 1px dashed var(--theme-accent); transition: all 0.2s; white-space: nowrap; flex-shrink: 0; cursor: pointer;" onmouseover="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.22)'" onmouseout="this.style.background='rgba(var(--theme-accent-rgb, 255,83,123), 0.12)'">
                     <i data-lucide="plus-circle" style="width: 12px; color: var(--theme-accent);"></i>
                     <span style="font-weight: 800; font-size: 0.78rem; color: var(--text);">${(order.items || []).length} Prod.</span>
-                </div>
+                </div>`}
                 ${paymentBadge}
             </div>
 
