@@ -5160,7 +5160,7 @@ window.printKitchenTicket = function(id) {
         const qty = item.qty || item.quantity || 1;
         let extrasStr = '';
         if (item.extras && item.extras.length > 0) {
-            extrasStr = `<div style="font-size: 11px; font-style: italic; padding-left: 10px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
+            extrasStr = item.extras.map(e => `<div style="font-size: 11px; font-style: italic; padding-left: 10px;">+ ${escapeHtml(e.name)}</div>`).join('');
         }
         return `
             <div style="font-weight: 900; font-size: 14px; margin-top: 6px;">
@@ -5236,7 +5236,7 @@ window.printCustomerReceipt = function(id) {
 
         let extrasStr = '';
         if (item.extras && item.extras.length > 0) {
-            extrasStr = `<div style="font-size: 10px; font-style: italic; padding-left: 8px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
+            extrasStr = item.extras.map(e => `<div style="font-size: 10px; font-style: italic; padding-left: 8px;">+ ${escapeHtml(e.name)}</div>`).join('');
         }
         return `
             <div style="display: flex; justify-content: space-between; margin-top: 4px; font-weight: bold; font-size: 12px;">
