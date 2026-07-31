@@ -6653,6 +6653,7 @@ document.addEventListener('click', (e) => {
         if (!modalEl) return;
 
         manualCart = [];
+        posTargetExtraItemId = null;
         selectedDelivery = null;
         if (document.getElementById('manual-cust-name')) document.getElementById('manual-cust-name').value = '';
         if (document.getElementById('manual-cust-phone')) document.getElementById('manual-cust-phone').value = '';
@@ -6741,6 +6742,35 @@ document.addEventListener('click', (e) => {
         renderManualProducts();
     }
 
+    let posTargetExtraItemId = null;
+
+    window.setPosExtraTarget = function(itemId) {
+        if (posTargetExtraItemId === String(itemId)) {
+            posTargetExtraItemId = null;
+        } else {
+            posTargetExtraItemId = String(itemId);
+            const catFilter = document.getElementById('manual-order-cat-filter');
+            if (catFilter) {
+                let extraOpt = Array.from(catFilter.options).find(opt => 
+                    opt.text.toLowerCase().includes('extra') || 
+                    opt.text.toLowerCase().includes('adicion') || 
+                    opt.value.toLowerCase().includes('extra')
+                );
+                if (extraOpt) {
+                    catFilter.value = extraOpt.value;
+                }
+            }
+        }
+        updateManualCart();
+        renderManualProducts();
+    };
+
+    window.clearPosExtraTarget = function() {
+        posTargetExtraItemId = null;
+        updateManualCart();
+        renderManualProducts();
+    };
+
     window.addExtraToCartItem = function(itemId, extraDishId) {
         const item = manualCart.find(i => String(i.id) === String(itemId));
         if (!item) return;
@@ -6769,60 +6799,6 @@ document.addEventListener('click', (e) => {
         if (typeof renderStep2CartList === 'function') renderStep2CartList();
     };
 
-    function openPosExtraSelector(itemId, targetBtn) {
-        let popover = document.getElementById('pos-extra-popover');
-        if (!popover) {
-            popover = document.createElement('div');
-            popover.id = 'pos-extra-popover';
-            popover.style.cssText = 'display:none; position:fixed; width:220px; max-height:260px; overflow-y:auto; background:#1e293b; border:1px solid var(--glass-border); border-radius:12px; padding:6px; box-shadow:0 15px 35px rgba(0,0,0,0.65); z-index:100095; scrollbar-width:thin;';
-            document.body.appendChild(popover);
-        }
-
-        const rect = targetBtn.getBoundingClientRect();
-        let top = rect.bottom + 4;
-        let left = rect.left - 100;
-        if (left + 220 > window.innerWidth - 10) left = window.innerWidth - 230;
-        if (left < 10) left = 10;
-        if (top + 260 > window.innerHeight) top = rect.top - 260;
-
-        popover.style.top = top + 'px';
-        popover.style.left = left + 'px';
-
-        let extrasList = (state.dishes || []).filter(d => {
-            if (d.active === false) return false;
-            const cat = String(d.cat || d.category || '').toLowerCase();
-            const catName = String(d.catName || '').toLowerCase();
-            const name = String(d.name || '').toLowerCase();
-            return cat.includes('extra') || cat.includes('adicion') || catName.includes('extra') || catName.includes('adicion') || name.includes('extra');
-        });
-
-        if (extrasList.length === 0) {
-            extrasList = (state.dishes || []).filter(d => d.active !== false);
-        }
-
-        popover.innerHTML = `
-            <div style="font-size:0.68rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:4px 6px 6px 6px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                <span>✨ Seleccionar Extra</span>
-                <span style="cursor:pointer; color:var(--text-dim);" onclick="document.getElementById('pos-extra-popover').style.display='none';">✕</span>
-            </div>
-            ${extrasList.map(ex => `
-                <div onclick="event.stopPropagation(); window.addExtraToCartItem('${itemId}', '${ex.id}'); document.getElementById('pos-extra-popover').style.display='none';" style="padding:7px 9px; font-size:0.78rem; font-weight:800; color:var(--text); cursor:pointer; border-radius:8px; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;" onmouseover="this.style.background='rgba(var(--theme-accent-rgb,255,83,123),0.15)'" onmouseout="this.style.background='transparent'">
-                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; padding-right:6px;">+ ${ex.name}</span>
-                    <span style="color:var(--theme-accent); font-weight:900; flex-shrink:0;">+$${(ex.price || 0).toLocaleString('es-CO')}</span>
-                </div>
-            `).join('')}
-        `;
-
-        popover.style.display = 'block';
-    }
-
-    document.addEventListener('click', function(e) {
-        const popover = document.getElementById('pos-extra-popover');
-        if (popover && !e.target.closest('#pos-extra-popover') && !e.target.closest('.manual-cart-add-extra-btn')) {
-            popover.style.display = 'none';
-        }
-    });
-
     // --- Tarjetas de Productos en Grid (Paso 1) ---
     function renderManualProducts() {
         const prodContainer = document.getElementById('manual-order-products');
@@ -6850,8 +6826,16 @@ document.addEventListener('click', (e) => {
         }
 
         dishes.forEach(dish => {
-            const cartItem = manualCart.find(i => i.id === dish.id);
-            const qty = cartItem ? cartItem.qty : 0;
+            let qty = 0;
+            if (posTargetExtraItemId) {
+                const targetItem = manualCart.find(i => String(i.id) === String(posTargetExtraItemId));
+                if (targetItem && Array.isArray(targetItem.extras)) {
+                    qty = targetItem.extras.filter(e => String(e.id) === String(dish.id)).length;
+                }
+            } else {
+                const cartItem = manualCart.find(i => i.id === dish.id);
+                qty = cartItem ? cartItem.qty : 0;
+            }
             const isSelected = qty > 0;
 
             const card = document.createElement('div');
@@ -6881,7 +6865,7 @@ document.addEventListener('click', (e) => {
                 </div>
 
                 <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.05);">
-                    <span style="font-size: 0.75rem; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text-dim)'}; font-weight: 800;">${isSelected ? 'Seleccionados:' : 'Cantidad:'}</span>
+                    <span style="font-size: 0.75rem; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text-dim)'}; font-weight: 800;">${posTargetExtraItemId ? 'Adicionados:' : (isSelected ? 'Seleccionados:' : 'Cantidad:')}</span>
                     <div class="manual-qty-capsule" style="display: flex; align-items: center; gap: 0.5rem; padding: 3px 6px; border-radius: 10px;">
                         <button type="button" class="manual-minus" style="width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1;">-</button>
                         <span class="manual-qty-display" style="font-weight: 900; font-size: 0.95rem; min-width: 20px; text-align: center; color: ${isSelected ? 'var(--theme-accent)' : 'var(--text)'};">${qty}</span>
@@ -6900,13 +6884,40 @@ document.addEventListener('click', (e) => {
     }
 
     function changeQty(dish, delta) {
+        if (posTargetExtraItemId) {
+            const targetItem = manualCart.find(i => String(i.id) === String(posTargetExtraItemId));
+            if (targetItem) {
+                if (!Array.isArray(targetItem.extras)) targetItem.extras = [];
+                if (delta > 0) {
+                    targetItem.extras.push({
+                        id: dish.id,
+                        name: dish.name,
+                        price: parseFloat(dish.price) || 0
+                    });
+                    showToast(`+ ${dish.name} asignado a ${targetItem.name} ✨`);
+                } else {
+                    const exIdx = targetItem.extras.findIndex(e => String(e.id) === String(dish.id));
+                    if (exIdx !== -1) {
+                        targetItem.extras.splice(exIdx, 1);
+                    }
+                }
+                updateManualCart();
+                renderManualProducts();
+                if (typeof renderStep2CartList === 'function') renderStep2CartList();
+                return;
+            }
+        }
+
         let item = manualCart.find(i => i.id === dish.id);
         if (!item) {
             if (delta < 1) return;
-            manualCart.push({ id: dish.id, name: dish.name, price: dish.price || 0, qty: 1, img: dish.img || '' });
+            manualCart.push({ id: dish.id, name: dish.name, price: dish.price || 0, qty: 1, img: dish.img || '', extras: [] });
         } else {
             item.qty += delta;
-            if (item.qty <= 0) manualCart = manualCart.filter(i => i.id !== dish.id);
+            if (item.qty <= 0) {
+                manualCart = manualCart.filter(i => i.id !== dish.id);
+                if (posTargetExtraItemId === String(dish.id)) posTargetExtraItemId = null;
+            }
         }
         updateManualCart();
         renderManualProducts();
@@ -6981,13 +6992,22 @@ document.addEventListener('click', (e) => {
         // Renderizado del carrito lateral en tiempo real (Paso 1)
         if (cartItems) {
             if (manualCart.length === 0) {
+                posTargetExtraItemId = null;
                 cartItems.innerHTML = `
                     <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-dim); gap:0.5rem; opacity:0.5; padding-top:3rem;">
                         <i data-lucide="shopping-cart" style="width:28px; height:28px;"></i>
                         <span style="font-size:0.8rem; font-weight:700;">Sin productos</span>
                     </div>`;
             } else {
-                cartItems.innerHTML = manualCart.map(item => {
+                const targetItem = posTargetExtraItemId ? manualCart.find(i => String(i.id) === String(posTargetExtraItemId)) : null;
+                const bannerHtml = targetItem ? `
+                    <div style="padding: 0.45rem 0.7rem; background: rgba(var(--theme-accent-rgb,255,83,123),0.15); border: 1px solid var(--theme-accent); border-radius: 10px; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; font-weight: 800; color: var(--theme-accent);">
+                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✨ Asignando adiciones a: ${targetItem.name}</span>
+                        <button type="button" onclick="window.clearPosExtraTarget()" style="background: var(--theme-accent); border: none; color: #fff; padding: 2px 7px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; font-weight: 900; flex-shrink: 0; margin-left: 4px;">Listo ✔</button>
+                    </div>` : '';
+
+                cartItems.innerHTML = bannerHtml + manualCart.map(item => {
+                    const isTarget = posTargetExtraItemId && String(posTargetExtraItemId) === String(item.id);
                     const extrasCost = (item.extras || []).reduce((s, ex) => s + (parseFloat(ex.price) || 0), 0);
                     const itemTotal = (item.price + extrasCost) * item.qty;
                     const extrasHtml = item.extras && item.extras.length > 0
@@ -7001,16 +7021,20 @@ document.addEventListener('click', (e) => {
                            </div>`
                         : '';
 
+                    const bgStyle = isTarget ? 'rgba(var(--theme-accent-rgb,255,83,123),0.15)' : 'rgba(255,255,255,0.04)';
+                    const borderStyle = isTarget ? '1.5px solid var(--theme-accent)' : '1px solid rgba(255,255,255,0.06)';
+                    const shadowStyle = isTarget ? '0 0 15px rgba(var(--theme-accent-rgb,255,83,123),0.25)' : 'none';
+
                     return `
-                        <div style="display:flex; flex-direction:column; gap:0.4rem; padding:0.6rem 0.75rem; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); margin-bottom:0.4rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.4rem; padding:0.6rem 0.75rem; border-radius:12px; background:${bgStyle}; border:${borderStyle}; box-shadow:${shadowStyle}; margin-bottom:0.4rem; transition:all 0.2s;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div style="display:flex; flex-direction:column; min-width:0; flex:1; padding-right:0.4rem;">
                                     <span style="color:var(--text); font-weight:800; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</span>
                                     <span style="font-size:0.75rem; color:var(--theme-accent); font-weight:800;">${item.qty}x · $${itemTotal.toLocaleString('es-CO')}</span>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:0.35rem;">
-                                    <button type="button" class="manual-cart-add-extra-btn" data-id="${item.id}" style="background:rgba(var(--theme-accent-rgb,255,83,123),0.15); border:1px solid rgba(var(--theme-accent-rgb,255,83,123),0.3); color:var(--theme-accent); cursor:pointer; padding:3px 7px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; gap:3px; transition:all 0.2s;" title="Agregar adición a este producto">
-                                        <i data-lucide="plus" style="width:11px; height:11px;"></i> Extra
+                                    <button type="button" class="manual-cart-add-extra-btn" data-id="${item.id}" style="background:${isTarget ? 'var(--theme-accent)' : 'rgba(var(--theme-accent-rgb,255,83,123),0.15)'}; border:1px solid ${isTarget ? 'transparent' : 'rgba(var(--theme-accent-rgb,255,83,123),0.3)'}; color:${isTarget ? '#ffffff' : 'var(--theme-accent)'}; cursor:pointer; padding:3px 7px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; gap:3px; transition:all 0.2s;" title="${isTarget ? 'Haga clic para finalizar adición de extras' : 'Agregar adición a este producto'}">
+                                        <i data-lucide="${isTarget ? 'check' : 'plus'}" style="width:11px; height:11px;"></i> ${isTarget ? 'Asignando' : 'Extra'}
                                     </button>
                                     <button type="button" class="manual-cart-del-btn" data-id="${item.id}" style="background:rgba(239,68,68,0.15); border:none; color:#ef4444; cursor:pointer; padding:4px 6px; border-radius:6px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Eliminar del pedido">
                                         <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
@@ -7027,6 +7051,7 @@ document.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const id = btn.dataset.id;
                         manualCart = manualCart.filter(i => String(i.id) !== String(id));
+                        if (posTargetExtraItemId === String(id)) posTargetExtraItemId = null;
                         updateManualCart();
                         renderManualProducts();
                     };
@@ -7035,7 +7060,7 @@ document.addEventListener('click', (e) => {
                 cartItems.querySelectorAll('.manual-cart-add-extra-btn').forEach(btn => {
                     btn.onclick = (e) => {
                         e.stopPropagation();
-                        openPosExtraSelector(btn.dataset.id, btn);
+                        window.setPosExtraTarget(btn.dataset.id);
                     };
                 });
 
