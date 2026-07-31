@@ -6630,7 +6630,8 @@ document.addEventListener('click', (e) => {
             name: i.name,
             price: parseFloat(i.price) || 0,
             qty: i.qty || i.quantity || 1,
-            img: i.img || ''
+            img: i.img || '',
+            extras: Array.isArray(i.extras) ? i.extras.map(e => ({ id: e.id || e.name, name: e.name, price: parseFloat(e.price) || 0 })) : []
         }));
 
         updateManualCart();
@@ -6740,6 +6741,88 @@ document.addEventListener('click', (e) => {
         renderManualProducts();
     }
 
+    window.addExtraToCartItem = function(itemId, extraDishId) {
+        const item = manualCart.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+
+        const extraDish = (state.dishes || []).find(d => String(d.id) === String(extraDishId));
+        if (!extraDish) return;
+
+        if (!Array.isArray(item.extras)) item.extras = [];
+
+        item.extras.push({
+            id: extraDish.id,
+            name: extraDish.name,
+            price: parseFloat(extraDish.price) || 0
+        });
+
+        updateManualCart();
+        if (typeof renderStep2CartList === 'function') renderStep2CartList();
+    };
+
+    window.removeExtraFromCartItem = function(itemId, extraIdx) {
+        const item = manualCart.find(i => String(i.id) === String(itemId));
+        if (!item || !Array.isArray(item.extras)) return;
+
+        item.extras.splice(extraIdx, 1);
+        updateManualCart();
+        if (typeof renderStep2CartList === 'function') renderStep2CartList();
+    };
+
+    function openPosExtraSelector(itemId, targetBtn) {
+        let popover = document.getElementById('pos-extra-popover');
+        if (!popover) {
+            popover = document.createElement('div');
+            popover.id = 'pos-extra-popover';
+            popover.style.cssText = 'display:none; position:fixed; width:220px; max-height:260px; overflow-y:auto; background:#1e293b; border:1px solid var(--glass-border); border-radius:12px; padding:6px; box-shadow:0 15px 35px rgba(0,0,0,0.65); z-index:100095; scrollbar-width:thin;';
+            document.body.appendChild(popover);
+        }
+
+        const rect = targetBtn.getBoundingClientRect();
+        let top = rect.bottom + 4;
+        let left = rect.left - 100;
+        if (left + 220 > window.innerWidth - 10) left = window.innerWidth - 230;
+        if (left < 10) left = 10;
+        if (top + 260 > window.innerHeight) top = rect.top - 260;
+
+        popover.style.top = top + 'px';
+        popover.style.left = left + 'px';
+
+        let extrasList = (state.dishes || []).filter(d => {
+            if (d.active === false) return false;
+            const cat = String(d.cat || d.category || '').toLowerCase();
+            const catName = String(d.catName || '').toLowerCase();
+            const name = String(d.name || '').toLowerCase();
+            return cat.includes('extra') || cat.includes('adicion') || catName.includes('extra') || catName.includes('adicion') || name.includes('extra');
+        });
+
+        if (extrasList.length === 0) {
+            extrasList = (state.dishes || []).filter(d => d.active !== false);
+        }
+
+        popover.innerHTML = `
+            <div style="font-size:0.68rem; color:var(--theme-accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:4px 6px 6px 6px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                <span>✨ Seleccionar Extra</span>
+                <span style="cursor:pointer; color:var(--text-dim);" onclick="document.getElementById('pos-extra-popover').style.display='none';">✕</span>
+            </div>
+            ${extrasList.map(ex => `
+                <div onclick="event.stopPropagation(); window.addExtraToCartItem('${itemId}', '${ex.id}'); document.getElementById('pos-extra-popover').style.display='none';" style="padding:7px 9px; font-size:0.78rem; font-weight:800; color:var(--text); cursor:pointer; border-radius:8px; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;" onmouseover="this.style.background='rgba(var(--theme-accent-rgb,255,83,123),0.15)'" onmouseout="this.style.background='transparent'">
+                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; padding-right:6px;">+ ${ex.name}</span>
+                    <span style="color:var(--theme-accent); font-weight:900; flex-shrink:0;">+$${(ex.price || 0).toLocaleString('es-CO')}</span>
+                </div>
+            `).join('')}
+        `;
+
+        popover.style.display = 'block';
+    }
+
+    document.addEventListener('click', function(e) {
+        const popover = document.getElementById('pos-extra-popover');
+        if (popover && !e.target.closest('#pos-extra-popover') && !e.target.closest('.manual-cart-add-extra-btn')) {
+            popover.style.display = 'none';
+        }
+    });
+
     // --- Tarjetas de Productos en Grid (Paso 1) ---
     function renderManualProducts() {
         const prodContainer = document.getElementById('manual-order-products');
@@ -6836,18 +6919,31 @@ document.addEventListener('click', (e) => {
             step2CartList.innerHTML = `<p style="color:var(--text-dim); font-size:0.85rem; margin:0;">No has seleccionado productos.</p>`;
             return;
         }
-        step2CartList.innerHTML = manualCart.map(item => `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 0.6rem 0.9rem; border-radius: 10px; border: 1px solid var(--glass-border);">
-                <div style="display: flex; align-items: center; gap: 0.7rem;">
-                    <span style="font-weight: 900; color: var(--theme-accent); font-size: 0.9rem;">${item.qty}x</span>
-                    <span style="font-weight: 700; font-size: 0.88rem; color: var(--text);">${item.name}</span>
+        step2CartList.innerHTML = manualCart.map(item => {
+            const extrasCost = (item.extras || []).reduce((s, ex) => s + (parseFloat(ex.price) || 0), 0);
+            const totalItemCost = (item.price + extrasCost) * item.qty;
+            const extrasHtml = item.extras && item.extras.length > 0
+                ? `<div style="display:flex; flex-direction:column; gap:2px; padding-left:0.5rem; border-left:2px solid var(--theme-accent); margin-top:0.3rem;">
+                    ${item.extras.map(ex => `<span style="font-size:0.72rem; color:var(--text-dim);">└ + ${ex.name} (+$${(parseFloat(ex.price)||0).toLocaleString('es-CO')})</span>`).join('')}
+                   </div>`
+                : '';
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 0.3rem; background: rgba(0,0,0,0.2); padding: 0.6rem 0.9rem; border-radius: 10px; border: 1px solid var(--glass-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.7rem;">
+                            <span style="font-weight: 900; color: var(--theme-accent); font-size: 0.9rem;">${item.qty}x</span>
+                            <span style="font-weight: 700; font-size: 0.88rem; color: var(--text);">${item.name}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.8rem;">
+                            <span style="font-weight: 900; color: var(--text); font-size: 0.9rem;">$${totalItemCost.toLocaleString('es-CO')}</span>
+                            <button type="button" class="manual-step2-del" data-id="${item.id}" style="background: rgba(239,68,68,0.15); border: none; color: #ef4444; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+                        </div>
+                    </div>
+                    ${extrasHtml}
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.8rem;">
-                    <span style="font-weight: 900; color: var(--text); font-size: 0.9rem;">$${(item.price * item.qty).toLocaleString('es-CO')}</span>
-                    <button type="button" class="manual-step2-del" data-id="${item.id}" style="background: rgba(239,68,68,0.15); border: none; color: #ef4444; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         step2CartList.querySelectorAll('.manual-step2-del').forEach(btn => {
             btn.onclick = (e) => {
@@ -6870,7 +6966,10 @@ document.addEventListener('click', (e) => {
         const totalEl        = document.getElementById('manual-order-total');
 
         const count = manualCart.reduce((s, i) => s + i.qty, 0);
-        const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
+        const baseTotal = manualCart.reduce((s, i) => {
+            const extrasCost = (i.extras || []).reduce((eSum, ex) => eSum + (parseFloat(ex.price) || 0), 0);
+            return s + (i.price + extrasCost) * i.qty;
+        }, 0);
         const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
         const grandTotal = baseTotal + delFee;
 
@@ -6888,17 +6987,40 @@ document.addEventListener('click', (e) => {
                         <span style="font-size:0.8rem; font-weight:700;">Sin productos</span>
                     </div>`;
             } else {
-                cartItems.innerHTML = manualCart.map(item => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; padding:0.5rem 0.7rem; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.04);">
-                        <div style="display:flex; flex-direction:column; min-width:0; flex:1; padding-right:0.5rem;">
-                            <span style="color:var(--text); font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</span>
-                            <span style="font-size:0.75rem; color:var(--theme-accent); font-weight:800;">${item.qty}x · $${(item.price * item.qty).toLocaleString('es-CO')}</span>
+                cartItems.innerHTML = manualCart.map(item => {
+                    const extrasCost = (item.extras || []).reduce((s, ex) => s + (parseFloat(ex.price) || 0), 0);
+                    const itemTotal = (item.price + extrasCost) * item.qty;
+                    const extrasHtml = item.extras && item.extras.length > 0
+                        ? `<div style="display:flex; flex-direction:column; gap:0.25rem; padding-left:0.5rem; border-left:2px solid var(--theme-accent); margin-top:0.2rem;">
+                            ${item.extras.map((ex, exIdx) => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:var(--text-dim);">
+                                    <span style="font-weight:700;">└ + ${ex.name} (+$${(parseFloat(ex.price)||0).toLocaleString('es-CO')})</span>
+                                    <button type="button" class="manual-cart-remove-extra-btn" data-item-id="${item.id}" data-extra-idx="${exIdx}" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:1px 3px; font-size:0.75rem; font-weight:900; line-height:1;" title="Quitar adición">✕</button>
+                                </div>
+                            `).join('')}
+                           </div>`
+                        : '';
+
+                    return `
+                        <div style="display:flex; flex-direction:column; gap:0.4rem; padding:0.6rem 0.75rem; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); margin-bottom:0.4rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; flex-direction:column; min-width:0; flex:1; padding-right:0.4rem;">
+                                    <span style="color:var(--text); font-weight:800; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</span>
+                                    <span style="font-size:0.75rem; color:var(--theme-accent); font-weight:800;">${item.qty}x · $${itemTotal.toLocaleString('es-CO')}</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.35rem;">
+                                    <button type="button" class="manual-cart-add-extra-btn" data-id="${item.id}" style="background:rgba(var(--theme-accent-rgb,255,83,123),0.15); border:1px solid rgba(var(--theme-accent-rgb,255,83,123),0.3); color:var(--theme-accent); cursor:pointer; padding:3px 7px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; gap:3px; transition:all 0.2s;" title="Agregar adición a este producto">
+                                        <i data-lucide="plus" style="width:11px; height:11px;"></i> Extra
+                                    </button>
+                                    <button type="button" class="manual-cart-del-btn" data-id="${item.id}" style="background:rgba(239,68,68,0.15); border:none; color:#ef4444; cursor:pointer; padding:4px 6px; border-radius:6px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Eliminar del pedido">
+                                        <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            ${extrasHtml}
                         </div>
-                        <button type="button" class="manual-cart-del-btn" data-id="${item.id}" style="background:rgba(239,68,68,0.15); border:none; color:#ef4444; cursor:pointer; padding:4px 6px; border-radius:6px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Eliminar del pedido">
-                            <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
-                        </button>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
 
                 cartItems.querySelectorAll('.manual-cart-del-btn').forEach(btn => {
                     btn.onclick = (e) => {
@@ -6907,6 +7029,20 @@ document.addEventListener('click', (e) => {
                         manualCart = manualCart.filter(i => String(i.id) !== String(id));
                         updateManualCart();
                         renderManualProducts();
+                    };
+                });
+
+                cartItems.querySelectorAll('.manual-cart-add-extra-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        openPosExtraSelector(btn.dataset.id, btn);
+                    };
+                });
+
+                cartItems.querySelectorAll('.manual-cart-remove-extra-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        window.removeExtraFromCartItem(btn.dataset.itemId, parseInt(btn.dataset.extraIdx, 10));
                     };
                 });
             }
@@ -7113,7 +7249,10 @@ document.addEventListener('click', (e) => {
                     note: noteInput !== undefined ? noteInput : (targetOrder.customer?.note || '')
                 };
 
-                const updatedBaseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
+                const updatedBaseTotal = manualCart.reduce((s, i) => {
+                    const extrasCost = (i.extras || []).reduce((eSum, ex) => eSum + (parseFloat(ex.price) || 0), 0);
+                    return s + (i.price + extrasCost) * i.qty;
+                }, 0);
                 const delFee = targetOrder.customer?.deliveryType === 'delivery' ? (targetOrder.deliveryFee || state.config.deliveryFee || 0) : 0;
 
                 targetOrder.baseTotal = updatedBaseTotal;
@@ -7162,7 +7301,10 @@ document.addEventListener('click', (e) => {
 
             if (!payment) { showToast('Selecciona el método de pago', 'error'); return; }
 
-            const baseTotal = manualCart.reduce((s, i) => s + i.price * i.qty, 0);
+            const baseTotal = manualCart.reduce((s, i) => {
+                const extrasCost = (i.extras || []).reduce((eSum, ex) => eSum + (parseFloat(ex.price) || 0), 0);
+                return s + (i.price + extrasCost) * i.qty;
+            }, 0);
             const delFee = selectedDelivery === 'delivery' ? (state.config.deliveryFee || 0) : 0;
 
             let orderCounter = parseInt(localStorage.getItem('streetfeed_order_counter') || '0');
@@ -7188,7 +7330,7 @@ document.addEventListener('click', (e) => {
             const orderData = {
                 id: 'ORD-' + orderCounter,
                 date: new Date().toISOString(),
-                items: manualCart.map(i => ({ ...i, extras: [] })),
+                items: manualCart.map(i => ({ ...i, extras: i.extras || [] })),
                 baseTotal: baseTotal,
                 deliveryFee: delFee,
                 total: baseTotal + delFee,
