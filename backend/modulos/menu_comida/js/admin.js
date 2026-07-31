@@ -7025,7 +7025,7 @@ document.addEventListener('click', (e) => {
                 const targetItem = posTargetExtraItemId ? manualCart.find(i => String(i.id) === String(posTargetExtraItemId)) : null;
                 const bannerHtml = targetItem ? `
                     <div style="padding: 0.45rem 0.7rem; background: rgba(var(--theme-accent-rgb,255,83,123),0.15); border: 1px solid var(--theme-accent); border-radius: 10px; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; font-weight: 800; color: var(--theme-accent);">
-                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✨ Asignando adiciones a: ${targetItem.name}</span>
+                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Asignando adiciones</span>
                         <button type="button" onclick="window.clearPosExtraTarget()" style="background: var(--theme-accent); border: none; color: #fff; padding: 2px 7px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; font-weight: 900; flex-shrink: 0; margin-left: 4px;">Listo ✔</button>
                     </div>` : '';
 
@@ -7056,7 +7056,7 @@ document.addEventListener('click', (e) => {
                                     <span style="font-size:0.75rem; color:var(--theme-accent); font-weight:800;">${item.qty}x · $${itemTotal.toLocaleString('es-CO')}</span>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:0.35rem;">
-                                    <button type="button" class="manual-cart-add-extra-btn" data-id="${item.id}" style="background:${isTarget ? 'var(--theme-accent)' : 'rgba(var(--theme-accent-rgb,255,83,123),0.15)'}; border:1px solid ${isTarget ? 'transparent' : 'rgba(var(--theme-accent-rgb,255,83,123),0.3)'}; color:${isTarget ? '#ffffff' : 'var(--theme-accent)'}; cursor:pointer; padding:3px 7px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; gap:3px; transition:all 0.2s;" title="${isTarget ? 'Haga clic para finalizar adición de extras' : 'Agregar adición a este producto'}">
+                                    <button type="button" class="manual-cart-add-extra-btn" data-id="${item.id}" style="background:${isTarget ? 'var(--theme-accent)' : 'rgba(var(--theme-accent-rgb,255,83,123),0.15)'}; border:1px solid ${isTarget ? 'transparent' : 'rgba(var(--theme-accent-rgb,255,83,123),0.3)'}; color:${isTarget ? '#ffffff' : 'var(--theme-accent)'}; cursor:${isTarget ? 'default' : 'pointer'}; padding:3px 7px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; gap:3px; transition:all 0.2s;" title="${isTarget ? 'Asignando adiciones' : 'Agregar adición a este producto'}">
                                         <i data-lucide="${isTarget ? 'check' : 'plus'}" style="width:11px; height:11px;"></i> ${isTarget ? 'Asignando' : 'Extra'}
                                     </button>
                                     <button type="button" class="manual-cart-del-btn" data-id="${item.id}" style="background:rgba(239,68,68,0.15); border:none; color:#ef4444; cursor:pointer; padding:4px 6px; border-radius:6px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Eliminar del pedido">
@@ -7083,6 +7083,9 @@ document.addEventListener('click', (e) => {
                 cartItems.querySelectorAll('.manual-cart-add-extra-btn').forEach(btn => {
                     btn.onclick = (e) => {
                         e.stopPropagation();
+                        if (posTargetExtraItemId && String(posTargetExtraItemId) === String(btn.dataset.id)) {
+                            return; // No hace nada si ya se está asignando
+                        }
                         window.setPosExtraTarget(btn.dataset.id);
                     };
                 });
