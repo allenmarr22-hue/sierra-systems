@@ -11013,8 +11013,7 @@ function printThermalTicketZ() {
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>FLETES DOMICILIO:</span><span>$${totalFees.toLocaleString('es-CO')}</span></div>
             ${dayExpenses > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span>GASTOS / SALIDAS:</span><span>-$${dayExpenses.toLocaleString('es-CO')}</span></div>` : ''}
             <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-bottom: 4px;"><span>TOTAL RECAUDADO TURNO:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
-            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-bottom: 4px;"><span>EFECTIVO EN CAJA:</span><span>$${netCashInHand.toLocaleString('es-CO')}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-bottom: 4px;"><span>TOTAL RECAUDADO TURNO:</span><span>$${grandTotalSales.toLocaleString('es-CO')}</span></div>
             <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
             <br><br>
             <div style="display: flex; justify-content: space-between; font-size: 11px;"><span>FIRMA CAJERO: ____________________</span></div>
