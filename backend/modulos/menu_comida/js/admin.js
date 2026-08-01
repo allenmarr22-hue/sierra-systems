@@ -952,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.config.logoAnimationEnabled = logoAnimToggle.checked;
                 saveStateToLocal();
                 if (typeof updateUIFromConfig === 'function') updateUIFromConfig();
-                showToast(logoAnimToggle.checked ? '✨ Animación activada' : '⏸️ Animación desactivada', 'success');
+                showToast(logoAnimToggle.checked ? 'Animación activada' : '⏸️ Animación desactivada', 'success');
             });
         }
     }
@@ -1633,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
                             document.querySelectorAll('.wallpaper-thumb').forEach(t => t.classList.remove('active'));
                             thumb.classList.add('active');
-                            showToast('Fondo aplicado ✨');
+                            showToast('Fondo aplicado');
                         };
                     });
                 }
@@ -1655,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveStateToLocal();
                 applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
                 document.querySelectorAll('.wallpaper-thumb').forEach(t => t.classList.remove('active'));
-                showToast('Fondo personalizado aplicado ✨');
+                showToast('Fondo personalizado aplicado');
             });
 
         } catch (err) {
@@ -6923,7 +6923,7 @@ document.addEventListener('click', (e) => {
                         name: dish.name,
                         price: parseFloat(dish.price) || 0
                     });
-                    showToast(`+ ${dish.name} asignado a ${targetItem.name} ✨`);
+                    showToast(`+ ${dish.name} asignado a ${targetItem.name}`);
                 } else {
                     const exIdx = targetItem.extras.findIndex(e => String(e.id) === String(dish.id));
                     if (exIdx !== -1) {

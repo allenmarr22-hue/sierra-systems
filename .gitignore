@@ -32,6 +32,8 @@ backend/fix_fogon_owner.js
 backend/fix_fogon_status.js
 backend/get_businesses.js
 backend/test_save.js
+# Agent temporary directory
+.gemini/
 backend/debug/
 
 

@@ -2480,7 +2480,7 @@ function checkPromotions(force = false, isUserClick = false) {
 
         const isSvcMode = promos.discount.mode === 'service';
         if (promos.discount.category === 'all') {
-            categoryDisplay.innerHTML = `<span style="display:inline-block; background:rgba(var(--accent-rgb),0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:20px; padding:4px 16px; font-size:0.78rem; font-weight:700; letter-spacing:0.5px; margin:3px 4px;">TODAS LAS CATEGORÍAS ✨</span>`;
+            categoryDisplay.innerHTML = `<span style="display:inline-block; background:rgba(var(--accent-rgb),0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:20px; padding:4px 16px; font-size:0.78rem; font-weight:700; letter-spacing:0.5px; margin:3px 4px;">TODAS LAS CATEGORÍAS</span>`;
         } else if (isSvcMode && Array.isArray(promos.discount.services)) {
             const svcs = [...promos.discount.services].sort((a, b) => a.length - b.length);
             categoryDisplay.innerHTML = svcs.map(n => `<span style="background:rgba(var(--accent-rgb),0.18); color:var(--color-dark-pink); border:1.5px solid var(--color-accent); border-radius:30px; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.5px;">${n.toUpperCase()}</span>`).join('');

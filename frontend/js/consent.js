@@ -44,17 +44,17 @@ function showConsentBanner() {
                 to { bottom: 1rem; opacity: 1; } 
             }
             .consent-content { display: flex; align-items: center; gap: 1.5rem; flex: 1; }
-            .consent-icon { color: #6366f1; display: flex; align-items: center; }
+            .consent-icon { color: #0284c7; display: flex; align-items: center; }
             .consent-text { font-size: 0.85rem; color: #475569; line-height: 1.5; }
             .consent-text strong { color: #1e293b; }
             .btn-accept-consent { 
-                background: #6366f1; color: white; border: none; 
+                background: #0284c7; color: white; border: none; 
                 padding: 0.7rem 2rem; border-radius: 12px; font-weight: 700; 
                 cursor: pointer; transition: all 0.3s ease;
                 white-space: nowrap; font-size: 0.85rem;
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
             }
-            .btn-accept-consent:hover { background: #4f46e5; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3); }
+            .btn-accept-consent:hover { background: #0369a1; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.3); }
             
             .btn-decline-consent {
                 background: transparent; color: #64748b; border: 1px solid #e2e8f0;
@@ -64,7 +64,7 @@ function showConsentBanner() {
             }
             .btn-decline-consent:hover { background: #f8fafc; color: #1e293b; border-color: #cbd5e1; }
 
-            .link-terms-consent { color: #6366f1; text-decoration: underline; cursor: pointer; font-weight: 600; }
+            .link-terms-consent { color: #0284c7; text-decoration: underline; cursor: pointer; font-weight: 600; }
             @media (max-width: 992px) { 
                 #consent-banner { flex-direction: column; gap: 1rem; text-align: center; padding: 1.5rem; width: 90%; }
                 .consent-content { flex-direction: column; gap: 0.5rem; }
@@ -95,7 +95,7 @@ window.handleDeclineConsent = function() {
         showCancelButton: true,
         confirmButtonText: 'Revisar Términos',
         cancelButtonText: 'Entiendo, cerrar por ahora',
-        confirmButtonColor: '#6366f1',
+        confirmButtonColor: '#0284c7',
         cancelButtonColor: '#94a3b8',
         background: '#ffffff',
         color: '#1e293b'

@@ -176,8 +176,6 @@ window.copySupportEmail = function() {
     const btn = document.getElementById('copy-support-email-btn');
     
     navigator.clipboard.writeText(adminSupportEmail).then(() => {
-        showToast('✉️ Correo de soporte copiado al portapapeles.', 'success');
-        
         if (btn) {
             const originalHTML = btn.innerHTML;
             btn.innerHTML = `<i data-lucide="check" style="color: #10b981;"></i> ¡Copiado!`;
@@ -1861,7 +1859,9 @@ function renderDashboard() {
                     borderColor = isExpired ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.12)';
                     badgeHtml = isExpired
                         ? `<div class="status-badge" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">⚠️ Pago Vencido</div>`
-                        : `<div class="status-badge active" style="position:absolute; top:1.5rem; right:1.5rem;">Activo</div>`;
+                        : (inst.isTrial
+                            ? `<div class="status-badge active" style="position:absolute; top:1.5rem; right:1.5rem; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-weight:800;">🎁 14 Días Gratis</div>`
+                            : `<div class="status-badge active" style="position:absolute; top:1.5rem; right:1.5rem;">Activo</div>`);
                 }
 
                 // Badge de sede (siempre mostrar con opción de editar nombre)
@@ -1889,7 +1889,7 @@ function renderDashboard() {
                 const dateBoxColor = isExpired ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)';
                 const dateBorderColor = isExpired ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
                 const dateTextColor = isExpired ? '#ef4444' : '#10b981';
-                const dateTextLabel = isExpired ? 'Vencido el:' : 'Próxima renovación:';
+                const dateTextLabel = isExpired ? 'Vencido el:' : (inst.isTrial ? 'Primer cobro automático:' : 'Próxima renovación:');
 
                 // Precio de esta instancia (priceApplied si disponible, o del módulo como fallback)
                 const instPrice = inst.priceApplied > 0
@@ -2205,8 +2205,10 @@ function renderDashboard() {
                 const suggestedId = getSuggestedModule(clientBiz);
                 const isSuggested = String(mod.id) === String(suggestedId);
                 const badge = (mod.status === 'active' && isSuggested)
-                    ? `<div class="marketplace-badge" style="background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color:#ffffff; box-shadow:0 0 15px rgba(99,102,241,0.4); border:none; top:12px; right:12px; font-weight:800;">⭐ SUGERIDO</div>`
+                    ? `<div class="marketplace-badge" style="background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; box-shadow:0 4px 14px rgba(2,132,199,0.35); border:none; top:12px; right:12px; font-weight:800;">⭐ SUGERIDO</div>`
                     : (discountBadge || '');
+
+                const hasUsedTrialAlready = clientBiz.hasUsedTrial === true || (clientBiz.moduleInstances && clientBiz.moduleInstances.some(m => m.isTrial));
 
                 let buttonHtml = '';
                 if (mod.status === 'maintenance') {
@@ -2223,12 +2225,20 @@ function renderDashboard() {
                             <i data-lucide="clock"></i> Próximamente
                         </button>
                     `;
-                } else {
+                } else if (hasUsedTrialAlready) {
                     buttonHtml = `
                         <button class="btn-primary btn-adquirir"
                             data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
                             style="width:100%; justify-content:center;">
                             <i data-lucide="shopping-cart"></i> Adquirir Módulo
+                        </button>
+                    `;
+                } else {
+                    buttonHtml = `
+                        <button class="btn-primary btn-adquirir-trial"
+                            data-mod-id="${mod.id}" data-mod-name="${mod.name}" data-mod-price="${finalPriceDisplay}"
+                            style="width:100%; justify-content:center; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:none; box-shadow:0 4px 14px 0 rgba(16,185,129,0.35);">
+                            <i data-lucide="gift"></i> Probar 14 Días Gratis ($0 Hoy)
                         </button>
                     `;
                 }
@@ -2403,8 +2413,16 @@ function renderDashboard() {
                     const modId = e.currentTarget.getAttribute('data-mod-id');
                     const modName = e.currentTarget.getAttribute('data-mod-name');
                     const modPrice = e.currentTarget.getAttribute('data-mod-price');
-                    // Realizar compra integrada real en backend MySQL
                     handleRenewal(modId, modName, modPrice);
+                });
+            });
+
+            document.querySelectorAll('.btn-adquirir-trial').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const modId = e.currentTarget.getAttribute('data-mod-id');
+                    const modName = e.currentTarget.getAttribute('data-mod-name');
+                    const modPrice = e.currentTarget.getAttribute('data-mod-price');
+                    handleRenewal(modId, modName, modPrice, null, null, true);
                 });
             });
 
@@ -2557,9 +2575,9 @@ function initClientCharts() {
 
         // ── 1. Line Chart: Consumo y Proyección Mensual ──
         const gradient = ctxBilling.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.45)');
-        gradient.addColorStop(0.6, 'rgba(99, 102, 241, 0.12)');
-        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+        gradient.addColorStop(0, 'rgba(2, 132, 199, 0.35)');
+        gradient.addColorStop(0.6, 'rgba(2, 132, 199, 0.10)');
+        gradient.addColorStop(1, 'rgba(2, 132, 199, 0)');
 
         // Labels dinámicos: últimos 5 meses reales + mes actual proyectado
         const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -2594,18 +2612,18 @@ function initClientCharts() {
                 datasets: [{
                     label: 'Consumo COP',
                     data: dataPoints,
-                    borderColor: '#6366f1',
+                    borderColor: '#0284c7',
                     backgroundColor: gradient,
                     fill: true,
                     tension: 0.4,
                     borderWidth: 2.5,
                     pointRadius: 4,
-                    pointBackgroundColor: '#6366f1',
+                    pointBackgroundColor: '#0284c7',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointHoverRadius: 7,
                     pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#6366f1',
+                    pointHoverBorderColor: '#0284c7',
                     pointHoverBorderWidth: 2
                 }]
             },
@@ -2647,7 +2665,7 @@ function initClientCharts() {
         });
 
         // ── 2. Doughnut Chart: Distribución de Módulos por Sede ──
-        const COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#f97316'];
+        const COLORS = ['#0284c7', '#10b981', '#f59e0b', '#3b82f6', '#06b6d4', '#475569'];
         const doughnutLabels = activeMods.length > 0 ? activeMods.map(m => m.name) : ['Sin módulos'];
         const doughnutData   = activeMods.length > 0 ? activeMods.map(() => 1)     : [1];
         const doughnutColors = activeMods.length > 0
@@ -3767,13 +3785,13 @@ function activateModule(modName) {
     });
 }
 
-async function handleRenewal(modId, modName, modPrice, branchName = null, instanceId = null) {
+async function handleRenewal(modId, modName, modPrice, branchName = null, instanceId = null, isTrial = false) {
     // --- Verificar perfil completo antes de renovar ---
     const clientBizChk = appState.businesses.find(b => String(b.id) === String(CLIENT_ID));
     if (isProfileIncomplete(clientBizChk)) {
         Swal.fire({
             title: 'Perfil Incompleto',
-            text: 'Antes de realizar cualquier pago, completa tu perfil con Nombre del Propietario, Teléfono, NIT, Dirección y Ciudad.',
+            text: 'Antes de realizar cualquier pago o activar pruebas, completa tu perfil con Nombre del Propietario, Teléfono, NIT, Dirección y Ciudad.',
             icon: 'warning',
             background: 'var(--bg-surface)',
             color: 'var(--text)',
@@ -3785,20 +3803,20 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         return;
     }
 
-    // Función auxiliar para procesar el pago en el servidor
+    // Función auxiliar para procesar la transacción en el servidor
     const processRenewalOnServer = async (last4, cardBrand = null, cardExpiry = null, cardHolder = null) => {
         let session;
         try { session = JSON.parse(sessionStorage.getItem('clientSession') || '{}'); } catch { session = {}; }
         if (!session.token) { Swal.fire({ icon: 'error', title: 'Sesión expirada' }); return; }
 
         try {
-            // Mostrar animación de carga de Wompi por 3 segundos
+            // Mostrar animación de carga de Wompi / Pasarela por 2.5 segundos
             Swal.fire({
-                title: 'Verificando con Wompi...',
+                title: isTrial ? 'Validando tarjeta con Wompi...' : 'Verificando con Wompi...',
                 html: `
                     <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; padding:1.5rem 0;">
-                        <div style="width: 50px; height: 50px; border: 4px solid rgba(99,102,241,0.2); border-left-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                        <p style="margin:0; font-size:1.05rem; font-weight: 500; color:var(--text);">Validando transacción con pasarela segura...</p>
+                        <div style="width: 50px; height: 50px; border: 4px solid rgba(16,185,129,0.2); border-left-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="margin:0; font-size:1.05rem; font-weight: 500; color:var(--text);">${isTrial ? 'Validando tarjeta ($0 COP) para activación de prueba...' : 'Validando transacción con pasarela segura...'}</p>
                         <span style="font-size:0.75rem; color:#10b981; display:flex; align-items:center; gap:4px;">
                             <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%; animation: ping 1.5s infinite;"></span>
                             Seguridad 3D Secure activa
@@ -3818,16 +3836,16 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
                 }
             });
             
-            // Simular retraso de pasarela de 3 segundos
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Simular retraso de pasarela de 2.5 segundos
+            await new Promise(resolve => setTimeout(resolve, 2500));
 
             const res = await fetch('/api/client/module/renew', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
-                body: JSON.stringify({ moduleId: modId, moduleName: modName, last4, cardBrand, cardExpiry, cardHolder, branchName, instanceId })
+                body: JSON.stringify({ moduleId: modId, moduleName: modName, last4, cardBrand, cardExpiry, cardHolder, branchName, instanceId, isTrial })
             });
             if (!res.ok) {
-                let errMsg = 'Error al renovar.';
+                let errMsg = 'Error al procesar la solicitud.';
                 try {
                     const errData = await res.json();
                     errMsg = errData.error || errMsg;
@@ -3861,10 +3879,12 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
             const currentSedeName = updatedInstance ? (updatedInstance.branchName || 'Sede Principal') : (branchName || 'Sede Principal');
 
             const isRenewal = !!instanceId;
-            const successTitle = isRenewal ? '¡Renovación Exitosa!' : '¡Compra Exitosa!';
-            const successText = isRenewal 
-                ? `El módulo <strong>${modName}</strong> ha sido renovado por 30 días más.`
-                : `El módulo <strong>${modName}</strong> ha sido adquirido con éxito.`;
+            const successTitle = isTrial ? '¡Prueba Gratis Activada!' : (isRenewal ? '¡Renovación Exitosa!' : '¡Compra Exitosa!');
+            const successText = isTrial
+                ? `Has activado los 14 días de prueba gratis para <strong>${modName}</strong> ($0 COP hoy). Tu primer cobro automático de <strong>${modPrice}</strong> será en 14 días.`
+                : (isRenewal 
+                    ? `El módulo <strong>${modName}</strong> ha sido renovado por 30 días más.`
+                    : `El módulo <strong>${modName}</strong> ha sido adquirido con éxito.`);
 
             const resSuccess = await Swal.fire({
                 icon: 'success',
@@ -3872,7 +3892,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
                 html: `
                     <div style="text-align:center;">
                         <p style="margin:0 0 1.25rem 0; font-size:1.05rem;">${successText}</p>
-                        <div style="background:rgba(99,102,241,0.05); padding:0.75rem; border-radius:8px; border:1px solid rgba(99,102,241,0.15); display:inline-block; font-size:0.9rem;">
+                        <div style="background:rgba(16,185,129,0.06); padding:0.75rem 1rem; border-radius:8px; border:1px solid rgba(16,185,129,0.2); display:inline-block; font-size:0.9rem;">
                             Identificación de Sede: <strong style="color:var(--primary);">${currentSedeName}</strong>
                         </div>
                     </div>
@@ -3882,7 +3902,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
                 confirmButtonText: 'Siguiente: Renombrar sede',
                 showCancelButton: true,
                 cancelButtonText: 'Terminar',
-                confirmButtonColor: '#8b5cf6',
+                confirmButtonColor: '#10b981',
                 cancelButtonColor: 'rgba(255,255,255,0.05)'
             });
 
@@ -3949,6 +3969,35 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         }
     };
 
+    const modalTitle = isTrial
+        ? '🎁 Prueba 14 Días Gratis'
+        : (instanceId ? 'Renovar Suscripción' : 'Adquirir Módulo');
+
+    const summaryBoxHtml = isTrial ? `
+        <div style="background: rgba(16, 185, 129, 0.08); padding: 1rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2); text-align:left; margin-bottom:1.25rem;">
+            <p style="margin:0; font-size:0.75rem; color:#10b981; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">🎁 Oferta de Lanzamiento: 14 Días Gratis</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.35rem;">
+                <h4 style="margin:0; font-size:1.1rem; color:var(--text); font-weight:700;">${modName}</h4>
+                <p style="margin:0; font-size:1.25rem; font-weight:900; color:#10b981;">$0 COP hoy</p>
+            </div>
+            <p style="margin:0.4rem 0 0 0; font-size:0.78rem; color:var(--text-muted); line-height:1.4;">
+                Primer cobro automático en 14 días: <strong>${modPrice}</strong>. Ingresa tu tarjeta para validar la activación ($0 cobrados el día de hoy).
+            </p>
+        </div>
+    ` : `
+        <div style="background: rgba(99, 102, 241, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2); text-align:left; margin-bottom:1.25rem;">
+            <p style="margin:0; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">${instanceId ? 'Módulo a Renovar' : 'Módulo a Adquirir'}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem;">
+                <h4 style="margin:0; font-size:1.15rem; color:var(--text); font-weight:700;">${modName}${branchName && branchName !== 'Sede Principal' ? ' <span style="font-size:0.8rem;opacity:0.7;">('+branchName+')</span>' : ''}</h4>
+                <p style="margin:0; font-size:1.2rem; font-weight:800; color:#10b981;">${modPrice}</p>
+            </div>
+        </div>
+    `;
+
+    const confirmBtnText = isTrial
+        ? 'Activar 14 Días Gratis ($0 Hoy)'
+        : (instanceId ? 'Pagar y Renovar' : 'Procesar Pago');
+
     // --- FLUJO: WALLET con tarjetas guardadas ---
     const walletCards = walletLoad();
     if (walletCards.length > 0) {
@@ -3960,8 +4009,8 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
             <div class="confirm-card-option" onclick="window.selectCardForPayment(this,${i})"
                 style="display:flex; align-items:center; justify-content:space-between; gap:1rem;
                     padding:0.85rem 1rem; border-radius:10px; cursor:pointer; transition:all 0.2s;
-                    border:1px solid ${ i === 0 ? 'rgba(139,92,246,0.7)' : 'rgba(99,102,241,0.2)' };
-                    background:${ i === 0 ? 'rgba(99,102,241,0.08)' : 'var(--bg-surface-light)' };">
+                    border:1px solid ${ i === 0 ? 'rgba(16,185,129,0.7)' : 'rgba(99,102,241,0.2)' };
+                    background:${ i === 0 ? 'rgba(16,185,129,0.08)' : 'var(--bg-surface-light)' };">
                 <div style="display:flex; align-items:center; gap:0.75rem;">
                     <div style="width:36px;height:36px;border-radius:8px;background:rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:center;font-size:1rem;">${bs.logo || '💳'}</div>
                     <div>
@@ -3971,7 +4020,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
                 </div>
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span style="font-size:0.8rem; color:var(--text-muted);">${card.expiry}</span>
-                    <div class="card-check-icon" style="width:20px;height:20px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;opacity:${i===0?'1':'0'};transition:opacity 0.2s;">
+                    <div class="card-check-icon" style="width:20px;height:20px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;opacity:${i===0?'1':'0'};transition:opacity 0.2s;">
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                 </div>
@@ -3979,15 +4028,11 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         }).join('');
 
         const swalResult = await Swal.fire({
-            title: 'Renovar Suscripción',
+            title: modalTitle,
             html: `
-                <style>.confirm-card-option:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.15);}</style>
-                <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; margin-top:1rem;">
-                    <div style="background:rgba(99,102,241,0.05); padding:1rem; border-radius:8px; border:1px solid rgba(99,102,241,0.2);">
-                        <p style="margin:0; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Módulo a Renovar</p>
-                        <h4 style="margin:0.25rem 0; font-size:1.15rem; color:var(--text); font-weight:700;">${modName}${branchName && branchName !== 'Sede Principal' ? ' <span style="font-size:0.8rem;opacity:0.7;">('+branchName+')</span>' : ''}</h4>
-                        <p style="margin:0; font-size:1.1rem; font-weight:800; color:#10b981;">${modPrice}</p>
-                    </div>
+                <style>.confirm-card-option:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,0.15);}</style>
+                <div style="text-align:left; display:flex; flex-direction:column; gap:1rem; margin-top:0.75rem;">
+                    ${summaryBoxHtml}
                     <div>
                         <p style="margin:0 0 0.75rem; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">${walletCards.length > 1 ? 'Selecciona una tarjeta guardada:' : 'Tarjeta guardada:'}</p>
                         <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:230px; overflow-y:auto; padding: 4px 4px 4px 0;">
@@ -3996,7 +4041,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
                     </div>
                     <p style="font-size:0.75rem; color:var(--text-muted); margin:0; display:flex; align-items:center; gap:6px;">
                         <i data-lucide="shield-check" style="width:16px; color:#10b981;"></i>
-                        <span>Datos protegidos con SSL 256-bit.</span>
+                        <span>Datos protegidos con cifrado seguro SSL 256-bit.</span>
                     </p>
                 </div>
             `,
@@ -4005,7 +4050,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
             width: '480px',
             showCancelButton: true,
             showCloseButton: true,
-            confirmButtonText: 'Pagar y Renovar',
+            confirmButtonText: confirmBtnText,
             cancelButtonText: 'Usar otra tarjeta',
             confirmButtonColor: '#10b981',
             cancelButtonColor: 'rgba(99,102,241,0.15)',
@@ -4015,7 +4060,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
                 const chosenCard = walletCards[idx];
                 if (!chosenCard) return Swal.showValidationMessage('Selecciona una tarjeta.');
                 Swal.showLoading();
-                return new Promise(resolve => setTimeout(() => resolve(chosenCard), 2500));
+                return new Promise(resolve => setTimeout(() => resolve(chosenCard), 2000));
             }
         });
 
@@ -4036,20 +4081,14 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
 
     // --- FLUJO NUEVA TARJETA ---
     const result = await Swal.fire({
-        title: 'Renovar Suscripción',
+        title: modalTitle,
         html: `
             <style>
                 .pro-input { width: 100%; box-sizing: border-box; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); background: var(--bg-body); color: var(--text); font-family: inherit; font-size: 1rem; outline: none; transition: all 0.2s; margin:0; }
-                .pro-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+                .pro-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
                 .pro-label { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
             </style>
-            <div style="background: rgba(99, 102, 241, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2); text-align:left; margin-bottom:1.5rem;">
-                <p style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Total a Pagar</p>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem;">
-                    <h4 style="margin:0; font-size:1.15rem; color:var(--text); font-weight:700;">${modName}</h4>
-                    <p style="margin:0; font-size:1.2rem; font-weight:800; color:var(--primary);">${modPrice}</p>
-                </div>
-            </div>
+            ${summaryBoxHtml}
             <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem;">
                 <div>
                     <label class="pro-label">NÚMERO DE TARJETA</label>
@@ -4075,7 +4114,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         color: 'var(--text)',
         width: '450px',
         showCancelButton: true,
-        confirmButtonText: 'Procesar Pago y Renovar',
+        confirmButtonText: confirmBtnText,
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#10b981',
         didRender: () => {
@@ -4102,7 +4141,7 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
             if (!cvc || cvc.length < 3) return Swal.showValidationMessage('CVC inválido.');
             if (!name || name.length < 3) return Swal.showValidationMessage('Ingresa el nombre del titular.');
             Swal.showLoading();
-            return new Promise(resolve => setTimeout(() => resolve({ num: numRaw, expiry, name }), 2500));
+            return new Promise(resolve => setTimeout(() => resolve({ num: numRaw, expiry, name }), 2000));
         }
     });
 
@@ -4112,12 +4151,19 @@ async function handleRenewal(modId, modName, modPrice, branchName = null, instan
         const newCard = { brand, last4: cardData.num.replace(/\s/g,'').slice(-4), expiry: cardData.expiry, holder: cardData.name.toUpperCase() };
         // Add new card to wallet for future use
         const cards = walletLoad();
-        cards.push(newCard);
-        walletSave(cards);
-        if (document.getElementById('card-wallet')) renderCardWallet();
-        await processRenewalOnServer(newCard.last4, newCard.brand, newCard.expiry, newCard.holder);
     }
 }
+
+window.copyDemoField = function(btn, text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+    }
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = `<span style="color:#10b981; font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:2px;">✓ Copiado</span>`;
+    setTimeout(() => {
+        btn.innerHTML = origHtml;
+    }, 1500);
+};
 
 /** Demo: redirige o informa */
 function handleDemo(modId, modName) {
@@ -4247,7 +4293,7 @@ function handleDemo(modId, modName) {
                     <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-surface-light); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 140px;">
                         <span style="color: var(--text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase;">Usuario:</span>
                         <strong style="color: var(--text); font-size: 0.88rem; font-family: monospace;">admin</strong>
-                        <button onclick="navigator.clipboard.writeText('admin'); Swal.showValidationMessage('¡Usuario copiado!'); setTimeout(() => Swal.resetValidationMessage(), 1500);" style="background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;" title="Copiar usuario">
+                        <button onclick="window.copyDemoField(this, 'admin')" style="background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;" title="Copiar usuario">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0015 2.25h-1.5a2.251 2.251 0 00-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 00-9-9z"></path></svg>
                         </button>
                     </div>
@@ -4255,7 +4301,7 @@ function handleDemo(modId, modName) {
                     <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-surface-light); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 140px;">
                         <span style="color: var(--text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase;">Clave:</span>
                         <strong style="color: var(--text); font-size: 0.88rem; font-family: monospace;">123456</strong>
-                        <button onclick="navigator.clipboard.writeText('123456'); Swal.showValidationMessage('¡Clave copiada!'); setTimeout(() => Swal.resetValidationMessage(), 1500);" style="background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;" title="Copiar clave">
+                        <button onclick="window.copyDemoField(this, '123456')" style="background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;" title="Copiar clave">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0015 2.25h-1.5a2.251 2.251 0 00-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 00-9-9z"></path></svg>
                         </button>
                     </div>

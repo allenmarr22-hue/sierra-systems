@@ -1872,7 +1872,7 @@ window.populateManualCategories = function() {
     if (comboActive && !isComboExpired) {
         const comboOpt = document.createElement('option');
         comboOpt.value = 'combo-active';
-        comboOpt.innerText = '✨ COMBO ESPECIAL';
+        comboOpt.innerText = 'COMBO ESPECIAL';
         comboOpt.style.fontWeight = '800';
         comboOpt.style.color = 'var(--color-dark-pink)';
         catSelect.appendChild(comboOpt);
@@ -5601,7 +5601,7 @@ window.sendReminderWhatsApp = function(index, isMaintenance = false) {
     
     let msg = "";
     if (isMaintenance || currentAgendaTray === 'reminders') {
-        const defaultMaintenance = `✨ *Cuidado de tus Uñas* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para saludarte y recordarte que ya es tiempo de consentir tus uñas con un mantenimiento o un nuevo diseño. 💅🏼✨\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`;
+        const defaultMaintenance = `*Cuidado de tus Uñas*\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para saludarte y recordarte que ya es tiempo de consentir tus uñas con un mantenimiento o un nuevo diseño. 💅🏼\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`;
         const template = localStorage.getItem('agenda_wa_template_maintenance') || defaultMaintenance;
         msg = template
             .replace(/{cliente}/g, clientName)
@@ -5633,7 +5633,7 @@ window.sendReminderWhatsApp = function(index, isMaintenance = false) {
         // ----------------------------------------
         
     } else {
-        const defaultReminder = `✨ *Recordatorio de Cita* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* {servicio}\n⏰ *Hora:* {horario}\n👩🏻‍🎨 *Especialista:* {especialista}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`;
+        const defaultReminder = `*Recordatorio de Cita*\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* {servicio}\n⏰ *Hora:* {horario}\n👩🏻‍🎨 *Especialista:* {especialista}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`;
         const template = localStorage.getItem('agenda_wa_template_reminder') || defaultReminder;
         
         let formattedDate = apt.date;
@@ -9012,8 +9012,8 @@ function loadCurrentSettings() {
     
     const defaultBookingHeader = `Hola {negocio}!\n\n*Mi Nombre:* {cliente}\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total a pagar: {total}*`;
     const defaultBookingItem = `{numero}. *{servicio}*\n   - Precio: {precio}\n   - Fecha: {fecha}\n   - Horario: {horario}\n   - Profesional: {profesional}\n`;
-    const defaultReminder = `✨ *Recordatorio de Cita* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* {servicio}\n⏰ *Hora:* {horario}\n👩🏻‍🎨 *Especialista:* {especialista}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`;
-    const defaultMaintenance = `✨ *Cuidado de tus Uñas* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para saludarte y recordarte que ya es tiempo de consentir tus uñas con un mantenimiento o un nuevo diseño. 💅🏼✨\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`;
+    const defaultReminder = `*Recordatorio de Cita*\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* {servicio}\n⏰ *Hora:* {horario}\n👩🏻‍🎨 *Especialista:* {especialista}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`;
+    const defaultMaintenance = `*Cuidado de tus Uñas*\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para saludarte y recordarte que ya es tiempo de consentir tus uñas con un mantenimiento o un nuevo diseño. 💅🏼\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`;
 
     const elHeader = document.getElementById('settings-wa-booking-header');
     if (elHeader) elHeader.value = localStorage.getItem('agenda_wa_template_booking_header') || defaultBookingHeader;
@@ -11261,7 +11261,7 @@ window.checkFirstTimeSetup = function() {
             `;
 
             Swal.fire({
-                title: '<span style="font-family:\'Montserrat\',sans-serif; font-weight:700; font-size:1.25rem;">✨ Identidad del Negocio</span>',
+                title: '<span style="font-family:\'Montserrat\',sans-serif; font-weight:700; font-size:1.25rem;">Identidad del Negocio</span>',
                 html: `
                     <style>
                         .swal2-popup {

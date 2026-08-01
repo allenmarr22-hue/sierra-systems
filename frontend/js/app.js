@@ -2576,23 +2576,26 @@ function renderModulesGrid() {
         const priceDisplay = (mod.price && !isNaN(priceNum) && priceNum > 0) ? `<span style="white-space: nowrap;">$ ${priceNum.toLocaleString('es-CO')} <span style="font-size: 0.8em;">COP</span></span>` : 'Cotizar';
         
         const isRec = String(mod.id) === String(appState.config?.recommendedModuleId);
-        const recBadgeHtml = isRec ? `<div style="margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 4px; background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-border); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; width: fit-content;">✨ RECOMENDADO</div>` : '';
+        const recLabel = appState.config?.recommendedLabel || 'RECOMENDADO';
+        const recBadgeHtml = isRec ? `<div style="display: inline-flex; align-items: center; background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-border); font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.04em; width: fit-content;">${recLabel}</div>` : '';
 
         return `
-        <div class="biz-card" data-module-id="${mod.id}">
-            <div class="module-card-header">
-                <div class="module-icon-large"><i data-lucide="${mod.icon}"></i></div>
-                <div class="status-badge ${mod.status === 'active' ? 'active' : (mod.status === 'maintenance' ? 'inactive' : 'neutral')}">
-                    ${mod.status === 'active' ? 'Activo' : (mod.status === 'maintenance' ? 'En Mantenimiento' : (mod.status === 'hidden' ? 'Oculto' : 'Próximamente'))}
+        <div class="biz-card" data-module-id="${mod.id}" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <div class="module-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <div class="module-icon-large"><i data-lucide="${mod.icon}"></i></div>
+                        ${recBadgeHtml}
+                    </div>
+                    <div class="status-badge ${mod.status === 'active' ? 'active' : (mod.status === 'maintenance' ? 'inactive' : 'neutral')}">
+                        ${mod.status === 'active' ? 'Activo' : (mod.status === 'maintenance' ? 'En Mantenimiento' : (mod.status === 'hidden' ? 'Oculto' : 'Próximamente'))}
+                    </div>
                 </div>
-            </div>
-            <h3 class="module-title" style="display:flex; flex-direction:column; gap:4px;">
-                <span>${mod.name}</span>
-                ${recBadgeHtml}
-            </h3>
-            <p class="module-desc">${mod.desc}</p>
-            <div class="module-price" style="font-weight: 800; color: var(--primary); margin-top: 0.75rem; font-size: 1.1rem;">
-                ${priceDisplay}
+                <h3 class="module-title">${mod.name}</h3>
+                <p class="module-desc" style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.75rem;">${mod.desc}</p>
+                <div class="module-price" style="font-weight: 800; color: var(--primary); font-size: 1.1rem;">
+                    ${priceDisplay}
+                </div>
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 1.25rem;">
                 <button class="btn-primary edit-mod-btn" data-id="${mod.id}" style="flex:2; justify-content: center;">
@@ -3410,12 +3413,12 @@ function initCharts() {
                 datasets: [{
                     label: 'Nuevos Negocios',
                     data: [2, 5, 3, 8, 4, 6],
-                    borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderColor: '#0284c7',
+                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
                     fill: true,
                     tension: 0.4,
                     borderWidth: 3,
-                    pointBackgroundColor: '#6366f1'
+                    pointBackgroundColor: '#0284c7'
                 }]
             },
             options: {
@@ -3448,7 +3451,7 @@ function initCharts() {
         const chartData = Object.values(moduleCounts).length > 0 
             ? Object.values(moduleCounts) 
             : [1];
-        const COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#f97316'];
+        const COLORS = ['#0284c7', '#10b981', '#f59e0b', '#3b82f6', '#06b6d4', '#475569'];
 
         modulesChart = new Chart(ctxModules, {
             type: 'doughnut',
@@ -3582,8 +3585,8 @@ function initCharts() {
             data = [0, 0, 0];
         }
 
-        const COLORS = ['rgba(59, 130, 246, 0.7)', 'rgba(139, 92, 246, 0.7)', 'rgba(236, 72, 153, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(16, 185, 129, 0.7)'];
-        const BORDERS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+        const COLORS = ['rgba(2, 132, 199, 0.7)', 'rgba(16, 185, 129, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(59, 130, 246, 0.7)', 'rgba(71, 85, 105, 0.7)'];
+        const BORDERS = ['#0284c7', '#10b981', '#f59e0b', '#3b82f6', '#475569'];
 
         ticketsChart = new Chart(ctxTickets, {
             type: 'bar',

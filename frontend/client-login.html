@@ -4,7 +4,7 @@
     <script>
         // Prevenir parpadeo de tema (FOUC) e inicializar favicon dinámico — sin flash
         (function() {
-            var DEFAULT_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2222%22%20fill%3D%22%230f172a%22%2F%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22as-grad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23818cf8%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234f46e5%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20font-size%3D%2252%22%20fill%3D%22url(%23as-grad)%22%20font-family%3D%22'Outfit'%2C'Inter'%2Csans-serif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22900%22%3EAS%3C%2Ftext%3E%3C%2Fsvg%3E";
+            var DEFAULT_SVG = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2222%22%20fill%3D%22%230f172a%22%2F%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22as-grad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%230284c7%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%232563eb%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20font-size%3D%2252%22%20fill%3D%22url(%23as-grad)%22%20font-family%3D%22'Outfit'%2C'Inter'%2Csans-serif%22%20text-anchor%3D%22middle%22%20font-weight%3D%22900%22%3EAS%3C%2Ftext%3E%3C%2Fsvg%3E";
             var theme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', theme);
             try {
@@ -47,7 +47,7 @@
         /* --- LEFT PANEL: BRAND --- */
         .brand-panel {
             width: 45%;
-            background: linear-gradient(145deg, #0f172a 0%, #1a1040 100%);
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -62,7 +62,7 @@
             position: absolute;
             top: -80px; left: -80px;
             width: 550px; height: 550px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 65%);
+            background: radial-gradient(circle, rgba(2, 132, 199, 0.15) 0%, transparent 65%);
             border-radius: 50%;
             animation: orb-pulse 7s ease-in-out infinite;
         }
@@ -72,7 +72,7 @@
             position: absolute;
             bottom: -60px; right: -60px;
             width: 450px; height: 450px;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.16) 0%, transparent 65%);
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, transparent 65%);
             border-radius: 50%;
             animation: orb-pulse 9s ease-in-out infinite reverse;
         }
@@ -104,12 +104,12 @@
         }
         .brand-logo-icon {
             width: 48px; height: 48px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #0284c7, #2563eb);
             border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
         }
         .brand-logo-text { font-size: 1.4rem; font-weight: 800; }
-        .brand-logo-text span { color: #818cf8; }
+        .brand-logo-text span { color: #0284c7; }
 
         .brand-tagline {
             font-size: 2.6rem;
@@ -120,7 +120,7 @@
             letter-spacing: -0.02em;
         }
         .brand-tagline span {
-            background: linear-gradient(135deg, #6366f1, #a78bfa);
+            background: linear-gradient(135deg, #0284c7, #2563eb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -149,10 +149,10 @@
         }
         .brand-feature-icon {
             width: 32px; height: 32px;
-            background: rgba(99, 102, 241, 0.15);
+            background: rgba(2, 132, 199, 0.15);
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            color: #818cf8;
+            color: #0284c7;
             flex-shrink: 0;
         }
         .brand-feature-icon i { width: 16px; height: 16px; }
@@ -223,9 +223,9 @@
             transition: all 0.2s ease;
         }
         .form-input:focus {
-            border-color: #6366f1;
+            border-color: #0284c7;
             background: rgba(30, 41, 59, 0.95);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
         }
         .form-input::placeholder { color: #475569; }
         .form-input.valid { border-color: rgba(16, 185, 129, 0.5); }
@@ -247,7 +247,7 @@
         .btn-login {
             width: 100%;
             padding: 1rem;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             background-size: 200% 100%;
             color: white;
             border: none;
@@ -262,7 +262,7 @@
             gap: 0.5rem;
             margin-top: 1.75rem;
             transition: all 0.3s ease;
-            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.45);
+            box-shadow: 0 8px 25px -5px rgba(2, 132, 199, 0.35);
             position: relative;
             overflow: hidden;
         }
@@ -270,7 +270,7 @@
             content: '';
             position: absolute;
             inset: -2px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa, #6366f1);
+            background: linear-gradient(135deg, #0284c7, #2563eb, #0369a1);
             background-size: 300% 300%;
             border-radius: 12px;
             z-index: -1;
@@ -285,7 +285,7 @@
         }
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 18px 35px -5px rgba(99, 102, 241, 0.6);
+            box-shadow: 0 14px 30px -5px rgba(2, 132, 199, 0.45);
             background-position: 100% 0;
         }
         .btn-login:disabled {
@@ -321,7 +321,7 @@
             color: #475569;
         }
         .login-footer a {
-            color: #818cf8;
+            color: #0284c7;
             text-decoration: none;
             font-weight: 600;
         }
@@ -352,6 +352,27 @@
             display: none;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Custom High-End SweetAlert Popups */
+        .custom-swal-popup {
+            border-radius: 24px !important;
+            padding: 2.2rem 2.5rem !important;
+            background: #0f172a !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7) !important;
+            overflow: hidden !important;
+        }
+        .custom-swal-title {
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 800 !important;
+            font-size: 1.55rem !important;
+            color: #ffffff !important;
+            letter-spacing: -0.02em !important;
+        }
+        @keyframes progress-fill {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
 
         /* --- GOOGLE BUTTON & DIVIDER --- */
         .login-divider {
@@ -499,8 +520,8 @@
                     <path d="M4 8h24v3H4zM4 14.5h18v3H4zM4 21h24v3H4z" fill="url(#grad1)"/>
                     <defs>
                         <linearGradient id="grad1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#6366f1"/>
-                            <stop offset="1" stop-color="#8b5cf6"/>
+                            <stop stop-color="#0284c7"/>
+                            <stop offset="1" stop-color="#2563eb"/>
                         </linearGradient>
                     </defs>
                 </svg>
@@ -632,7 +653,7 @@
         window.addEventListener('resize', resizeCanvas);
 
         const PARTICLE_COUNT = 45;
-        const COLORS = ['rgba(99,102,241,', 'rgba(139,92,246,', 'rgba(167,139,250,'];
+        const COLORS = ['rgba(2,132,199,', 'rgba(37,99,235,', 'rgba(56,189,248,'];
 
         function createParticle() {
             return {
@@ -859,7 +880,7 @@
                 confirmButtonText: 'Continuar →',
                 showCancelButton: true,
                 cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#6366f1',
+                confirmButtonColor: '#0284c7',
                 focusConfirm: false,
                 preConfirm: () => {
                     const val = document.getElementById('swal-email').value.trim();
@@ -897,7 +918,7 @@
                 confirmButtonText: 'Verificar →',
                 showCancelButton: true,
                 cancelButtonText: '← Atrás',
-                confirmButtonColor: '#6366f1',
+                confirmButtonColor: '#0284c7',
                 focusConfirm: false,
                 preConfirm: () => {
                     const val = document.getElementById('swal-admin-pass').value;
@@ -974,7 +995,7 @@
                         background: '#0f172a',
                         color: '#f8fafc',
                         confirmButtonText: 'Iniciar Sesión',
-                        confirmButtonColor: '#6366f1'
+                        confirmButtonColor: '#0284c7'
                     });
                     // Prellenar el email en el formulario
                     document.getElementById('login-email').value = email;
@@ -1035,7 +1056,7 @@
                     text: 'El servicio de Google aún se está cargando. Inténtalo de nuevo en unos instantes.',
                     background: '#0d1526',
                     color: '#f8fafc',
-                    confirmButtonColor: '#6366f1'
+                    confirmButtonColor: '#0284c7'
                 });
             }
         });
@@ -1044,17 +1065,23 @@
             const googleBtn = document.getElementById('btn-google');
             if (googleBtn) googleBtn.disabled = true;
 
-            // Mostrar loader
+            // Step 1: Mostrar loader redondeado y elegante
             Swal.fire({
-                title: 'Verificando cuenta...',
-                html: accessToken
-                    ? `<p style="color:#64748b; font-size:0.88rem;">Conectando de forma segura con <strong style="color:#818cf8;">Google</strong>...</p>`
-                    : `<p style="color:#64748b; font-size:0.88rem;">Conectando con <strong style="color:#818cf8;">${email.replace(/</g, '&lt;')}</strong></p>`,
-                background: '#0d1526',
-                color: '#f8fafc',
-                allowOutsideClick: false,
+                title: 'Autenticando Sesión...',
+                html: `
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:1.25rem; margin-top:1rem;">
+                        <div style="width:48px; height:48px; border:3.5px solid rgba(2, 132, 199, 0.2); border-top-color:#0284c7; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                        <p style="font-family:'Outfit',sans-serif; color:#94a3b8; font-size:0.95rem; margin:0; line-height:1.5;">
+                            Conectando de forma segura con <strong style="color:#0284c7;">Google Security</strong>...
+                        </p>
+                    </div>
+                `,
+                customClass: {
+                    popup: 'custom-swal-popup',
+                    title: 'custom-swal-title'
+                },
                 showConfirmButton: false,
-                didOpen: () => Swal.showLoading()
+                allowOutsideClick: false
             });
 
             try {
@@ -1081,20 +1108,43 @@
                         token: data.token
                     }));
 
-                    const welcomeTitle = data.wasAutoRegistered ? '¡Registro Exitoso!' : '¡Acceso concedido!';
-                    const welcomeHtml = data.wasAutoRegistered 
-                        ? `<p style="color:#64748b;">Creando tu cuenta para <strong style="color:#f1f5f9;">${data.clientName}</strong>. Redirigiendo al panel...</p>`
-                        : `<p style="color:#64748b;">Bienvenido de nuevo, <strong style="color:#f1f5f9;">${data.clientName}</strong></p>`;
+                    if (googleBtn) {
+                        googleBtn.innerHTML = `<i data-lucide="check-circle" style="color:#10b981; width:20px; height:20px;"></i> ¡Acceso concedido!`;
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    }
 
+                    const name = data.clientName || 'Cliente';
+                    const titleText = data.wasAutoRegistered ? '¡Registro Completado!' : '¡Bienvenido de nuevo!';
+                    const subtitleText = data.wasAutoRegistered 
+                        ? `Tu cuenta para <strong style="color:#ffffff;">${name}</strong> ha sido configurada.`
+                        : `Hola <strong style="color:#ffffff;">${name}</strong>, tu sesión ha sido verificada.`;
+
+                    // Step 2: Mostrar tarjeta de bienvenida clara, legible y redondeada con barra interna pro
                     await Swal.fire({
-                        icon: 'success',
-                        title: welcomeTitle,
-                        html: welcomeHtml,
-                        background: '#0d1526',
-                        color: '#f8fafc',
-                        timer: 1600,
-                        timerProgressBar: true,
-                        showConfirmButton: false
+                        html: `
+                            <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding: 0.5rem 0;">
+                                <div style="width:64px; height:64px; border-radius:50%; background:rgba(16, 185, 129, 0.12); border: 2px solid rgba(16, 185, 129, 0.3); display:flex; align-items:center; justify-content:center; margin-bottom: 1.25rem;">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                                <h3 style="font-family:'Outfit',sans-serif; font-size:1.65rem; font-weight:800; color:#ffffff; margin:0 0 0.5rem 0; letter-spacing:-0.02em;">${titleText}</h3>
+                                <p style="font-family:'Outfit',sans-serif; font-size:1.02rem; color:#94a3b8; margin:0 0 1.25rem 0; line-height:1.5;">
+                                    ${subtitleText}
+                                </p>
+                                <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.25); padding:0.45rem 1.1rem; border-radius:20px; color:#38bdf8; font-size:0.84rem; font-weight:600; margin-bottom: 0.85rem;">
+                                    <span style="width:7px; height:7px; border-radius:50%; background:#10b981; animation:pulse 1.5s infinite;"></span> Redirigiendo a tu panel de control...
+                                </div>
+                                <div style="width: 100%; max-width: 240px; height: 5px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden;">
+                                    <div style="height: 100%; width: 0%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); border-radius: 999px; animation: progress-fill 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;"></div>
+                                </div>
+                            </div>
+                        `,
+                        customClass: {
+                            popup: 'custom-swal-popup'
+                        },
+                        timer: 1500,
+                        timerProgressBar: false,
+                        showConfirmButton: false,
+                        allowOutsideClick: false
                     });
 
                     const params = new URLSearchParams(window.location.search);
@@ -1113,10 +1163,14 @@
                     icon: 'error',
                     title: 'Acceso Denegado',
                     text: err.message || 'No se pudo verificar la sesión con Google.',
-                    background: '#0d1526',
+                    background: '#0f172a',
                     color: '#f8fafc',
+                    customClass: {
+                        popup: 'custom-swal-popup',
+                        title: 'custom-swal-title'
+                    },
                     confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#6366f1'
+                    confirmButtonColor: '#0284c7'
                 });
             }
         }

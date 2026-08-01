@@ -2256,12 +2256,27 @@ app.post('/api/client/module/renew', async (req, res) => {
             biz.modules.push(moduleId);
         }
 
+        const isTrial = req.body.isTrial === true || req.body.isTrial === 'true';
+
+        // Verificar si el negocio ya utilizó su prueba gratuita de 14 días (límite: 1 por negocio)
+        const hasUsedTrialAlready = biz.hasUsedTrial === true || (biz.moduleInstances && biz.moduleInstances.some(m => m.isTrial));
+        if (isTrial && hasUsedTrialAlready) {
+            return res.status(400).json({ error: 'Tu negocio ya ha disfrutado del periodo de prueba gratuita de 14 días. Las contrataciones adicionales se realizan con la tarifa regular.' });
+        }
+
+        if (isTrial) {
+            biz.hasUsedTrial = true;
+        }
+
+        const daysToAdd = isTrial ? 14 : 30;
+        const paidAmount = isTrial ? 0 : priceApplied;
+
         let targetInstance = null;
         if (instanceId) {
             targetInstance = biz.moduleInstances.find(m => m.instanceId === instanceId);
         }
 
-        const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        const newExpiry = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
         const newExpiryStr = newExpiry.toISOString();
 
         let finalBranchName;
@@ -2277,11 +2292,12 @@ app.post('/api/client/module/renew', async (req, res) => {
             const baseDate = (currentRenewal && new Date(currentRenewal).getTime() > Date.now()) 
                 ? new Date(currentRenewal) 
                 : new Date();
-            const extendedExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            const extendedExpiry = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
             
             targetInstance.status = 'active';
             targetInstance.priceApplied = priceApplied;
             targetInstance.renewalDate = extendedExpiry.toISOString();
+            targetInstance.isTrial = isTrial ? true : false;
             targetInstance.cancelledAt = null;
             targetInstance.accessUntil = null;
             
@@ -2299,6 +2315,7 @@ app.post('/api/client/module/renew', async (req, res) => {
                 branchName: finalBranchName,
                 status: 'active',
                 priceApplied: priceApplied,
+                isTrial: isTrial ? true : false,
                 renewalDate: newExpiryStr
             });
             
@@ -2316,8 +2333,8 @@ app.post('/api/client/module/renew', async (req, res) => {
         
         biz.billing.next_billing_date = finalExpiryStr.slice(0, 10);
         biz.billing.last_payment_date = new Date().toISOString();
-        biz.billing.last_payment_amount = priceApplied;
-        biz.billing.last_transaction_id = `sim_txn_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+        biz.billing.last_payment_amount = paidAmount;
+        biz.billing.last_transaction_id = isTrial ? `trial_txn_${Date.now()}_${Math.floor(Math.random()*1000)}` : `sim_txn_${Date.now()}_${Math.floor(Math.random()*1000)}`;
 
         if (last4) {
             biz.billing.last_four = last4;
@@ -2335,7 +2352,7 @@ app.post('/api/client/module/renew', async (req, res) => {
             biz.billing.card_holder = cardHolder;
         }
 
-        // Registrar en historial de pagos SQL directo (Compra/Renovación Módulo)
+        // Registrar en historial de pagos SQL directo (Compra/Renovación Módulo / Prueba Gratis)
         try {
             await db.pool.query(`
                 INSERT INTO payment_history (id, business_id, amount, \`desc\`, status, transaction_id)
@@ -2343,8 +2360,10 @@ app.post('/api/client/module/renew', async (req, res) => {
             `, [
                 `pay_${Date.now()}_${Math.floor(Math.random()*1000)}`,
                 session.clientId,
-                priceApplied,
-                `Adquisición / Renovación de Módulo — ${moduleName || moduleId} (${finalBranchName})`,
+                paidAmount,
+                isTrial
+                    ? `Prueba Gratis 14 Días — ${moduleName || moduleId} (${finalBranchName})`
+                    : `Adquisición / Renovación de Módulo — ${moduleName || moduleId} (${finalBranchName})`,
                 'APPROVED',
                 biz.billing.last_transaction_id
             ]);
@@ -3684,8 +3703,8 @@ function generateLocalFallback(businessType, style) {
     let templates = {
         bookingHeader: `Hola {negocio}!\n\n*Mi Nombre:* {cliente}\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total a pagar: {total}*`,
         bookingItem: `{numero}. *{servicio}*\n   - Precio: {precio}\n   - Fecha: {fecha}\n   - Horario: {horario}\n   - Profesional: {profesional}\n`,
-        reminder: `✨ *Recordatorio de Cita* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* {servicio}\n⏰ *Hora:* {horario}\n👩🏻‍🎨 *Especialista:* {especialista}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`,
-        maintenance: `✨ *Cuidado de tu Servicio* ✨\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para saludarte y recordarte que ya es tiempo de realizar tu mantenimiento o programar tu próxima sesión. ✨\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`
+        reminder: `*Recordatorio de Cita*\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para recordarte tu próxima cita programada con nosotros:\n\n💅🏼 *Servicio:* {servicio}\n⏰ *Hora:* {horario}\n👩🏻‍🎨 *Especialista:* {especialista}\n\nPor favor, recuerda llegar con unos minutos de anticipación. Si requieres reprogramar, avísanos en cuanto antes. 🙏🏼\n\n¿Nos confirmas tu asistencia con un "Sí"? 💖`,
+        maintenance: `*Cuidado de tu Servicio*\n\n¡Hola, {cliente}! 👋🏼\n\nTe escribimos de *{negocio}* para saludarte y recordarte que ya es tiempo de realizar tu mantenimiento o programar tu próxima sesión.\n\n¿Te gustaría que te agendemos un espacio para esta semana? ¡Nos encantaría verte de nuevo! 💖`
     };
 
     if (isBarber) {
@@ -3721,10 +3740,10 @@ function generateLocalFallback(businessType, style) {
             };
         } else if (tone.includes('divertido') || tone.includes('emoji')) {
             templates = {
-                bookingHeader: `¡Hola 🦷 {negocio}! ✨\n\n*Paciente:* {cliente} 😁\n*Celular:* {telefono}\n\nDeseo agendar cita para cuidar mi sonrisa:\n{citas}\n\n*Total: {total}* 🎉\n\n¿Tienen un espacio libre? ¡Nos vemos!`,
+                bookingHeader: `¡Hola 🦷 {negocio}!\n\n*Paciente:* {cliente} 😁\n*Celular:* {telefono}\n\nDeseo agendar cita para cuidar mi sonrisa:\n{citas}\n\n*Total: {total}* 🎉\n\n¿Tienen un espacio libre? ¡Nos vemos!`,
                 bookingItem: `{numero}. ⭐ {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
-                reminder: `¡Hola {cliente}! 👋🦷\n\n¡Es hora de lucir esa gran sonrisa en {negocio}! Recuerda tu cita:\n\n✨ Tratamiento: {servicio}\n⏰ Hora: {horario}\n👩‍⚕️ Profesional: {especialista}\n\nConfírmanos con un "Sí" y prepárate para brillar. ✨`,
-                maintenance: `¡Hola {cliente}! 😁👋\n\n¡Que nada apague tu sonrisa de estrella! ✨🦷\n\nEn {negocio} queremos recordarte que ya toca tu control preventivo o limpieza para mantener tus dientes impecables. ¿Separamos tu espacio hoy mismo? 🌟`
+                reminder: `¡Hola {cliente}! 👋🦷\n\n¡Es hora de lucir esa gran sonrisa en {negocio}! Recuerda tu cita:\n\nTratamiento: {servicio}\n⏰ Hora: {horario}\n👩‍⚕️ Profesional: {especialista}\n\nConfírmanos con un "Sí" y prepárate para brillar.`,
+                maintenance: `¡Hola {cliente}! 😁👋\n\n¡Que nada apague tu sonrisa! 🦷\n\nEn {negocio} queremos recordarte que ya toca tu control preventivo o limpieza para mantener tus dientes impecables. ¿Separamos tu espacio hoy mismo? 🌟`
             };
         } else { // casual
             templates = {
@@ -3744,10 +3763,10 @@ function generateLocalFallback(businessType, style) {
             };
         } else if (tone.includes('divertido') || tone.includes('emoji')) {
             templates = {
-                bookingHeader: `¡Hola 💅 {negocio}! ✨\n\n*Cliente:* {cliente} 💕\n*Celular:* {telefono}\n\n¡Necesito un día de spa! Quiero agendar:\n{citas}\n\n*Total: {total}* 🛍️\n\n¿Tienen espacio para consentirme? 👑`,
+                bookingHeader: `¡Hola 💅 {negocio}!\n\n*Cliente:* {cliente} 💕\n*Celular:* {telefono}\n\n¡Necesito un día de spa! Quiero agendar:\n{citas}\n\n*Total: {total}* 🛍️\n\n¿Tienen espacio para consentirme? 👑`,
                 bookingItem: `{numero}. 🌸 {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
                 reminder: `¡Hola {cliente}! 👋💅\n\n¡Tu momento de brillar está cerca en {negocio}! No olvides tu cita:\n\n💖 Servicio: {servicio}\n⏰ Hora: {horario}\n🎨 Artista: {especialista}\n\n¿Confirmadísima? Responde con un "Sí" para asegurar tu cita de spa. 💎`,
-                maintenance: `¡Hola {cliente}! Princess time! 👑💅\n\n¿Esas uñitas ya necesitan un cambio de diseño o mantenimiento para seguir deslumbrando? ✨\n\nEn {negocio} tenemos listos los mejores tonos. ¡Escríbenos para agendar tu espacio esta semana! 💕`
+                maintenance: `¡Hola {cliente}! Princess time! 👑💅\n\n¿Esas uñitas ya necesitan un cambio de diseño o mantenimiento para seguir deslumbrando?\n\nEn {negocio} tenemos listos los mejores tonos. ¡Escríbenos para agendar tu espacio esta semana! 💕`
             };
         } else { // casual
             templates = {
@@ -3767,10 +3786,10 @@ function generateLocalFallback(businessType, style) {
             };
         } else if (tone.includes('divertido') || tone.includes('emoji')) {
             templates = {
-                bookingHeader: `¡Hola ✨ {negocio}! 🎉\n\n*Cliente:* {cliente} 👋\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total: {total}* 💰\n\n¿Tienen espacio para mí? 😄`,
+                bookingHeader: `¡Hola {negocio}! 🎉\n\n*Cliente:* {cliente} 👋\n*Celular:* {telefono}\n\nQuiero agendar los siguientes servicios:\n{citas}\n\n*Total: {total}* 💰\n\n¿Tienen espacio para mí? 😄`,
                 bookingItem: `{numero}. 🎯 {servicio} con {profesional} el {fecha} a las {horario} ({precio})\n`,
-                reminder: `¡Hola {cliente}! 👋✨\n\nTe recordamos tu cita programada en {negocio}:\n\n🌟 Servicio: {servicio}\n⏰ Hora: {horario}\n👩‍🎨 Especialista: {especialista}\n\n¡Te esperamos! Confírmanos con un "Sí". 👍`,
-                maintenance: `¡Hola {cliente}! 👋✨\n\n¡Es tiempo de cuidarte y consentirte de nuevo! En {negocio} estamos listos para atenderte en tu próxima sesión. ¿Te agendamos un turno esta semana? 😊`
+                reminder: `¡Hola {cliente}! 👋\n\nTe recordamos tu cita programada en {negocio}:\n\n🌟 Servicio: {servicio}\n⏰ Hora: {horario}\n👩‍🎨 Especialista: {especialista}\n\n¡Te esperamos! Confírmanos con un "Sí". 👍`,
+                maintenance: `¡Hola {cliente}! 👋\n\n¡Es tiempo de cuidarte y consentirte de nuevo! En {negocio} estamos listos para atenderte en tu próxima sesión. ¿Te agendamos un turno esta semana? 😊`
             };
         } else { // casual
             templates = {
