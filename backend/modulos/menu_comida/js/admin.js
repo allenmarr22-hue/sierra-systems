@@ -120,24 +120,63 @@ function renderKardexTable() {
     const tbody = document.getElementById('kardex-table-body');
     if (!tbody) return;
 
+    const searchInput = document.getElementById('kardex-search-input');
+    const typeFilterSelect = document.getElementById('kardex-type-filter');
+    const exportBtn = document.getElementById('export-kardex-pdf-btn');
+
+    // Bind event listeners once
+    if (searchInput && !searchInput.dataset.bound) {
+        searchInput.dataset.bound = '1';
+        searchInput.addEventListener('input', () => renderKardexTable());
+    }
+    if (typeFilterSelect && !typeFilterSelect.dataset.bound) {
+        typeFilterSelect.dataset.bound = '1';
+        typeFilterSelect.addEventListener('change', () => renderKardexTable());
+    }
+    if (exportBtn && !exportBtn.dataset.bound) {
+        exportBtn.dataset.bound = '1';
+        exportBtn.addEventListener('click', () => exportKardexPDF());
+    }
+
+    const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const selectedType = typeFilterSelect ? typeFilterSelect.value : 'all';
+
     let movements = [];
     (state.dishes || []).forEach(d => {
         if (d.inventoryHistory && Array.isArray(d.inventoryHistory)) {
             d.inventoryHistory.forEach(h => {
-                movements.push({ ...h, productName: d.name });
+                movements.push({ 
+                    ...h, 
+                    productName: d.name,
+                    productPrice: parseInt(d.price) || 0
+                });
             });
         }
     });
 
     movements.sort((a, b) => new Date(b.date) - new Date(a.date));
-    movements = movements.slice(0, 50);
 
-    if (movements.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="padding: 2rem; text-align: center; color: var(--text-dim);">No hay registros de movimientos de inventario aún</td></tr>`;
+    // Apply filtering
+    if (selectedType !== 'all') {
+        movements = movements.filter(m => m.type === selectedType);
+    }
+    if (searchQuery) {
+        movements = movements.filter(m => 
+            (m.productName && m.productName.toLowerCase().includes(searchQuery)) ||
+            (m.note && m.note.toLowerCase().includes(searchQuery)) ||
+            (m.user && m.user.toLowerCase().includes(searchQuery))
+        );
+    }
+
+    // Limit to 50 for table display
+    const displayedMovements = movements.slice(0, 50);
+
+    if (displayedMovements.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="padding: 2.5rem; text-align: center; color: var(--text-dim);">No hay registros de movimientos que coincidan con la búsqueda</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = movements.map(m => {
+    tbody.innerHTML = displayedMovements.map(m => {
         let typeBadge = `<span style="background:rgba(16,185,129,0.15); color:#10b981; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📥 Ingreso</span>`;
         if (m.type === 'out') {
             typeBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📤 Merma / Salida</span>`;
@@ -150,17 +189,161 @@ function renderKardexTable() {
         const formattedDate = new Date(m.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
         const qtyDisplay = m.qty > 0 ? `+${m.qty}` : m.qty;
 
+        // Financial Value ($ Total)
+        const unitPrice = m.price || m.productPrice || 0;
+        const totalVal = Math.abs(m.qty || 0) * unitPrice;
+        let valDisplay = `<span style="color: var(--text-dim); font-size: 0.84rem;">$0</span>`;
+        if (m.qty > 0) {
+            valDisplay = `<span style="color: #10b981; font-weight: 800; font-size: 0.85rem;">+$ ${totalVal.toLocaleString('es-CO')}</span>`;
+        } else if (m.qty < 0) {
+            valDisplay = `<span style="color: #ef4444; font-weight: 800; font-size: 0.85rem;">-$ ${totalVal.toLocaleString('es-CO')}</span>`;
+        }
+
+        // Responsible User
+        let userDisplay = `<span style="background:rgba(2,132,199,0.12); color:#38bdf8; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:700;">👤 ${m.user || 'Administrador'}</span>`;
+        if (m.type === 'sale') {
+            userDisplay = `<span style="background:rgba(245,158,11,0.12); color:#f59e0b; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:700;">🤖 Sistema</span>`;
+        }
+
         return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${formattedDate}</td>
+                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem; white-space: nowrap;">${formattedDate}</td>
                 <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.productName}</td>
                 <td style="padding: 0.85rem 1rem;">${typeBadge}</td>
                 <td style="padding: 0.85rem 1rem; font-weight: 800; color: ${m.qty > 0 ? '#10b981' : '#ef4444'}; font-size: 0.9rem;">${qtyDisplay}</td>
+                <td style="padding: 0.85rem 1rem;">${valDisplay}</td>
                 <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.resultingStock} un.</td>
+                <td style="padding: 0.85rem 1rem;">${userDisplay}</td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${m.note || '-'}</td>
             </tr>
         `;
     }).join('');
+}
+
+function exportKardexPDF() {
+    const searchInput = document.getElementById('kardex-search-input');
+    const typeFilterSelect = document.getElementById('kardex-type-filter');
+    const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const selectedType = typeFilterSelect ? typeFilterSelect.value : 'all';
+
+    let movements = [];
+    (state.dishes || []).forEach(d => {
+        if (d.inventoryHistory && Array.isArray(d.inventoryHistory)) {
+            d.inventoryHistory.forEach(h => {
+                movements.push({ 
+                    ...h, 
+                    productName: d.name,
+                    productPrice: parseInt(d.price) || 0
+                });
+            });
+        }
+    });
+
+    movements.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (selectedType !== 'all') {
+        movements = movements.filter(m => m.type === selectedType);
+    }
+    if (searchQuery) {
+        movements = movements.filter(m => 
+            (m.productName && m.productName.toLowerCase().includes(searchQuery)) ||
+            (m.note && m.note.toLowerCase().includes(searchQuery)) ||
+            (m.user && m.user.toLowerCase().includes(searchQuery))
+        );
+    }
+
+    if (movements.length === 0) {
+        showToast('No hay registros de inventario para exportar.', 'warning');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape');
+    const businessName = state.config?.businessName || 'Sierra Systems POS';
+    const nowStr = new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' });
+
+    // Document Header
+    doc.setFillColor(15, 23, 42); // #0f172a
+    doc.rect(0, 0, 297, 28, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`REPORTES DE INVENTARIO Y MOVIMIENTOS (KARDEX)`, 14, 15);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Empresa: ${businessName} | Fecha de Generación: ${nowStr} | Total Movimientos: ${movements.length}`, 14, 22);
+
+    // Prepare table rows
+    const tableRows = movements.map(m => {
+        const dateStr = new Date(m.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+        const typeLabel = m.type === 'in' ? 'Ingreso' : (m.type === 'out' ? 'Merma / Pérdida' : (m.type === 'sale' ? 'Venta Pedido' : 'Reconteo'));
+        const qtyStr = m.qty > 0 ? `+${m.qty}` : `${m.qty}`;
+        const unitPrice = m.price || m.productPrice || 0;
+        const totalVal = Math.abs(m.qty || 0) * unitPrice;
+        const valStr = m.qty > 0 ? `+$${totalVal.toLocaleString('es-CO')}` : (m.qty < 0 ? `-$${totalVal.toLocaleString('es-CO')}` : '$0');
+        const userStr = m.type === 'sale' ? 'Sistema' : (m.user || 'Administrador');
+
+        return [
+            dateStr,
+            m.productName,
+            typeLabel,
+            qtyStr,
+            valStr,
+            `${m.resultingStock} un.`,
+            userStr,
+            m.note || '-'
+        ];
+    });
+
+    doc.autoTable({
+        startY: 34,
+        head: [['Fecha / Hora', 'Producto', 'Tipo Movimiento', 'Cantidad', 'Valor ($)', 'Stock Resultante', 'Responsable', 'Motivo / Nota']],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: {
+            fillColor: [2, 132, 199], // #0284c7
+            textColor: 255,
+            fontSize: 9,
+            fontStyle: 'bold',
+            halign: 'left'
+        },
+        bodyStyles: {
+            fontSize: 8,
+            textColor: [30, 41, 59]
+        },
+        alternateRowStyles: {
+            fillColor: [248, 250, 252]
+        },
+        columnStyles: {
+            0: { cellWidth: 32 },
+            1: { cellWidth: 45, fontStyle: 'bold' },
+            2: { cellWidth: 35 },
+            3: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
+            4: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+            5: { cellWidth: 28, halign: 'center' },
+            6: { cellWidth: 30 },
+            7: { cellWidth: 'auto' }
+        },
+        didParseCell: function(data) {
+            if (data.section === 'body') {
+                if (data.column.index === 3 || data.column.index === 4) {
+                    const rawVal = data.cell.raw || '';
+                    if (rawVal.startsWith('+')) {
+                        data.cell.styles.textColor = [16, 185, 129];
+                    } else if (rawVal.startsWith('-')) {
+                        data.cell.styles.textColor = [239, 68, 68];
+                    }
+                }
+            }
+        }
+    });
+
+    const fileDate = new Date().toISOString().slice(0, 10);
+    doc.save(`Kardex_Inventario_${businessName.replace(/\s+/g, '_')}_${fileDate}.pdf`);
+    showToast('📄 Reporte PDF generado y descargado con éxito');
 }
 
 /**
