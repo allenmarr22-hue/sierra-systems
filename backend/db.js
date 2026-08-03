@@ -286,6 +286,7 @@ async function initializeDatabase() {
                 branch_name VARCHAR(150) NULL,
                 status ENUM('active', 'cancelled') NOT NULL DEFAULT 'active',
                 price_applied DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                is_trial TINYINT(1) NOT NULL DEFAULT 0,
                 cancelled_at VARCHAR(100) NULL,
                 access_until VARCHAR(100) NULL,
                 renewal_date VARCHAR(100) NULL,
@@ -293,6 +294,14 @@ async function initializeDatabase() {
                 FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
             )
         `);
+
+        // Migration check for is_trial column
+        const [bmColumns] = await pool.query('SHOW COLUMNS FROM business_modules');
+        const existingBmCols = bmColumns.map(c => (c.COLUMN_NAME || c.column_name || c.Field || '').toLowerCase());
+        if (!existingBmCols.includes('is_trial')) {
+            await pool.query('ALTER TABLE business_modules ADD COLUMN is_trial TINYINT(1) NOT NULL DEFAULT 0');
+            console.log('[DB] 🛠️ Column "is_trial" added to "business_modules" table.');
+        }
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS notifications (
@@ -365,6 +374,52 @@ async function initializeDatabase() {
                 INSERT IGNORE INTO modules (id, name, \`desc\`, icon, status, price)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [mod.id, mod.name, mod.desc, mod.icon, mod.status, mod.price]);
+        }
+
+        // Auto-reparar registros existentes de prueba gratis (marcar is_trial = 1 y ajustar renewal_date a 14 días ÚNICAMENTE para el módulo específico en prueba)
+        try {
+            const [allMods] = await pool.query('SELECT id, name FROM modules');
+            const [trialTxns] = await pool.query(`
+                SELECT business_id, created_at, transaction_id, \`desc\`
+                FROM payment_history 
+                WHERE transaction_id LIKE 'trial_txn_%' OR \`desc\` LIKE '%Prueba Gratis%'
+            `);
+
+            for (const tx of trialTxns) {
+                const txDesc = tx.desc || '';
+                // Identificar qué módulo específico fue adquirido en prueba gratis
+                const targetMod = allMods.find(m => txDesc.toLowerCase().includes(m.name.toLowerCase()));
+                const targetModId = targetMod ? targetMod.id : null;
+
+                const txDate = new Date(tx.created_at || Date.now());
+                const renewalDate14Days = new Date(txDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+                const renewalDate30Days = new Date(txDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+                if (targetModId) {
+                    // Marcar SOLO la instancia de este módulo específico como prueba de 14 días
+                    await pool.query(`
+                        UPDATE business_modules 
+                        SET is_trial = 1, renewal_date = ? 
+                        WHERE business_id = ? AND module_id = ? AND status = 'active'
+                    `, [renewalDate14Days, tx.business_id, targetModId]);
+
+                    // Restaurar los demás módulos a 30 días de renovación regular (sin is_trial)
+                    await pool.query(`
+                        UPDATE business_modules 
+                        SET is_trial = 0, renewal_date = ? 
+                        WHERE business_id = ? AND module_id != ? AND status = 'active' AND (is_trial = 1 OR renewal_date = ?)
+                    `, [renewalDate30Days, tx.business_id, targetModId, renewalDate14Days]);
+                } else {
+                    // Fallback si no se reconoce el nombre en la descripción
+                    await pool.query(`
+                        UPDATE business_modules 
+                        SET is_trial = 1, renewal_date = ? 
+                        WHERE business_id = ? AND status = 'active'
+                    `, [renewalDate14Days, tx.business_id]);
+                }
+            }
+        } catch (repairErr) {
+            console.warn('[DB] Nota al reparar fechas de pruebas existentes:', repairErr.message);
         }
 
         console.log('[DB] ✅ Base de datos inicializada correctamente.');
@@ -468,6 +523,7 @@ async function getCompleteState() {
                     branchName: mr.branch_name || 'Sede Principal',
                     status: mr.status,
                     priceApplied: parseFloat(mr.price_applied) || 0,
+                    isTrial: mr.is_trial === 1 || mr.is_trial === true || mr.is_trial === '1' || mr.is_trial === 'true',
                     renewalDate: mr.renewal_date,
                     cancelledAt: mr.cancelled_at,
                     accessUntil: mr.access_until
@@ -754,25 +810,27 @@ async function saveCompleteState(db) {
                     for (const mod of moduleInstances) {
                         if (mod.status === 'active') {
                             await connection.query(`
-                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, renewal_date)
-                                VALUES (?, ?, ?, ?, 'active', ?, ?)
+                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, is_trial, renewal_date)
+                                VALUES (?, ?, ?, ?, 'active', ?, ?, ?)
                                 ON DUPLICATE KEY UPDATE
                                     branch_name = VALUES(branch_name),
                                     status = VALUES(status),
                                     price_applied = VALUES(price_applied),
+                                    is_trial = VALUES(is_trial),
                                     renewal_date = VALUES(renewal_date)
-                            `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.renewalDate]);
+                            `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.isTrial ? 1 : 0, mod.renewalDate]);
                         } else if (mod.status === 'cancelled') {
                             await connection.query(`
-                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, cancelled_at, access_until)
-                                VALUES (?, ?, ?, ?, 'cancelled', ?, ?, ?)
+                                INSERT INTO business_modules (instance_id, business_id, module_id, branch_name, status, price_applied, is_trial, cancelled_at, access_until)
+                                VALUES (?, ?, ?, ?, 'cancelled', ?, ?, ?, ?)
                                 ON DUPLICATE KEY UPDATE
                                     branch_name = VALUES(branch_name),
                                     status = VALUES(status),
                                     price_applied = VALUES(price_applied),
+                                    is_trial = VALUES(is_trial),
                                     cancelled_at = VALUES(cancelled_at),
                                     access_until = VALUES(access_until)
-                            `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.cancelledAt || null, mod.accessUntil || null]);
+                            `, [mod.instanceId, biz.id, mod.moduleId, mod.branchName || 'Sede Principal', mod.priceApplied || 0, mod.isTrial ? 1 : 0, mod.cancelledAt || null, mod.accessUntil || null]);
                         }
                     }
                 } else {

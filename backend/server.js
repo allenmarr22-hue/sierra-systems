@@ -2761,6 +2761,18 @@ app.post('/api/payment/save-token', requireAdminOrMatchingClient, paymentLimiter
         const biz = dbState.businesses.find(b => b.id == bizId);
         if (!biz) return res.status(404).json({ ok: false, message: 'Negocio no encontrado.' });
 
+        let calculatedNextDate = next_billing_date || biz.billing?.next_billing_date;
+        if (!calculatedNextDate && biz.moduleInstances && biz.moduleInstances.length > 0) {
+            const activeInstances = biz.moduleInstances.filter(m => m.status === 'active' && m.renewalDate);
+            if (activeInstances.length > 0) {
+                activeInstances.sort((a, b) => new Date(a.renewalDate) - new Date(b.renewalDate));
+                calculatedNextDate = activeInstances[0].renewalDate.slice(0, 10);
+            }
+        }
+        if (!calculatedNextDate) {
+            calculatedNextDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        }
+
         biz.billing = {
             ...(biz.billing || {}),
             gateway_token: token,
@@ -2769,7 +2781,7 @@ app.post('/api/payment/save-token', requireAdminOrMatchingClient, paymentLimiter
             card_expiry: card_expiry || biz.billing?.card_expiry || '',
             card_holder: card_holder || biz.billing?.card_holder || '',
             subscription_status: 'active',
-            next_billing_date: next_billing_date || biz.billing?.next_billing_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+            next_billing_date: calculatedNextDate,
             last_payment_date: biz.billing?.last_payment_date || null,
             last_payment_amount: biz.billing?.last_payment_amount || 0,
         };

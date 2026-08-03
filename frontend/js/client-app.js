@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div style="width:72px;height:72px;background:rgba(239,68,68,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2rem;">🚫</div>
                         <h2 style="color:#f8fafc;font-size:1.5rem;font-weight:800;margin-bottom:0.75rem;">Cuenta Suspendida</h2>
                         <p style="color:#94a3b8;font-size:0.95rem;line-height:1.6;margin-bottom:2rem;">Tu cuenta ha sido desactivada por el administrador. Para más información, comunícate con <strong style="color:#f8fafc;">AS Sierra Systems</strong>.</p>
-                        <a href="/client-login.html" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:0.75rem 2rem;border-radius:12px;font-weight:700;text-decoration:none;font-size:0.95rem;">Volver al Inicio</a>
+                        <a href="/client-login.html" style="display:inline-block;background:linear-gradient(135deg,#0284c7,#2563eb);color:white;padding:0.75rem 2rem;border-radius:12px;font-weight:700;text-decoration:none;font-size:0.95rem;">Volver al Inicio</a>
                     </div>
                 </div>`;
                 return;
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 </style>
                 <div style="text-align:center; margin-top: 1rem;">
-                    <div id="avatar-preview-wrap" style="width:90px; height:90px; border-radius:50%; background: linear-gradient(135deg,#6366f1,#8b5cf6); margin: 0 auto 1rem; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:700; color:white; overflow:hidden; border:3px solid rgba(99,102,241,0.4); cursor:pointer;" onclick="document.getElementById('avatar-file-input').click()">
+                    <div id="avatar-preview-wrap" style="width:90px; height:90px; border-radius:50%; background: linear-gradient(135deg,#0284c7,#2563eb); margin: 0 auto 1rem; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:700; color:white; overflow:hidden; border:3px solid rgba(2,132,199,0.4); cursor:pointer;" onclick="document.getElementById('avatar-file-input').click()">
                         ${currentAvatar ? `<img src="${currentAvatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${currentName.substring(0, 2).toUpperCase()}</span>`}
                     </div>
                     <p style="font-size:0.75rem; color:var(--primary); margin-bottom:1.5rem; cursor:pointer; font-weight:600;" onclick="document.getElementById('avatar-file-input').click()">
@@ -3053,7 +3053,7 @@ async function showPremiumActivationLoader(modName) {
             html: `
                 <div style="text-align:center; padding:1.5rem 0;">
                     <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; margin-bottom: 1rem; position: relative; border: 1px solid var(--primary-border);">
-                        <div id="activation-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%); transition: width 0.1s linear; border-radius: 4px;"></div>
+                        <div id="activation-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary) 0%, #2563eb 100%); transition: width 0.1s linear; border-radius: 4px;"></div>
                     </div>
                     <p id="activation-status-text" style="margin:0; font-size:1.05rem; font-weight: 600; color:var(--text);">Iniciando configuración...</p>
                     <p style="margin:0.5rem 0 0; font-size:0.8rem; color:var(--text-muted);">Estableciendo base de datos y licencias para <strong>${modName}</strong></p>
@@ -3584,7 +3584,7 @@ function handlePurchase(modName, modPrice) {
                 </div>
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span style="font-size:0.8rem; color:var(--text-muted);">${card.expiry}</span>
-                    <div class="card-check-icon" style="width:20px;height:20px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;opacity:${i===0?'1':'0'};transition:opacity 0.2s;">
+                    <div class="card-check-icon" style="width:20px;height:20px;border-radius:50%;background:#0284c7;display:flex;align-items:center;justify-content:center;opacity:${i===0?'1':'0'};transition:opacity 0.2s;">
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                 </div>
@@ -3651,7 +3651,7 @@ function showPurchaseNewCardForm(modName, modPrice) {
         html: `
             <style>
                 .pro-input { width: 100%; box-sizing: border-box; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); background: var(--bg-body); color: var(--text); font-family: inherit; font-size: 1rem; outline: none; transition: all 0.2s; margin:0; }
-                .pro-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+                .pro-input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); }
                 .pro-label { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
                 .card-brands { display: flex; gap: 4px; color: var(--text-muted); align-items:center; }
             </style>
@@ -4375,7 +4375,7 @@ function showPaymentForm() {
         html: `
             <style>
                 .pro-input { width: 100%; box-sizing: border-box; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); background: var(--bg-body); color: var(--text); font-family: inherit; font-size: 1rem; outline: none; transition: all 0.2s; margin:0; }
-                .pro-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+                .pro-input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); }
                 .pro-label { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
                 .card-brands { display: flex; gap: 4px; color: var(--text-muted); align-items:center; }
             </style>
@@ -6526,7 +6526,7 @@ window.payPendingBalance = async function() {
             text: 'Por favor, agrega una tarjeta de pago en tu Wallet primero para proceder con el cobro.',
             background: 'var(--bg-surface)',
             color: 'var(--text)',
-            confirmButtonColor: '#6366f1'
+            confirmButtonColor: '#0284c7'
         });
         return;
     }
@@ -6645,8 +6645,8 @@ window.openDevicesSecurityModal = async function() {
                </p>`
             : sessions.map((s, idx) => `
                 <div style="display:flex;align-items:center;gap:0.9rem;padding:0.85rem 0;${idx < sessionCount - 1 ? 'border-bottom:1px solid rgba(var(--border-color-rgb,148,163,184),0.15);' : ''}">
-                    <div style="flex-shrink:0;width:42px;height:42px;border-radius:10px;background:rgba(99,102,241,0.08);display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="${deviceIcon(s.deviceType)}" style="width:20px;height:20px;color:#6366f1;"></i>
+                    <div style="flex-shrink:0;width:42px;height:42px;border-radius:10px;background:rgba(2,132,199,0.08);display:flex;align-items:center;justify-content:center;">
+                        <i data-lucide="${deviceIcon(s.deviceType)}" style="width:20px;height:20px;color:#0284c7;"></i>
                     </div>
                     <div style="flex:1;min-width:0;text-align:left;">
                         <div style="font-size:0.875rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.browser}</div>

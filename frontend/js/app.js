@@ -405,7 +405,7 @@ async function adminFetch(url, options = {}) {
             cancelButtonText: 'Salir',
             background: 'var(--bg-surface)',
             color: 'var(--text-main)',
-            confirmButtonColor: '#6366f1',
+            confirmButtonColor: '#0284c7',
             didOpen: (popup) => {
                 const input = popup.querySelector('#swal-reauth-pass');
                 if (input) {
@@ -738,7 +738,7 @@ function initRealTimeSync() {
                     text: 'Se ha cerrado la sesión globalmente en este dispositivo.',
                     background: 'var(--bg-surface)',
                     color: 'var(--text)',
-                    confirmButtonColor: '#6366f1'
+                    confirmButtonColor: '#0284c7'
                 });
             }
         } catch (err) {
@@ -1193,7 +1193,7 @@ function setupEventListeners() {
             text: "Tendrás que volver a ingresar tus credenciales para acceder.",
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#6366f1',
+            confirmButtonColor: '#0284c7',
             cancelButtonColor: '#ef4444',
             confirmButtonText: 'Sí, cerrar sesión',
             cancelButtonText: 'Cancelar',
@@ -3979,7 +3979,7 @@ window.billingShowDetail = async function(bizId) {
         background: 'var(--bg-surface)',
         color: 'var(--text-main)',
         confirmButtonText: 'Cerrar',
-        confirmButtonColor: '#6366f1',
+        confirmButtonColor: '#0284c7',
         width: '600px',
         didOpen: (popup) => {
             if (window.lucide) lucide.createIcons();
@@ -4032,7 +4032,7 @@ window.billingGiftDays = async function(bizId) {
             icon: 'warning',
             background: 'var(--bg-surface)',
             color: 'var(--text-main)',
-            confirmButtonColor: '#6366f1'
+            confirmButtonColor: '#0284c7'
         });
         return;
     }
@@ -4385,7 +4385,7 @@ async function billingTriggerCycle(dryRun = false) {
             html: `Esto procesará los pagos de <strong>todos los negocios</strong> con fecha de corte para hoy.<br><br><span style="color:#f59e0b;font-size:0.9rem;">Esta acción no se puede deshacer.</span>`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#6366f1',
+            confirmButtonColor: '#0284c7',
             cancelButtonColor: '#64748b',
             confirmButtonText: 'Sí, iniciar cobros',
             cancelButtonText: 'Cancelar',
@@ -6728,7 +6728,7 @@ window.openPromoFormModal = function(id = '') {
         showCancelButton: true,
         confirmButtonText: isEdit ? 'Guardar Cambios' : 'Lanzar Campaña',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#6366f1',
+        confirmButtonColor: '#0284c7',
         cancelButtonColor: '#64748b',
         didOpen: (popup) => {
             const valInput = popup.querySelector('#swal-promo-value');
@@ -7186,7 +7186,7 @@ window.triggerAdminGlobalLogout = async function() {
                     text: 'Todas las sesiones del panel administrativo han sido cerradas.',
                     background: 'var(--bg-surface)',
                     color: 'var(--text)',
-                    confirmButtonColor: '#6366f1'
+                    confirmButtonColor: '#0284c7'
                 });
             } else {
                 const errData = await res.json();
@@ -7196,7 +7196,7 @@ window.triggerAdminGlobalLogout = async function() {
                     text: errData.error || 'No se pudieron cerrar las sesiones.',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
-                    confirmButtonColor: '#6366f1'
+                    confirmButtonColor: '#0284c7'
                 });
             }
         } catch (err) {
@@ -7207,7 +7207,7 @@ window.triggerAdminGlobalLogout = async function() {
                 text: 'Hubo un error de conexión con el servidor.',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                confirmButtonColor: '#6366f1'
+                confirmButtonColor: '#0284c7'
             });
         }
     }
@@ -7280,7 +7280,7 @@ window.triggerAdminGlobalLogout = async function() {
                     text: 'Se ha cerrado la sesión en otro dispositivo o pestaña.',
                     background: 'var(--bg-surface)',
                     color: 'var(--text)',
-                    confirmButtonColor: '#6366f1'
+                    confirmButtonColor: '#0284c7'
                 });
             }
         }
