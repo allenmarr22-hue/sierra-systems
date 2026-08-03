@@ -170,6 +170,16 @@ function renderKardexTable() {
 function renderAdmin(openCatIds = null) {
     const container = document.getElementById('admin-inventory-accordion');
     if (!container) return;
+
+    const menuSearchInput = document.getElementById('menu-accordion-search');
+    const menuSearchQuery = menuSearchInput ? menuSearchInput.value.trim().toLowerCase() : '';
+    
+    if (menuSearchInput && !menuSearchInput.dataset.bound) {
+        menuSearchInput.dataset.bound = '1';
+        menuSearchInput.addEventListener('input', () => {
+            renderAdmin();
+        });
+    }
     
     // Capture current open states if not provided
     if (!openCatIds) {
@@ -221,8 +231,21 @@ function renderAdmin(openCatIds = null) {
     const hasExtrasCat = state.categories.some(c => c.isExtras);
 
     activeCats.forEach(cat => {
-        const catDishes = dishesByCategory[cat.id] || [];
-        const isOpen = openCatIds.includes(cat.id);
+        let catDishes = dishesByCategory[cat.id] || [];
+        let isOpen = openCatIds.includes(cat.id);
+
+        if (menuSearchQuery) {
+            const catMatches = cat.name.toLowerCase().includes(menuSearchQuery);
+            if (!catMatches) {
+                catDishes = catDishes.filter(d => d.name.toLowerCase().includes(menuSearchQuery) || (d.desc && d.desc.toLowerCase().includes(menuSearchQuery)));
+            }
+            if (catMatches || catDishes.length > 0) {
+                isOpen = true;
+            } else {
+                return; // Ocultar categorías que no coinciden con la búsqueda
+            }
+        }
+
         const group = document.createElement('div');
         group.className = `admin-cat-group ${isOpen ? 'active' : ''}`;
         group.dataset.catId = cat.id;
