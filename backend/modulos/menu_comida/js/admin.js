@@ -50,26 +50,36 @@ function openStockAdjustModal(dishId) {
     if (modal) modal.classList.remove('hidden');
 }
 
-function renderStockTable(filter = 'tracked', searchQuery = '', catFilter = 'all') {
+function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = null) {
     const tbody = document.getElementById('stock-table-body');
     if (!tbody) return;
 
-    if (catFilter === 'all') {
+    if (searchQuery === null) {
+        searchQuery = document.getElementById('stock-search-input')?.value || '';
+    }
+
+    if (catFilter === null || catFilter === undefined) {
         const catSelect = document.getElementById('stock-category-filter');
-        if (catSelect && catSelect.value) catFilter = catSelect.value;
+        catFilter = catSelect ? catSelect.value : 'all';
     }
 
     let items = (state.dishes || []);
 
-    if (catFilter && catFilter !== 'all') {
-        items = items.filter(d => d.cat === catFilter);
+    // 1. Filter by Category Dropdown
+    if (catFilter && catFilter !== 'all' && catFilter !== 'todos') {
+        const targetCatObj = (state.categories || []).find(c => String(c.id) === String(catFilter) || String(c.name).toLowerCase() === String(catFilter).toLowerCase());
+        const targetCatId = targetCatObj ? String(targetCatObj.id) : String(catFilter);
+
+        items = items.filter(d => String(d.cat) === targetCatId || String(d.cat).toLowerCase() === String(catFilter).toLowerCase());
     }
 
-    if (searchQuery) {
-        const q = searchQuery.toLowerCase();
+    // 2. Filter by Search Query
+    if (searchQuery && searchQuery.trim() !== '') {
+        const q = searchQuery.trim().toLowerCase();
         items = items.filter(d => d.name.toLowerCase().includes(q) || (d.desc && d.desc.toLowerCase().includes(q)));
     }
 
+    // 3. Filter by Stock Status Button
     if (filter === 'tracked') {
         items = items.filter(d => d.trackStock === true);
     } else if (filter === 'low') {
@@ -77,12 +87,13 @@ function renderStockTable(filter = 'tracked', searchQuery = '', catFilter = 'all
     } else if (filter === 'out') {
         items = items.filter(d => d.trackStock === true && (parseInt(d.stock) || 0) <= 0);
     }
+    // If filter === 'all' (Ver Todos), show all products in the selected category regardless of trackStock!
 
     if (items.length === 0) {
         if (filter === 'tracked') {
-            tbody.innerHTML = `<tr><td colspan="7" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-dim);"><div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin-bottom: 0.4rem;">No tienes productos con control de inventario activado aún</div><div style="font-size: 0.84rem; color: var(--text-dim);">Haz clic en el botón <strong style="color: #38bdf8;">📦+</strong> en cualquier plato de <em>Catálogo & Menú</em> para activar su control de stock.</div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-dim);"><div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin-bottom: 0.4rem;">No tienes productos con control de inventario activado en esta categoría aún</div><div style="font-size: 0.84rem; color: var(--text-dim);">Haz clic en el botón <strong style="color: #38bdf8;">📋 Ver Todos</strong> para ver todo el catálogo y activar el stock de tus productos.</div></td></tr>`;
         } else {
-            tbody.innerHTML = `<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-dim);">No hay productos que coincidan con el filtro</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-dim);">No hay productos que coincidan con los filtros seleccionados</td></tr>`;
         }
         return;
     }
@@ -1526,7 +1537,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const searchQuery = document.getElementById('stock-search-input')?.value || '';
-            renderStockTable(currentStockFilter, searchQuery);
+            const catFilter = document.getElementById('stock-category-filter')?.value || 'all';
+            renderStockTable(currentStockFilter, searchQuery, catFilter);
         });
     });
 
@@ -1534,7 +1546,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const stockSearchInput = document.getElementById('stock-search-input');
     if (stockSearchInput) {
         stockSearchInput.addEventListener('input', (e) => {
-            renderStockTable(currentStockFilter, e.target.value);
+            const catFilter = document.getElementById('stock-category-filter')?.value || 'all';
+            renderStockTable(currentStockFilter, e.target.value, catFilter);
         });
     }
 
