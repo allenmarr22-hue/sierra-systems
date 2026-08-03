@@ -266,23 +266,29 @@ function exportKardexPDF() {
     }
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('landscape');
+    const doc = new jsPDF('p', 'mm', 'a4');
     const businessName = state.config?.businessName || 'Sierra Systems POS';
-    const nowStr = new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' });
+    const nowStr = new Date().toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
 
-    // Document Header
-    doc.setFillColor(15, 23, 42); // #0f172a
-    doc.rect(0, 0, 297, 28, 'F');
+    // Document Header Banner (Compact & Executive)
+    doc.setFillColor(15, 23, 42); // #0f172a Deep Slate
+    doc.rect(0, 0, 210, 18, 'F');
 
+    // Accent line below header banner
+    doc.setFillColor(2, 132, 199); // #0284c7 Tech Blue
+    doc.rect(0, 18, 210, 1.2, 'F');
+
+    // Header Title
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(`REPORTE DE HISTORIAL DE MOVIMIENTOS (KARDEX)`, 14, 15);
+    doc.text(`REPORTE DE HISTORIAL DE MOVIMIENTOS (KARDEX)`, 12, 10.5);
 
-    doc.setFontSize(9);
+    // Header Metadata
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(203, 213, 225);
-    doc.text(`Empresa: ${businessName} | Fecha de Generación: ${nowStr} | Total Movimientos: ${movements.length}`, 14, 22);
+    doc.setTextColor(203, 213, 225); // #cbd5e1
+    doc.text(`Empresa: ${businessName}   •   Fecha: ${nowStr}   •   Total Registros: ${movements.length}`, 12, 15.5);
 
     // Prepare table rows
     const tableRows = movements.map(m => {
@@ -307,32 +313,38 @@ function exportKardexPDF() {
     });
 
     doc.autoTable({
-        startY: 34,
-        head: [['Fecha / Hora', 'Producto', 'Tipo', 'Cantidad', 'Valor ($)', 'Stock Resultante', 'Motivo']],
+        startY: 23,
+        margin: { left: 12, right: 12 },
+        head: [['Fecha / Hora', 'Producto', 'Tipo', 'Cantidad', 'Valor ($)', 'Stock Result.', 'Motivo']],
         body: tableRows,
         theme: 'grid',
+        styles: {
+            font: 'helvetica',
+            cellPadding: 2,
+            overflow: 'linebreak'
+        },
         headStyles: {
             fillColor: [2, 132, 199], // #0284c7
             textColor: 255,
-            fontSize: 9,
+            fontSize: 8.5,
             fontStyle: 'bold',
             halign: 'left'
         },
         bodyStyles: {
-            fontSize: 8.5,
+            fontSize: 8,
             textColor: [30, 41, 59]
         },
         alternateRowStyles: {
             fillColor: [248, 250, 252]
         },
         columnStyles: {
-            0: { cellWidth: 35 },
-            1: { cellWidth: 55, fontStyle: 'bold' },
-            2: { cellWidth: 30 },
-            3: { cellWidth: 25, halign: 'right', fontStyle: 'bold' },
-            4: { cellWidth: 35, halign: 'right', fontStyle: 'bold' },
-            5: { cellWidth: 30, halign: 'center' },
-            6: { cellWidth: 'auto' }
+            0: { cellWidth: 32 },                       // Fecha / Hora
+            1: { cellWidth: 42, fontStyle: 'bold' },     // Producto
+            2: { cellWidth: 20, halign: 'center' },       // Tipo
+            3: { cellWidth: 18, halign: 'right', fontStyle: 'bold' },  // Cantidad
+            4: { cellWidth: 24, halign: 'right', fontStyle: 'bold' },  // Valor ($)
+            5: { cellWidth: 22, halign: 'center' },      // Stock Result.
+            6: { cellWidth: 28 }                        // Motivo
         },
         didParseCell: function(data) {
             if (data.section === 'body') {
