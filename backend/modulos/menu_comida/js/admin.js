@@ -155,6 +155,9 @@ function renderKardexTable() {
     if (typeFilterSelect && !typeFilterSelect.dataset.bound) {
         typeFilterSelect.dataset.bound = '1';
         typeFilterSelect.addEventListener('change', () => renderKardexTable());
+        if (typeof window.initializeCustomAdminSelect === 'function') {
+            window.initializeCustomAdminSelect('kardex-type-filter');
+        }
     }
     if (exportBtn && !exportBtn.dataset.bound) {
         exportBtn.dataset.bound = '1';
@@ -8529,6 +8532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.initializeCustomAdminSelect === 'function') {
         window.initializeCustomAdminSelect('stock-category-filter');
         window.initializeCustomAdminSelect('stock-adjust-type');
+        window.initializeCustomAdminSelect('kardex-type-filter');
         window.initializeCustomAdminSelect('expense-month-filter');
         window.initializeCustomAdminSelect('expense-category');
         window.initializeCustomAdminSelect('stats-month-filter');
