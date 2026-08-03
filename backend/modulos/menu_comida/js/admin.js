@@ -531,9 +531,6 @@ function renderAdmin(openCatIds = null) {
                                     </button>
                                 </div>
                                 <div class="admin-item-actions">
-                                    <button class="btn-secondary icon-btn adjust-stock-btn" data-id="${dish.id}" title="Ajustar Stock de Inventario">
-                                        <i data-lucide="package-plus"></i>
-                                    </button>
                                     <button class="btn-secondary icon-btn edit-item" data-id="${dish.id}" title="Editar">
                                         <i data-lucide="edit-3"></i>
                                     </button>
