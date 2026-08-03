@@ -36,6 +36,12 @@ function openStockAdjustModal(dishId) {
     document.getElementById('stock-adjust-qty').value = '';
     document.getElementById('stock-adjust-note').value = '';
     document.getElementById('stock-adjust-type').value = 'in';
+
+    const trackStockChk = document.getElementById('item-adjust-track-stock');
+    const minStockInput = document.getElementById('item-adjust-min-stock');
+    if (trackStockChk) trackStockChk.checked = dish.trackStock === true;
+    if (minStockInput) minStockInput.value = dish.minStock !== undefined ? dish.minStock : 5;
+
     if (typeof window.initializeCustomAdminSelect === 'function') {
         window.initializeCustomAdminSelect('stock-adjust-type');
     }
@@ -1435,10 +1441,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = document.getElementById('edit-id').value;
             const dish = id ? state.dishes.find(d => d.id === parseInt(id)) : null;
             
-            const trackStock = document.getElementById('item-track-stock')?.checked === true;
-            const stock = parseInt(document.getElementById('item-stock')?.value) || 0;
-            const minStock = parseInt(document.getElementById('item-min-stock')?.value) || 5;
-
             const newItem = {
                 id: id ? parseInt(id) : Date.now(),
                 name: document.getElementById('item-name').value,
@@ -1446,9 +1448,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: parseFloat(document.getElementById('item-price').value.replace(/\./g, '')),
                 desc: document.getElementById('item-desc').value,
                 img: window.currentItemImageB64 || (dish ? dish.img : ''),
-                trackStock: trackStock,
-                stock: stock,
-                minStock: minStock,
+                trackStock: dish ? (dish.trackStock === true) : false,
+                stock: dish ? (parseInt(dish.stock) || 0) : 50,
+                minStock: dish ? (parseInt(dish.minStock) || 5) : 5,
                 inventoryHistory: dish ? (dish.inventoryHistory || []) : [],
                 extras: dish ? (dish.extras || []) : []
             };
@@ -1537,43 +1539,51 @@ document.addEventListener('DOMContentLoaded', () => {
             const dish = state.dishes.find(d => d.id === dishId);
             if (!dish) return;
 
+            const trackStock = document.getElementById('item-adjust-track-stock')?.checked === true;
+            const minStock = parseInt(document.getElementById('item-adjust-min-stock')?.value) || 5;
+
+            dish.trackStock = trackStock;
+            dish.minStock = minStock;
+
+            const rawQty = document.getElementById('stock-adjust-qty').value;
             const type = document.getElementById('stock-adjust-type').value;
-            const qty = parseInt(document.getElementById('stock-adjust-qty').value) || 0;
             const note = document.getElementById('stock-adjust-note').value.trim();
 
-            let oldStock = parseInt(dish.stock) || 0;
-            let newStock = oldStock;
-            let moveQty = qty;
+            if (rawQty !== '' && !isNaN(parseInt(rawQty))) {
+                const qty = parseInt(rawQty);
+                let oldStock = parseInt(dish.stock) || 0;
+                let newStock = oldStock;
+                let moveQty = qty;
 
-            if (type === 'in') {
-                newStock = oldStock + qty;
-                moveQty = qty;
-            } else if (type === 'out') {
-                newStock = Math.max(0, oldStock - qty);
-                moveQty = -qty;
-            } else if (type === 'set') {
-                newStock = Math.max(0, qty);
-                moveQty = newStock - oldStock;
+                if (type === 'in') {
+                    newStock = oldStock + qty;
+                    moveQty = qty;
+                } else if (type === 'out') {
+                    newStock = Math.max(0, oldStock - qty);
+                    moveQty = -qty;
+                } else if (type === 'set') {
+                    newStock = Math.max(0, qty);
+                    moveQty = newStock - oldStock;
+                }
+
+                dish.stock = newStock;
+                if (!dish.inventoryHistory) dish.inventoryHistory = [];
+
+                dish.inventoryHistory.push({
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    type: type,
+                    qty: moveQty,
+                    resultingStock: newStock,
+                    note: note || (type === 'in' ? 'Ingreso de stock' : (type === 'out' ? 'Merma' : 'Reconteo físico'))
+                });
             }
-
-            dish.trackStock = true;
-            dish.stock = newStock;
-            if (!dish.inventoryHistory) dish.inventoryHistory = [];
-
-            dish.inventoryHistory.push({
-                id: Date.now(),
-                date: new Date().toISOString(),
-                type: type,
-                qty: moveQty,
-                resultingStock: newStock,
-                note: note || (type === 'in' ? 'Ingreso de stock' : (type === 'out' ? 'Merma' : 'Reconteo físico'))
-            });
 
             document.getElementById('stock-adjust-modal').classList.add('hidden');
             saveStateToLocal();
             renderAdmin();
             if (typeof renderMenu === 'function') renderMenu();
-            showToast(`Stock actualizado: ${newStock} un. ✅`);
+            showToast(`Inventario de ${dish.name} actualizado ✅`);
         });
     }
 
