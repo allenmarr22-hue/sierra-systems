@@ -4267,18 +4267,21 @@ body.light-mode .admin-custom-select-trigger {
 .admin-custom-select-panel {
     display: none;
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     left: 0;
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
+    max-width: 280px;
     box-sizing: border-box;
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-    max-height: 200px;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(16px);
+    max-height: 240px;
     overflow-y: auto;
     z-index: 1000;
-    padding: 3px;
+    padding: 6px;
 }
 
 body.light-mode .admin-custom-select-panel {
@@ -4303,16 +4306,14 @@ body.light-mode .admin-custom-select-panel::-webkit-scrollbar-thumb {
 }
 
 .admin-custom-select-item {
-    padding: 5px 8px;
-    border-radius: 6px;
+    padding: 7px 12px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 0.78rem;
+    font-size: 0.84rem;
     font-weight: 600;
     color: #cbd5e1;
-    transition: all 0.15s;
+    transition: all 0.15s ease;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 body.light-mode .admin-custom-select-item {
@@ -4320,8 +4321,8 @@ body.light-mode .admin-custom-select-item {
 }
 
 .admin-custom-select-item:hover {
-    background: #0f172a !important;
-    color: #ffffff !important;
+    background: rgba(2, 132, 199, 0.15) !important;
+    color: #38bdf8 !important;
 }
 
 body.light-mode .admin-custom-select-item:hover {
