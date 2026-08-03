@@ -1353,15 +1353,18 @@ function renderDishCard(dish) {
     const price = isDiscounted ? dish.discountPrice : dish.price;
     const savings = isDiscounted ? Math.round((1 - dish.discountPrice / dish.price) * 100) : 0;
 
+    const isOutOfStock = dish.trackStock === true && (parseInt(dish.stock) || 0) <= 0;
+
     return `
-        <article class="dish-card">
+        <article class="dish-card ${isOutOfStock ? 'dish-out-of-stock' : ''}">
             <div class="dish-img-container clickable-img" data-id="${dish.id}">
                 ${isDiscounted ? `<div class="dish-discount-badge">-${savings}%</div>` : ''}
-                <img src="${dish.img}" class="dish-img-full" alt="${dish.name}">
+                ${isOutOfStock ? `<div class="dish-discount-badge" style="background: rgba(239, 68, 68, 0.9); left: 10px; right: auto;">🔴 Agotado</div>` : ''}
+                <img src="${dish.img}" class="dish-img-full" alt="${dish.name}" style="${isOutOfStock ? 'filter: grayscale(0.6) opacity(0.7);' : ''}">
             </div>
             <div class="dish-info">
                 <div class="dish-header">
-                    <h3 class="dish-name">${dish.name}</h3>
+                    <h3 class="dish-name">${dish.name} ${isOutOfStock ? '<span style="color: #ef4444; font-size: 0.75rem; font-weight: 800; margin-left: 4px;">(Agotado)</span>' : ''}</h3>
                     <div class="dish-pricing">
                         ${isDiscounted ? `<span class="dish-old-price">$ ${dish.price.toLocaleString('es-CO')}</span>` : ''}
                         <span class="dish-price">$ ${price.toLocaleString('es-CO')}</span>
@@ -1370,7 +1373,13 @@ function renderDishCard(dish) {
                 <p class="dish-desc">${dish.desc}</p>
                 <div class="dish-actions">
                     <button class="btn-secondary view-details" data-id="${dish.id}">Detalles</button>
-                    <button class="add-btn add-to-cart" data-id="${dish.id}"><i data-lucide="plus"></i></button>
+                    ${isOutOfStock ? `
+                        <button class="add-btn" disabled style="opacity: 0.4; cursor: not-allowed; background: rgba(255,255,255,0.08); border-color: transparent;" title="Producto Agotado">
+                            <i data-lucide="slash"></i>
+                        </button>
+                    ` : `
+                        <button class="add-btn add-to-cart" data-id="${dish.id}"><i data-lucide="plus"></i></button>
+                    `}
                 </div>
             </div>
         </article>

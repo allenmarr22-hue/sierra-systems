@@ -24,8 +24,132 @@
 })();
 
 /* =========================================
-   ADMIN DASHBOARD LOGIC
+   ADMIN DASHBOARD & INVENTORY CONTROL LOGIC
    ========================================= */
+
+function openStockAdjustModal(dishId) {
+    const dish = state.dishes.find(d => d.id === dishId);
+    if (!dish) return;
+
+    document.getElementById('stock-adjust-item-id').value = dish.id;
+    document.getElementById('stock-adjust-product-name').textContent = dish.name;
+    document.getElementById('stock-adjust-qty').value = '';
+    document.getElementById('stock-adjust-note').value = '';
+    document.getElementById('stock-adjust-type').value = 'in';
+
+    const modal = document.getElementById('stock-adjust-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function renderStockTable(filter = 'all', searchQuery = '') {
+    const tbody = document.getElementById('stock-table-body');
+    if (!tbody) return;
+
+    let items = (state.dishes || []);
+
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        items = items.filter(d => d.name.toLowerCase().includes(q) || (d.desc && d.desc.toLowerCase().includes(q)));
+    }
+
+    if (filter === 'low') {
+        items = items.filter(d => d.trackStock === true && (parseInt(d.stock) || 0) > 0 && (parseInt(d.stock) || 0) <= (parseInt(d.minStock) || 5));
+    } else if (filter === 'out') {
+        items = items.filter(d => d.trackStock === true && (parseInt(d.stock) || 0) <= 0);
+    }
+
+    if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-dim);">No hay productos que coincidan con el filtro</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = items.map(dish => {
+        const catObj = (state.categories || []).find(c => c.id === dish.cat);
+        const catName = catObj ? catObj.name : dish.cat;
+        const isTracked = dish.trackStock === true;
+        const stockQty = parseInt(dish.stock) || 0;
+        const minQty = parseInt(dish.minStock) || 5;
+
+        let statusBadge = `<span style="background:rgba(255,255,255,0.06); color:var(--text-dim); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:600;">Sin Control</span>`;
+        if (isTracked) {
+            if (stockQty <= 0) {
+                statusBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:800;">🔴 Agotado</span>`;
+            } else if (stockQty <= minQty) {
+                statusBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:800;">⚠️ Stock Bajo</span>`;
+            } else {
+                statusBadge = `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:800;">🟢 En Stock</span>`;
+            }
+        }
+
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <img src="${dish.img}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
+                    <strong style="color: var(--text); font-size: 0.9rem;">${dish.name}</strong>
+                </td>
+                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${catName}</td>
+                <td style="padding: 0.85rem 1rem; font-size: 0.85rem;">${isTracked ? '🟢 Sí' : '⚪ No (Ilimitado)'}</td>
+                <td style="padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 800; color: ${isTracked && stockQty <= 0 ? '#ef4444' : 'var(--text)'};">${isTracked ? stockQty + ' un.' : '∞'}</td>
+                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${isTracked ? minQty + ' un.' : '-'}</td>
+                <td style="padding: 0.85rem 1rem;">${statusBadge}</td>
+                <td style="padding: 0.85rem 1rem; text-align: right;">
+                    <button type="button" class="btn-secondary icon-btn adjust-stock-btn" data-id="${dish.id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; gap: 4px; display: inline-flex; align-items: center;" title="Ajustar Existencias">
+                        <i data-lucide="package-plus" style="width: 14px; height: 14px;"></i> Ajustar
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderKardexTable() {
+    const tbody = document.getElementById('kardex-table-body');
+    if (!tbody) return;
+
+    let movements = [];
+    (state.dishes || []).forEach(d => {
+        if (d.inventoryHistory && Array.isArray(d.inventoryHistory)) {
+            d.inventoryHistory.forEach(h => {
+                movements.push({ ...h, productName: d.name });
+            });
+        }
+    });
+
+    movements.sort((a, b) => new Date(b.date) - new Date(a.date));
+    movements = movements.slice(0, 50);
+
+    if (movements.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding: 2rem; text-align: center; color: var(--text-dim);">No hay registros de movimientos de inventario aún</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = movements.map(m => {
+        let typeBadge = `<span style="background:rgba(16,185,129,0.15); color:#10b981; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📥 Ingreso</span>`;
+        if (m.type === 'out') {
+            typeBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📤 Merma / Salida</span>`;
+        } else if (m.type === 'set') {
+            typeBadge = `<span style="background:rgba(2,132,199,0.15); color:#0284c7; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">🔄 Reconteo</span>`;
+        } else if (m.type === 'sale') {
+            typeBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">🛒 Venta Pedido</span>`;
+        }
+
+        const formattedDate = new Date(m.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+        const qtyDisplay = m.qty > 0 ? `+${m.qty}` : m.qty;
+
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${formattedDate}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.productName}</td>
+                <td style="padding: 0.85rem 1rem;">${typeBadge}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 800; color: ${m.qty > 0 ? '#10b981' : '#ef4444'}; font-size: 0.9rem;">${qtyDisplay}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.resultingStock} un.</td>
+                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${m.note || '-'}</td>
+            </tr>
+        `;
+    }).join('');
+}
 
 /**
  * Renders the main inventory table in the admin panel
@@ -47,10 +171,30 @@ function renderAdmin(openCatIds = null) {
     const totalDishes = state.dishes.length;
     const totalCats = state.categories.length - 1; // Exclude 'todos'
     
+    // Calculate stock stats
+    let lowStockCount = 0;
+    let outStockCount = 0;
+    state.dishes.forEach(d => {
+        if (d.trackStock === true) {
+            const stockVal = parseInt(d.stock) || 0;
+            const minVal = parseInt(d.minStock) || 5;
+            if (stockVal <= 0) {
+                outStockCount++;
+            } else if (stockVal <= minVal) {
+                lowStockCount++;
+            }
+        }
+    });
+
     const statDishes = document.getElementById('stat-total-dishes');
     const statCats = document.getElementById('stat-total-cats');
+    const statLow = document.getElementById('stat-low-stock');
+    const statOut = document.getElementById('stat-out-stock');
+
     if (statDishes) statDishes.textContent = totalDishes;
     if (statCats) statCats.textContent = totalCats;
+    if (statLow) statLow.textContent = lowStockCount;
+    if (statOut) statOut.textContent = outStockCount;
 
     const dishesByCategory = {};
     state.dishes.forEach(dish => {
@@ -112,35 +256,59 @@ function renderAdmin(openCatIds = null) {
                 </div>
                 <div class="admin-items-list">
                     ${catDishes.length === 0 ? '<p style="padding: 1.5rem; text-align: center; color: var(--text-dim);">No hay productos en esta categoría</p>' : ''}
-                    ${catDishes.map(dish => `
-                        <div class="admin-item-row">
-                            <img src="${dish.img}" class="admin-item-img" alt="${dish.name}">
-                            <div class="admin-item-info">
-                                <h4>${dish.name}</h4>
-                                <p>${(dish.desc || '').substring(0, 50)}${(dish.desc || '').length > 50 ? '...' : ''}</p>
+                    ${catDishes.map(dish => {
+                        const isTracked = dish.trackStock === true;
+                        const stockQty = parseInt(dish.stock) || 0;
+                        const minQty = parseInt(dish.minStock) || 5;
+                        let stockBadge = '';
+
+                        if (isTracked) {
+                            if (stockQty <= 0) {
+                                stockBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:0.72rem; padding:2px 8px; border-radius:10px; font-weight:800; display:inline-flex; align-items:center; gap:4px; margin-top:4px;">🔴 Agotado (0)</span>`;
+                            } else if (stockQty <= minQty) {
+                                stockBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); font-size:0.72rem; padding:2px 8px; border-radius:10px; font-weight:800; display:inline-flex; align-items:center; gap:4px; margin-top:4px;">⚠️ Bajo (${stockQty})</span>`;
+                            } else {
+                                stockBadge = `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:0.72rem; padding:2px 8px; border-radius:10px; font-weight:800; display:inline-flex; align-items:center; gap:4px; margin-top:4px;">🟢 Stock: ${stockQty}</span>`;
+                            }
+                        }
+
+                        return `
+                            <div class="admin-item-row">
+                                <img src="${dish.img}" class="admin-item-img" alt="${dish.name}">
+                                <div class="admin-item-info">
+                                    <h4>${dish.name}</h4>
+                                    <p>${(dish.desc || '').substring(0, 50)}${(dish.desc || '').length > 50 ? '...' : ''}</p>
+                                    ${stockBadge}
+                                </div>
+                                <div class="admin-item-price">$ ${dish.price.toLocaleString('es-CO')}</div>
+                                <div class="admin-item-status">
+                                    <button class="status-badge-btn toggle-active ${dish.active !== false ? 'active' : 'inactive'}" data-id="${dish.id}">
+                                        ${dish.active !== false ? 'Activo' : 'Inactivo'}
+                                    </button>
+                                </div>
+                                <div class="admin-item-actions">
+                                    <button class="btn-secondary icon-btn adjust-stock-btn" data-id="${dish.id}" title="Ajustar Stock de Inventario">
+                                        <i data-lucide="package-plus"></i>
+                                    </button>
+                                    <button class="btn-secondary icon-btn edit-item" data-id="${dish.id}" title="Editar">
+                                        <i data-lucide="edit-3"></i>
+                                    </button>
+                                    <button class="btn-secondary icon-btn delete-item" data-id="${dish.id}" title="Eliminar" style="color: #ff5252;">
+                                        <i data-lucide="trash-2"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="admin-item-price">$ ${dish.price.toLocaleString('es-CO')}</div>
-                            <div class="admin-item-status">
-                                <button class="status-badge-btn toggle-active ${dish.active !== false ? 'active' : 'inactive'}" data-id="${dish.id}">
-                                    ${dish.active !== false ? 'Activo' : 'Inactivo'}
-                                </button>
-                            </div>
-                            <div class="admin-item-actions">
-                                <button class="btn-secondary icon-btn edit-item" data-id="${dish.id}" title="Editar">
-                                    <i data-lucide="edit-3"></i>
-                                </button>
-                                <button class="btn-secondary icon-btn delete-item" data-id="${dish.id}" title="Eliminar" style="color: #ff5252;">
-                                    <i data-lucide="trash-2"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `;
 
         container.appendChild(group);
     });
+
+    renderStockTable();
+    renderKardexTable();
 
     // Re-initialize icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -674,6 +842,13 @@ function openAdminModal(id = null, prefillCatId = null) {
         document.getElementById('item-price').value = dish.price.toLocaleString('es-CO');
         document.getElementById('item-desc').value = dish.desc;
         
+        const trackStockChk = document.getElementById('item-track-stock');
+        const stockInput = document.getElementById('item-stock');
+        const minStockInput = document.getElementById('item-min-stock');
+        if (trackStockChk) trackStockChk.checked = dish.trackStock === true;
+        if (stockInput) stockInput.value = dish.stock !== undefined ? dish.stock : 0;
+        if (minStockInput) minStockInput.value = dish.minStock !== undefined ? dish.minStock : 5;
+        
         if (window.setPreviewImage) {
             window.setPreviewImage('item-img-preview', dish.img, 'Click para seleccionar foto');
         } else {
@@ -684,6 +859,13 @@ function openAdminModal(id = null, prefillCatId = null) {
     } else {
         form.reset();
         document.getElementById('edit-id').value = '';
+        
+        const trackStockChk = document.getElementById('item-track-stock');
+        const stockInput = document.getElementById('item-stock');
+        const minStockInput = document.getElementById('item-min-stock');
+        if (trackStockChk) trackStockChk.checked = false;
+        if (stockInput) stockInput.value = '50';
+        if (minStockInput) minStockInput.value = '5';
         
         // Pre-fill category if provided
         if (prefillCatId) {
@@ -1012,6 +1194,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = document.getElementById('edit-id').value;
             const dish = id ? state.dishes.find(d => d.id === parseInt(id)) : null;
             
+            const trackStock = document.getElementById('item-track-stock')?.checked === true;
+            const stock = parseInt(document.getElementById('item-stock')?.value) || 0;
+            const minStock = parseInt(document.getElementById('item-min-stock')?.value) || 5;
+
             const newItem = {
                 id: id ? parseInt(id) : Date.now(),
                 name: document.getElementById('item-name').value,
@@ -1019,7 +1205,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: parseFloat(document.getElementById('item-price').value.replace(/\./g, '')),
                 desc: document.getElementById('item-desc').value,
                 img: window.currentItemImageB64 || (dish ? dish.img : ''),
-                extras: []
+                trackStock: trackStock,
+                stock: stock,
+                minStock: minStock,
+                inventoryHistory: dish ? (dish.inventoryHistory || []) : [],
+                extras: dish ? (dish.extras || []) : []
             };
 
             if (id) {
@@ -1035,6 +1225,105 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAdmin();
             if (typeof renderMenu === 'function') renderMenu();
             showToast(id ? 'Producto actualizado ✅' : 'Nuevo producto creado ✅');
+        });
+    }
+
+    // Inventory Subtabs Navigation
+    document.querySelectorAll('.inventory-subtab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sectionId = btn.dataset.section;
+            document.querySelectorAll('.inventory-subtab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.inventory-sub-section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(sectionId)?.classList.remove('hidden');
+
+            if (sectionId === 'inv-stock-sec') renderStockTable();
+            if (sectionId === 'inv-history-sec') renderKardexTable();
+        });
+    });
+
+    // Stock Filter Buttons
+    let currentStockFilter = 'all';
+    document.querySelectorAll('.stock-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentStockFilter = btn.dataset.filter;
+            document.querySelectorAll('.stock-filter-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'transparent';
+                b.style.color = 'var(--text-dim)';
+            });
+            btn.classList.add('active');
+            btn.style.background = 'var(--theme-accent)';
+            btn.style.color = '#fff';
+
+            const searchQuery = document.getElementById('stock-search-input')?.value || '';
+            renderStockTable(currentStockFilter, searchQuery);
+        });
+    });
+
+    // Stock Search Input
+    const stockSearchInput = document.getElementById('stock-search-input');
+    if (stockSearchInput) {
+        stockSearchInput.addEventListener('input', (e) => {
+            renderStockTable(currentStockFilter, e.target.value);
+        });
+    }
+
+    // Adjust Stock Button Delegation
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.adjust-stock-btn');
+        if (btn) {
+            const dishId = parseInt(btn.dataset.id);
+            openStockAdjustModal(dishId);
+        }
+    });
+
+    // Stock Adjust Form Submit
+    const stockAdjustForm = document.getElementById('stock-adjust-form');
+    if (stockAdjustForm) {
+        stockAdjustForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const dishId = parseInt(document.getElementById('stock-adjust-item-id').value);
+            const dish = state.dishes.find(d => d.id === dishId);
+            if (!dish) return;
+
+            const type = document.getElementById('stock-adjust-type').value;
+            const qty = parseInt(document.getElementById('stock-adjust-qty').value) || 0;
+            const note = document.getElementById('stock-adjust-note').value.trim();
+
+            let oldStock = parseInt(dish.stock) || 0;
+            let newStock = oldStock;
+            let moveQty = qty;
+
+            if (type === 'in') {
+                newStock = oldStock + qty;
+                moveQty = qty;
+            } else if (type === 'out') {
+                newStock = Math.max(0, oldStock - qty);
+                moveQty = -qty;
+            } else if (type === 'set') {
+                newStock = Math.max(0, qty);
+                moveQty = newStock - oldStock;
+            }
+
+            dish.trackStock = true;
+            dish.stock = newStock;
+            if (!dish.inventoryHistory) dish.inventoryHistory = [];
+
+            dish.inventoryHistory.push({
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type: type,
+                qty: moveQty,
+                resultingStock: newStock,
+                note: note || (type === 'in' ? 'Reabastecimiento de stock' : (type === 'out' ? 'Merma / Salida' : 'Reconteo físico'))
+            });
+
+            document.getElementById('stock-adjust-modal').classList.add('hidden');
+            saveStateToLocal();
+            renderAdmin();
+            if (typeof renderMenu === 'function') renderMenu();
+            showToast(`Stock actualizado: ${newStock} un. ✅`);
         });
     }
 
