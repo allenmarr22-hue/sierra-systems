@@ -739,17 +739,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isProfileIncomplete(clientBiz) && !sessionStorage.getItem('onboardingPrompted')) {
             sessionStorage.setItem('onboardingPrompted', 'true');
             Swal.fire({
-                title: '👋 ¡Te damos la bienvenida!',
                 html: `
-                    <p style="color:var(--text-muted); margin-bottom:1.2rem; font-size:0.92rem; line-height:1.55;">
-                        Para comenzar a usar tu panel de control, por favor <strong style="color:var(--primary);">completa el perfil de tu negocio</strong>.<br>Esto nos ayudará a configurar tus facturas y servicios de manera profesional.
-                    </p>
+                    <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding: 0.5rem 0;">
+                        <div style="width:64px; height:64px; border-radius:18px; background:rgba(2, 132, 199, 0.12); border:1.5px solid rgba(2, 132, 199, 0.3); display:flex; align-items:center; justify-content:center; margin-bottom: 1.25rem;">
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"></path><path d="M1 21h22"></path><path d="M9 7h1"></path><path d="M9 11h1"></path><path d="M14 7h1"></path><path d="M14 11h1"></path></svg>
+                        </div>
+                        <h3 style="font-family:'Outfit',sans-serif; font-size:1.6rem; font-weight:800; color:var(--text, #ffffff); margin:0 0 0.6rem 0; letter-spacing:-0.02em;">
+                            Configuración Inicial Requerida
+                        </h3>
+                        <p style="font-family:'Outfit',sans-serif; font-size:0.96rem; color:var(--text-muted, #94a3b8); margin:0 0 0.5rem 0; line-height:1.6; max-width:360px;">
+                            Para habilitar la emisión formal de tus servicios y personalizar tus comprobantes, por favor ingresa la información legal de tu negocio.
+                        </p>
+                    </div>
                 `,
-                icon: 'info',
-                background: 'var(--bg-surface)',
-                color: 'var(--text)',
-                confirmButtonText: 'Configurar Perfil →',
-                confirmButtonColor: 'var(--primary)',
+                customClass: {
+                    popup: 'custom-swal-popup'
+                },
+                background: 'var(--bg-surface, #0f172a)',
+                color: 'var(--text, #f8fafc)',
+                confirmButtonText: 'Completar Datos de Empresa →',
+                confirmButtonColor: '#0284c7',
                 allowOutsideClick: false,
                 allowEscapeKey: false
             }).then((result) => {
