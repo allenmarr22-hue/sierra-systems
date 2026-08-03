@@ -841,7 +841,7 @@ function updateCatSelects() {
     const stockCatFilter = document.getElementById('stock-category-filter');
     if (stockCatFilter) {
         const currentVal = stockCatFilter.value || 'all';
-        const opts = ['<option value="all">📂 Todas las Categorías</option>'];
+        const opts = ['<option value="all">📂 Categorías</option>'];
         (state.categories || [])
             .filter(c => c.id !== 'todos')
             .forEach(c => {
