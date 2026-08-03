@@ -314,15 +314,15 @@ body.light-mode .admin-cat-count {
 
 .admin-stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.2rem;
-    margin: 0 0 2.5rem 0;
+    grid-template-columns: repeat(4, minmax(0, 210px));
+    gap: 1rem;
+    margin: 0 0 2rem 0;
     width: 100%;
 }
 
 @media (max-width: 900px) {
     .admin-stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 @media (max-width: 480px) {
@@ -334,29 +334,33 @@ body.light-mode .admin-cat-count {
 .admin-stat-card {
     background: var(--surface-light);
     border: 1px solid var(--glass-border);
-    border-top: 4px solid var(--theme-accent);
-    padding: 1.8rem;
-    border-radius: 20px;
+    border-top: 3px solid var(--theme-accent);
+    padding: 1rem 1.25rem;
+    border-radius: 16px;
     transition: all 0.3s ease;
     box-shadow: var(--shadow);
 }
 
 .admin-stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
 }
 
 .admin-stat-card .label {
     display: block;
     color: var(--text-dim);
-    font-size: 0.85rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .admin-stat-card .value {
-    font-size: 2rem;
+    font-size: 1.65rem;
     font-weight: 800;
     color: var(--text);
 }
