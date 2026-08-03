@@ -315,7 +315,7 @@ function exportKardexPDF() {
     doc.autoTable({
         startY: 23,
         margin: { left: 12, right: 12 },
-        head: [['Fecha / Hora', 'Producto', 'Tipo', 'Cantidad', 'Valor ($)', 'Stock Result.', 'Motivo']],
+        head: [['Fecha / Hora', 'Producto', 'Tipo', 'Cantidad', 'Valor ($)', 'Stock', 'Motivo']],
         body: tableRows,
         theme: 'grid',
         styles: {
