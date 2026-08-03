@@ -50,7 +50,7 @@ function openStockAdjustModal(dishId) {
     if (modal) modal.classList.remove('hidden');
 }
 
-function renderStockTable(filter = 'all', searchQuery = '', catFilter = 'all') {
+function renderStockTable(filter = 'tracked', searchQuery = '', catFilter = 'all') {
     const tbody = document.getElementById('stock-table-body');
     if (!tbody) return;
 
@@ -70,14 +70,20 @@ function renderStockTable(filter = 'all', searchQuery = '', catFilter = 'all') {
         items = items.filter(d => d.name.toLowerCase().includes(q) || (d.desc && d.desc.toLowerCase().includes(q)));
     }
 
-    if (filter === 'low') {
+    if (filter === 'tracked') {
+        items = items.filter(d => d.trackStock === true);
+    } else if (filter === 'low') {
         items = items.filter(d => d.trackStock === true && (parseInt(d.stock) || 0) > 0 && (parseInt(d.stock) || 0) <= (parseInt(d.minStock) || 5));
     } else if (filter === 'out') {
         items = items.filter(d => d.trackStock === true && (parseInt(d.stock) || 0) <= 0);
     }
 
     if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-dim);">No hay productos que coincidan con el filtro</td></tr>`;
+        if (filter === 'tracked') {
+            tbody.innerHTML = `<tr><td colspan="7" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-dim);"><div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin-bottom: 0.4rem;">No tienes productos con control de inventario activado aún</div><div style="font-size: 0.84rem; color: var(--text-dim);">Haz clic en el botón <strong style="color: #38bdf8;">📦+</strong> en cualquier plato de <em>Catálogo & Menú</em> para activar su control de stock.</div></td></tr>`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-dim);">No hay productos que coincidan con el filtro</td></tr>`;
+        }
         return;
     }
 
@@ -1486,18 +1492,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Stock Filter Buttons
-    let currentStockFilter = 'all';
+    let currentStockFilter = 'tracked';
     document.querySelectorAll('.stock-filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             currentStockFilter = btn.dataset.filter;
             document.querySelectorAll('.stock-filter-btn').forEach(b => {
                 b.classList.remove('active');
-                b.style.background = 'transparent';
+                b.style.background = 'rgba(255, 255, 255, 0.05)';
                 b.style.color = 'var(--text-dim)';
             });
             btn.classList.add('active');
-            btn.style.background = 'var(--theme-accent)';
-            btn.style.color = '#fff';
+            if (btn.dataset.filter === 'tracked') {
+                btn.style.background = 'rgba(2, 132, 199, 0.18)';
+                btn.style.color = '#38bdf8';
+            } else if (btn.dataset.filter === 'low') {
+                btn.style.background = 'rgba(245, 158, 11, 0.18)';
+                btn.style.color = '#f59e0b';
+            } else if (btn.dataset.filter === 'out') {
+                btn.style.background = 'rgba(239, 68, 68, 0.18)';
+                btn.style.color = '#ef4444';
+            } else {
+                btn.style.background = 'rgba(255, 255, 255, 0.15)';
+                btn.style.color = '#ffffff';
+            }
 
             const searchQuery = document.getElementById('stock-search-input')?.value || '';
             renderStockTable(currentStockFilter, searchQuery);

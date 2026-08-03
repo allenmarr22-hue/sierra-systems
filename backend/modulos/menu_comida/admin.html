@@ -675,10 +675,12 @@
                                     </div>
                                 </div>
 
-                                <!-- Derecha: Botones de estado (Stock Bajo y Agotados) -->
+                                <!-- Derecha: Botones de estado (Controlados por defecto, Stock Bajo, Agotados y Todos) -->
                                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                    <button type="button" class="stock-filter-btn active" data-filter="tracked" style="padding: 0.45rem 1.1rem; border-radius: 20px; border: 1px solid rgba(2, 132, 199, 0.4); background: rgba(2, 132, 199, 0.18); color: #38bdf8; font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">📦 Controlados</button>
                                     <button type="button" class="stock-filter-btn" data-filter="low" style="padding: 0.45rem 1.1rem; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">⚠️ Stock Bajo</button>
                                     <button type="button" class="stock-filter-btn" data-filter="out" style="padding: 0.45rem 1.1rem; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">🔴 Agotados</button>
+                                    <button type="button" class="stock-filter-btn" data-filter="all" style="padding: 0.45rem 1.1rem; border-radius: 20px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.05); color: var(--text-dim); font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">📋 Ver Todos</button>
                                 </div>
                             </div>
 
