@@ -41,11 +41,20 @@ function openStockAdjustModal(dishId) {
     if (modal) modal.classList.remove('hidden');
 }
 
-function renderStockTable(filter = 'all', searchQuery = '') {
+function renderStockTable(filter = 'all', searchQuery = '', catFilter = 'all') {
     const tbody = document.getElementById('stock-table-body');
     if (!tbody) return;
 
+    if (catFilter === 'all') {
+        const catSelect = document.getElementById('stock-category-filter');
+        if (catSelect && catSelect.value) catFilter = catSelect.value;
+    }
+
     let items = (state.dishes || []);
+
+    if (catFilter && catFilter !== 'all') {
+        items = items.filter(d => d.cat === catFilter);
+    }
 
     if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -195,6 +204,9 @@ function renderAdmin(openCatIds = null) {
     if (statCats) statCats.textContent = totalCats;
     if (statLow) statLow.textContent = lowStockCount;
     if (statOut) statOut.textContent = outStockCount;
+
+    updateCatSelects();
+    renderStockTable();
 
     const dishesByCategory = {};
     state.dishes.forEach(dish => {
@@ -819,11 +831,25 @@ function showPrompt(title, defaultVal, onConfirm) {
 
 function updateCatSelects() {
     const catSelect = document.getElementById('dish-cat');
-    if (!catSelect) return;
-    catSelect.innerHTML = state.categories
-        .filter(c => c.id !== 'todos')
-        .map(c => `<option value="${c.id}">${c.name}</option>`)
-        .join('');
+    if (catSelect) {
+        catSelect.innerHTML = state.categories
+            .filter(c => c.id !== 'todos')
+            .map(c => `<option value="${c.id}">${c.name}</option>`)
+            .join('');
+    }
+
+    const stockCatFilter = document.getElementById('stock-category-filter');
+    if (stockCatFilter) {
+        const currentVal = stockCatFilter.value || 'all';
+        const opts = ['<option value="all">📂 Todas las Categorías</option>'];
+        (state.categories || [])
+            .filter(c => c.id !== 'todos')
+            .forEach(c => {
+                opts.push(`<option value="${c.id}">📂 ${c.name}</option>`);
+            });
+        stockCatFilter.innerHTML = opts.join('');
+        stockCatFilter.value = currentVal;
+    }
 }
 
 function openAdminModal(id = null, prefillCatId = null) {
@@ -1266,6 +1292,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stockSearchInput) {
         stockSearchInput.addEventListener('input', (e) => {
             renderStockTable(currentStockFilter, e.target.value);
+        });
+    }
+
+    // Stock Category Filter Select
+    const stockCategoryFilter = document.getElementById('stock-category-filter');
+    if (stockCategoryFilter) {
+        stockCategoryFilter.addEventListener('change', (e) => {
+            const searchQuery = document.getElementById('stock-search-input')?.value || '';
+            renderStockTable(currentStockFilter, searchQuery, e.target.value);
         });
     }
 
