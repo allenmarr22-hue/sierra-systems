@@ -4230,6 +4230,7 @@ body.light-mode #manual-order-products-container::-webkit-scrollbar-thumb {
 .admin-custom-select-wrap {
     position: relative;
     display: inline-block;
+    min-width: 175px;
     width: auto;
     max-width: 100%;
     user-select: none;
@@ -4269,9 +4270,8 @@ body.light-mode .admin-custom-select-trigger {
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
-    width: max-content;
+    width: 100%;
     min-width: 100%;
-    max-width: 280px;
     box-sizing: border-box;
     background: #0f172a;
     border: 1px solid rgba(255, 255, 255, 0.15);
