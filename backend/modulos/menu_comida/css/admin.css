@@ -705,22 +705,29 @@ body.light-mode .admin-item-price {
 }
 
 .subtab-btn {
-    padding: 0.6rem 1.1rem;
-    font-size: 0.88rem;
-    font-weight: 600;
-    border-radius: var(--radius-full);
-    background: rgba(var(--text-rgb),0.05);
+    padding: 0.55rem 1.15rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     color: var(--text-dim);
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.2s ease;
     white-space: nowrap;
 }
 
-.subtab-btn:hover, .subtab-btn.active {
-    background: var(--theme-accent);
-    color: #000;
-    border-color: var(--theme-accent);
+.subtab-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.subtab-btn.active {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
 }
 
 /* --- Config Panel --- */

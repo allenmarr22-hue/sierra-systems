@@ -94,14 +94,14 @@ function renderStockTable(filter = 'tracked', searchQuery = '', catFilter = 'all
         const stockQty = parseInt(dish.stock) || 0;
         const minQty = parseInt(dish.minStock) || 5;
 
-        let statusBadge = `<span style="background:rgba(255,255,255,0.06); color:var(--text-dim); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:600;">Sin Control</span>`;
+        let statusBadge = `<span style="background:rgba(255,255,255,0.06); color:var(--text-dim); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">Sin Control</span>`;
         if (isTracked) {
             if (stockQty <= 0) {
-                statusBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:800;">🔴 Agotado</span>`;
+                statusBadge = `<span style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">Agotado</span>`;
             } else if (stockQty <= minQty) {
-                statusBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:800;">⚠️ Stock Bajo</span>`;
+                statusBadge = `<span style="background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">Stock Bajo</span>`;
             } else {
-                statusBadge = `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:800;">🟢 En Stock</span>`;
+                statusBadge = `<span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">En Stock</span>`;
             }
         }
 
@@ -112,8 +112,8 @@ function renderStockTable(filter = 'tracked', searchQuery = '', catFilter = 'all
                     <strong style="color: var(--text); font-size: 0.9rem;">${dish.name}</strong>
                 </td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${catName}</td>
-                <td style="padding: 0.85rem 1rem; font-size: 0.85rem;">${isTracked ? '🟢 Sí' : '⚪ No (Ilimitado)'}</td>
-                <td style="padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 800; color: ${isTracked && stockQty <= 0 ? '#ef4444' : 'var(--text)'};">${isTracked ? stockQty + ' un.' : '∞'}</td>
+                <td style="padding: 0.85rem 1rem; font-size: 0.85rem;">${isTracked ? '<span style="color:#34d399; font-weight:700;">Sí</span>' : '<span style="color:var(--text-dim);">No (Ilimitado)</span>'}</td>
+                <td style="padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 800; color: ${isTracked && stockQty <= 0 ? '#f87171' : 'var(--text)'};">${isTracked ? stockQty + ' un.' : '∞'}</td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${isTracked ? minQty + ' un.' : '-'}</td>
                 <td style="padding: 0.85rem 1rem;">${statusBadge}</td>
                 <td style="padding: 0.85rem 1rem; text-align: right;">
@@ -189,13 +189,13 @@ function renderKardexTable() {
     }
 
     tbody.innerHTML = displayedMovements.map(m => {
-        let typeBadge = `<span style="background:rgba(16,185,129,0.15); color:#10b981; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📥 Ingreso</span>`;
+        let typeBadge = `<span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center;">Ingreso</span>`;
         if (m.type === 'out') {
-            typeBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📤 Merma</span>`;
+            typeBadge = `<span style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center;">Merma</span>`;
         } else if (m.type === 'set') {
-            typeBadge = `<span style="background:rgba(2,132,199,0.15); color:#0284c7; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">🔄 Reconteo</span>`;
+            typeBadge = `<span style="background:rgba(2,132,199,0.12); color:#38bdf8; border:1px solid rgba(2,132,199,0.3); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center;">Reconteo</span>`;
         } else if (m.type === 'sale') {
-            typeBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">🛒 Venta</span>`;
+            typeBadge = `<span style="background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center;">Venta</span>`;
         }
 
         const formattedDate = new Date(m.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
@@ -206,9 +206,9 @@ function renderKardexTable() {
         const totalVal = Math.abs(m.qty || 0) * unitPrice;
         let valDisplay = `<span style="color: var(--text-dim); font-size: 0.84rem;">$0</span>`;
         if (m.qty > 0) {
-            valDisplay = `<span style="color: #10b981; font-weight: 800; font-size: 0.85rem;">+$ ${totalVal.toLocaleString('es-CO')}</span>`;
+            valDisplay = `<span style="color: #34d399; font-weight: 800; font-size: 0.85rem;">+$${totalVal.toLocaleString('es-CO')}</span>`;
         } else if (m.qty < 0) {
-            valDisplay = `<span style="color: #ef4444; font-weight: 800; font-size: 0.85rem;">-$ ${totalVal.toLocaleString('es-CO')}</span>`;
+            valDisplay = `<span style="color: #f87171; font-weight: 800; font-size: 0.85rem;">-$${totalVal.toLocaleString('es-CO')}</span>`;
         }
 
         // Clean Motivo text
@@ -219,10 +219,10 @@ function renderKardexTable() {
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem; white-space: nowrap;">${formattedDate}</td>
                 <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.productName}</td>
-                <td style="padding: 0.85rem 1rem; white-space: nowrap;">${typeBadge}</td>
-                <td style="padding: 0.85rem 1rem; font-weight: 800; color: ${m.qty > 0 ? '#10b981' : '#ef4444'}; font-size: 0.9rem; white-space: nowrap;">${qtyDisplay}</td>
-                <td style="padding: 0.85rem 1rem; white-space: nowrap;">${valDisplay}</td>
-                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem; white-space: nowrap;">${m.resultingStock} un.</td>
+                <td style="padding: 0.85rem 1rem; white-space: nowrap; text-align: center;">${typeBadge}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 800; color: ${m.qty > 0 ? '#34d399' : '#f87171'}; font-size: 0.9rem; white-space: nowrap; text-align: center;">${qtyDisplay}</td>
+                <td style="padding: 0.85rem 1rem; white-space: nowrap; text-align: center;">${valDisplay}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem; white-space: nowrap; text-align: center;">${m.resultingStock} un.</td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${motivoText}</td>
             </tr>
         `;
