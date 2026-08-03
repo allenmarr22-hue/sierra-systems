@@ -2350,29 +2350,44 @@
                     </div>
 
                     <!-- Configuración de Control de Existencias (Stock) -->
-                    <div class="form-group" style="margin-top: 1rem; padding: 1.2rem; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 14px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
-                            <span style="font-weight: 700; font-size: 0.9rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
-                                <i data-lucide="package" style="width: 18px; color: var(--theme-accent);"></i> Control de Existencias (Stock)
-                            </span>
-                            <label style="display: flex; align-items: center; cursor: pointer; gap: 0.5rem;">
-                                <input type="checkbox" id="item-track-stock" style="accent-color: var(--theme-accent); width: 18px; height: 18px;">
-                                <span style="font-size: 0.82rem; color: var(--text-dim); font-weight: 600;">Activar Control</span>
+                    <div class="form-group" style="margin-top: 1.25rem; padding: 1.25rem 1.4rem; background: rgba(15, 23, 42, 0.4); border: 1.5px solid var(--glass-border); border-radius: 18px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);">
+                        <!-- Encabezado con Icono, Título y Switch -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(2, 132, 199, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i data-lucide="package" style="width: 17px; height: 17px; color: #0284c7;"></i>
+                                </div>
+                                <div>
+                                    <span style="font-weight: 800; font-size: 0.95rem; color: #ffffff; display: block; line-height: 1.2; text-transform: none;">Control de Inventario</span>
+                                    <span style="font-size: 0.76rem; color: var(--text-dim); font-weight: 500; display: block; margin-top: 2px;">Gestión automática de stock y alertas</span>
+                                </div>
+                            </div>
+                            <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; background: rgba(255, 255, 255, 0.05); padding: 0.4rem 0.85rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.2s;">
+                                <input type="checkbox" id="item-track-stock" style="accent-color: #0284c7; width: 17px; height: 17px; cursor: pointer;">
+                                <span style="font-size: 0.82rem; color: #ffffff; font-weight: 700; text-transform: none; letter-spacing: 0;">Activar Control</span>
                             </label>
                         </div>
-                        <div id="stock-fields-wrap" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.8rem;">
+
+                        <!-- Campos de Entrada en Cuadrícula -->
+                        <div id="stock-fields-wrap" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; transition: opacity 0.2s;">
                             <div>
-                                <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.3rem;">Stock Actual (Unidades)</label>
-                                <input type="number" id="item-stock" min="0" placeholder="Ej: 50" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text); outline: none;">
+                                <label style="font-size: 0.8rem; color: var(--text); display: block; margin-bottom: 0.4rem; font-weight: 700; text-transform: none;">Stock Actual</label>
+                                <div style="position: relative;">
+                                    <input type="number" id="item-stock" min="0" placeholder="50" style="width: 100%; box-sizing: border-box; padding: 0.65rem 2.2rem 0.65rem 0.85rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.35); color: #ffffff; font-size: 0.92rem; font-weight: 700; outline: none;">
+                                    <span style="position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: var(--text-dim); font-weight: 600; pointer-events: none;">Unid.</span>
+                                </div>
                             </div>
                             <div>
-                                <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.3rem;">Stock Mínimo (Alerta)</label>
-                                <input type="number" id="item-min-stock" min="0" placeholder="Ej: 5" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text); outline: none;">
+                                <label style="font-size: 0.8rem; color: var(--text); display: block; margin-bottom: 0.4rem; font-weight: 700; text-transform: none;">Stock Mínimo (Alerta)</label>
+                                <div style="position: relative;">
+                                    <input type="number" id="item-min-stock" min="0" placeholder="5" style="width: 100%; box-sizing: border-box; padding: 0.65rem 2.2rem 0.65rem 0.85rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.35); color: #ffffff; font-size: 0.92rem; font-weight: 700; outline: none;">
+                                    <span style="position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: var(--text-dim); font-weight: 600; pointer-events: none;">Unid.</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary w-full" style="margin-top: 1rem; padding: 1rem;">Guardar Cambios</button>
+                    <button type="submit" class="btn-primary w-full" style="margin-top: 1.25rem; padding: 1rem; border-radius: 14px; font-weight: 800; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);">Guardar Cambios</button>
                 </form>
             </div>
         </div>
