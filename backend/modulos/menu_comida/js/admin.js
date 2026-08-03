@@ -179,11 +179,11 @@ function renderKardexTable() {
     tbody.innerHTML = displayedMovements.map(m => {
         let typeBadge = `<span style="background:rgba(16,185,129,0.15); color:#10b981; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📥 Ingreso</span>`;
         if (m.type === 'out') {
-            typeBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📤 Merma / Salida</span>`;
+            typeBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">📤 Merma</span>`;
         } else if (m.type === 'set') {
             typeBadge = `<span style="background:rgba(2,132,199,0.15); color:#0284c7; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">🔄 Reconteo</span>`;
         } else if (m.type === 'sale') {
-            typeBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">🛒 Venta Pedido</span>`;
+            typeBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:800;">🛒 Venta</span>`;
         }
 
         const formattedDate = new Date(m.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
@@ -199,22 +199,19 @@ function renderKardexTable() {
             valDisplay = `<span style="color: #ef4444; font-weight: 800; font-size: 0.85rem;">-$ ${totalVal.toLocaleString('es-CO')}</span>`;
         }
 
-        // Responsible User
-        let userDisplay = `<span style="background:rgba(2,132,199,0.12); color:#38bdf8; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:700;">👤 ${m.user || 'Administrador'}</span>`;
-        if (m.type === 'sale') {
-            userDisplay = `<span style="background:rgba(245,158,11,0.12); color:#f59e0b; padding:3px 8px; border-radius:8px; font-size:0.75rem; font-weight:700;">🤖 Sistema</span>`;
-        }
+        // Clean Motivo text
+        let motivoText = m.note || '-';
+        if (motivoText === 'Merma / Salida') motivoText = 'Merma';
 
         return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem; white-space: nowrap;">${formattedDate}</td>
                 <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.productName}</td>
-                <td style="padding: 0.85rem 1rem;">${typeBadge}</td>
-                <td style="padding: 0.85rem 1rem; font-weight: 800; color: ${m.qty > 0 ? '#10b981' : '#ef4444'}; font-size: 0.9rem;">${qtyDisplay}</td>
-                <td style="padding: 0.85rem 1rem;">${valDisplay}</td>
-                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.resultingStock} un.</td>
-                <td style="padding: 0.85rem 1rem;">${userDisplay}</td>
-                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${m.note || '-'}</td>
+                <td style="padding: 0.85rem 1rem; white-space: nowrap;">${typeBadge}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 800; color: ${m.qty > 0 ? '#10b981' : '#ef4444'}; font-size: 0.9rem; white-space: nowrap;">${qtyDisplay}</td>
+                <td style="padding: 0.85rem 1rem; white-space: nowrap;">${valDisplay}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem; white-space: nowrap;">${m.resultingStock} un.</td>
+                <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${motivoText}</td>
             </tr>
         `;
     }).join('');
@@ -247,8 +244,7 @@ function exportKardexPDF() {
     if (searchQuery) {
         movements = movements.filter(m => 
             (m.productName && m.productName.toLowerCase().includes(searchQuery)) ||
-            (m.note && m.note.toLowerCase().includes(searchQuery)) ||
-            (m.user && m.user.toLowerCase().includes(searchQuery))
+            (m.note && m.note.toLowerCase().includes(searchQuery))
         );
     }
 
@@ -269,7 +265,7 @@ function exportKardexPDF() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(`REPORTES DE INVENTARIO Y MOVIMIENTOS (KARDEX)`, 14, 15);
+    doc.text(`REPORTE DE HISTORIAL DE MOVIMIENTOS (KARDEX)`, 14, 15);
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
@@ -279,12 +275,13 @@ function exportKardexPDF() {
     // Prepare table rows
     const tableRows = movements.map(m => {
         const dateStr = new Date(m.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
-        const typeLabel = m.type === 'in' ? 'Ingreso' : (m.type === 'out' ? 'Merma / Pérdida' : (m.type === 'sale' ? 'Venta Pedido' : 'Reconteo'));
+        const typeLabel = m.type === 'in' ? 'Ingreso' : (m.type === 'out' ? 'Merma' : (m.type === 'sale' ? 'Venta' : 'Reconteo'));
         const qtyStr = m.qty > 0 ? `+${m.qty}` : `${m.qty}`;
         const unitPrice = m.price || m.productPrice || 0;
         const totalVal = Math.abs(m.qty || 0) * unitPrice;
         const valStr = m.qty > 0 ? `+$${totalVal.toLocaleString('es-CO')}` : (m.qty < 0 ? `-$${totalVal.toLocaleString('es-CO')}` : '$0');
-        const userStr = m.type === 'sale' ? 'Sistema' : (m.user || 'Administrador');
+        let motivoText = m.note || '-';
+        if (motivoText === 'Merma / Salida') motivoText = 'Merma';
 
         return [
             dateStr,
@@ -293,14 +290,13 @@ function exportKardexPDF() {
             qtyStr,
             valStr,
             `${m.resultingStock} un.`,
-            userStr,
-            m.note || '-'
+            motivoText
         ];
     });
 
     doc.autoTable({
         startY: 34,
-        head: [['Fecha / Hora', 'Producto', 'Tipo Movimiento', 'Cantidad', 'Valor ($)', 'Stock Resultante', 'Responsable', 'Motivo / Nota']],
+        head: [['Fecha / Hora', 'Producto', 'Tipo', 'Cantidad', 'Valor ($)', 'Stock Resultante', 'Motivo']],
         body: tableRows,
         theme: 'grid',
         headStyles: {
@@ -311,21 +307,20 @@ function exportKardexPDF() {
             halign: 'left'
         },
         bodyStyles: {
-            fontSize: 8,
+            fontSize: 8.5,
             textColor: [30, 41, 59]
         },
         alternateRowStyles: {
             fillColor: [248, 250, 252]
         },
         columnStyles: {
-            0: { cellWidth: 32 },
-            1: { cellWidth: 45, fontStyle: 'bold' },
-            2: { cellWidth: 35 },
-            3: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
-            4: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
-            5: { cellWidth: 28, halign: 'center' },
-            6: { cellWidth: 30 },
-            7: { cellWidth: 'auto' }
+            0: { cellWidth: 35 },
+            1: { cellWidth: 55, fontStyle: 'bold' },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 25, halign: 'right', fontStyle: 'bold' },
+            4: { cellWidth: 35, halign: 'right', fontStyle: 'bold' },
+            5: { cellWidth: 30, halign: 'center' },
+            6: { cellWidth: 'auto' }
         },
         didParseCell: function(data) {
             if (data.section === 'body') {
@@ -1571,7 +1566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: type,
                 qty: moveQty,
                 resultingStock: newStock,
-                note: note || (type === 'in' ? 'Reabastecimiento de stock' : (type === 'out' ? 'Merma / Salida' : 'Reconteo físico'))
+                note: note || (type === 'in' ? 'Ingreso de stock' : (type === 'out' ? 'Merma' : 'Reconteo físico'))
             });
 
             document.getElementById('stock-adjust-modal').classList.add('hidden');

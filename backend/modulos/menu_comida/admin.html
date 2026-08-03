@@ -714,10 +714,10 @@
 
                                     <select id="kardex-type-filter" style="height: 35px; box-sizing: border-box; padding: 0.45rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 700; cursor: pointer; outline: none; transition: all 0.2s;">
                                         <option value="all">📂 Todos los movimientos</option>
-                                        <option value="in">📥 Reabastecimiento / Ingresos</option>
-                                        <option value="out">📤 Mermas / Pérdidas</option>
-                                        <option value="sale">🛒 Ventas por Pedido</option>
-                                        <option value="set">🔄 Reconteos Físicos</option>
+                                        <option value="in">📥 Ingresos</option>
+                                        <option value="out">📤 Mermas</option>
+                                        <option value="sale">🛒 Ventas</option>
+                                        <option value="set">🔄 Reconteos</option>
                                     </select>
                                 </div>
 
@@ -732,14 +732,13 @@
                                 <table class="admin-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
                                     <thead>
                                         <tr style="background: rgba(255,255,255,0.02); text-align: left;">
-                                            <th style="padding: 0.9rem 1rem;">Fecha / Hora</th>
-                                            <th style="padding: 0.9rem 1rem;">Producto</th>
-                                            <th style="padding: 0.9rem 1rem;">Tipo Movimiento</th>
-                                            <th style="padding: 0.9rem 1rem;">Cantidad</th>
-                                            <th style="padding: 0.9rem 1rem;">Valor ($)</th>
-                                            <th style="padding: 0.9rem 1rem;">Stock Resultante</th>
-                                            <th style="padding: 0.9rem 1rem;">Responsable</th>
-                                            <th style="padding: 0.9rem 1rem;">Motivo / Nota</th>
+                                            <th style="padding: 0.9rem 1rem; white-space: nowrap;">Fecha / Hora</th>
+                                            <th style="padding: 0.9rem 1rem; white-space: nowrap;">Producto</th>
+                                            <th style="padding: 0.9rem 1rem; white-space: nowrap;">Tipo</th>
+                                            <th style="padding: 0.9rem 1rem; white-space: nowrap;">Cantidad</th>
+                                            <th style="padding: 0.9rem 1rem; white-space: nowrap;">Valor ($)</th>
+                                            <th style="padding: 0.9rem 1rem; white-space: nowrap;">Stock Resultante</th>
+                                            <th style="padding: 0.9rem 1rem; white-space: nowrap;">Motivo</th>
                                         </tr>
                                     </thead>
                                     <tbody id="kardex-table-body">
@@ -2390,9 +2389,9 @@
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Tipo de Movimiento</label>
                         <select id="stock-adjust-type" required style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.9rem; outline: none;">
-                            <option value="in">📥 Ingreso / Reabastecimiento (+ Stock)</option>
-                            <option value="out">📤 Salida / Merma / Desperdicio (- Stock)</option>
-                            <option value="set">🔄 Reconteo Físico (Establecer valor exacto)</option>
+                            <option value="in">📥 Ingreso (+ Stock)</option>
+                            <option value="out">📤 Merma (- Stock)</option>
+                            <option value="set">🔄 Reconteo Físico (Valor exacto)</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 1rem;">
@@ -2400,7 +2399,7 @@
                         <input type="number" id="stock-adjust-qty" min="1" required placeholder="Ej: 20" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.95rem; outline: none;">
                     </div>
                     <div class="form-group" style="margin-bottom: 1.5rem;">
-                        <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Motivo / Nota (Opcional)</label>
+                        <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Motivo (Opcional)</label>
                         <input type="text" id="stock-adjust-note" placeholder="Ej: Compra proveedor / Producto vencido" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
                     </div>
 
