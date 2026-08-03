@@ -183,8 +183,12 @@ function renderAdmin(openCatIds = null) {
     
     // Capture current open states if not provided
     if (!openCatIds) {
-        openCatIds = Array.from(container.querySelectorAll('.admin-cat-group.active'))
-            .map(group => group.dataset.catId);
+        if (!menuSearchQuery) {
+            openCatIds = window._userExplicitOpenCatIds || [];
+        } else {
+            openCatIds = Array.from(container.querySelectorAll('.admin-cat-group.active'))
+                .map(group => group.dataset.catId);
+        }
     }
 
     container.innerHTML = '';
@@ -354,19 +358,23 @@ function renderAdmin(openCatIds = null) {
     // Add toggle event listeners
     container.querySelectorAll('.admin-cat-header').forEach(header => {
         header.addEventListener('click', (e) => {
-            // Prevent toggle if delete button was clicked
-            if (e.target.closest('.delete-cat')) return;
+            // Prevent toggle if action buttons were clicked
+            if (e.target.closest('.delete-cat') || e.target.closest('.edit-cat') || e.target.closest('.add-to-cat-btn') || e.target.closest('.toggle-extras') || e.target.closest('.toggle-menu-visibility')) return;
             
             const group = header.parentElement;
+            const catId = group.dataset.catId;
             const wasActive = group.classList.contains('active');
             
             group.classList.toggle('active');
             
-            // Si se acaba de abrir, centrar suavemente en pantalla
+            if (!window._userExplicitOpenCatIds) window._userExplicitOpenCatIds = [];
             if (!wasActive) {
+                if (catId && !window._userExplicitOpenCatIds.includes(catId)) window._userExplicitOpenCatIds.push(catId);
                 setTimeout(() => {
                     group.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 100);
+            } else {
+                if (catId) window._userExplicitOpenCatIds = window._userExplicitOpenCatIds.filter(id => id !== catId);
             }
         });
     });
