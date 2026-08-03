@@ -7763,6 +7763,34 @@ document.addEventListener('click', (e) => {
                 }
             };
 
+            // Descontar inventario para productos con control de stock activado
+            if (Array.isArray(orderData.items)) {
+                let stockUpdated = false;
+                orderData.items.forEach(item => {
+                    const dish = (state.dishes || []).find(d => d.id == item.id || d.name === item.name);
+                    if (dish && dish.trackStock === true) {
+                        const currentQty = parseInt(dish.stock) || 0;
+                        const orderQty = parseInt(item.quantity || item.qty) || 1;
+                        const newQty = Math.max(0, currentQty - orderQty);
+                        dish.stock = newQty;
+
+                        if (!dish.inventoryHistory) dish.inventoryHistory = [];
+                        dish.inventoryHistory.push({
+                            date: new Date().toISOString(),
+                            type: 'sale',
+                            qty: -orderQty,
+                            resultingStock: newQty,
+                            note: `Venta Pedido Manual #${orderData.id}`
+                        });
+                        stockUpdated = true;
+                    }
+                });
+                if (stockUpdated) {
+                    if (typeof saveState === 'function') saveState();
+                    if (typeof renderAdmin === 'function') renderAdmin();
+                }
+            }
+
             const orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
             orders.push(orderData);
             state.orders = orders;

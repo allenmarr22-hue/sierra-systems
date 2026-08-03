@@ -2484,6 +2484,33 @@ function initCheckout() {
             status: 'pending' // Importante para el BI y el Dashboard
         };
 
+        // Descontar inventario automáticamente para productos con control de stock
+        if (Array.isArray(orderData.items)) {
+            let stockUpdated = false;
+            orderData.items.forEach(item => {
+                const dish = (state.dishes || []).find(d => d.id == item.id || d.name === item.name);
+                if (dish && dish.trackStock === true) {
+                    const currentQty = parseInt(dish.stock) || 0;
+                    const orderQty = parseInt(item.quantity || item.qty) || 1;
+                    const newQty = Math.max(0, currentQty - orderQty);
+                    dish.stock = newQty;
+
+                    if (!dish.inventoryHistory) dish.inventoryHistory = [];
+                    dish.inventoryHistory.push({
+                        date: new Date().toISOString(),
+                        type: 'sale',
+                        qty: -orderQty,
+                        resultingStock: newQty,
+                        note: `Venta Pedido #${orderData.id}`
+                    });
+                    stockUpdated = true;
+                }
+            });
+            if (stockUpdated) {
+                localStorage.setItem('streetfeed_dishes', JSON.stringify(state.dishes));
+            }
+        }
+
         // Guardar en el historial global (para que el Admin lo vea)
         state.orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
         state.orders.push(orderData);
