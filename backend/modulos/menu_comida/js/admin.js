@@ -341,8 +341,8 @@ function exportKardexPDF() {
             0: { cellWidth: 32 },                       // Fecha / Hora
             1: { cellWidth: 42, fontStyle: 'bold' },     // Producto
             2: { cellWidth: 20, halign: 'center' },       // Tipo
-            3: { cellWidth: 18, halign: 'right', fontStyle: 'bold' },  // Cantidad
-            4: { cellWidth: 24, halign: 'right', fontStyle: 'bold' },  // Valor ($)
+            3: { cellWidth: 18, halign: 'center', fontStyle: 'bold' }, // Cantidad
+            4: { cellWidth: 24, halign: 'center', fontStyle: 'bold' }, // Valor ($)
             5: { cellWidth: 22, halign: 'center' },      // Stock Result.
             6: { cellWidth: 28 }                        // Motivo
         },
