@@ -3581,15 +3581,38 @@ body.light-mode .form-group select {
     background-color: #ffffff !important;
 }
 
+select {
+    color-scheme: dark;
+}
+
+select option {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    padding: 10px 14px !important;
+    font-size: 0.88rem !important;
+}
+
+select option:hover,
+select option:focus,
+select option:active,
+select option:checked {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+}
+
 .form-group select option {
-    background: var(--admin-surface);
-    color: var(--text);
+    background: #0f172a !important;
+    color: #f8fafc !important;
     padding: 10px;
 }
 
+body.light-mode select {
+    color-scheme: light;
+}
+
 body.light-mode .form-group select option {
-    background: #ffffff;
-    color: #0f172a;
+    background: #ffffff !important;
+    color: #0f172a !important;
 }
 
 /* Category header in light mode */

@@ -36,6 +36,9 @@ function openStockAdjustModal(dishId) {
     document.getElementById('stock-adjust-qty').value = '';
     document.getElementById('stock-adjust-note').value = '';
     document.getElementById('stock-adjust-type').value = 'in';
+    if (typeof window.initializeCustomAdminSelect === 'function') {
+        window.initializeCustomAdminSelect('stock-adjust-type');
+    }
 
     const modal = document.getElementById('stock-adjust-modal');
     if (modal) modal.classList.remove('hidden');
@@ -849,6 +852,9 @@ function updateCatSelects() {
             });
         stockCatFilter.innerHTML = opts.join('');
         stockCatFilter.value = currentVal;
+        if (typeof window.initializeCustomAdminSelect === 'function') {
+            window.initializeCustomAdminSelect('stock-category-filter', true);
+        }
     }
 }
 
@@ -8089,13 +8095,53 @@ window.resetStreetFeedWATemplate = function() {
 };
 
 
-window.initializeCustomAdminSelect = function(selectId) {
+window.initializeCustomAdminSelect = function(selectId, forceRebuild = false) {
     const sel = document.getElementById(selectId);
-    if (!sel || sel.dataset.customSelectInit) return;
+    if (!sel) return;
+
+    let wrap = sel.nextElementSibling;
+    if (wrap && wrap.classList.contains('admin-custom-select-wrap')) {
+        if (!forceRebuild) return;
+        const panel = wrap.querySelector('.admin-custom-select-panel');
+        const label = wrap.querySelector('.admin-custom-select-label');
+        if (panel) {
+            panel.innerHTML = '';
+            const options = Array.from(sel.options);
+            options.forEach(opt => {
+                const item = document.createElement('div');
+                item.className = 'admin-custom-select-item';
+                item.textContent = opt.text;
+                item.dataset.value = opt.value;
+                if (opt.selected || (sel.value && sel.value === opt.value)) {
+                    item.classList.add('selected');
+                    if (label) label.textContent = opt.text;
+                }
+
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    sel.value = opt.value;
+                    wrap.querySelectorAll('.admin-custom-select-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                    if (label) label.textContent = opt.text;
+                    panel.style.display = 'none';
+                    const iconSvg = wrap.querySelector('.admin-custom-select-chevron svg');
+                    if (iconSvg) iconSvg.style.transform = 'rotate(0deg)';
+                    sel.dispatchEvent(new Event('change'));
+                });
+
+                panel.appendChild(item);
+            });
+            const selectedOpt = options.find(o => o.value === sel.value) || options[0];
+            if (selectedOpt && label) label.textContent = selectedOpt.text;
+        }
+        return;
+    }
+
+    if (sel.dataset.customSelectInit) return;
     sel.dataset.customSelectInit = '1';
     sel.style.display = 'none';
 
-    const wrap = document.createElement('div');
+    wrap = document.createElement('div');
     wrap.className = 'admin-custom-select-wrap';
 
     const trigger = document.createElement('div');
@@ -8193,8 +8239,10 @@ window.initializeCustomAdminSelect = function(selectId) {
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.location.pathname.endsWith('admin.html')) return;
 
-    // Convertir los selectores nativos de gastos y personal a selectores modernizados
+    // Convertir los selectores nativos a selectores modernizados
     if (typeof window.initializeCustomAdminSelect === 'function') {
+        window.initializeCustomAdminSelect('stock-category-filter');
+        window.initializeCustomAdminSelect('stock-adjust-type');
         window.initializeCustomAdminSelect('expense-month-filter');
         window.initializeCustomAdminSelect('expense-category');
         window.initializeCustomAdminSelect('stats-month-filter');
