@@ -2377,14 +2377,7 @@
             <div class="modal-content glass" style="max-width: 500px; padding: 2rem; border-radius: 24px; position: relative;">
                 <button class="modal-close" onclick="document.getElementById('stock-adjust-modal').classList.add('hidden')"><i data-lucide="x"></i></button>
                 <h3 class="font-serif" style="margin: 0 0 0.2rem 0; font-size: 1.4rem; color: var(--text);">Ajustar Inventario y Existencias</h3>
-                
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.1rem; flex-wrap: wrap; gap: 0.5rem;">
-                    <p id="stock-adjust-product-name" style="margin: 0; font-size: 0.95rem; color: #0284c7; font-weight: 800;"></p>
-                    <button type="button" id="open-product-kardex-detail-btn" style="background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.3); color: #38bdf8; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">
-                        <i data-lucide="history" style="width: 14px; height: 14px;"></i>
-                        <span>Ver Historial</span>
-                    </button>
-                </div>
+                <p id="stock-adjust-product-name" style="margin: 0 0 1.1rem 0; font-size: 0.95rem; color: #0284c7; font-weight: 800;"></p>
                 
                 <form id="stock-adjust-form">
                     <input type="hidden" id="stock-adjust-item-id">
@@ -2404,22 +2397,26 @@
                         </div>
                     </div>
 
-                    <div style="border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.25rem; padding-top: 1rem;">
-                        <div class="form-group" style="margin-bottom: 1rem;">
-                            <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Tipo de Movimiento</label>
-                            <select id="stock-adjust-type" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.9rem; outline: none;">
-                                <option value="in">📥 Ingreso (+ Stock)</option>
-                                <option value="out">📤 Merma (- Stock)</option>
-                                <option value="set">🔄 Reconteo Físico (Valor exacto)</option>
-                            </select>
+                    <div style="border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.1rem; padding-top: 1rem;">
+                        <!-- Tipo de Movimiento y Cantidad en 1 fila (2 columnas) -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Tipo Movimiento</label>
+                                <select id="stock-adjust-type" style="width: 100%; box-sizing: border-box; padding: 0.7rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                                    <option value="in">📥 Ingreso (+ Stock)</option>
+                                    <option value="out">📤 Merma (- Stock)</option>
+                                    <option value="set">🔄 Reconteo Físico</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Cantidad Unidades</label>
+                                <input type="number" id="stock-adjust-qty" min="0" placeholder="Ej: 20" style="width: 100%; box-sizing: border-box; padding: 0.7rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.92rem; outline: none;">
+                            </div>
                         </div>
-                        <div class="form-group" style="margin-bottom: 1rem;">
-                            <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Cantidad de Unidades</label>
-                            <input type="number" id="stock-adjust-qty" min="0" placeholder="Ej: 20" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.95rem; outline: none;">
-                        </div>
+
                         <div class="form-group" style="margin-bottom: 1rem;">
                             <label style="font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">Motivo (Opcional)</label>
-                            <input type="text" id="stock-adjust-note" placeholder="Ej: Compra proveedor / Producto vencido" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                            <input type="text" id="stock-adjust-note" placeholder="Ej: Compra proveedor / Producto vencido" style="width: 100%; box-sizing: border-box; padding: 0.7rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
                         </div>
                     </div>
 

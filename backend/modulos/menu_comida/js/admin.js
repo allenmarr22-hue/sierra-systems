@@ -141,7 +141,6 @@ function openStockAdjustModal(dishId) {
     // Bind real-time input preview listeners
     const qtyInput = document.getElementById('stock-adjust-qty');
     const typeSelect = document.getElementById('stock-adjust-type');
-    const historyBtn = document.getElementById('open-product-kardex-detail-btn');
 
     if (qtyInput && !qtyInput.dataset.boundPreview) {
         qtyInput.dataset.boundPreview = '1';
@@ -150,13 +149,6 @@ function openStockAdjustModal(dishId) {
     if (typeSelect && !typeSelect.dataset.boundPreview) {
         typeSelect.dataset.boundPreview = '1';
         typeSelect.addEventListener('change', () => updateStockAdjustPreview());
-    }
-    if (historyBtn && !historyBtn.dataset.boundHistory) {
-        historyBtn.dataset.boundHistory = '1';
-        historyBtn.addEventListener('click', () => {
-            const currentId = document.getElementById('stock-adjust-item-id')?.value;
-            if (currentId) openProductKardexModal(currentId);
-        });
     }
 
     if (typeof window.initializeCustomAdminSelect === 'function') {
@@ -237,9 +229,17 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
 
         return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
-                    <img src="${dish.img}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
-                    <strong style="color: var(--text); font-size: 0.9rem;">${dish.name}</strong>
+                <td style="padding: 0.85rem 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <img src="${dish.img}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
+                            <strong style="color: var(--text); font-size: 0.9rem;">${dish.name}</strong>
+                        </div>
+                        <button type="button" class="view-dish-kardex-btn" data-id="${dish.id}" style="background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.3); color: #38bdf8; font-size: 0.75rem; font-weight: 700; padding: 0.28rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; transition: all 0.2s;" title="Ver Detalle e Historial de ${dish.name}">
+                            <i data-lucide="history" style="width: 13px; height: 13px;"></i>
+                            <span>Detalles</span>
+                        </button>
+                    </div>
                 </td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${catName}</td>
                 <td style="padding: 0.85rem 1rem; font-size: 0.85rem;">${isTracked ? '<span style="color:#34d399; font-weight:700;">Sí</span>' : '<span style="color:var(--text-dim);">No (Ilimitado)</span>'}</td>
@@ -254,6 +254,13 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
             </tr>
         `;
     }).join('');
+
+    tbody.querySelectorAll('.view-dish-kardex-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            if (id) openProductKardexModal(id);
+        });
+    });
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
