@@ -520,6 +520,8 @@ function renderKardexTable() {
         const valDisplay = m.qty > 0 ? `+$${totalVal.toLocaleString('es-CO')}` : (m.qty < 0 ? `-$${totalVal.toLocaleString('es-CO')}` : '$0');
         let motivoText = m.note || '-';
         if (motivoText === 'Merma / Salida') motivoText = 'Merma';
+        if (motivoText.toLowerCase().includes('reabastecimiento') || motivoText.toLowerCase().includes('ingreso')) motivoText = 'Reabastecimiento';
+        motivoText = motivoText.replace(/\s*de stock\s*/gi, '').trim();
 
         return `
             <tr style="border-bottom: 1px solid var(--glass-border); font-size: 0.88rem;">
@@ -824,6 +826,8 @@ function exportKardexPDFConfigured({ scope, catId, dishId, period }) {
         const valStr = m.qty > 0 ? `+$${totalVal.toLocaleString('es-CO')}` : (m.qty < 0 ? `-$${totalVal.toLocaleString('es-CO')}` : '$0');
         let motivoText = m.note || '-';
         if (motivoText === 'Merma / Salida') motivoText = 'Merma';
+        if (motivoText.toLowerCase().includes('reabastecimiento') || motivoText.toLowerCase().includes('ingreso')) motivoText = 'Reabastecimiento';
+        motivoText = motivoText.replace(/\s*de stock\s*/gi, '').trim();
 
         return [dateStr, m.productName, typeLabel, qtyStr, valStr, `${m.resultingStock} un.`, motivoText];
     });
