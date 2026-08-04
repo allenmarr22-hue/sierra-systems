@@ -230,15 +230,9 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
         return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <td style="padding: 0.85rem 1rem;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <img src="${dish.img}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
-                            <strong style="color: var(--text); font-size: 0.9rem;">${dish.name}</strong>
-                        </div>
-                        <button type="button" class="view-dish-kardex-btn" data-id="${dish.id}" style="background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.3); color: #38bdf8; font-size: 0.75rem; font-weight: 700; padding: 0.28rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; transition: all 0.2s;" title="Ver Detalle e Historial de ${dish.name}">
-                            <i data-lucide="history" style="width: 13px; height: 13px;"></i>
-                            <span>Detalles</span>
-                        </button>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <img src="${dish.img}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
+                        <strong class="view-dish-kardex-text" data-id="${dish.id}" style="color: var(--text); font-size: 0.9rem; cursor: pointer; transition: color 0.2s;" title="Ver Historial de ${dish.name}">${dish.name}</strong>
                     </div>
                 </td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${catName}</td>
@@ -247,15 +241,20 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${isTracked ? minQty + ' un.' : '-'}</td>
                 <td style="padding: 0.85rem 1rem;">${statusBadge}</td>
                 <td style="padding: 0.85rem 1rem; text-align: right;">
-                    <button type="button" class="btn-secondary icon-btn adjust-stock-btn" data-id="${dish.id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; gap: 4px; display: inline-flex; align-items: center;" title="Ajustar Existencias">
-                        <i data-lucide="package-plus" style="width: 14px; height: 14px;"></i> Ajustar
-                    </button>
+                    <div style="display: inline-flex; align-items: center; gap: 0.45rem;">
+                        <button type="button" class="view-dish-kardex-btn" data-id="${dish.id}" style="padding: 0.42rem 0.65rem; border-radius: 10px; background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.3); color: #38bdf8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Historial de Movimientos">
+                            <i data-lucide="history" style="width: 15px; height: 15px;"></i>
+                        </button>
+                        <button type="button" class="btn-secondary icon-btn adjust-stock-btn" data-id="${dish.id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; gap: 4px; display: inline-flex; align-items: center;" title="Ajustar Existencias">
+                            <i data-lucide="package-plus" style="width: 14px; height: 14px;"></i> Ajustar
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
 
-    tbody.querySelectorAll('.view-dish-kardex-btn').forEach(btn => {
+    tbody.querySelectorAll('.view-dish-kardex-btn, .view-dish-kardex-text').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.id;
             if (id) openProductKardexModal(id);
