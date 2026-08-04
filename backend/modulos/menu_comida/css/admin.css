@@ -4298,19 +4298,28 @@ body.light-mode .admin-custom-select-panel {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* Scrollbar para el panel */
+/* Scrollbar para el panel personalizado */
 .admin-custom-select-panel::-webkit-scrollbar {
-    width: 5px;
+    width: 7px;
 }
 .admin-custom-select-panel::-webkit-scrollbar-track {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
 }
 .admin-custom-select-panel::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
+    background: #0284c7;
+    border-radius: 6px;
+}
+body.light-mode .admin-custom-select-panel::-webkit-scrollbar-track {
+    background: #f1f5f9 !important;
+    border-radius: 6px;
 }
 body.light-mode .admin-custom-select-panel::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1) !important;
+    background: #0284c7 !important;
+    border-radius: 6px;
+}
+body.light-mode .admin-custom-select-panel::-webkit-scrollbar-thumb:hover {
+    background: #0369a1 !important;
 }
 
 .admin-custom-select-item {
@@ -4325,7 +4334,7 @@ body.light-mode .admin-custom-select-panel::-webkit-scrollbar-thumb {
 }
 
 body.light-mode .admin-custom-select-item {
-    color: #475569 !important;
+    color: #0f172a !important;
 }
 
 .admin-custom-select-item:hover {
@@ -4334,8 +4343,8 @@ body.light-mode .admin-custom-select-item {
 }
 
 body.light-mode .admin-custom-select-item:hover {
-    background: #0f172a !important;
-    color: #ffffff !important;
+    background: rgba(2, 132, 199, 0.12) !important;
+    color: #0284c7 !important;
     font-weight: 700 !important;
 }
 
