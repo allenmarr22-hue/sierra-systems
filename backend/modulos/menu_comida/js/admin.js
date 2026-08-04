@@ -124,7 +124,7 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
                 </td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${catName}</td>
                 <td style="padding: 0.85rem 1rem; font-size: 0.85rem;">${isTracked ? '<span style="color:#34d399; font-weight:700;">Sí</span>' : '<span style="color:var(--text-dim);">No (Ilimitado)</span>'}</td>
-                <td style="padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 800; color: ${isTracked && stockQty <= 0 ? '#f87171' : 'var(--text)'};">${isTracked ? stockQty + ' un.' : '∞'}</td>
+                <td style="padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 800; color: ${isTracked && stockQty <= 0 ? '#f87171' : 'var(--text)'};">${isTracked ? stockQty + ' un.' : '<span style="color:var(--text-dim); font-size:0.84rem; font-weight:600;">Ilimitado</span>'}</td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${isTracked ? minQty + ' un.' : '-'}</td>
                 <td style="padding: 0.85rem 1rem;">${statusBadge}</td>
                 <td style="padding: 0.85rem 1rem; text-align: right;">
@@ -139,33 +139,34 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function renderKardexTable() {
-    const tbody = document.getElementById('kardex-table-body');
-    if (!tbody) return;
-
+function getFilteredKardexMovements() {
     const searchInput = document.getElementById('kardex-search-input');
+    const catFilterSelect = document.getElementById('kardex-cat-filter');
     const typeFilterSelect = document.getElementById('kardex-type-filter');
-    const exportBtn = document.getElementById('export-kardex-pdf-btn');
-
-    // Bind event listeners once
-    if (searchInput && !searchInput.dataset.bound) {
-        searchInput.dataset.bound = '1';
-        searchInput.addEventListener('input', () => renderKardexTable());
-    }
-    if (typeFilterSelect && !typeFilterSelect.dataset.bound) {
-        typeFilterSelect.dataset.bound = '1';
-        typeFilterSelect.addEventListener('change', () => renderKardexTable());
-        if (typeof window.initializeCustomAdminSelect === 'function') {
-            window.initializeCustomAdminSelect('kardex-type-filter');
-        }
-    }
-    if (exportBtn && !exportBtn.dataset.bound) {
-        exportBtn.dataset.bound = '1';
-        exportBtn.addEventListener('click', () => exportKardexPDF());
-    }
+    const periodFilterSelect = document.getElementById('kardex-period-filter');
+    const dateInput = document.getElementById('kardex-date-input');
+    const monthInput = document.getElementById('kardex-month-input');
 
     const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const selectedCat = catFilterSelect ? catFilterSelect.value : 'all';
     const selectedType = typeFilterSelect ? typeFilterSelect.value : 'all';
+    const selectedPeriod = periodFilterSelect ? periodFilterSelect.value : 'all';
+    const selectedDate = dateInput ? dateInput.value : '';
+    const selectedMonth = monthInput ? monthInput.value : '';
+
+    // Show / hide date or month picker if needed
+    if (dateInput && monthInput) {
+        if (selectedPeriod === 'specific_day') {
+            dateInput.classList.remove('hidden');
+            monthInput.classList.add('hidden');
+        } else if (selectedPeriod === 'specific_month') {
+            monthInput.classList.remove('hidden');
+            dateInput.classList.add('hidden');
+        } else {
+            dateInput.classList.add('hidden');
+            monthInput.classList.add('hidden');
+        }
+    }
 
     let movements = [];
     (state.dishes || []).forEach(d => {
@@ -173,6 +174,8 @@ function renderKardexTable() {
             d.inventoryHistory.forEach(h => {
                 movements.push({ 
                     ...h, 
+                    dishId: d.id,
+                    dishCat: d.cat,
                     productName: d.name,
                     productPrice: parseInt(d.price) || 0
                 });
@@ -182,10 +185,17 @@ function renderKardexTable() {
 
     movements.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Apply filtering
+    // 1. Filter by Movement Type
     if (selectedType !== 'all') {
         movements = movements.filter(m => m.type === selectedType);
     }
+
+    // 2. Filter by Category
+    if (selectedCat !== 'all') {
+        movements = movements.filter(m => String(m.dishCat) === selectedCat || String(m.dishCat).toLowerCase() === selectedCat.toLowerCase());
+    }
+
+    // 3. Filter by Search Query
     if (searchQuery) {
         movements = movements.filter(m => 
             (m.productName && m.productName.toLowerCase().includes(searchQuery)) ||
@@ -193,6 +203,98 @@ function renderKardexTable() {
             (m.user && m.user.toLowerCase().includes(searchQuery))
         );
     }
+
+    // 4. Filter by Period / Date / Month
+    if (selectedPeriod !== 'all') {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        
+        const yest = new Date(now);
+        yest.setDate(yest.getDate() - 1);
+        const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+        
+        const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        movements = movements.filter(m => {
+            if (!m.date) return false;
+            const d = new Date(m.date);
+            const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const mMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+            if (selectedPeriod === 'today') return mDateStr === todayStr;
+            if (selectedPeriod === 'yesterday') return mDateStr === yestStr;
+            if (selectedPeriod === 'this_month') return mMonthStr === thisMonthStr;
+            if (selectedPeriod === 'specific_day' && selectedDate) return mDateStr === selectedDate;
+            if (selectedPeriod === 'specific_month' && selectedMonth) return mMonthStr === selectedMonth;
+            return true;
+        });
+    }
+
+    return {
+        movements,
+        filters: {
+            searchQuery,
+            selectedCat,
+            selectedType,
+            selectedPeriod,
+            selectedDate,
+            selectedMonth
+        }
+    };
+}
+
+function renderKardexTable() {
+    const tbody = document.getElementById('kardex-table-body');
+    if (!tbody) return;
+
+    const searchInput = document.getElementById('kardex-search-input');
+    const catFilterSelect = document.getElementById('kardex-cat-filter');
+    const typeFilterSelect = document.getElementById('kardex-type-filter');
+    const periodFilterSelect = document.getElementById('kardex-period-filter');
+    const dateInput = document.getElementById('kardex-date-input');
+    const monthInput = document.getElementById('kardex-month-input');
+    const exportBtn = document.getElementById('export-kardex-pdf-btn');
+
+    // Bind event listeners once
+    if (searchInput && !searchInput.dataset.bound) {
+        searchInput.dataset.bound = '1';
+        searchInput.addEventListener('input', () => renderKardexTable());
+    }
+    if (catFilterSelect && !catFilterSelect.dataset.bound) {
+        catFilterSelect.dataset.bound = '1';
+        catFilterSelect.addEventListener('change', () => renderKardexTable());
+        if (typeof window.initializeCustomAdminSelect === 'function') {
+            window.initializeCustomAdminSelect('kardex-cat-filter');
+        }
+    }
+    if (typeFilterSelect && !typeFilterSelect.dataset.bound) {
+        typeFilterSelect.dataset.bound = '1';
+        typeFilterSelect.addEventListener('change', () => renderKardexTable());
+        if (typeof window.initializeCustomAdminSelect === 'function') {
+            window.initializeCustomAdminSelect('kardex-type-filter');
+        }
+    }
+    if (periodFilterSelect && !periodFilterSelect.dataset.bound) {
+        periodFilterSelect.dataset.bound = '1';
+        periodFilterSelect.addEventListener('change', () => renderKardexTable());
+        if (typeof window.initializeCustomAdminSelect === 'function') {
+            window.initializeCustomAdminSelect('kardex-period-filter');
+        }
+    }
+    if (dateInput && !dateInput.dataset.bound) {
+        dateInput.dataset.bound = '1';
+        dateInput.addEventListener('change', () => renderKardexTable());
+    }
+    if (monthInput && !monthInput.dataset.bound) {
+        monthInput.dataset.bound = '1';
+        monthInput.addEventListener('change', () => renderKardexTable());
+    }
+    if (exportBtn && !exportBtn.dataset.bound) {
+        exportBtn.dataset.bound = '1';
+        exportBtn.addEventListener('click', () => exportKardexPDF());
+    }
+
+    const { movements } = getFilteredKardexMovements();
 
     // Limit to 50 for table display
     const displayedMovements = movements.slice(0, 50);
@@ -244,38 +346,10 @@ function renderKardexTable() {
 }
 
 function exportKardexPDF() {
-    const searchInput = document.getElementById('kardex-search-input');
-    const typeFilterSelect = document.getElementById('kardex-type-filter');
-    const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
-    const selectedType = typeFilterSelect ? typeFilterSelect.value : 'all';
-
-    let movements = [];
-    (state.dishes || []).forEach(d => {
-        if (d.inventoryHistory && Array.isArray(d.inventoryHistory)) {
-            d.inventoryHistory.forEach(h => {
-                movements.push({ 
-                    ...h, 
-                    productName: d.name,
-                    productPrice: parseInt(d.price) || 0
-                });
-            });
-        }
-    });
-
-    movements.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    if (selectedType !== 'all') {
-        movements = movements.filter(m => m.type === selectedType);
-    }
-    if (searchQuery) {
-        movements = movements.filter(m => 
-            (m.productName && m.productName.toLowerCase().includes(searchQuery)) ||
-            (m.note && m.note.toLowerCase().includes(searchQuery))
-        );
-    }
+    const { movements, filters } = getFilteredKardexMovements();
 
     if (movements.length === 0) {
-        showToast('No hay registros de inventario para exportar.', 'warning');
+        showToast('No hay registros de inventario para exportar con los filtros seleccionados.', 'warning');
         return;
     }
 
@@ -298,11 +372,28 @@ function exportKardexPDF() {
     doc.setFont('helvetica', 'bold');
     doc.text(`REPORTE DE HISTORIAL DE MOVIMIENTOS (KARDEX)`, 12, 10.5);
 
+    // Build filter summary strings
+    const catObj = (state.categories || []).find(c => String(c.id) === filters.selectedCat);
+    const catNameStr = filters.selectedCat === 'all' ? 'Todas' : (catObj ? catObj.name : filters.selectedCat);
+    
+    let typeStr = 'Todos';
+    if (filters.selectedType === 'in') typeStr = 'Ingresos';
+    else if (filters.selectedType === 'out') typeStr = 'Mermas';
+    else if (filters.selectedType === 'sale') typeStr = 'Ventas';
+    else if (filters.selectedType === 'set') typeStr = 'Reconteos';
+
+    let periodStr = 'Todo el historial';
+    if (filters.selectedPeriod === 'today') periodStr = 'Hoy';
+    else if (filters.selectedPeriod === 'yesterday') periodStr = 'Ayer';
+    else if (filters.selectedPeriod === 'this_month') periodStr = 'Este Mes';
+    else if (filters.selectedPeriod === 'specific_day') periodStr = filters.selectedDate ? `Día: ${filters.selectedDate}` : 'Día específico';
+    else if (filters.selectedPeriod === 'specific_month') periodStr = filters.selectedMonth ? `Mes: ${filters.selectedMonth}` : 'Mes específico';
+
     // Header Metadata
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(203, 213, 225); // #cbd5e1
-    doc.text(`Empresa: ${businessName}   •   Fecha: ${nowStr}   •   Total Registros: ${movements.length}`, 12, 15.5);
+    doc.text(`Empresa: ${businessName}  •  Cat: ${catNameStr}  •  Período: ${periodStr}  •  Tipo: ${typeStr}  •  Total: ${movements.length}`, 12, 15.5);
 
     // Prepare table rows
     const tableRows = movements.map(m => {
@@ -1098,6 +1189,22 @@ function updateCatSelects() {
         stockCatFilter.value = currentVal;
         if (typeof window.initializeCustomAdminSelect === 'function') {
             window.initializeCustomAdminSelect('stock-category-filter', true);
+        }
+    }
+
+    const kardexCatFilter = document.getElementById('kardex-cat-filter');
+    if (kardexCatFilter) {
+        const currentVal = kardexCatFilter.value || 'all';
+        const opts = ['<option value="all">Todas las categorías</option>'];
+        (state.categories || [])
+            .filter(c => c.id !== 'todos')
+            .forEach(c => {
+                opts.push(`<option value="${c.id}">${c.name}</option>`);
+            });
+        kardexCatFilter.innerHTML = opts.join('');
+        kardexCatFilter.value = currentVal;
+        if (typeof window.initializeCustomAdminSelect === 'function') {
+            window.initializeCustomAdminSelect('kardex-cat-filter', true);
         }
     }
 }
@@ -8532,7 +8639,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.initializeCustomAdminSelect === 'function') {
         window.initializeCustomAdminSelect('stock-category-filter');
         window.initializeCustomAdminSelect('stock-adjust-type');
+        window.initializeCustomAdminSelect('kardex-cat-filter');
         window.initializeCustomAdminSelect('kardex-type-filter');
+        window.initializeCustomAdminSelect('kardex-period-filter');
         window.initializeCustomAdminSelect('expense-month-filter');
         window.initializeCustomAdminSelect('expense-category');
         window.initializeCustomAdminSelect('stats-month-filter');

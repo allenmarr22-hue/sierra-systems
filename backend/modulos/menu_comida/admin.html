@@ -707,12 +707,16 @@
                         <!-- SECCIÓN 3: HISTORIAL DE MOVIMIENTOS / KARDEX -->
                         <div id="inv-history-sec" class="inventory-sub-section hidden">
                             <div style="max-width: 1000px; margin: 0 auto 1.25rem auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-                                <!-- Izquierda: Buscador + Filtro por Tipo -->
-                                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                                    <div style="position: relative; width: 220px;">
+                                <!-- Izquierda: Buscador + Filtros por Categoría, Tipo y Fecha -->
+                                <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+                                    <div style="position: relative; width: 180px;">
                                         <input type="text" id="kardex-search-input" placeholder="Buscar en historial..." style="width: 100%; height: 35px; box-sizing: border-box; padding: 0.45rem 1rem 0.45rem 2.2rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none; transition: all 0.2s;">
                                         <i data-lucide="search" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-dim); pointer-events: none;"></i>
                                     </div>
+
+                                    <select id="kardex-cat-filter" style="height: 35px; box-sizing: border-box; padding: 0.45rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 700; cursor: pointer; outline: none; transition: all 0.2s;">
+                                        <option value="all">Todas las categorías</option>
+                                    </select>
 
                                     <select id="kardex-type-filter" style="height: 35px; box-sizing: border-box; padding: 0.45rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 700; cursor: pointer; outline: none; transition: all 0.2s;">
                                         <option value="all">Todos los movimientos</option>
@@ -721,6 +725,18 @@
                                         <option value="sale">Ventas</option>
                                         <option value="set">Reconteos</option>
                                     </select>
+
+                                    <select id="kardex-period-filter" style="height: 35px; box-sizing: border-box; padding: 0.45rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 700; cursor: pointer; outline: none; transition: all 0.2s;">
+                                        <option value="all">Todo el historial</option>
+                                        <option value="today">Hoy</option>
+                                        <option value="yesterday">Ayer</option>
+                                        <option value="this_month">Este Mes</option>
+                                        <option value="specific_day">Día Específico...</option>
+                                        <option value="specific_month">Mes Específico...</option>
+                                    </select>
+
+                                    <input type="date" id="kardex-date-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
+                                    <input type="month" id="kardex-month-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
                                 </div>
 
                                 <!-- Derecha: Botón Exportar a PDF -->
