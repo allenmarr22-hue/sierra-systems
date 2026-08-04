@@ -672,12 +672,12 @@ function openPDFExportModal() {
     const modal = document.getElementById('pdf-export-modal');
     if (!modal) return;
 
+    const scopeSelect = document.getElementById('pdf-scope-select');
     const catContainer = document.getElementById('pdf-scope-cat-container');
     const dishContainer = document.getElementById('pdf-scope-dish-container');
     const catSelect = document.getElementById('pdf-cat-select');
     const dishSelect = document.getElementById('pdf-dish-select');
     const periodSelect = document.getElementById('pdf-period-select');
-    const radios = modal.querySelectorAll('input[name="pdf-scope"]');
     const submitBtn = document.getElementById('pdf-generate-submit-btn');
 
     // Populate categories
@@ -692,37 +692,42 @@ function openPDFExportModal() {
 
     // Transformar a menús desplegables modernos ejecutivos
     if (typeof window.initializeCustomAdminSelect === 'function') {
+        window.initializeCustomAdminSelect('pdf-scope-select', true);
         window.initializeCustomAdminSelect('pdf-cat-select', true);
         window.initializeCustomAdminSelect('pdf-dish-select', true);
         window.initializeCustomAdminSelect('pdf-period-select', true);
     }
 
-    radios.forEach(radio => {
-        radio.addEventListener('change', () => {
-            const val = modal.querySelector('input[name="pdf-scope"]:checked').value;
-            if (val === 'cat') {
-                catContainer.classList.remove('hidden');
-                dishContainer.classList.add('hidden');
-                if (typeof window.initializeCustomAdminSelect === 'function') {
-                    window.initializeCustomAdminSelect('pdf-cat-select', true);
-                }
-            } else if (val === 'dish') {
-                dishContainer.classList.remove('hidden');
-                catContainer.classList.add('hidden');
-                if (typeof window.initializeCustomAdminSelect === 'function') {
-                    window.initializeCustomAdminSelect('pdf-dish-select', true);
-                }
-            } else {
-                catContainer.classList.add('hidden');
-                dishContainer.classList.add('hidden');
+    const handleScopeChange = () => {
+        const val = scopeSelect ? scopeSelect.value : 'all';
+        if (val === 'cat') {
+            catContainer.classList.remove('hidden');
+            dishContainer.classList.add('hidden');
+            if (typeof window.initializeCustomAdminSelect === 'function') {
+                window.initializeCustomAdminSelect('pdf-cat-select', true);
             }
-        });
-    });
+        } else if (val === 'dish') {
+            dishContainer.classList.remove('hidden');
+            catContainer.classList.add('hidden');
+            if (typeof window.initializeCustomAdminSelect === 'function') {
+                window.initializeCustomAdminSelect('pdf-dish-select', true);
+            }
+        } else {
+            catContainer.classList.add('hidden');
+            dishContainer.classList.add('hidden');
+        }
+    };
+
+    if (scopeSelect && !scopeSelect.dataset.bound) {
+        scopeSelect.dataset.bound = '1';
+        scopeSelect.addEventListener('change', handleScopeChange);
+    }
+    handleScopeChange();
 
     if (submitBtn && !submitBtn.dataset.bound) {
         submitBtn.dataset.bound = '1';
         submitBtn.addEventListener('click', () => {
-            const scope = modal.querySelector('input[name="pdf-scope"]:checked').value;
+            const scope = scopeSelect ? scopeSelect.value : 'all';
             const catId = catSelect ? catSelect.value : 'all';
             const dishId = dishSelect ? dishSelect.value : null;
             const period = periodSelect ? periodSelect.value : 'all';

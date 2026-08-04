@@ -2586,42 +2586,13 @@
                 </div>
 
                 <!-- PASO 1: Selección de Alcance -->
-                <div style="margin-bottom: 1.25rem;">
-                    <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #0284c7; margin-bottom: 0.55rem;">PASO 1: Alcance del Reporte</div>
-                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                        <label class="pdf-scope-card" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: var(--text); cursor: pointer; padding: 0.7rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--glass-border); background: rgba(255,255,255,0.02); transition: all 0.2s;">
-                            <input type="radio" name="pdf-scope" value="all" checked style="accent-color: #0284c7; width: 17px; height: 17px; cursor: pointer;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span>🌐</span>
-                                <div>
-                                    <strong style="display: block; font-size: 0.88rem; color: var(--text);">Inventario Completo</strong>
-                                    <span style="font-size: 0.75rem; color: var(--text-dim);">Todos los productos y sus movimientos</span>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="pdf-scope-card" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: var(--text); cursor: pointer; padding: 0.7rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--glass-border); background: rgba(255,255,255,0.02); transition: all 0.2s;">
-                            <input type="radio" name="pdf-scope" value="cat" style="accent-color: #0284c7; width: 17px; height: 17px; cursor: pointer;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span>📁</span>
-                                <div>
-                                    <strong style="display: block; font-size: 0.88rem; color: var(--text);">Por Categoría Específica</strong>
-                                    <span style="font-size: 0.75rem; color: var(--text-dim);">Filtrar por una categoría de menú</span>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="pdf-scope-card" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: var(--text); cursor: pointer; padding: 0.7rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--glass-border); background: rgba(255,255,255,0.02); transition: all 0.2s;">
-                            <input type="radio" name="pdf-scope" value="dish" style="accent-color: #0284c7; width: 17px; height: 17px; cursor: pointer;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span>🍔</span>
-                                <div>
-                                    <strong style="display: block; font-size: 0.88rem; color: var(--text);">Por Producto Específico</strong>
-                                    <span style="font-size: 0.75rem; color: var(--text-dim);">Ficha técnica e historial individual</span>
-                                </div>
-                            </div>
-                        </label>
-                    </div>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #0284c7; margin-bottom: 0.4rem;">PASO 1: Alcance del Reporte</div>
+                    <select id="pdf-scope-select" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                        <option value="all">🌐 Inventario Completo (Todos los productos)</option>
+                        <option value="cat">📁 Por Categoría Específica</option>
+                        <option value="dish">🍔 Por Producto Específico</option>
+                    </select>
                 </div>
 
                 <!-- PASO 2: Selección Específica (Categoría / Producto) -->
