@@ -2446,11 +2446,52 @@
 
                     <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
                         <button type="button" class="btn-secondary" onclick="document.getElementById('stock-adjust-modal').classList.add('hidden')" style="padding: 0.75rem 1.25rem; border-radius: 10px;">Cancelar</button>
-                        <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 800;">Guardar Ajuste</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                        <select id="kardex-period-filter" style="height: 35px; box-sizing: border-box; padding: 0.45rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 700; cursor: pointer; outline: none; transition: all 0.2s;">
+                                         <option value="all">Todo el historial</option>
+                                         <option value="today">Hoy</option>
+                                         <option value="yesterday">Ayer</option>
+                                         <option value="this_month">Este Mes</option>
+                                     </select>
+
+                                     <!-- Botoncito de la Libreta para Filtro por Día o Mes Específico -->
+                                     <button type="button" id="kardex-notebook-btn" style="height: 35px; width: 35px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); cursor: pointer; transition: all 0.2s;" title="Búsqueda por Libreta (Día o Mes Específico)">
+                                         <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
+                                     </button>
+
+                                     <input type="date" id="kardex-date-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
+                                     <input type="month" id="kardex-month-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
+                                 </div>
+
+                                 <!-- Derecha: Botón Exportar a PDF -->
+                                 <button type="button" id="export-kardex-pdf-btn" style="height: 35px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.45rem 1.15rem; border-radius: 12px; border: none; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); transition: all 0.2s;">
+                                     <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                                     <span>Exportar PDF</span>
+                                 </button>
+                             </div>
+
+                             <div class="admin-table-container" style="overflow-x: auto;">
+                                 <table class="admin-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                                     <thead>
+                                         <tr style="background: rgba(255,255,255,0.02); text-align: left;">
+                                             <th style="padding: 0.9rem 1rem; white-space: nowrap;">Fecha / Hora</th>
+                                             <th style="padding: 0.9rem 1rem; white-space: nowrap;">Producto</th>
+                                             <th style="padding: 0.9rem 1rem; white-space: nowrap; text-align: center;">Tipo</th>
+                                             <th style="padding: 0.9rem 1rem; white-space: nowrap; text-align: center;">Cantidad</th>
+                                             <th style="padding: 0.9rem 1rem; white-space: nowrap; text-align: center;">Valor ($)</th>
+                                             <th style="padding: 0.9rem 1rem; white-space: nowrap; text-align: center;">Stock</th>
+                                             <th style="padding: 0.9rem 1rem; white-space: nowrap;">Motivo</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody id="kardex-table-body">
+                                         <!-- Injected by JS -->
+                                     </tbody>
+                                 </table>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+         </div>
 
         <!-- Modal de Ficha Técnica / Detalle y Resumen del Producto -->
         <div id="product-kardex-modal" class="modal hidden" style="z-index: 100040; backdrop-filter: blur(8px);">
@@ -2458,14 +2499,14 @@
                 <button class="modal-close" onclick="document.getElementById('product-kardex-modal').classList.add('hidden')"><i data-lucide="x"></i></button>
 
                 <!-- Header del Producto -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.85rem;">
                         <img id="product-kardex-img" src="" style="width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1.5px solid rgba(2, 132, 199, 0.4); display: none;">
                         <div id="product-kardex-icon-fallback" style="width: 48px; height: 48px; border-radius: 12px; background: rgba(2, 132, 199, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(2, 132, 199, 0.3);">
                             <i data-lucide="bar-chart-2" style="width: 24px; height: 24px;"></i>
                         </div>
                         <div>
-                            <h3 id="product-kardex-modal-title" class="font-serif" style="margin: 0; font-size: 1.35rem; color: #ffffff;">Detalle de Producto</h3>
+                            <h3 id="product-kardex-modal-title" class="font-serif" style="margin: 0; font-size: 1.35rem; color: var(--text);">Detalle de Producto</h3>
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem;">
                                 <span id="product-kardex-cat-badge" style="font-size: 0.76rem; color: #0284c7; font-weight: 700;">Categoría</span>
                                 <span style="color: var(--text-dim); font-size: 0.7rem;">•</span>
@@ -2475,23 +2516,23 @@
                     </div>
                 </div>
 
-                <!-- Tarjetas KPI de Resumen del Día -->
+                <!-- Tarjetas KPI de Resumen del Día (Adaptables a Modo Día y Modo Noche) -->
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 1.25rem;">
-                    <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--glass-border); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
+                    <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
                         <div style="font-size: 0.7rem; color: var(--text-dim); font-weight: 700; margin-bottom: 0.2rem;">📦 Stock Actual</div>
-                        <div id="pkm-stock-actual" style="font-size: 1.15rem; font-weight: 900; color: #ffffff;">0 un.</div>
+                        <div id="pkm-stock-actual" style="font-size: 1.15rem; font-weight: 900; color: var(--text);">0 un.</div>
                     </div>
                     <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
-                        <div style="font-size: 0.7rem; color: #34d399; font-weight: 700; margin-bottom: 0.2rem;">🛒 Vendidos Hoy</div>
-                        <div id="pkm-sales-today" style="font-size: 1.15rem; font-weight: 900; color: #34d399;">0 un.</div>
+                        <div style="font-size: 0.7rem; color: #10b981; font-weight: 700; margin-bottom: 0.2rem;">🛒 Vendidos Hoy</div>
+                        <div id="pkm-sales-today" style="font-size: 1.15rem; font-weight: 900; color: #10b981;">0 un.</div>
                     </div>
                     <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
-                        <div style="font-size: 0.7rem; color: #38bdf8; font-weight: 700; margin-bottom: 0.2rem;">📥 Ingresos Hoy</div>
-                        <div id="pkm-in-today" style="font-size: 1.15rem; font-weight: 900; color: #38bdf8;">0 un.</div>
+                        <div style="font-size: 0.7rem; color: #0284c7; font-weight: 700; margin-bottom: 0.2rem;">📥 Ingresos Hoy</div>
+                        <div id="pkm-in-today" style="font-size: 1.15rem; font-weight: 900; color: #0284c7;">0 un.</div>
                     </div>
                     <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
-                        <div style="font-size: 0.7rem; color: #f87171; font-weight: 700; margin-bottom: 0.2rem;">📤 Mermas Hoy</div>
-                        <div id="pkm-out-today" style="font-size: 1.15rem; font-weight: 900; color: #f87171;">0 un.</div>
+                        <div style="font-size: 0.7rem; color: #ef4444; font-weight: 700; margin-bottom: 0.2rem;">📤 Mermas Hoy</div>
+                        <div id="pkm-out-today" style="font-size: 1.15rem; font-weight: 900; color: #ef4444;">0 un.</div>
                     </div>
                 </div>
 
@@ -2520,6 +2561,115 @@
 
                 <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
                     <button type="button" class="btn-secondary" onclick="document.getElementById('product-kardex-modal').classList.add('hidden')" style="padding: 0.65rem 1.25rem; border-radius: 10px; font-weight: 700;">Cerrar Ficha</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Búsqueda por Fecha / Libreta (Día o Mes Específico) -->
+        <div id="kardex-notebook-modal" class="modal hidden" style="z-index: 100050; backdrop-filter: blur(8px);">
+            <div class="modal-content glass" style="max-width: 420px; padding: 1.8rem; border-radius: 24px; position: relative;">
+                <button class="modal-close" onclick="document.getElementById('kardex-notebook-modal').classList.add('hidden')"><i data-lucide="x"></i></button>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(2, 132, 199, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(2, 132, 199, 0.3);">
+                        <i data-lucide="book-open" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-serif" style="margin: 0; font-size: 1.2rem; color: var(--text);">Filtro por Libreta (Fecha)</h3>
+                        <p style="margin: 0.15rem 0 0 0; font-size: 0.8rem; color: var(--text-dim);">Consulta por día o mes específico</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Modo de Consulta</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" id="knm-mode-day" class="knm-mode-btn active" style="flex: 1; padding: 0.55rem; border-radius: 10px; border: 1px solid rgba(2, 132, 199, 0.4); background: rgba(2, 132, 199, 0.2); color: #38bdf8; font-size: 0.82rem; font-weight: 700; cursor: pointer;">📅 Por Día Específico</button>
+                        <button type="button" id="knm-mode-month" class="knm-mode-btn" style="flex: 1; padding: 0.55rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.05); color: var(--text-dim); font-size: 0.82rem; font-weight: 700; cursor: pointer;">🗓️ Por Mes Específico</button>
+                    </div>
+                </div>
+
+                <div id="knm-day-container" class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Seleccionar Día</label>
+                    <input type="date" id="knm-date-input" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                </div>
+
+                <div id="knm-month-container" class="form-group hidden" style="margin-bottom: 1.25rem;">
+                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Seleccionar Mes</label>
+                    <input type="month" id="knm-month-input" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                    <button type="button" id="knm-clear-btn" class="btn-secondary" style="padding: 0.65rem 1rem; border-radius: 10px; font-weight: 700;">Limpiar</button>
+                    <button type="button" id="knm-apply-btn" class="btn-primary" style="padding: 0.65rem 1.25rem; border-radius: 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 800;">Aplicar Libreta</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Exportación a PDF Configurable -->
+        <div id="pdf-export-modal" class="modal hidden" style="z-index: 100045; backdrop-filter: blur(8px);">
+            <div class="modal-content glass" style="max-width: 480px; padding: 2rem; border-radius: 24px; position: relative;">
+                <button class="modal-close" onclick="document.getElementById('pdf-export-modal').classList.add('hidden')"><i data-lucide="x"></i></button>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(2, 132, 199, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(2, 132, 199, 0.3);">
+                        <i data-lucide="file-text" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-serif" style="margin: 0; font-size: 1.25rem; color: var(--text);">Exportar Reporte PDF</h3>
+                        <p style="margin: 0.15rem 0 0 0; font-size: 0.8rem; color: var(--text-dim);">Configura el alcance y formato de descarga</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.1rem;">
+                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">¿Qué deseas exportar en el PDF?</label>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.84rem; color: var(--text); cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
+                            <input type="radio" name="pdf-scope" value="all" checked style="accent-color: #0284c7;">
+                            <span>🌐 Inventario Completo (Todos los productos)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.84rem; color: var(--text); cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
+                            <input type="radio" name="pdf-scope" value="cat" style="accent-color: #0284c7;">
+                            <span>📂 Por Categoría Específica</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.84rem; color: var(--text); cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
+                            <input type="radio" name="pdf-scope" value="dish" style="accent-color: #0284c7;">
+                            <span>🍔 Por Producto Específico</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Selector de Categoría -->
+                <div id="pdf-scope-cat-container" class="form-group hidden" style="margin-bottom: 1.1rem;">
+                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Seleccionar Categoría</label>
+                    <select id="pdf-cat-select" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Selector de Producto -->
+                <div id="pdf-scope-dish-container" class="form-group hidden" style="margin-bottom: 1.1rem;">
+                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Seleccionar Producto</label>
+                    <select id="pdf-dish-select" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Período del Reporte -->
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Rango de Fecha del Reporte</label>
+                    <select id="pdf-period-select" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
+                        <option value="all">Todo el Historial</option>
+                        <option value="this_month">Este Mes</option>
+                        <option value="today">Hoy</option>
+                        <option value="yesterday">Ayer</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('pdf-export-modal').classList.add('hidden')" style="padding: 0.75rem 1.25rem; border-radius: 10px;">Cancelar</button>
+                    <button type="button" id="pdf-generate-submit-btn" class="btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
+                        <i data-lucide="download" style="width: 16px; height: 16px;"></i> Descargar PDF
+                    </button>
                 </div>
             </div>
         </div>

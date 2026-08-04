@@ -488,9 +488,15 @@ function renderKardexTable() {
         monthInput.dataset.bound = '1';
         monthInput.addEventListener('change', () => renderKardexTable());
     }
+    const notebookBtn = document.getElementById('kardex-notebook-btn');
+    if (notebookBtn && !notebookBtn.dataset.bound) {
+        notebookBtn.dataset.bound = '1';
+        notebookBtn.addEventListener('click', () => openKardexNotebookModal());
+    }
+
     if (exportBtn && !exportBtn.dataset.bound) {
         exportBtn.dataset.bound = '1';
-        exportBtn.addEventListener('click', () => exportKardexPDF());
+        exportBtn.addEventListener('click', () => openPDFExportModal());
     }
 
     const { movements } = getFilteredKardexMovements();
@@ -519,24 +525,17 @@ function renderKardexTable() {
         // Financial Value ($ Total)
         const unitPrice = m.price || m.productPrice || 0;
         const totalVal = Math.abs(m.qty || 0) * unitPrice;
-        let valDisplay = `<span style="color: var(--text-dim); font-size: 0.84rem;">$0</span>`;
-        if (m.qty > 0) {
-            valDisplay = `<span style="color: #34d399; font-weight: 800; font-size: 0.85rem;">+$${totalVal.toLocaleString('es-CO')}</span>`;
-        } else if (m.qty < 0) {
-            valDisplay = `<span style="color: #f87171; font-weight: 800; font-size: 0.85rem;">-$${totalVal.toLocaleString('es-CO')}</span>`;
-        }
-
-        // Clean Motivo text
+        const valDisplay = m.qty > 0 ? `+$${totalVal.toLocaleString('es-CO')}` : (m.qty < 0 ? `-$${totalVal.toLocaleString('es-CO')}` : '$0');
         let motivoText = m.note || '-';
         if (motivoText === 'Merma / Salida') motivoText = 'Merma';
 
         return `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <tr style="border-bottom: 1px solid var(--glass-border); font-size: 0.88rem;">
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem; white-space: nowrap;">${formattedDate}</td>
-                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem;">${m.productName}</td>
-                <td style="padding: 0.85rem 1rem; white-space: nowrap; text-align: center;">${typeBadge}</td>
-                <td style="padding: 0.85rem 1rem; font-weight: 800; color: ${m.qty > 0 ? '#34d399' : '#f87171'}; font-size: 0.9rem; white-space: nowrap; text-align: center;">${qtyDisplay}</td>
-                <td style="padding: 0.85rem 1rem; white-space: nowrap; text-align: center;">${valDisplay}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text);">${m.productName}</td>
+                <td style="padding: 0.85rem 1rem; text-align: center;">${typeBadge}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 800; text-align: center; color: ${m.qty > 0 ? '#34d399' : '#f87171'};">${qtyDisplay}</td>
+                <td style="padding: 0.85rem 1rem; font-weight: 800; text-align: center; color: ${m.qty > 0 ? '#34d399' : (m.qty < 0 ? '#f87171' : 'var(--text-dim)')};">${valDisplay}</td>
                 <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--text); font-size: 0.88rem; white-space: nowrap; text-align: center;">${m.resultingStock} un.</td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem;">${motivoText}</td>
             </tr>
@@ -544,55 +543,240 @@ function renderKardexTable() {
     }).join('');
 }
 
-function exportKardexPDF() {
-    const { movements, filters } = getFilteredKardexMovements();
+// Modal Libreta por Fecha Específica
+function openKardexNotebookModal() {
+    const modal = document.getElementById('kardex-notebook-modal');
+    if (!modal) return;
+
+    const btnDay = document.getElementById('knm-mode-day');
+    const btnMonth = document.getElementById('knm-mode-month');
+    const dayContainer = document.getElementById('knm-day-container');
+    const monthContainer = document.getElementById('knm-month-container');
+    const dateInput = document.getElementById('knm-date-input');
+    const monthInput = document.getElementById('knm-month-input');
+    const applyBtn = document.getElementById('knm-apply-btn');
+    const clearBtn = document.getElementById('knm-clear-btn');
+    const periodSelect = document.getElementById('kardex-period-filter');
+    const mainDateInput = document.getElementById('kardex-date-input');
+    const mainMonthInput = document.getElementById('kardex-month-input');
+    const notebookBtn = document.getElementById('kardex-notebook-btn');
+
+    let currentMode = 'day';
+
+    if (btnDay && !btnDay.dataset.bound) {
+        btnDay.dataset.bound = '1';
+        btnDay.addEventListener('click', () => {
+            currentMode = 'day';
+            btnDay.classList.add('active');
+            btnMonth.classList.remove('active');
+            btnDay.style.background = 'rgba(2, 132, 199, 0.2)';
+            btnDay.style.borderColor = 'rgba(2, 132, 199, 0.4)';
+            btnDay.style.color = '#38bdf8';
+            btnMonth.style.background = 'rgba(255, 255, 255, 0.05)';
+            btnMonth.style.borderColor = 'var(--glass-border)';
+            btnMonth.style.color = 'var(--text-dim)';
+            dayContainer.classList.remove('hidden');
+            monthContainer.classList.add('hidden');
+        });
+    }
+
+    if (btnMonth && !btnMonth.dataset.bound) {
+        btnMonth.dataset.bound = '1';
+        btnMonth.addEventListener('click', () => {
+            currentMode = 'month';
+            btnMonth.classList.add('active');
+            btnDay.classList.remove('active');
+            btnMonth.style.background = 'rgba(2, 132, 199, 0.2)';
+            btnMonth.style.borderColor = 'rgba(2, 132, 199, 0.4)';
+            btnMonth.style.color = '#38bdf8';
+            btnDay.style.background = 'rgba(255, 255, 255, 0.05)';
+            btnDay.style.borderColor = 'var(--glass-border)';
+            btnDay.style.color = 'var(--text-dim)';
+            monthContainer.classList.remove('hidden');
+            dayContainer.classList.add('hidden');
+        });
+    }
+
+    if (applyBtn && !applyBtn.dataset.bound) {
+        applyBtn.dataset.bound = '1';
+        applyBtn.addEventListener('click', () => {
+            if (currentMode === 'day') {
+                const val = dateInput ? dateInput.value : '';
+                if (!val) {
+                    showToast('Por favor selecciona una fecha específica', 'warning');
+                    return;
+                }
+                if (mainDateInput) mainDateInput.value = val;
+                if (periodSelect) periodSelect.value = 'specific_day';
+            } else {
+                const val = monthInput ? monthInput.value : '';
+                if (!val) {
+                    showToast('Por favor selecciona un mes específico', 'warning');
+                    return;
+                }
+                if (mainMonthInput) mainMonthInput.value = val;
+                if (periodSelect) periodSelect.value = 'specific_month';
+            }
+
+            if (notebookBtn) {
+                notebookBtn.style.background = 'rgba(2, 132, 199, 0.2)';
+                notebookBtn.style.borderColor = '#0284c7';
+                notebookBtn.style.color = '#38bdf8';
+            }
+            renderKardexTable();
+            modal.classList.add('hidden');
+        });
+    }
+
+    if (clearBtn && !clearBtn.dataset.bound) {
+        clearBtn.dataset.bound = '1';
+        clearBtn.addEventListener('click', () => {
+            if (dateInput) dateInput.value = '';
+            if (monthInput) monthInput.value = '';
+            if (mainDateInput) mainDateInput.value = '';
+            if (mainMonthInput) mainMonthInput.value = '';
+            if (periodSelect) periodSelect.value = 'all';
+            if (notebookBtn) {
+                notebookBtn.style.background = 'rgba(255, 255, 255, 0.06)';
+                notebookBtn.style.borderColor = 'var(--glass-border)';
+                notebookBtn.style.color = 'var(--text)';
+            }
+            renderKardexTable();
+            modal.classList.add('hidden');
+        });
+    }
+
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Modal Exportar PDF Configurable
+function openPDFExportModal() {
+    const modal = document.getElementById('pdf-export-modal');
+    if (!modal) return;
+
+    const catContainer = document.getElementById('pdf-scope-cat-container');
+    const dishContainer = document.getElementById('pdf-scope-dish-container');
+    const catSelect = document.getElementById('pdf-cat-select');
+    const dishSelect = document.getElementById('pdf-dish-select');
+    const radios = modal.querySelectorAll('input[name="pdf-scope"]');
+    const submitBtn = document.getElementById('pdf-generate-submit-btn');
+
+    // Populate categories
+    if (catSelect) {
+        catSelect.innerHTML = `<option value="all">Todas las categorías</option>` + (state.categories || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
+    // Populate products
+    if (dishSelect) {
+        dishSelect.innerHTML = (state.dishes || []).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    }
+
+    radios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            const val = modal.querySelector('input[name="pdf-scope"]:checked').value;
+            if (val === 'cat') {
+                catContainer.classList.remove('hidden');
+                dishContainer.classList.add('hidden');
+            } else if (val === 'dish') {
+                dishContainer.classList.remove('hidden');
+                catContainer.classList.add('hidden');
+            } else {
+                catContainer.classList.add('hidden');
+                dishContainer.classList.add('hidden');
+            }
+        });
+    });
+
+    if (submitBtn && !submitBtn.dataset.bound) {
+        submitBtn.dataset.bound = '1';
+        submitBtn.addEventListener('click', () => {
+            const scope = modal.querySelector('input[name="pdf-scope"]:checked').value;
+            const catId = catSelect ? catSelect.value : 'all';
+            const dishId = dishSelect ? dishSelect.value : null;
+            const period = document.getElementById('pdf-period-select')?.value || 'all';
+
+            modal.classList.add('hidden');
+            exportKardexPDFConfigured({ scope, catId, dishId, period });
+        });
+    }
+
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function exportKardexPDFConfigured({ scope, catId, dishId, period }) {
+    let { movements } = getFilteredKardexMovements();
+
+    // Filter by Scope
+    let titleScope = 'REPORTE DE INVENTARIO Y MOVIMIENTOS';
+    let subtitleScope = 'Alcance: Todo el Inventario';
+
+    if (scope === 'cat') {
+        const catObj = (state.categories || []).find(c => String(c.id) === String(catId));
+        const catName = catObj ? catObj.name : 'Categoría Seleccionada';
+        titleScope = `REPORTE DE INVENTARIO - CATEGORÍA: ${catName.toUpperCase()}`;
+        subtitleScope = `Categoría: ${catName}`;
+        if (catId !== 'all') {
+            movements = movements.filter(m => String(m.dishCat) === String(catId) || String(m.dishCat).toLowerCase() === String(catId).toLowerCase());
+        }
+    } else if (scope === 'dish' && dishId) {
+        const dishObj = (state.dishes || []).find(d => String(d.id) === String(dishId));
+        const dishName = dishObj ? dishObj.name : 'Producto Seleccionado';
+        titleScope = `FICHA DE INVENTARIO - PRODUCTO: ${dishName.toUpperCase()}`;
+        subtitleScope = `Producto: ${dishName}  •  Stock Actual: ${dishObj?.stock || 0} un.`;
+        movements = movements.filter(m => String(m.dishId || m.id) === String(dishId) || String(m.productName).toLowerCase() === String(dishName).toLowerCase());
+    }
+
+    // Filter by Period
+    if (period !== 'all') {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const yest = new Date(now);
+        yest.setDate(yest.getDate() - 1);
+        const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+        const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        movements = movements.filter(m => {
+            if (!m.date) return false;
+            const d = new Date(m.date);
+            const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const mMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+            if (period === 'today') return mDateStr === todayStr;
+            if (period === 'yesterday') return mDateStr === yestStr;
+            if (period === 'this_month') return mMonthStr === thisMonthStr;
+            return true;
+        });
+    }
 
     if (movements.length === 0) {
-        showToast('No hay registros de inventario para exportar con los filtros seleccionados.', 'warning');
+        showToast('No se encontraron movimientos para el filtro seleccionado', 'info');
         return;
     }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     const businessName = state.config?.businessName || 'Sierra Systems POS';
-    const nowStr = new Date().toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
 
-    // Document Header Banner (Compact & Executive)
+    // Document Header Banner
     doc.setFillColor(15, 23, 42); // #0f172a Deep Slate
     doc.rect(0, 0, 210, 18, 'F');
 
-    // Accent line below header banner
     doc.setFillColor(2, 132, 199); // #0284c7 Tech Blue
     doc.rect(0, 18, 210, 1.2, 'F');
 
     // Header Title
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(`REPORTE DE HISTORIAL DE MOVIMIENTOS (KARDEX)`, 12, 10.5);
-
-    // Build filter summary strings
-    const catObj = (state.categories || []).find(c => String(c.id) === filters.selectedCat);
-    const catNameStr = filters.selectedCat === 'all' ? 'Todas' : (catObj ? catObj.name : filters.selectedCat);
-    
-    let typeStr = 'Todos';
-    if (filters.selectedType === 'in') typeStr = 'Ingresos';
-    else if (filters.selectedType === 'out') typeStr = 'Mermas';
-    else if (filters.selectedType === 'sale') typeStr = 'Ventas';
-    else if (filters.selectedType === 'set') typeStr = 'Reconteos';
-
-    let periodStr = 'Todo el historial';
-    if (filters.selectedPeriod === 'today') periodStr = 'Hoy';
-    else if (filters.selectedPeriod === 'yesterday') periodStr = 'Ayer';
-    else if (filters.selectedPeriod === 'this_month') periodStr = 'Este Mes';
-    else if (filters.selectedPeriod === 'specific_day') periodStr = filters.selectedDate ? `Día: ${filters.selectedDate}` : 'Día específico';
-    else if (filters.selectedPeriod === 'specific_month') periodStr = filters.selectedMonth ? `Mes: ${filters.selectedMonth}` : 'Mes específico';
+    doc.text(titleScope, 12, 10.5);
 
     // Header Metadata
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(203, 213, 225); // #cbd5e1
-    doc.text(`Empresa: ${businessName}  •  Cat: ${catNameStr}  •  Período: ${periodStr}  •  Tipo: ${typeStr}  •  Total: ${movements.length}`, 12, 15.5);
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Empresa: ${businessName}  •  ${subtitleScope}  •  Total Registros: ${movements.length}`, 12, 15.5);
 
     // Prepare table rows
     const tableRows = movements.map(m => {
@@ -605,15 +789,7 @@ function exportKardexPDF() {
         let motivoText = m.note || '-';
         if (motivoText === 'Merma / Salida') motivoText = 'Merma';
 
-        return [
-            dateStr,
-            m.productName,
-            typeLabel,
-            qtyStr,
-            valStr,
-            `${m.resultingStock} un.`,
-            motivoText
-        ];
+        return [dateStr, m.productName, typeLabel, qtyStr, valStr, `${m.resultingStock} un.`, motivoText];
     });
 
     doc.autoTable({
@@ -622,50 +798,32 @@ function exportKardexPDF() {
         head: [['Fecha / Hora', 'Producto', 'Tipo', 'Cantidad', 'Valor ($)', 'Stock', 'Motivo']],
         body: tableRows,
         theme: 'grid',
-        styles: {
-            font: 'helvetica',
-            cellPadding: 2,
-            overflow: 'linebreak'
-        },
-        headStyles: {
-            fillColor: [2, 132, 199], // #0284c7
-            textColor: 255,
-            fontSize: 8.5,
-            fontStyle: 'bold',
-            halign: 'left'
-        },
-        bodyStyles: {
-            fontSize: 8,
-            textColor: [30, 41, 59]
-        },
-        alternateRowStyles: {
-            fillColor: [248, 250, 252]
-        },
+        styles: { font: 'helvetica', cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: [2, 132, 199], textColor: 255, fontSize: 8.5, fontStyle: 'bold', halign: 'left' },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: {
-            0: { cellWidth: 32 },                       // Fecha / Hora
-            1: { cellWidth: 42, fontStyle: 'bold' },     // Producto
-            2: { cellWidth: 20, halign: 'center' },       // Tipo
-            3: { cellWidth: 18, halign: 'center', fontStyle: 'bold' }, // Cantidad
-            4: { cellWidth: 24, halign: 'center', fontStyle: 'bold' }, // Valor ($)
-            5: { cellWidth: 22, halign: 'center' },      // Stock Result.
-            6: { cellWidth: 28 }                        // Motivo
+            0: { cellWidth: 32 },
+            1: { cellWidth: 42, fontStyle: 'bold' },
+            2: { cellWidth: 20, halign: 'center' },
+            3: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+            4: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
+            5: { cellWidth: 22, halign: 'center' },
+            6: { cellWidth: 28 }
         },
         didParseCell: function(data) {
             if (data.section === 'body') {
                 if (data.column.index === 3 || data.column.index === 4) {
                     const rawVal = data.cell.raw || '';
-                    if (rawVal.startsWith('+')) {
-                        data.cell.styles.textColor = [16, 185, 129];
-                    } else if (rawVal.startsWith('-')) {
-                        data.cell.styles.textColor = [239, 68, 68];
-                    }
+                    if (rawVal.startsWith('+')) data.cell.styles.textColor = [16, 185, 129];
+                    else if (rawVal.startsWith('-')) data.cell.styles.textColor = [239, 68, 68];
                 }
             }
         }
     });
 
     const fileDate = new Date().toISOString().slice(0, 10);
-    doc.save(`Kardex_Inventario_${businessName.replace(/\s+/g, '_')}_${fileDate}.pdf`);
+    doc.save(`Reporte_Inventario_${businessName.replace(/\s+/g, '_')}_${fileDate}.pdf`);
     showToast('📄 Reporte PDF generado y descargado con éxito');
 }
 
