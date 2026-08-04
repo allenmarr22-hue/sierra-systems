@@ -731,9 +731,12 @@
                                         <option value="today">Hoy</option>
                                         <option value="yesterday">Ayer</option>
                                         <option value="this_month">Este Mes</option>
-                                        <option value="specific_day">Día Específico...</option>
-                                        <option value="specific_month">Mes Específico...</option>
                                     </select>
+
+                                    <!-- Botoncito de Calendario al lado de "Todo el historial" -->
+                                    <button type="button" id="kardex-notebook-btn" style="height: 35px; width: 35px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); cursor: pointer; transition: all 0.2s;" title="Filtro por Calendario / Libreta (Día o Mes Específico)">
+                                        <i data-lucide="calendar" style="width: 15px; height: 15px;"></i>
+                                    </button>
 
                                     <input type="date" id="kardex-date-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
                                     <input type="month" id="kardex-month-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
@@ -2446,28 +2449,11 @@
 
                     <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
                         <button type="button" class="btn-secondary" onclick="document.getElementById('stock-adjust-modal').classList.add('hidden')" style="padding: 0.75rem 1.25rem; border-radius: 10px;">Cancelar</button>
-                        <select id="kardex-period-filter" style="height: 35px; box-sizing: border-box; padding: 0.45rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 700; cursor: pointer; outline: none; transition: all 0.2s;">
-                                         <option value="all">Todo el historial</option>
-                                         <option value="today">Hoy</option>
-                                         <option value="yesterday">Ayer</option>
-                                         <option value="this_month">Este Mes</option>
-                                     </select>
-
-                                     <!-- Botoncito de la Libreta para Filtro por Día o Mes Específico -->
-                                     <button type="button" id="kardex-notebook-btn" style="height: 35px; width: 35px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); cursor: pointer; transition: all 0.2s;" title="Búsqueda por Libreta (Día o Mes Específico)">
-                                         <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
-                                     </button>
-
-                                     <input type="date" id="kardex-date-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
-                                     <input type="month" id="kardex-month-input" class="hidden" style="height: 35px; box-sizing: border-box; padding: 0.45rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); font-size: 0.84rem; font-weight: 600; outline: none;">
-                                 </div>
-
-                                 <!-- Derecha: Botón Exportar a PDF -->
-                                 <button type="button" id="export-kardex-pdf-btn" style="height: 35px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.45rem 1.15rem; border-radius: 12px; border: none; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); transition: all 0.2s;">
-                                     <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
-                                     <span>Exportar PDF</span>
-                                 </button>
-                             </div>
+                        <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 800;">Guardar Ajuste</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
                              <div class="admin-table-container" style="overflow-x: auto;">
                                  <table class="admin-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
