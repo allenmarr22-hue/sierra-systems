@@ -708,7 +708,7 @@ body.light-mode .admin-item-price {
     padding: 0.55rem 1.15rem;
     font-size: 0.85rem;
     font-weight: 700;
-    border-radius: 20px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     color: var(--text-dim);
@@ -718,9 +718,9 @@ body.light-mode .admin-item-price {
 }
 
 .subtab-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(2, 132, 199, 0.15);
+    color: #38bdf8;
+    border-color: rgba(2, 132, 199, 0.4);
 }
 
 .subtab-btn.active {
@@ -728,6 +728,26 @@ body.light-mode .admin-item-price {
     color: #ffffff !important;
     border-color: #38bdf8 !important;
     box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+}
+
+body.light-mode .subtab-btn {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #334155 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.light-mode .subtab-btn:hover {
+    background: rgba(2, 132, 199, 0.08) !important;
+    border-color: #0284c7 !important;
+    color: #0284c7 !important;
+}
+
+body.light-mode .subtab-btn.active {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    color: #ffffff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
 }
 
 /* --- Config Panel --- */
