@@ -2985,8 +2985,8 @@ body.light-mode .input-focus-accent:focus-within {
     background: #ffffff !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
-    border-color: var(--theme-accent, #f7931e) !important;
-    box-shadow: 0 0 0 3px rgba(247, 147, 30, 0.25) !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
     outline: none !important;
 }
 
@@ -3575,12 +3575,12 @@ body.light-mode .orders-container-pro {
 }
 
 .form-group select:hover {
-    border-color: rgba(var(--primary-rgb, 247, 147, 30), 0.55) !important;
+    border-color: rgba(2, 132, 199, 0.5) !important;
 }
 
 .form-group select:focus {
-    border-color: var(--theme-accent, #f7931e) !important;
-    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 247, 147, 30), 0.18) !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
     outline: none !important;
 }
 
@@ -4286,9 +4286,9 @@ body.light-mode .admin-custom-select-trigger {
     border-radius: 14px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(16px);
-    max-height: 240px;
+    max-height: 220px;
     overflow-y: auto;
-    z-index: 1000;
+    z-index: 100090;
     padding: 6px;
 }
 
@@ -4471,7 +4471,7 @@ body.light-mode .emp-action-btn.delete-btn:hover {
 }
 
 .admin-custom-select-trigger:hover {
-    border-color: var(--theme-accent, #f7931e) !important;
+    border-color: #0284c7 !important;
 }
 
 body.light-mode .admin-custom-select-trigger {
@@ -4481,7 +4481,7 @@ body.light-mode .admin-custom-select-trigger {
 }
 
 body.light-mode .admin-custom-select-trigger:hover {
-    border-color: var(--theme-accent, #f7931e) !important;
+    border-color: #0284c7 !important;
 }
 
 /* Animated GPS Route Polyline */
@@ -4933,4 +4933,31 @@ body.light-mode .cash-close-modal-card [style*="background: rgba(255,255,255,0.0
         height: 42px;
         justify-content: center;
     }
+}
+
+/* PDF Scope Card Styles & Light Mode */
+.pdf-scope-card:hover {
+    border-color: #0284c7 !important;
+    background: rgba(2, 132, 199, 0.08) !important;
+}
+
+body.light-mode .pdf-scope-card {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+
+body.light-mode .pdf-scope-card:hover {
+    background: rgba(2, 132, 199, 0.08) !important;
+    border-color: #0284c7 !important;
+}
+
+/* Global No-Orange focus override */
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus,
+.admin-custom-select-trigger:focus,
+.admin-custom-select-trigger:hover {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
+    outline: none !important;
 }

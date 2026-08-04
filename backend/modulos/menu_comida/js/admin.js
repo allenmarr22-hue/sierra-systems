@@ -353,18 +353,10 @@ function getFilteredKardexMovements() {
     const selectedDate = dateInput ? dateInput.value : '';
     const selectedMonth = monthInput ? monthInput.value : '';
 
-    // Show / hide date or month picker if needed
+    // Los inputs de fecha en la página principal se mantienen siempre ocultos; la selección se realiza en el Modal Libreta
     if (dateInput && monthInput) {
-        if (selectedPeriod === 'specific_day') {
-            dateInput.classList.remove('hidden');
-            monthInput.classList.add('hidden');
-        } else if (selectedPeriod === 'specific_month') {
-            monthInput.classList.remove('hidden');
-            dateInput.classList.add('hidden');
-        } else {
-            dateInput.classList.add('hidden');
-            monthInput.classList.add('hidden');
-        }
+        dateInput.classList.add('hidden');
+        monthInput.classList.add('hidden');
     }
 
     let movements = [];

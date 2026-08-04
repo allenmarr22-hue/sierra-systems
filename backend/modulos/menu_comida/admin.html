@@ -2571,56 +2571,77 @@
 
         <!-- Modal de Exportación a PDF Configurable -->
         <div id="pdf-export-modal" class="modal hidden" style="z-index: 100045; backdrop-filter: blur(8px);">
-            <div class="modal-content glass" style="max-width: 480px; padding: 2rem; border-radius: 24px; position: relative;">
+            <div class="modal-content glass" style="max-width: 520px; padding: 2rem; border-radius: 24px; position: relative;">
                 <button class="modal-close" onclick="document.getElementById('pdf-export-modal').classList.add('hidden')"><i data-lucide="x"></i></button>
 
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(2, 132, 199, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(2, 132, 199, 0.3);">
-                        <i data-lucide="file-text" style="width: 22px; height: 22px;"></i>
+                <!-- Header Modal -->
+                <div style="display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--glass-border);">
+                    <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(2, 132, 199, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(2, 132, 199, 0.3);">
+                        <i data-lucide="file-down" style="width: 24px; height: 24px;"></i>
                     </div>
                     <div>
-                        <h3 class="font-serif" style="margin: 0; font-size: 1.25rem; color: var(--text);">Exportar Reporte PDF</h3>
-                        <p style="margin: 0.15rem 0 0 0; font-size: 0.8rem; color: var(--text-dim);">Configura el alcance y formato de descarga</p>
+                        <h3 class="font-serif" style="margin: 0; font-size: 1.35rem; color: var(--text);">Exportar Reporte PDF</h3>
+                        <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--text-dim);">Personaliza los filtros y el alcance antes de descargar</p>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 1.1rem;">
-                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.4rem; font-weight: 600;">¿Qué deseas exportar en el PDF?</label>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.84rem; color: var(--text); cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
-                            <input type="radio" name="pdf-scope" value="all" checked style="accent-color: #0284c7;">
-                            <span>🌐 Inventario Completo (Todos los productos)</span>
+                <!-- PASO 1: Selección de Alcance -->
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #0284c7; margin-bottom: 0.55rem;">PASO 1: Alcance del Reporte</div>
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                        <label class="pdf-scope-card" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: var(--text); cursor: pointer; padding: 0.7rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--glass-border); background: rgba(255,255,255,0.02); transition: all 0.2s;">
+                            <input type="radio" name="pdf-scope" value="all" checked style="accent-color: #0284c7; width: 17px; height: 17px; cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span>🌐</span>
+                                <div>
+                                    <strong style="display: block; font-size: 0.88rem; color: var(--text);">Inventario Completo</strong>
+                                    <span style="font-size: 0.75rem; color: var(--text-dim);">Todos los productos y sus movimientos</span>
+                                </div>
+                            </div>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.84rem; color: var(--text); cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
-                            <input type="radio" name="pdf-scope" value="cat" style="accent-color: #0284c7;">
-                            <span>📂 Por Categoría Específica</span>
+
+                        <label class="pdf-scope-card" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: var(--text); cursor: pointer; padding: 0.7rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--glass-border); background: rgba(255,255,255,0.02); transition: all 0.2s;">
+                            <input type="radio" name="pdf-scope" value="cat" style="accent-color: #0284c7; width: 17px; height: 17px; cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span>📁</span>
+                                <div>
+                                    <strong style="display: block; font-size: 0.88rem; color: var(--text);">Por Categoría Específica</strong>
+                                    <span style="font-size: 0.75rem; color: var(--text-dim);">Filtrar por una categoría de menú</span>
+                                </div>
+                            </div>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.84rem; color: var(--text); cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
-                            <input type="radio" name="pdf-scope" value="dish" style="accent-color: #0284c7;">
-                            <span>🍔 Por Producto Específico</span>
+
+                        <label class="pdf-scope-card" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: var(--text); cursor: pointer; padding: 0.7rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--glass-border); background: rgba(255,255,255,0.02); transition: all 0.2s;">
+                            <input type="radio" name="pdf-scope" value="dish" style="accent-color: #0284c7; width: 17px; height: 17px; cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span>🍔</span>
+                                <div>
+                                    <strong style="display: block; font-size: 0.88rem; color: var(--text);">Por Producto Específico</strong>
+                                    <span style="font-size: 0.75rem; color: var(--text-dim);">Ficha técnica e historial individual</span>
+                                </div>
+                            </div>
                         </label>
                     </div>
                 </div>
 
-                <!-- Selector de Categoría -->
-                <div id="pdf-scope-cat-container" class="form-group hidden" style="margin-bottom: 1.1rem;">
-                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Seleccionar Categoría</label>
+                <!-- PASO 2: Selección Específica (Categoría / Producto) -->
+                <div id="pdf-scope-cat-container" class="form-group hidden" style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #0284c7; margin-bottom: 0.4rem;">PASO 2: Seleccionar Categoría</div>
                     <select id="pdf-cat-select" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
                         <!-- Populated dynamically -->
                     </select>
                 </div>
 
-                <!-- Selector de Producto -->
-                <div id="pdf-scope-dish-container" class="form-group hidden" style="margin-bottom: 1.1rem;">
-                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Seleccionar Producto</label>
+                <div id="pdf-scope-dish-container" class="form-group hidden" style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #0284c7; margin-bottom: 0.4rem;">PASO 2: Seleccionar Producto</div>
                     <select id="pdf-dish-select" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
                         <!-- Populated dynamically -->
                     </select>
                 </div>
 
-                <!-- Período del Reporte -->
-                <div class="form-group" style="margin-bottom: 1.25rem;">
-                    <label style="font-size: 0.78rem; color: var(--text-dim); display: block; margin-bottom: 0.35rem; font-weight: 600;">Rango de Fecha del Reporte</label>
+                <!-- PASO 3: Período del Historial -->
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #0284c7; margin-bottom: 0.4rem;">PASO 3: Período de Tiempo</div>
                     <select id="pdf-period-select" style="width: 100%; height: 42px; box-sizing: border-box; padding: 0 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.88rem; outline: none;">
                         <option value="all">Todo el Historial</option>
                         <option value="this_month">Este Mes</option>
@@ -2629,10 +2650,11 @@
                     </select>
                 </div>
 
-                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('pdf-export-modal').classList.add('hidden')" style="padding: 0.75rem 1.25rem; border-radius: 10px;">Cancelar</button>
-                    <button type="button" id="pdf-generate-submit-btn" class="btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
-                        <i data-lucide="download" style="width: 16px; height: 16px;"></i> Descargar PDF
+                <!-- Footer Botones -->
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('pdf-export-modal').classList.add('hidden')" style="padding: 0.75rem 1.35rem; border-radius: 12px; font-weight: 700;">Cancelar</button>
+                    <button type="button" id="pdf-generate-submit-btn" class="btn-primary" style="padding: 0.75rem 1.65rem; border-radius: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);">
+                        <i data-lucide="download" style="width: 17px; height: 17px;"></i> Descargar PDF
                     </button>
                 </div>
             </div>
