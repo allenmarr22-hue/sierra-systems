@@ -27,6 +27,102 @@
    ADMIN DASHBOARD & INVENTORY CONTROL LOGIC
    ========================================= */
 
+function updateStockAdjustPreview() {
+    const dishId = document.getElementById('stock-adjust-item-id')?.value;
+    const dish = (state.dishes || []).find(d => String(d.id) === String(dishId));
+    const beforeQty = dish ? (parseInt(dish.stock) || 0) : 0;
+
+    const moveType = document.getElementById('stock-adjust-type')?.value || 'in';
+    const moveQty = parseInt(document.getElementById('stock-adjust-qty')?.value || 0) || 0;
+
+    const beforeEl = document.getElementById('stock-preview-before');
+    const opEl = document.getElementById('stock-preview-op-sign');
+    const deltaEl = document.getElementById('stock-preview-delta');
+    const afterEl = document.getElementById('stock-preview-after');
+    const badgeEl = document.getElementById('stock-preview-badge');
+
+    if (!beforeEl || !afterEl) return;
+
+    beforeEl.textContent = `${beforeQty} un.`;
+
+    let afterQty = beforeQty;
+    if (moveType === 'in') {
+        afterQty = beforeQty + moveQty;
+        opEl.textContent = '+';
+        opEl.style.color = '#34d399';
+        deltaEl.textContent = `+${moveQty} un.`;
+        deltaEl.style.color = '#34d399';
+        if (badgeEl) badgeEl.textContent = 'Ingreso (+ Stock)';
+    } else if (moveType === 'out') {
+        afterQty = Math.max(0, beforeQty - moveQty);
+        opEl.textContent = '-';
+        opEl.style.color = '#f87171';
+        deltaEl.textContent = `-${moveQty} un.`;
+        deltaEl.style.color = '#f87171';
+        if (badgeEl) badgeEl.textContent = 'Merma (- Stock)';
+    } else if (moveType === 'set') {
+        afterQty = Math.max(0, moveQty);
+        opEl.textContent = '=';
+        opEl.style.color = '#38bdf8';
+        deltaEl.textContent = `${moveQty} un.`;
+        deltaEl.style.color = '#38bdf8';
+        if (badgeEl) badgeEl.textContent = 'Reconteo Físico';
+    }
+
+    afterEl.textContent = `${afterQty} un.`;
+    const minQty = parseInt(dish?.minStock) || 5;
+    if (afterQty <= 0) {
+        afterEl.style.color = '#f87171';
+    } else if (afterQty <= minQty) {
+        afterEl.style.color = '#fbbf24';
+    } else {
+        afterEl.style.color = '#34d399';
+    }
+}
+
+function openProductKardexModal(dishId) {
+    const dish = (state.dishes || []).find(d => String(d.id) === String(dishId));
+    if (!dish) return;
+
+    const titleEl = document.getElementById('product-kardex-modal-title');
+    const tbody = document.getElementById('product-kardex-modal-tbody');
+    const modal = document.getElementById('product-kardex-modal');
+
+    if (titleEl) titleEl.textContent = dish.name;
+
+    const history = dish.inventoryHistory || [];
+    if (tbody) {
+        if (!history || history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-dim);">Este producto no registra movimientos de inventario aún.</td></tr>`;
+        } else {
+            const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+            tbody.innerHTML = sorted.map(h => {
+                const formattedDate = new Date(h.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+                let typeBadge = `<span style="color:#34d399; font-weight:700;">Ingreso</span>`;
+                if (h.type === 'out') typeBadge = `<span style="color:#f87171; font-weight:700;">Merma</span>`;
+                else if (h.type === 'set') typeBadge = `<span style="color:#38bdf8; font-weight:700;">Reconteo</span>`;
+                else if (h.type === 'sale') typeBadge = `<span style="color:#fbbf24; font-weight:700;">Venta</span>`;
+
+                const qtyStr = h.qty > 0 ? `+${h.qty}` : `${h.qty}`;
+                const noteStr = h.note || (h.user ? `Por ${h.user}` : '-');
+
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.83rem;">
+                        <td style="padding: 0.65rem 0.5rem; color: var(--text-dim); font-size: 0.8rem; white-space: nowrap;">${formattedDate}</td>
+                        <td style="padding: 0.65rem 0.5rem; text-align: center;">${typeBadge}</td>
+                        <td style="padding: 0.65rem 0.5rem; text-align: center; font-weight: 800; color: ${h.qty > 0 ? '#34d399' : '#f87171'};">${qtyStr}</td>
+                        <td style="padding: 0.65rem 0.5rem; text-align: center; font-weight: 700; color: var(--text);">${h.resultingStock} un.</td>
+                        <td style="padding: 0.65rem 0.5rem; color: var(--text-dim);">${noteStr}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    if (modal) modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function openStockAdjustModal(dishId) {
     const dish = state.dishes.find(d => d.id === dishId);
     if (!dish) return;
@@ -42,9 +138,32 @@ function openStockAdjustModal(dishId) {
     if (trackStockChk) trackStockChk.checked = dish.trackStock === true;
     if (minStockInput) minStockInput.value = dish.minStock !== undefined ? dish.minStock : 5;
 
+    // Bind real-time input preview listeners
+    const qtyInput = document.getElementById('stock-adjust-qty');
+    const typeSelect = document.getElementById('stock-adjust-type');
+    const historyBtn = document.getElementById('open-product-kardex-detail-btn');
+
+    if (qtyInput && !qtyInput.dataset.boundPreview) {
+        qtyInput.dataset.boundPreview = '1';
+        qtyInput.addEventListener('input', () => updateStockAdjustPreview());
+    }
+    if (typeSelect && !typeSelect.dataset.boundPreview) {
+        typeSelect.dataset.boundPreview = '1';
+        typeSelect.addEventListener('change', () => updateStockAdjustPreview());
+    }
+    if (historyBtn && !historyBtn.dataset.boundHistory) {
+        historyBtn.dataset.boundHistory = '1';
+        historyBtn.addEventListener('click', () => {
+            const currentId = document.getElementById('stock-adjust-item-id')?.value;
+            if (currentId) openProductKardexModal(currentId);
+        });
+    }
+
     if (typeof window.initializeCustomAdminSelect === 'function') {
         window.initializeCustomAdminSelect('stock-adjust-type');
     }
+
+    updateStockAdjustPreview();
 
     const modal = document.getElementById('stock-adjust-modal');
     if (modal) modal.classList.remove('hidden');
