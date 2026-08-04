@@ -4318,28 +4318,46 @@ body.light-mode .admin-custom-select-panel {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* Scrollbar para el panel personalizado */
+/* Scrollbar universal para el panel personalizado */
+.admin-custom-select-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #0284c7 rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .admin-custom-select-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #0284c7 #e2e8f0;
+}
+
 .admin-custom-select-panel::-webkit-scrollbar {
-    width: 7px;
+    width: 8px !important;
 }
+
 .admin-custom-select-panel::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
 }
+
 .admin-custom-select-panel::-webkit-scrollbar-thumb {
-    background: #0284c7;
-    border-radius: 6px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
+
 body.light-mode .admin-custom-select-panel::-webkit-scrollbar-track {
-    background: #f1f5f9 !important;
-    border-radius: 6px;
+    background: #e2e8f0 !important;
+    border-radius: 10px !important;
 }
+
 body.light-mode .admin-custom-select-panel::-webkit-scrollbar-thumb {
-    background: #0284c7 !important;
-    border-radius: 6px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #ffffff !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3) !important;
 }
+
 body.light-mode .admin-custom-select-panel::-webkit-scrollbar-thumb:hover {
-    background: #0369a1 !important;
+    background: #0284c7 !important;
 }
 
 .admin-custom-select-item {
