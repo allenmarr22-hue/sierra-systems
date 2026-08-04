@@ -9002,6 +9002,27 @@ window.initializeCustomAdminSelect = function(selectId, forceRebuild = false) {
             panel.style.display = 'block';
             const iconSvg = chevron.querySelector('svg');
             if (iconSvg) iconSvg.style.transform = 'rotate(180deg)';
+
+            // Auto-scroll elemento seleccionado dentro del panel
+            const selItem = panel.querySelector('.admin-custom-select-item.selected');
+            if (selItem) {
+                selItem.scrollIntoView({ block: 'nearest' });
+            }
+
+            // Auto-scroll del modal si el panel se extiende más allá del borde inferior
+            setTimeout(() => {
+                const modalContent = wrap.closest('.modal-content');
+                if (modalContent) {
+                    const panelRect = panel.getBoundingClientRect();
+                    const modalRect = modalContent.getBoundingClientRect();
+                    if (panelRect.bottom > modalRect.bottom) {
+                        modalContent.scrollBy({
+                            top: panelRect.bottom - modalRect.bottom + 30,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            }, 40);
         }
     });
 
