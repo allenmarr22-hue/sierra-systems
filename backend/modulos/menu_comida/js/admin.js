@@ -9002,11 +9002,16 @@ window.initializeCustomAdminSelect = function(selectId, forceRebuild = false) {
         }
     });
 
-    document.addEventListener('click', () => {
-        panel.style.display = 'none';
-        const iconSvg = chevron.querySelector('svg');
-        if (iconSvg) iconSvg.style.transform = 'rotate(0deg)';
-    });
+    if (!window._customSelectGlobalListenerBound) {
+        window._customSelectGlobalListenerBound = true;
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.admin-custom-select-panel').forEach(p => {
+                p.style.display = 'none';
+                const parentChevron = p.parentNode.querySelector('.admin-custom-select-chevron svg');
+                if (parentChevron) parentChevron.style.transform = 'rotate(0deg)';
+            });
+        });
+    }
 
     // Sincronizar cambios programáticos del valor del select con el trigger personalizado
     sel.addEventListener('change', () => {
