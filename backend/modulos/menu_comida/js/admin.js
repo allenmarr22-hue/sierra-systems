@@ -600,6 +600,7 @@ function openKardexNotebookModal() {
     if (applyBtn && !applyBtn.dataset.bound) {
         applyBtn.dataset.bound = '1';
         applyBtn.addEventListener('click', () => {
+            let labelText = 'Fecha Específica';
             if (currentMode === 'day') {
                 const val = dateInput ? dateInput.value : '';
                 if (!val) {
@@ -608,6 +609,7 @@ function openKardexNotebookModal() {
                 }
                 if (mainDateInput) mainDateInput.value = val;
                 if (periodSelect) periodSelect.value = 'specific_day';
+                labelText = `📅 ${val}`;
             } else {
                 const val = monthInput ? monthInput.value : '';
                 if (!val) {
@@ -616,6 +618,16 @@ function openKardexNotebookModal() {
                 }
                 if (mainMonthInput) mainMonthInput.value = val;
                 if (periodSelect) periodSelect.value = 'specific_month';
+                labelText = `🗓️ ${val}`;
+            }
+
+            // Actualizar texto de opción en el select para que el dropdown personalizado muestre la fecha seleccionada
+            if (periodSelect) {
+                const opt = Array.from(periodSelect.options).find(o => o.value === periodSelect.value);
+                if (opt) opt.text = labelText;
+                if (typeof window.initializeCustomAdminSelect === 'function') {
+                    window.initializeCustomAdminSelect('kardex-period-filter', true);
+                }
             }
 
             if (notebookBtn) {
@@ -625,6 +637,7 @@ function openKardexNotebookModal() {
             }
             renderKardexTable();
             modal.classList.add('hidden');
+            showToast(`Filtro por Libreta aplicado: ${labelText}`, 'success');
         });
     }
 
@@ -636,6 +649,17 @@ function openKardexNotebookModal() {
             if (mainDateInput) mainDateInput.value = '';
             if (mainMonthInput) mainMonthInput.value = '';
             if (periodSelect) periodSelect.value = 'all';
+
+            if (periodSelect) {
+                const optDay = Array.from(periodSelect.options).find(o => o.value === 'specific_day');
+                if (optDay) optDay.text = 'Día Específico';
+                const optMonth = Array.from(periodSelect.options).find(o => o.value === 'specific_month');
+                if (optMonth) optMonth.text = 'Mes Específico';
+                if (typeof window.initializeCustomAdminSelect === 'function') {
+                    window.initializeCustomAdminSelect('kardex-period-filter', true);
+                }
+            }
+
             if (notebookBtn) {
                 notebookBtn.style.background = 'rgba(255, 255, 255, 0.06)';
                 notebookBtn.style.borderColor = 'var(--glass-border)';
@@ -643,6 +667,7 @@ function openKardexNotebookModal() {
             }
             renderKardexTable();
             modal.classList.add('hidden');
+            showToast('Filtro de fecha limpiado', 'info');
         });
     }
 
@@ -659,6 +684,7 @@ function openPDFExportModal() {
     const dishContainer = document.getElementById('pdf-scope-dish-container');
     const catSelect = document.getElementById('pdf-cat-select');
     const dishSelect = document.getElementById('pdf-dish-select');
+    const periodSelect = document.getElementById('pdf-period-select');
     const radios = modal.querySelectorAll('input[name="pdf-scope"]');
     const submitBtn = document.getElementById('pdf-generate-submit-btn');
 
@@ -672,15 +698,28 @@ function openPDFExportModal() {
         dishSelect.innerHTML = (state.dishes || []).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
     }
 
+    // Transformar a menús desplegables modernos ejecutivos
+    if (typeof window.initializeCustomAdminSelect === 'function') {
+        window.initializeCustomAdminSelect('pdf-cat-select', true);
+        window.initializeCustomAdminSelect('pdf-dish-select', true);
+        window.initializeCustomAdminSelect('pdf-period-select', true);
+    }
+
     radios.forEach(radio => {
         radio.addEventListener('change', () => {
             const val = modal.querySelector('input[name="pdf-scope"]:checked').value;
             if (val === 'cat') {
                 catContainer.classList.remove('hidden');
                 dishContainer.classList.add('hidden');
+                if (typeof window.initializeCustomAdminSelect === 'function') {
+                    window.initializeCustomAdminSelect('pdf-cat-select', true);
+                }
             } else if (val === 'dish') {
                 dishContainer.classList.remove('hidden');
                 catContainer.classList.add('hidden');
+                if (typeof window.initializeCustomAdminSelect === 'function') {
+                    window.initializeCustomAdminSelect('pdf-dish-select', true);
+                }
             } else {
                 catContainer.classList.add('hidden');
                 dishContainer.classList.add('hidden');
@@ -694,7 +733,7 @@ function openPDFExportModal() {
             const scope = modal.querySelector('input[name="pdf-scope"]:checked').value;
             const catId = catSelect ? catSelect.value : 'all';
             const dishId = dishSelect ? dishSelect.value : null;
-            const period = document.getElementById('pdf-period-select')?.value || 'all';
+            const period = periodSelect ? periodSelect.value : 'all';
 
             modal.classList.add('hidden');
             exportKardexPDFConfigured({ scope, catId, dishId, period });
