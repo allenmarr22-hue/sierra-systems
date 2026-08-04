@@ -8900,6 +8900,9 @@ window.initializeCustomAdminSelect = function(selectId, forceRebuild = false) {
             panel.innerHTML = '';
             const options = Array.from(sel.options);
             options.forEach(opt => {
+                if (opt.style.display === 'none' || opt.hidden || opt.dataset.customHidden === 'true') {
+                    return;
+                }
                 const item = document.createElement('div');
                 item.className = 'admin-custom-select-item';
                 item.textContent = opt.text;
@@ -8953,6 +8956,9 @@ window.initializeCustomAdminSelect = function(selectId, forceRebuild = false) {
 
     const options = Array.from(sel.options);
     options.forEach(opt => {
+        if (opt.style.display === 'none' || opt.hidden || opt.dataset.customHidden === 'true') {
+            return;
+        }
         const item = document.createElement('div');
         item.className = 'admin-custom-select-item';
         item.textContent = opt.text;
