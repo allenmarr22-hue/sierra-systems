@@ -85,12 +85,85 @@ function openProductKardexModal(dishId) {
     if (!dish) return;
 
     const titleEl = document.getElementById('product-kardex-modal-title');
+    const catBadgeEl = document.getElementById('product-kardex-cat-badge');
+    const statusBadgeEl = document.getElementById('product-kardex-status-badge');
+    const imgEl = document.getElementById('product-kardex-img');
+    const iconFallback = document.getElementById('product-kardex-icon-fallback');
     const tbody = document.getElementById('product-kardex-modal-tbody');
     const modal = document.getElementById('product-kardex-modal');
 
+    // Header info
     if (titleEl) titleEl.textContent = dish.name;
+    const catObj = (state.categories || []).find(c => c.id === dish.cat);
+    if (catBadgeEl) catBadgeEl.textContent = catObj ? catObj.name : (dish.cat || 'General');
 
+    const isTracked = dish.trackStock === true;
+    const stockQty = parseInt(dish.stock) || 0;
+    const minQty = parseInt(dish.minStock) || 5;
+
+    if (statusBadgeEl) {
+        if (!isTracked) {
+            statusBadgeEl.innerHTML = `<span style="background:rgba(255,255,255,0.06); color:var(--text-dim); padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">Sin Control</span>`;
+        } else if (stockQty <= 0) {
+            statusBadgeEl.innerHTML = `<span style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">Agotado</span>`;
+        } else if (stockQty <= minQty) {
+            statusBadgeEl.innerHTML = `<span style="background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">Stock Bajo</span>`;
+        } else {
+            statusBadgeEl.innerHTML = `<span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">En Stock</span>`;
+        }
+    }
+
+    if (dish.img && imgEl) {
+        imgEl.src = dish.img;
+        imgEl.style.display = 'block';
+        if (iconFallback) iconFallback.style.display = 'none';
+    } else {
+        if (imgEl) imgEl.style.display = 'none';
+        if (iconFallback) iconFallback.style.display = 'flex';
+    }
+
+    // Compute Today's KPIs
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Stock actual
+    const stockEl = document.getElementById('pkm-stock-actual');
+    if (stockEl) stockEl.textContent = isTracked ? `${stockQty} un.` : 'Ilimitado';
+
+    // 2. Sales today from state.orders
+    let salesToday = 0;
+    (state.orders || []).forEach(order => {
+        if (order.status === 'cancelled' || order.status === 'anulado') return;
+        const orderDate = order.date ? new Date(order.date).toISOString().split('T')[0] : '';
+        if (orderDate === todayStr) {
+            (order.items || []).forEach(item => {
+                if (String(item.id || item.dishId) === String(dish.id)) {
+                    salesToday += (parseInt(item.qty || item.quantity) || 0);
+                }
+            });
+        }
+    });
+    const salesEl = document.getElementById('pkm-sales-today');
+    if (salesEl) salesEl.textContent = `${salesToday} un.`;
+
+    // 3. Inputs & Mermas today from dish.inventoryHistory
+    let inToday = 0;
+    let outToday = 0;
     const history = dish.inventoryHistory || [];
+    history.forEach(h => {
+        const hDate = h.date ? new Date(h.date).toISOString().split('T')[0] : '';
+        if (hDate === todayStr) {
+            if (h.type === 'in') inToday += Math.abs(parseInt(h.qty) || 0);
+            if (h.type === 'out') outToday += Math.abs(parseInt(h.qty) || 0);
+        }
+    });
+
+    const inEl = document.getElementById('pkm-in-today');
+    if (inEl) inEl.textContent = `+${inToday} un.`;
+
+    const outEl = document.getElementById('pkm-out-today');
+    if (outEl) outEl.textContent = `-${outToday} un.`;
+
+    // Populate Table
     if (tbody) {
         if (!history || history.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-dim);">Este producto no registra movimientos de inventario aún.</td></tr>`;
@@ -111,7 +184,7 @@ function openProductKardexModal(dishId) {
                         <td style="padding: 0.65rem 0.5rem; color: var(--text-dim); font-size: 0.8rem; white-space: nowrap;">${formattedDate}</td>
                         <td style="padding: 0.65rem 0.5rem; text-align: center;">${typeBadge}</td>
                         <td style="padding: 0.65rem 0.5rem; text-align: center; font-weight: 800; color: ${h.qty > 0 ? '#34d399' : '#f87171'};">${qtyStr}</td>
-                        <td style="padding: 0.65rem 0.5rem; text-align: center; font-weight: 700; color: var(--text);">${h.resultingStock} un.</td>
+                        <td style="padding: 0.65rem 0.5rem; text-align: center; font-weight: 700; color: var(--text);">${h.resultingStock !== undefined ? h.resultingStock + ' un.' : '-'}</td>
                         <td style="padding: 0.65rem 0.5rem; color: var(--text-dim);">${noteStr}</td>
                     </tr>
                 `;
@@ -242,9 +315,8 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
                 <td style="padding: 0.85rem 1rem;">${statusBadge}</td>
                 <td style="padding: 0.85rem 1rem; text-align: center;">
                     <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;">
-                        <button type="button" class="view-dish-kardex-btn" data-id="${dish.id}" style="height: 34px; padding: 0 0.75rem; border-radius: 10px; background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.35); color: #38bdf8; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;" title="Ver Historial de Movimientos">
-                            <i data-lucide="history" style="width: 14px; height: 14px;"></i>
-                            <span>Historial</span>
+                        <button type="button" class="view-dish-kardex-btn" data-id="${dish.id}" style="width: 34px; height: 34px; padding: 0; border-radius: 10px; background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.35); color: #38bdf8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Detalle y Resumen de ${dish.name}">
+                            <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
                         </button>
                         <button type="button" class="adjust-stock-btn" data-id="${dish.id}" style="height: 34px; padding: 0 0.85rem; border-radius: 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; color: #ffffff; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25); transition: all 0.2s;" title="Ajustar Existencias">
                             <i data-lucide="package-plus" style="width: 14px; height: 14px;"></i>

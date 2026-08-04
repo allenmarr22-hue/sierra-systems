@@ -2452,21 +2452,56 @@
             </div>
         </div>
 
-        <!-- Modal de Detalle / Historial de Movimientos de un Producto -->
+        <!-- Modal de Ficha Técnica / Detalle y Resumen del Producto -->
         <div id="product-kardex-modal" class="modal hidden" style="z-index: 100040; backdrop-filter: blur(8px);">
-            <div class="modal-content glass" style="max-width: 620px; padding: 2rem; border-radius: 24px; position: relative;">
+            <div class="modal-content glass" style="max-width: 660px; padding: 2rem; border-radius: 24px; position: relative;">
                 <button class="modal-close" onclick="document.getElementById('product-kardex-modal').classList.add('hidden')"><i data-lucide="x"></i></button>
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(2, 132, 199, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(2, 132, 199, 0.3);">
-                        <i data-lucide="history" style="width: 22px; height: 22px;"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-serif" style="margin: 0; font-size: 1.3rem; color: var(--text);">Historial de Movimientos</h3>
-                        <p id="product-kardex-modal-title" style="margin: 0.15rem 0 0 0; font-size: 0.88rem; color: #0284c7; font-weight: 700;"></p>
+
+                <!-- Header del Producto -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.85rem;">
+                        <img id="product-kardex-img" src="" style="width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1.5px solid rgba(2, 132, 199, 0.4); display: none;">
+                        <div id="product-kardex-icon-fallback" style="width: 48px; height: 48px; border-radius: 12px; background: rgba(2, 132, 199, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(2, 132, 199, 0.3);">
+                            <i data-lucide="bar-chart-2" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <div>
+                            <h3 id="product-kardex-modal-title" class="font-serif" style="margin: 0; font-size: 1.35rem; color: #ffffff;">Detalle de Producto</h3>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem;">
+                                <span id="product-kardex-cat-badge" style="font-size: 0.76rem; color: #0284c7; font-weight: 700;">Categoría</span>
+                                <span style="color: var(--text-dim); font-size: 0.7rem;">•</span>
+                                <span id="product-kardex-status-badge"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div style="max-height: 380px; overflow-y: auto; padding-right: 0.25rem;">
+                <!-- Tarjetas KPI de Resumen del Día -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 1.25rem;">
+                    <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--glass-border); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-dim); font-weight: 700; margin-bottom: 0.2rem;">📦 Stock Actual</div>
+                        <div id="pkm-stock-actual" style="font-size: 1.15rem; font-weight: 900; color: #ffffff;">0 un.</div>
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
+                        <div style="font-size: 0.7rem; color: #34d399; font-weight: 700; margin-bottom: 0.2rem;">🛒 Vendidos Hoy</div>
+                        <div id="pkm-sales-today" style="font-size: 1.15rem; font-weight: 900; color: #34d399;">0 un.</div>
+                    </div>
+                    <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
+                        <div style="font-size: 0.7rem; color: #38bdf8; font-weight: 700; margin-bottom: 0.2rem;">📥 Ingresos Hoy</div>
+                        <div id="pkm-in-today" style="font-size: 1.15rem; font-weight: 900; color: #38bdf8;">0 un.</div>
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); padding: 0.75rem 0.6rem; border-radius: 14px; text-align: center;">
+                        <div style="font-size: 0.7rem; color: #f87171; font-weight: 700; margin-bottom: 0.2rem;">📤 Mermas Hoy</div>
+                        <div id="pkm-out-today" style="font-size: 1.15rem; font-weight: 900; color: #f87171;">0 un.</div>
+                    </div>
+                </div>
+
+                <!-- Historial de Movimientos -->
+                <div style="margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.82rem; font-weight: 800; color: var(--text); letter-spacing: 0.3px;">HISTORIAL DE MOVIMIENTOS</span>
+                    <span style="font-size: 0.72rem; color: var(--text-dim);">Registros automáticos y manuales</span>
+                </div>
+
+                <div style="max-height: 260px; overflow-y: auto; padding-right: 0.25rem;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="border-bottom: 1.5px solid rgba(255,255,255,0.1); text-align: left; font-size: 0.78rem; color: var(--text-dim);">
@@ -2484,7 +2519,7 @@
                 </div>
 
                 <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('product-kardex-modal').classList.add('hidden')" style="padding: 0.65rem 1.25rem; border-radius: 10px; font-weight: 700;">Cerrar</button>
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('product-kardex-modal').classList.add('hidden')" style="padding: 0.65rem 1.25rem; border-radius: 10px; font-weight: 700;">Cerrar Ficha</button>
                 </div>
             </div>
         </div>
