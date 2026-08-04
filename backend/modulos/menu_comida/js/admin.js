@@ -240,13 +240,15 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
                 <td style="padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 800; color: ${isTracked && stockQty <= 0 ? '#f87171' : 'var(--text)'};">${isTracked ? stockQty + ' un.' : '<span style="color:var(--text-dim); font-size:0.84rem; font-weight:600;">Ilimitado</span>'}</td>
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.85rem;">${isTracked ? minQty + ' un.' : '-'}</td>
                 <td style="padding: 0.85rem 1rem;">${statusBadge}</td>
-                <td style="padding: 0.85rem 1rem; text-align: right;">
-                    <div style="display: inline-flex; align-items: center; gap: 0.45rem;">
-                        <button type="button" class="view-dish-kardex-btn" data-id="${dish.id}" style="padding: 0.42rem 0.65rem; border-radius: 10px; background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.3); color: #38bdf8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ver Historial de Movimientos">
-                            <i data-lucide="history" style="width: 15px; height: 15px;"></i>
+                <td style="padding: 0.85rem 1rem; text-align: center;">
+                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;">
+                        <button type="button" class="view-dish-kardex-btn" data-id="${dish.id}" style="height: 34px; padding: 0 0.75rem; border-radius: 10px; background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.35); color: #38bdf8; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;" title="Ver Historial de Movimientos">
+                            <i data-lucide="history" style="width: 14px; height: 14px;"></i>
+                            <span>Historial</span>
                         </button>
-                        <button type="button" class="btn-secondary icon-btn adjust-stock-btn" data-id="${dish.id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; gap: 4px; display: inline-flex; align-items: center;" title="Ajustar Existencias">
-                            <i data-lucide="package-plus" style="width: 14px; height: 14px;"></i> Ajustar
+                        <button type="button" class="adjust-stock-btn" data-id="${dish.id}" style="height: 34px; padding: 0 0.85rem; border-radius: 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; color: #ffffff; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25); transition: all 0.2s;" title="Ajustar Existencias">
+                            <i data-lucide="package-plus" style="width: 14px; height: 14px;"></i>
+                            <span>Ajustar</span>
                         </button>
                     </div>
                 </td>
