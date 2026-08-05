@@ -5511,6 +5511,62 @@ async function loadMyTickets() {
     }
 }
 
+function _renderClientTicketsBatch(container, statusMap, priorityMap) {
+    if (!container) return;
+    const all = window._ctAllItems || [];
+    const page = window._ctPage || 1;
+    const toShow = all.slice(0, page * 20);
+    const remaining = all.length - toShow.length;
+
+    let html = toShow.map(t => {
+        const d = new Date(t.created_at);
+        const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        const s = statusMap[t.status] || statusMap.abierto;
+        const p = priorityMap[t.priority] || priorityMap.normal;
+        const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
+        const moduleDisplayName = targetMod ? targetMod.name : (t.module || '—');
+        return `
+            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
+                <td style="padding:1rem 1.5rem;">
+                    <a href="javascript:void(0)" onclick="viewClientTicketDetails('${t.id}')" style="font-size:0.82rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver conversación">
+                        #${String(t.id || '').substring(0, 8).toUpperCase()}
+                    </a>
+                </td>
+                <td style="padding:1rem 1.5rem;">${moduleDisplayName}</td>
+                <td style="padding:1rem 1.5rem; font-size:0.8rem; color:${p.color}; font-weight:700;">${p.label}</td>
+                <td style="padding:1rem 1.5rem;">
+                    <span style="background:${s.bg};color:${s.color};border:1px solid ${s.border};font-weight:700;font-size:0.75rem;padding:0.25rem 0.65rem;border-radius:12px;white-space:nowrap;">${s.label}</span>
+                </td>
+                <td style="padding:1rem 1.5rem; white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${dateStr}</td>
+            </tr>`;
+    }).join('');
+
+    if (remaining > 0) {
+        html += `<tr><td colspan="5" style="text-align:center;padding:0.75rem;background:var(--bg-surface-light);">
+            <span style="font-size:0.82rem;color:var(--text-muted);">Mostrando ${toShow.length} de ${all.length}</span>
+            <button onclick="window._ctLoadMore()" style="margin-left:0.8rem;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--primary);padding:4px 14px;border-radius:16px;cursor:pointer;font-size:0.78rem;font-weight:700;">Cargar ${Math.min(remaining,20)} más</button>
+        </td></tr>`;
+    }
+    container.innerHTML = html;
+    lucide.createIcons();
+}
+
+window._ctLoadMore = function() {
+    const statusMap = {
+        abierto:    { label: 'Entrante',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' },
+        en_proceso: { label: 'En Proceso',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
+        resuelto:   { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+        cerrado:    { label: 'Finalizado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
+    };
+    const priorityMap = {
+        normal:  { label: '🟠 Normal',  color: '#f59e0b' },
+        urgente: { label: '🔴 Urgente', color: '#ef4444' },
+        baja:    { label: '🟢 Baja',    color: '#10b981' },
+    };
+    window._ctPage = (window._ctPage || 1) + 1;
+    _renderClientTicketsBatch(document.getElementById('client-tickets-body'), statusMap, priorityMap);
+};
+
 function renderClientTickets() {
     const tbody = document.getElementById('client-tickets-body');
     if (!tbody) return;
@@ -5539,29 +5595,11 @@ function renderClientTickets() {
         baja:    { label: '🟢 Baja',    color: '#10b981' },
     };
 
-    tbody.innerHTML = tickets.map(t => {
-        const d = new Date(t.created_at);
-        const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-        const s = statusMap[t.status] || statusMap.abierto;
-        const p = priorityMap[t.priority] || priorityMap.normal;
-        const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
-        const moduleDisplayName = targetMod ? targetMod.name : (t.module || '—');
-        return `
-            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
-                <td style="padding:1rem 1.5rem;">
-                    <a href="javascript:void(0)" onclick="viewClientTicketDetails('${t.id}')" style="font-size:0.82rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver conversación">
-                        #${String(t.id || '').substring(0, 8).toUpperCase()}
-                    </a>
-                </td>
-                <td style="padding:1rem 1.5rem;">${moduleDisplayName}</td>
-                <td style="padding:1rem 1.5rem; font-size:0.8rem; color:${p.color}; font-weight:700;">${p.label}</td>
-                <td style="padding:1rem 1.5rem;">
-                    <span style="background:${s.bg};color:${s.color};border:1px solid ${s.border};font-weight:700;font-size:0.75rem;padding:0.25rem 0.65rem;border-radius:12px;white-space:nowrap;">${s.label}</span>
-                </td>
-                <td style="padding:1rem 1.5rem; white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${dateStr}</td>
-            </tr>`;
-    }).join('');
-    lucide.createIcons();
+    // ====== LAZY LOADING TICKETS CLIENTE (20 por lote) ======
+    const ctFP = `${tickets.length}`;
+    if (window._ctFP !== ctFP) { window._ctFP = ctFP; window._ctPage = 1; }
+    window._ctAllItems = tickets;
+    _renderClientTicketsBatch(tbody, statusMap, priorityMap);
 }
 
 window.viewClientTicketDetails = function(ticketId) {
@@ -6032,11 +6070,70 @@ window.showChatTypingIndicator = function(text) {
 // ==========================================
 // CLIENT PAYMENT HISTORY & PDF EXPORT
 // ==========================================
+function _renderClientPaymentsBatch(container) {
+    if (!container) return;
+    const all = window._cpAllItems || [];
+    const page = window._cpPage || 1;
+    const toShow = all.slice(0, page * 20);
+    const remaining = all.length - toShow.length;
+
+    let html = toShow.map(ph => {
+        const d = new Date(ph.created_at);
+        const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        const amountStr = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
+
+        // Alinear descripciones de módulos antiguos/IDs a nombres actualizados de módulos
+        let desc = ph.desc || '—';
+        appState.modules.forEach(m => {
+            desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
+        });
+
+        // Badge de estado premium fintech glassmorphic
+        const badgeBg = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+        const badgeColor = ph.status === 'APPROVED' ? '#10b981' : '#ef4444';
+        const badgeBorder = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)';
+        const badgeLabel = ph.status === 'APPROVED' ? 'Aprobado' : 'Fallido';
+
+        const downloadBtn = ph.status === 'APPROVED' ? `
+            <button onclick="downloadSinglePaymentReceiptPDF('${ph.id}')" title="Descargar Recibo PDF" style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); border-radius:8px; padding:0.4rem 0.6rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.25rem; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='var(--primary)';this.style.color='#fff';" onmouseout="this.style.background='var(--primary-bg)';this.style.color='var(--primary)';">
+                <i data-lucide="download" style="width:13px; height:13px;"></i> PDF
+            </button>
+        ` : '—';
+
+        return `
+            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
+                <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.85rem;">${dateStr}</td>
+                <td style="padding:1rem 1.5rem; font-weight:600;">${desc}</td>
+                <td style="padding:1rem 1.5rem; font-weight:800; color:var(--text-main);">${amountStr}</td>
+                <td style="padding:1rem 1.5rem;">
+                    <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
+                </td>
+                <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${ph.transaction_id || '—'}</td>
+                <td style="padding:1rem 1.5rem; text-align:center;">${downloadBtn}</td>
+            </tr>
+        `;
+    }).join('');
+
+    if (remaining > 0) {
+        html += `<tr><td colspan="6" style="text-align:center;padding:0.75rem;background:var(--bg-surface-light);">
+            <span style="font-size:0.82rem;color:var(--text-muted);">Mostrando ${toShow.length} de ${all.length}</span>
+            <button onclick="window._cpLoadMore()" style="margin-left:0.8rem;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--primary);padding:4px 14px;border-radius:16px;cursor:pointer;font-size:0.78rem;font-weight:700;">Cargar ${Math.min(remaining,20)} más</button>
+        </td></tr>`;
+    }
+    container.innerHTML = html;
+    lucide.createIcons();
+}
+
+window._cpLoadMore = function() {
+    window._cpPage = (window._cpPage || 1) + 1;
+    _renderClientPaymentsBatch(document.getElementById('client-payment-history-body'));
+};
+
 window.loadPaymentHistory = async function() {
     const tbody = document.getElementById('client-payment-history-body');
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
         <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
             <span style="display:inline-block;width:24px;height:24px;border:3px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span>
             <span>Cargando transacciones relacionales...</span>
@@ -6047,7 +6144,7 @@ window.loadPaymentHistory = async function() {
     let session;
     try { session = JSON.parse(sessionStorage.getItem('clientSession') || '{}'); } catch { session = {}; }
     if (!session.token) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--danger);">Sesión expirada. Por favor inicia sesión.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--danger);">Sesión expirada. Por favor inicia sesión.</td></tr>`;
         return;
     }
 
@@ -6072,43 +6169,11 @@ window.loadPaymentHistory = async function() {
             return;
         }
 
-        tbody.innerHTML = appState.clientPayments.map(ph => {
-            const d = new Date(ph.created_at);
-            const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-            const amountStr = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
-
-            // Alinear descripciones de módulos antiguos/IDs a nombres actualizados de módulos
-            let desc = ph.desc || '—';
-            appState.modules.forEach(m => {
-                desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
-            });
-
-            // Badge de estado premium fintech glassmorphic
-            const badgeBg = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
-            const badgeColor = ph.status === 'APPROVED' ? '#10b981' : '#ef4444';
-            const badgeBorder = ph.status === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)';
-            const badgeLabel = ph.status === 'APPROVED' ? 'Aprobado' : 'Fallido';
-
-            const downloadBtn = ph.status === 'APPROVED' ? `
-                <button onclick="downloadSinglePaymentReceiptPDF('${ph.id}')" title="Descargar Recibo PDF" style="background:var(--primary-bg); color:var(--primary); border:1px solid var(--primary-border); border-radius:8px; padding:0.4rem 0.6rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.25rem; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='var(--primary)';this.style.color='#fff';" onmouseout="this.style.background='var(--primary-bg)';this.style.color='var(--primary)';">
-                    <i data-lucide="download" style="width:13px; height:13px;"></i> PDF
-                </button>
-            ` : '—';
-
-            return `
-                <tr style="border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:500;">
-                    <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.85rem;">${dateStr}</td>
-                    <td style="padding:1rem 1.5rem; font-weight:600;">${desc}</td>
-                    <td style="padding:1rem 1.5rem; font-weight:800; color:var(--text-main);">${amountStr}</td>
-                    <td style="padding:1rem 1.5rem;">
-                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:12px; white-space:nowrap;">${badgeLabel}</span>
-                    </td>
-                    <td style="padding:1rem 1.5rem; font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${ph.transaction_id || '—'}</td>
-                    <td style="padding:1rem 1.5rem; text-align:center;">${downloadBtn}</td>
-                </tr>
-            `;
-        }).join('');
-        lucide.createIcons();
+        // ====== LAZY LOADING PAGOS CLIENTE (20 por lote) ======
+        const cpFP = `${appState.clientPayments.length}`;
+        if (window._cpFP !== cpFP) { window._cpFP = cpFP; window._cpPage = 1; }
+        window._cpAllItems = appState.clientPayments;
+        _renderClientPaymentsBatch(tbody);
 
     } catch (err) {
         console.error('Error cargando historial de pagos del cliente:', err);

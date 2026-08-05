@@ -111,9 +111,27 @@ app.use((req, res, next) => {
 // ============================================================
 // HELPERS: Lectura y Escritura Relacional de Base de Datos
 // ============================================================
+
+// Cache en memoria de corta duración para readDb()
+// Evita disparar decenas de queries SQL en cada petición HTTP
+let _dbCache = null;
+let _dbCacheTime = 0;
+const DB_CACHE_TTL_MS = 5000; // 5 segundos
+
+function invalidateDbCache() {
+    _dbCache = null;
+    _dbCacheTime = 0;
+}
+
 async function readDb() {
     try {
-        return await db.getCompleteState();
+        const now = Date.now();
+        if (_dbCache && (now - _dbCacheTime) < DB_CACHE_TTL_MS) {
+            return _dbCache;
+        }
+        _dbCache = await db.getCompleteState();
+        _dbCacheTime = Date.now();
+        return _dbCache;
     } catch (err) {
         console.error('[Server] Error leyendo base de datos:', err.message);
         throw err;
@@ -123,6 +141,7 @@ async function readDb() {
 async function writeDb(dbState) {
     try {
         await db.saveCompleteState(dbState);
+        invalidateDbCache(); // Forzar re-lectura en la próxima petición
     } catch (err) {
         console.error('[Server] Error guardando base de datos:', err.message);
         throw err;
@@ -700,7 +719,7 @@ app.post('/api/client/google-login', loginLimiter, async (req, res) => {
             let dbState = await readDb();
             const bizId = Date.now() + Math.floor(Math.random() * 1000);
             const randomPass = Math.random().toString(36).substring(2, 10);
-            const hashedPass = db.hashPassword(randomPass);
+            const hashedPass = await db.hashPassword(randomPass);
             const placeholderBizName = ownerName || 'Mi Negocio';
 
             const newBiz = {
@@ -831,7 +850,7 @@ app.post('/api/client/google-register', loginLimiter, async (req, res) => {
         let dbState = await readDb();
         const bizId = Date.now() + Math.floor(Math.random() * 1000);
         const randomPass = Math.random().toString(36).substring(2, 10);
-        const hashedPass = db.hashPassword(randomPass);
+        const hashedPass = await db.hashPassword(randomPass);
 
         const newBiz = {
             id: bizId,
@@ -948,7 +967,7 @@ app.post('/api/client/verify-password', async (req, res) => {
         const biz = await db.findBusinessById(session.clientId);
         if (!biz) return res.status(404).json({ success: false, error: 'Negocio no encontrado.' });
 
-        const isValid = db.verifyPassword(pass, biz.client_pass);
+        const isValid = await db.verifyPassword(pass, biz.client_pass);
         return res.json({ success: true, valid: isValid });
     } catch (err) {
         console.error('Error verificando contraseña de cliente:', err);
@@ -1013,7 +1032,7 @@ app.post('/api/client/module/logout-all', async (req, res) => {
         const biz = await db.findBusinessById(session.clientId);
         if (!biz) return res.status(404).json({ success: false, error: 'Negocio no encontrado.' });
 
-        if (!db.verifyPassword(pass, biz.client_pass)) {
+        if (!await db.verifyPassword(pass, biz.client_pass)) {
             return res.status(401).json({ success: false, error: 'Contraseña incorrecta.' });
         }
 
@@ -1054,7 +1073,7 @@ app.post('/api/client/forgot-password', loginLimiter, async (req, res) => {
                 'SELECT * FROM users WHERE status = ?', ['active']
             );
             for (const u of adminRows) {
-                if (db.verifyPassword(adminPass, u.pass)) {
+                if (await db.verifyPassword(adminPass, u.pass)) {
                     isAdminValid = true;
                     break;
                 }
@@ -1075,7 +1094,7 @@ app.post('/api/client/forgot-password', loginLimiter, async (req, res) => {
         }
 
         // 3. Actualizar la contraseña del cliente
-        const hashedNew = db.hashPassword(newPass);
+        const hashedNew = await db.hashPassword(newPass);
         await db.pool.query(
             'UPDATE businesses SET client_pass = ? WHERE id = ?', [hashedNew, biz.id]
         );
@@ -1152,7 +1171,7 @@ app.post('/api/client/credentials/update', async (req, res) => {
         const biz = await db.findBusinessById(session.clientId);
         if (!biz) return res.status(404).json({ error: 'Negocio no encontrado.' });
 
-        if (!db.verifyPassword(currentPass, biz.client_pass)) {
+        if (!await db.verifyPassword(currentPass, biz.client_pass)) {
             return res.status(401).json({ error: 'La contraseña actual es incorrecta.' });
         }
 
@@ -1408,7 +1427,7 @@ app.post('/api/businesses/new', requireWriteAccess, async (req, res) => {
     try {
         let dbState = await readDb();
         if (newBiz.clientPass) {
-            newBiz.clientPass = db.hashPassword(newBiz.clientPass);
+            newBiz.clientPass = await db.hashPassword(newBiz.clientPass);
         }
         dbState.businesses.unshift(newBiz);
 
@@ -1436,7 +1455,7 @@ app.put('/api/businesses/:id', requireWriteAccess, async (req, res) => {
         const bizIndex = dbState.businesses.findIndex(b => b.id == bizId);
         if (bizIndex !== -1) {
             if (updatedFields.clientPass) {
-                updatedFields.clientPass = db.hashPassword(updatedFields.clientPass);
+                updatedFields.clientPass = await db.hashPassword(updatedFields.clientPass);
             }
             
             const biz = dbState.businesses[bizIndex];
@@ -1847,7 +1866,7 @@ app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
         const isChangingPass = !!adminPass;
 
         if (isChangingUser || isChangingPass) {
-            if (!db.verifyPassword(currentPass, masterPass)) {
+            if (!await db.verifyPassword(currentPass, masterPass)) {
                 return res.status(401).json({ success: false, error: 'La contraseña actual es incorrecta' });
             }
         }
@@ -1857,7 +1876,7 @@ app.post('/api/settings/save', requireSuperAdmin, async (req, res) => {
         if (supportEmail) dbState.config.supportEmail = supportEmail;
         if (supportPhone) dbState.config.supportPhone = supportPhone;
         if (adminUser) dbState.config.adminUser = adminUser;
-        if (adminPass) dbState.config.adminPass = db.hashPassword(adminPass);
+        if (adminPass) dbState.config.adminPass = await db.hashPassword(adminPass);
 
         if (recommendedModuleId !== undefined) dbState.config.recommendedModuleId = recommendedModuleId;
         if (multiSedeDiscount !== undefined) dbState.config.multiSedeDiscount = parseInt(multiSedeDiscount);
@@ -3156,13 +3175,18 @@ app.post('/api/webhooks/wompi', async (req, res) => {
 
 app.get('/api/payments/history', requireSuperAdmin, async (req, res) => {
     try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 100));
+        const offset = (page - 1) * limit;
         const [rows] = await db.pool.query(`
             SELECT ph.*, b.name as business_name 
             FROM payment_history ph
             JOIN businesses b ON ph.business_id = b.id
             ORDER BY ph.created_at DESC
-        `);
-        res.json({ success: true, history: rows });
+            LIMIT ? OFFSET ?
+        `, [limit, offset]);
+        const [[{ total }]] = await db.pool.query('SELECT COUNT(*) as total FROM payment_history');
+        res.json({ success: true, history: rows, total, page, limit });
     } catch (err) {
         console.error('Error al obtener historial de pagos:', err);
         res.status(500).json({ success: false, error: 'Error al consultar historial de pagos.' });
@@ -3275,6 +3299,7 @@ app.get('/api/tickets/my', async (req, res) => {
 // ADMIN: Listar todos los tickets
 app.get('/api/admin/tickets', requireAdmin, async (req, res) => {
     try {
+        const limit = Math.min(500, Math.max(1, parseInt(req.query.limit) || 200));
         const [rows] = await db.pool.query(
             `SELECT t.*, b.name as business_name
              FROM tickets t
@@ -3282,7 +3307,8 @@ app.get('/api/admin/tickets', requireAdmin, async (req, res) => {
              ORDER BY
                CASE t.priority WHEN 'urgente' THEN 1 WHEN 'normal' THEN 2 WHEN 'baja' THEN 3 ELSE 4 END,
                CASE t.status WHEN 'abierto' THEN 1 WHEN 'en_proceso' THEN 2 WHEN 'resuelto' THEN 3 WHEN 'cerrado' THEN 4 ELSE 5 END,
-               t.created_at DESC`
+               t.created_at DESC
+             LIMIT ?`, [limit]
         );
         res.json({ success: true, tickets: rows });
     } catch (err) {

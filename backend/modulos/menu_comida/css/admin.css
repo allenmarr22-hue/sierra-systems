@@ -2596,6 +2596,12 @@ body.light-mode .order-settings-btn:hover {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Animación usada por el spinner de carga progresiva (lazy loading) */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 .order-card-pro:hover {
     background: rgba(var(--text-rgb), 0.06);
     border-color: rgba(var(--text-rgb), 0.15);

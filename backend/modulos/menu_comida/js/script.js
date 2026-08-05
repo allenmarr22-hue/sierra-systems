@@ -524,7 +524,10 @@ function applyTheme(accentColor, bgUrl, logoUrl) {
     }
 }
 
-function saveStateToLocal() {
+// Throttle para saveStateToLocal: evita serializar el estado 8 veces por acción seguida.
+// Cada llamada reinicia el timer; solo ejecuta 600ms después de la última llamada.
+let _saveStateTimer = null;
+const _saveStateImmediate = function() {
     try {
         const fullState = JSON.stringify(state);
         localStorage.setItem('streetfeed_dishes', JSON.stringify(state.dishes));
@@ -541,6 +544,14 @@ function saveStateToLocal() {
             showToast('⚠️ Error: Almacenamiento lleno. Intenta con una imagen más pequeña.', 'error');
         }
     }
+};
+function saveStateToLocal() {
+    clearTimeout(_saveStateTimer);
+    _saveStateTimer = setTimeout(_saveStateImmediate, 600);
+}
+function saveStateToLocalNow() {
+    clearTimeout(_saveStateTimer);
+    _saveStateImmediate();
 }
 
 function switchView(viewName) {
@@ -2702,14 +2713,6 @@ window.confirmClearCart = function() {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    const isPageAdmin = window.location.pathname.endsWith('admin.html');
-    
-    if (isPageAdmin) {
-        if (state.isLoggedIn) switchView('admin');
-        else switchView('login');
-        return;
-    }
-
     updateUIFromConfig();
     renderCategories();
     renderMenu();
@@ -2722,14 +2725,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Scroll to top AFTER everything is rendered (overrides browser scroll restore)
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'instant' }), 0);
     
+    const isPageAdmin = window.location.pathname.endsWith('admin.html');
     const savedView = sessionStorage.getItem('streetfeed_view');
-    if (savedView === 'admin' && state.isLoggedIn) switchView('admin');
-    else switchView('menu');
+    
+    if (isPageAdmin) {
+        if (state.isLoggedIn) switchView('admin');
+        else switchView('login');
+    } else {
+        if (savedView === 'admin' && state.isLoggedIn) switchView('admin');
+        else switchView('menu');
+    }
 
     // --- SINCRONIZACIÓN EN TIEMPO REAL (CROSS-TAB) ---
     // Escucha cambios en localStorage hechos desde otras pestañas (como el Admin)
     window.addEventListener('storage', (e) => {
-        if (window.location.pathname.endsWith('admin.html')) return;
         if (e.key && e.key.startsWith('streetfeed_')) {
             // Recargar datos actualizados
             state.dishes = JSON.parse(localStorage.getItem('streetfeed_dishes')) || state.dishes;
@@ -2784,5 +2793,13 @@ document.addEventListener('click', function(e) {
     const wrapper = document.getElementById('payment-select-wrapper');
     if (wrapper && !wrapper.contains(e.target)) {
         wrapper.classList.remove('open');
+    }
+});
+
+// Guardar estado inmediatamente antes de cerrar/recargar la página
+// Esto garantiza que el throttle de saveStateToLocal no pierda el último cambio
+window.addEventListener('beforeunload', function() {
+    if (typeof saveStateToLocalNow === 'function') {
+        saveStateToLocalNow();
     }
 });

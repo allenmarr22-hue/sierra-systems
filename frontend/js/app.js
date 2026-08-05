@@ -13,6 +13,14 @@ const bizTypeTranslations = {
 // Premium Super Admin styles are loaded statically from style.css
 function injectSuperAdminStyles() {}
 
+function debounce(fn, delay = 280) {
+    let _dbt;
+    return function(...args) {
+        clearTimeout(_dbt);
+        _dbt = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
 // --- CUSTOM TABLE DRAWING (NO DEPENDENCIES) ---
 function drawCustomTable(doc, headers, rows, startY, options = {}) {
     const margin = options.margin || 14;
@@ -643,6 +651,7 @@ function initRealTimeSync() {
     _sseSource = new EventSource('/api/stream');
 
     _sseSource.onopen = function() {
+        clearInterval(window._notifPolling);
         _sseRetryDelay = 1000; // Reset delay on successful connection
         if (_sseReconnectToastShown) {
             showToast('✅ Conexión en tiempo real restaurada', 'success');
@@ -747,6 +756,9 @@ function initRealTimeSync() {
     };
 
     _sseSource.onerror = function() {
+        if (!window._notifPolling) {
+            window._notifPolling = setInterval(fetchNotifications, 30000);
+        }
         if (!_sseSource) return;
         _sseSource.close();
         _sseSource = null;
@@ -764,6 +776,8 @@ function initRealTimeSync() {
 }
 
 function closeRealTimeSync() {
+    clearInterval(window._notifPolling);
+    clearInterval(window._devicePolling);
     clearTimeout(_sseReconnectTimer);
     _sseReconnectTimer = null;
     if (_sseSource) {
@@ -837,10 +851,10 @@ async function loadData() {
         const res = await adminFetch('/api/data');
         const data = await res.json();
         
-        const oldBusinessesStr = JSON.stringify(appState.businesses);
-        const oldModulesStr = JSON.stringify(appState.modules);
-        const oldUsersStr = JSON.stringify(appState.users);
-        const oldConfigStr = JSON.stringify(appState.config);
+        const oldBusinessesStr = JSON.stringify(appState.businesses || []).slice(0, 200);
+        const oldModulesStr = JSON.stringify(appState.modules || []).slice(0, 200);
+        const oldUsersStr = JSON.stringify(appState.users || []).slice(0, 200);
+        const oldConfigStr = JSON.stringify(appState.config || {}).slice(0, 200);
 
         appState.businesses = data.businesses || [];
         appState.modules = data.modules || [];
@@ -895,10 +909,10 @@ async function loadData() {
             }
         }
         
-        const businessesChanged = JSON.stringify(appState.businesses) !== oldBusinessesStr;
-        const modulesChanged = JSON.stringify(appState.modules) !== oldModulesStr;
-        const usersChanged = JSON.stringify(appState.users) !== oldUsersStr;
-        const configChanged = JSON.stringify(appState.config) !== oldConfigStr;
+        const businessesChanged = JSON.stringify(appState.businesses || []).slice(0, 200) !== oldBusinessesStr;
+        const modulesChanged = JSON.stringify(appState.modules || []).slice(0, 200) !== oldModulesStr;
+        const usersChanged = JSON.stringify(appState.users || []).slice(0, 200) !== oldUsersStr;
+        const configChanged = JSON.stringify(appState.config || {}).slice(0, 200) !== oldConfigStr;
         const anyDataChanged = businessesChanged || modulesChanged || usersChanged || configChanged || ticketsChanged;
 
         if (anyDataChanged) {
@@ -1188,6 +1202,8 @@ function setupEventListeners() {
 
     // Logout
     const doLogout = () => {
+        clearInterval(window._notifPolling);
+        clearInterval(window._devicePolling);
         Swal.fire({
             title: '¿Cerrar sesión?',
             text: "Tendrás que volver a ingresar tus credenciales para acceder.",
@@ -1919,9 +1935,9 @@ function setupEventListeners() {
     });
 
     // Search Box
-    document.getElementById('business-search')?.addEventListener('input', (e) => {
+    document.getElementById('business-search')?.addEventListener('input', debounce((e) => {
         filterBusinesses(document.querySelector('.filter-pills .pill.active')?.getAttribute('data-filter') || 'all', e.target.value.toLowerCase());
-    });
+    }, 280));
 
     // Business Form Submit (Real API connect)
     const bizForm = document.getElementById('business-form');
@@ -2012,9 +2028,9 @@ function setupEventListeners() {
     document.getElementById('user-modal-cancel')?.addEventListener('click', closeUserModal);
 
     // User Search
-    document.getElementById('user-search')?.addEventListener('input', (e) => {
+    document.getElementById('user-search')?.addEventListener('input', debounce((e) => {
         renderUsersList(e.target.value.toLowerCase());
-    });
+    }, 280));
 
     // User Toggle Text
     document.getElementById('user-active')?.addEventListener('change', (e) => {
@@ -2158,21 +2174,14 @@ function setupMRRSimulator(currentMRR) {
 
 // ===================== USER MANAGEMENT =====================
 
-function renderUsersList(searchQuery = '') {
-    const list = document.getElementById('users-list');
-    if (!list) return;
+function _renderUsersBatch(container) {
+    if (!container) return;
+    const all = window._usAllItems || [];
+    const page = window._usPage || 1;
+    const toShow = all.slice(0, page * 30);
+    const remaining = all.length - toShow.length;
 
-    let filtered = appState.users || [];
-
-    if (searchQuery) {
-        filtered = filtered.filter(u => 
-            (u.name || '').toLowerCase().includes(searchQuery) || 
-            (u.email || '').toLowerCase().includes(searchQuery) ||
-            (u.user || '').toLowerCase().includes(searchQuery)
-        );
-    }
-
-    list.innerHTML = filtered.map(user => `
+    let html = toShow.map(user => `
         <tr>
             <td>
                 <div style="display: flex; align-items: center; gap: 1rem;">
@@ -2196,8 +2205,47 @@ function renderUsersList(searchQuery = '') {
             </td>
         </tr>
     `).join('');
+
+    if (remaining > 0) {
+        html += `<tr><td colspan="5" style="text-align:center;padding:0.75rem;background:var(--bg-surface-light);">
+            <span style="font-size:0.82rem;color:var(--text-muted);">Mostrando ${toShow.length} de ${all.length}</span>
+            <button onclick="window._usLoadMore()" style="margin-left:0.8rem;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--primary);padding:4px 14px;border-radius:16px;cursor:pointer;font-size:0.78rem;font-weight:700;">Cargar ${Math.min(remaining,30)} más</button>
+        </td></tr>`;
+    }
+    container.innerHTML = html;
     lucide.createIcons();
     applyRolePermissions();
+}
+
+window._usLoadMore = function() {
+    window._usPage = (window._usPage || 1) + 1;
+    _renderUsersBatch(document.getElementById('users-list'));
+};
+
+function renderUsersList(searchQuery = '') {
+    const list = document.getElementById('users-list');
+    if (!list) return;
+
+    let filtered = appState.users || [];
+
+    if (searchQuery) {
+        filtered = filtered.filter(u =>
+            (u.name || '').toLowerCase().includes(searchQuery) ||
+            (u.email || '').toLowerCase().includes(searchQuery) ||
+            (u.user || '').toLowerCase().includes(searchQuery)
+        );
+    }
+
+    if (filtered.length === 0) {
+        list.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">No se encontraron usuarios.</td></tr>`;
+        return;
+    }
+
+    // ====== LAZY LOADING USUARIOS (30 por lote) ======
+    const usFP = `${filtered.length}|${searchQuery}`;
+    if (window._usFP !== usFP) { window._usFP = usFP; window._usPage = 1; }
+    window._usAllItems = filtered;
+    _renderUsersBatch(list);
 }
 
 function openUserModal(id = null) {
@@ -2452,19 +2500,14 @@ function renderBusinessesGrid() {
     filterBusinesses(filter, search);
 }
 
-function filterBusinesses(filterType, searchQuery = '') {
-    const grid = document.getElementById('businesses-grid');
-    let filtered = appState.businesses;
+function _renderBizBatch(container) {
+    if (!container) return;
+    const all = window._bizAllItems || [];
+    const page = window._bizPage || 1;
+    const toShow = all.slice(0, page * 25);
+    const remaining = all.length - toShow.length;
     
-    if (filterType !== 'all') filtered = filtered.filter(b => b.status === filterType);
-    if (searchQuery) filtered = filtered.filter(b => b.name.toLowerCase().includes(searchQuery) || b.city.toLowerCase().includes(searchQuery));
-    
-    if (filtered.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron negocios.</div>';
-        return;
-    }
-
-    grid.innerHTML = filtered.map(biz => `
+    let html = toShow.map(biz => `
         <div class="biz-list-item">
             <div class="biz-info-main">
                 <div class="biz-name">${biz.name}</div>
@@ -2547,9 +2590,40 @@ function filterBusinesses(filterType, searchQuery = '') {
             </div>
         </div>
     `).join('');
-
+    
+    if (remaining > 0) {
+        html += `<div style="grid-column:1/-1;text-align:center;padding:1rem;">
+            <span style="font-size:0.82rem;color:var(--text-muted);">Mostrando ${toShow.length} de ${all.length}</span>
+            <button onclick="window._bizLoadMore()" style="margin-left:0.8rem;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--primary);padding:6px 16px;border-radius:16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Cargar ${Math.min(remaining,25)} más</button>
+        </div>`;
+    }
+    container.innerHTML = html;
     lucide.createIcons();
     applyRolePermissions();
+}
+
+window._bizLoadMore = function() {
+    window._bizPage = (window._bizPage || 1) + 1;
+    _renderBizBatch(document.getElementById('businesses-grid'));
+};
+
+function filterBusinesses(filterType, searchQuery = '') {
+    const grid = document.getElementById('businesses-grid');
+    let filtered = appState.businesses;
+    
+    if (filterType !== 'all') filtered = filtered.filter(b => b.status === filterType);
+    if (searchQuery) filtered = filtered.filter(b => b.name.toLowerCase().includes(searchQuery) || b.city.toLowerCase().includes(searchQuery));
+    
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron negocios.</div>';
+        return;
+    }
+
+    // ====== LAZY LOADING NEGOCIOS (25 por lote) ======
+    const bizFP = `${filtered.length}|${filterType}|${searchQuery}`;
+    if (window._bizFP !== bizFP) { window._bizFP = bizFP; window._bizPage = 1; }
+    window._bizAllItems = filtered;
+    _renderBizBatch(grid);
 }
 
 function renderQuickModules() {
@@ -2769,6 +2843,12 @@ window.makeSwalSelect = function(selectId) {
 
     // Reposition panel on scroll/resize
     const reposition = () => {
+        if (!document.body.contains(btn)) {
+            window.removeEventListener('scroll', reposition, true);
+            window.removeEventListener('resize', reposition);
+            if (panel && document.body.contains(panel)) panel.remove();
+            return;
+        }
         if (panel.classList.contains('hidden')) return;
         const rect = btn.getBoundingClientRect();
         panel.style.left = rect.left + 'px';
@@ -4542,6 +4622,78 @@ const TICKET_PRIORITY_MAP = {
     urgente: { label: '🔴 Urgente',    color: '#ef4444' }
 };
 
+function _renderTicketsBatch(container) {
+    if (!container) return;
+    const all = window._tkAllItems || [];
+    const page = window._tkPage || 1;
+    const toShow = all.slice(0, page * 30);
+    const remaining = all.length - toShow.length;
+    
+    let html = toShow.map(t => {
+        const st = TICKET_STATUS_MAP[t.status] || TICKET_STATUS_MAP['abierto'];
+        const pr = TICKET_PRIORITY_MAP[t.priority] || TICKET_PRIORITY_MAP['normal'];
+        
+        let dateStr = '—';
+        if (t.created_at) {
+            const d = new Date(t.created_at);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            dateStr = `${day}/${month}/${year}`;
+        }
+        
+        const desc = t.description ? (t.description.length > 40 ? t.description.substring(0, 40) + '…' : t.description) : '—';
+        const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
+        const moduleDisplayName = targetMod ? targetMod.name : (t.module || '—');
+        
+        return `
+            <tr>
+                <td style="padding:1rem 1.5rem; white-space:nowrap;">
+                    <a href="javascript:void(0)" onclick="viewTicketDetails('${t.id}')" style="font-size:0.78rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver detalles del ticket">
+                        #${String(t.id || '').substring(0, 8).toUpperCase()}
+                    </a>
+                </td>
+                <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || '—'}</td>
+                <td style="padding:1rem 1.5rem; color:var(--text-muted);">${moduleDisplayName}</td>
+                <td style="padding:1rem 1.5rem;">
+                    <span style="font-size:0.78rem; font-weight:700; padding:3px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color}; white-space:nowrap;">
+                        ${pr.label}
+                    </span>
+                </td>
+                <td style="padding:1rem 1.5rem; font-size:0.85rem; color:var(--text-muted); max-width:220px;" title="${(t.description || '').replace(/"/g, '&quot;')}"><span style="white-space:pre-wrap;word-break:break-word;">${desc}</span></td>
+                <td style="padding:1rem 1.5rem; text-align:center;">
+                    <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem; font-weight:700; padding:4px 12px; border-radius:20px; background:${st.bg}; color:${st.color}; white-space:nowrap;">
+                        <i data-lucide="${st.icon}" style="width:12px;height:12px;"></i> ${st.label}
+                    </span>
+                </td>
+                <td style="padding:1rem 1.5rem; font-size:0.82rem; color:var(--text-muted);">${dateStr}</td>
+                <td style="padding:1rem 1.5rem; text-align:center;">
+                    <div style="display:inline-flex; gap:6px; align-items:center; justify-content:center;">
+                        <button class="btn-ghost delete-ticket-btn" style="padding:0.35rem 0.5rem; font-size:0.8rem; border:1px solid rgba(239,68,68,0.25); color:#ef4444; border-radius:8px; cursor:pointer; background:rgba(239,68,68,0.05); display:inline-flex; align-items:center; justify-content:center;"
+                            onclick="deleteTicket('${t.id}')" title="Eliminar ticket permanentemente">
+                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+    
+    if (remaining > 0) {
+        html += `<tr><td colspan="8" style="text-align:center;padding:0.75rem;background:var(--bg-surface-light);">
+            <span style="font-size:0.82rem;color:var(--text-muted);">Mostrando ${toShow.length} de ${all.length}</span>
+            <button onclick="window._tkLoadMore()" style="margin-left:0.8rem;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--primary);padding:4px 14px;border-radius:16px;cursor:pointer;font-size:0.78rem;font-weight:700;">Cargar ${Math.min(remaining,30)} más</button>
+        </td></tr>`;
+    }
+    container.innerHTML = html;
+    lucide.createIcons();
+    applyRolePermissions();
+}
+
+window._tkLoadMore = function() {
+    window._tkPage = (window._tkPage || 1) + 1;
+    _renderTicketsBatch(document.getElementById('tickets-list'));
+};
+
 function renderAdminTickets() {
     const tbody = document.getElementById('tickets-list');
     if (!tbody) return;
@@ -4596,56 +4748,11 @@ function renderAdminTickets() {
         return;
     }
     
-    tbody.innerHTML = list.map(t => {
-        const st = TICKET_STATUS_MAP[t.status] || TICKET_STATUS_MAP['abierto'];
-        const pr = TICKET_PRIORITY_MAP[t.priority] || TICKET_PRIORITY_MAP['normal'];
-        
-        let dateStr = '—';
-        if (t.created_at) {
-            const d = new Date(t.created_at);
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            dateStr = `${day}/${month}/${year}`;
-        }
-        
-        const desc = t.description ? (t.description.length > 40 ? t.description.substring(0, 40) + '…' : t.description) : '—';
-        const targetMod = appState.modules.find(m => String(m.id) === String(t.module) || String(m.name) === String(t.module));
-        const moduleDisplayName = targetMod ? targetMod.name : (t.module || '—');
-        
-        return `
-            <tr>
-                <td style="padding:1rem 1.5rem; white-space:nowrap;">
-                    <a href="javascript:void(0)" onclick="viewTicketDetails('${t.id}')" style="font-size:0.78rem; font-weight:800; color:var(--primary); font-family:monospace; text-decoration:none; border-bottom:1px dashed var(--primary-alpha); padding-bottom:1px;" title="Ver detalles del ticket">
-                        #${String(t.id || '').substring(0, 8).toUpperCase()}
-                    </a>
-                </td>
-                <td style="padding:1rem 1.5rem; font-weight:600; color:var(--text-main);">${t.business_name || '—'}</td>
-                <td style="padding:1rem 1.5rem; color:var(--text-muted);">${moduleDisplayName}</td>
-                <td style="padding:1rem 1.5rem;">
-                    <span style="font-size:0.78rem; font-weight:700; padding:3px 10px; border-radius:20px; background:${pr.color}18; color:${pr.color}; white-space:nowrap;">
-                        ${pr.label}
-                    </span>
-                </td>
-                <td style="padding:1rem 1.5rem; font-size:0.85rem; color:var(--text-muted); max-width:220px;" title="${(t.description || '').replace(/"/g, '&quot;')}"><span style="white-space:pre-wrap;word-break:break-word;">${desc}</span></td>
-                <td style="padding:1rem 1.5rem; text-align:center;">
-                    <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem; font-weight:700; padding:4px 12px; border-radius:20px; background:${st.bg}; color:${st.color}; white-space:nowrap;">
-                        <i data-lucide="${st.icon}" style="width:12px;height:12px;"></i> ${st.label}
-                    </span>
-                </td>
-                <td style="padding:1rem 1.5rem; font-size:0.82rem; color:var(--text-muted);">${dateStr}</td>
-                <td style="padding:1rem 1.5rem; text-align:center;">
-                    <div style="display:inline-flex; gap:6px; align-items:center; justify-content:center;">
-                        <button class="btn-ghost delete-ticket-btn" style="padding:0.35rem 0.5rem; font-size:0.8rem; border:1px solid rgba(239,68,68,0.25); color:#ef4444; border-radius:8px; cursor:pointer; background:rgba(239,68,68,0.05); display:inline-flex; align-items:center; justify-content:center;"
-                            onclick="deleteTicket('${t.id}')" title="Eliminar ticket permanentemente">
-                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>`;
-    }).join('');
-    lucide.createIcons();
-    applyRolePermissions();
+    // ====== LAZY LOADING TICKETS (30 por lote) ======
+    const tkFP = `${list.length}|${search}|${filter}|${priorityFilter}|${moduleFilter}`;
+    if (window._tkFP !== tkFP) { window._tkFP = tkFP; window._tkPage = 1; }
+    window._tkAllItems = list;
+    _renderTicketsBatch(tbody);
 }
 
 async function updateTicketStatus(ticketId, currentStatus) {
@@ -5649,48 +5756,14 @@ window.loadGlobalPaymentsHistory = async function() {
     }
 };
 
-window.renderGlobalPaymentsHistory = function() {
-    const tbody = document.getElementById('global-payments-list');
-    if (!tbody) return;
-
-    const filter = window._currentGlobalPaymentFilter || 'all';
-    const search = (document.getElementById('global-payment-search')?.value || '').toLowerCase().trim();
-
-    let list = appState.globalPayments || [];
-
-    // Filtrar por estado
-    if (filter !== 'all') {
-        list = list.filter(p => p.status === filter);
-    }
-
-    // Filtrar por búsqueda
-    if (search) {
-        list = list.filter(p => {
-            let desc = p.desc || '';
-            appState.modules.forEach(m => {
-                if (desc.includes(m.name)) return;
-                desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
-            });
-            return (p.business_name || '').toLowerCase().includes(search) ||
-                   desc.toLowerCase().includes(search) ||
-                   (p.transaction_id || '').toLowerCase().includes(search);
-        });
-    }
-
-    window._filteredGlobalPayments = list; // Guardar para exportación PDF
-
-    if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
-                <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
-                <span>No se encontraron transacciones.</span>
-            </div>
-        </td></tr>`;
-        lucide.createIcons();
-        return;
-    }
-
-    tbody.innerHTML = list.map(ph => {
+function _renderGlobalPaymentsBatch(container) {
+    if (!container) return;
+    const all = window._gpAllItems || [];
+    const page = window._gpPage || 1;
+    const toShow = all.slice(0, page * 25);
+    const remaining = all.length - toShow.length;
+    
+    let html = toShow.map(ph => {
         const d = new Date(ph.created_at);
         const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
         const amountStr = `$ ${Number(ph.amount).toLocaleString('es-CO')} COP`;
@@ -5774,7 +5847,68 @@ window.renderGlobalPaymentsHistory = function() {
             </tr>
         `;
     }).join('');
+    
+    if (remaining > 0) {
+        html += `<tr><td colspan="7" style="text-align:center;padding:0.75rem;background:var(--bg-surface-light);">
+            <span style="font-size:0.82rem;color:var(--text-muted);">Mostrando ${toShow.length} de ${all.length}</span>
+            <button onclick="window._gpLoadMore()" style="margin-left:0.8rem;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--primary);padding:4px 14px;border-radius:16px;cursor:pointer;font-size:0.78rem;font-weight:700;">Cargar ${Math.min(remaining,25)} más</button>
+        </td></tr>`;
+    }
+    container.innerHTML = html;
     lucide.createIcons();
+}
+
+window._gpLoadMore = function() {
+    window._gpPage = (window._gpPage || 1) + 1;
+    _renderGlobalPaymentsBatch(document.getElementById('global-payments-list'));
+};
+
+window.renderGlobalPaymentsHistory = function() {
+    const tbody = document.getElementById('global-payments-list');
+    if (!tbody) return;
+
+    const filter = window._currentGlobalPaymentFilter || 'all';
+    const search = (document.getElementById('global-payment-search')?.value || '').toLowerCase().trim();
+
+    let list = appState.globalPayments || [];
+
+    // Filtrar por estado
+    if (filter !== 'all') {
+        list = list.filter(p => p.status === filter);
+    }
+
+    // Filtrar por búsqueda
+    if (search) {
+        list = list.filter(p => {
+            let desc = p.desc || '';
+            appState.modules.forEach(m => {
+                if (desc.includes(m.name)) return;
+                desc = desc.replace(new RegExp(m.id, 'gi'), m.name);
+            });
+            return (p.business_name || '').toLowerCase().includes(search) ||
+                   desc.toLowerCase().includes(search) ||
+                   (p.transaction_id || '').toLowerCase().includes(search);
+        });
+    }
+
+    window._filteredGlobalPayments = list; // Guardar para exportación PDF
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+                <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.4;"></i>
+                <span>No se encontraron transacciones.</span>
+            </div>
+        </td></tr>`;
+        lucide.createIcons();
+        return;
+    }
+
+    // ====== LAZY LOADING PAGOS GLOBALES (25 por lote) ======
+    const gpFP = `${list.length}|${filter}|${search}`;
+    if (window._gpFP !== gpFP) { window._gpFP = gpFP; window._gpPage = 1; }
+    window._gpAllItems = list;
+    _renderGlobalPaymentsBatch(tbody);
 };
 
 window.setGlobalPaymentFilter = function(filterType) {
@@ -7240,7 +7374,7 @@ window.triggerAdminGlobalLogout = async function() {
     }
 
     // Actualizar la lista en tiempo real cada 15 segundos si el usuario está en la pestaña de dispositivos
-    setInterval(() => {
+    window._devicePolling = setInterval(() => {
         if (localStorage.getItem('as_auth') !== 'true') return;
         const devicesTabBtn = document.querySelector('.config-nav-btn[data-config-tab="config-devices"]');
         const isDevicesTabActive = devicesTabBtn && devicesTabBtn.classList.contains('active');

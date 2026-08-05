@@ -12,28 +12,31 @@ const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { promisify } = require('util');
+
+const _pbkdf2 = promisify(crypto.pbkdf2);
 
 // --- HASHING DE CONTRASEÑAS SEGURO ---
-function hashPassword(password) {
+async function hashPassword(password) {
     if (!password) return '';
     // Si ya parece estar encriptada (formato salt:hash), no volver a encriptar
     if (password.includes(':') && password.split(':')[0].length === 32) {
         return password;
     }
     const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    return `${salt}:${hash}`;
+    const hash = await _pbkdf2(password, salt, 1000, 64, 'sha512');
+    return `${salt}:${hash.toString('hex')}`;
 }
 
-function verifyPassword(password, storedValue) {
+async function verifyPassword(password, storedValue) {
     if (!storedValue) return false;
     if (!storedValue.includes(':')) {
         // Fallback para contraseñas de texto plano
         return password === storedValue;
     }
     const [salt, originalHash] = storedValue.split(':');
-    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    return hash === originalHash;
+    const hash = await _pbkdf2(password, salt, 1000, 64, 'sha512');
+    return hash.toString('hex') === originalHash;
 }
 
 // --- 1. CARGAR VARIABLES DE ENTORNO DESDE .ENV MANUALMENTE ---
@@ -421,6 +424,35 @@ async function initializeDatabase() {
         } catch (repairErr) {
             console.warn('[DB] Nota al reparar fechas de pruebas existentes:', repairErr.message);
         }
+
+        // --- ÍNDICES SQL PARA MEJORAR RENDIMIENTO DE QUERIES FRECUENTES ---
+        // Compatible con MySQL 5.7+ (no usa IF NOT EXISTS en CREATE INDEX)
+        const indexDefs = [
+            { name: 'idx_biz_client_email',  table: 'businesses',           cols: '(client_email)' },
+            { name: 'idx_biz_status',        table: 'businesses',           cols: '(status, subscription_status)' },
+            { name: 'idx_emp_biz_login',     table: 'streetfeed_employees', cols: '(business_id, username)' },
+            { name: 'idx_ticket_biz_date',   table: 'tickets',              cols: '(business_id, created_at)' },
+            { name: 'idx_ticket_status',     table: 'tickets',              cols: '(status, priority)' },
+            { name: 'idx_payment_biz_date',  table: 'payment_history',      cols: '(business_id, created_at)' },
+            { name: 'idx_notif_created',     table: 'notifications',        cols: '(id)' },
+        ];
+        const dbName = (await pool.query('SELECT DATABASE() as db'))[0][0].db;
+        for (const idx of indexDefs) {
+            try {
+                const [existing] = await pool.query(
+                    `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.STATISTICS
+                     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?`,
+                    [dbName, idx.table, idx.name]
+                );
+                if (existing[0].cnt === 0) {
+                    await pool.query(`CREATE INDEX ${idx.name} ON ${idx.table} ${idx.cols}`);
+                    console.log(`[DB] 🗂️ Índice creado: ${idx.name} ON ${idx.table}`);
+                }
+            } catch (idxErr) {
+                console.warn(`[DB] Nota al crear índice ${idx.name}:`, idxErr.message);
+            }
+        }
+        console.log('[DB] ✅ Índices SQL verificados/creados.');
 
         console.log('[DB] ✅ Base de datos inicializada correctamente.');
     } catch (err) {
@@ -948,7 +980,7 @@ async function updateSystemConfig(fields) {
 async function findUser(username, password) {
     const [rows] = await pool.query('SELECT * FROM users WHERE user = ? AND status = "active"', [username]);
     const user = rows[0] || null;
-    if (user && verifyPassword(password, user.pass)) {
+    if (user && await verifyPassword(password, user.pass)) {
         return user;
     }
     return null;
@@ -957,7 +989,7 @@ async function findUser(username, password) {
 async function findMasterUser(username, password) {
     const [rows] = await pool.query('SELECT * FROM system_config WHERE admin_user = ? AND id = 1', [username]);
     const config = rows[0] || null;
-    if (config && verifyPassword(password, config.admin_pass)) {
+    if (config && await verifyPassword(password, config.admin_pass)) {
         return config;
     }
     return null;
@@ -967,7 +999,7 @@ async function createUser(user) {
     const id = user.id || Date.now() + Math.floor(Math.random() * 1000);
     await pool.query(
         'INSERT INTO users (id, user, email, pass, name, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [id, user.user, user.email || '', hashPassword(user.pass), user.name, user.role || 'Admin', user.status || 'active']
+        [id, user.user, user.email || '', await hashPassword(user.pass), user.name, user.role || 'Admin', user.status || 'active']
     );
     return id;
 }
@@ -982,7 +1014,7 @@ async function updateUser(id, fields) {
         if (['user', 'email', 'pass', 'name', 'role', 'status'].includes(key)) {
             sets.push(`${key} = ?`);
             if (key === 'pass') {
-                values.push(hashPassword(fields[key]));
+                values.push(await hashPassword(fields[key]));
             } else {
                 values.push(fields[key]);
             }
@@ -1078,7 +1110,7 @@ async function findBusinessByClientCredentials(email, password) {
         [email]
     );
     const biz = rows[0] || null;
-    if (biz && verifyPassword(password, biz.client_pass)) {
+    if (biz && await verifyPassword(password, biz.client_pass)) {
         return biz;
     }
     return null;
@@ -1119,7 +1151,7 @@ async function createBusiness(biz) {
             last_payment_date, last_payment_amount, last_failed_attempt, last_transaction_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-        id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.nit || null, biz.phone || null, biz.address || null, biz.clientEmail, hashPassword(biz.clientPass), biz.ownerName || null, biz.registrationSource || 'admin', biz.avatarUrl || null,
+        id, biz.name, biz.type, biz.status || 'active', biz.city || null, biz.nit || null, biz.phone || null, biz.address || null, biz.clientEmail, await hashPassword(biz.clientPass), biz.ownerName || null, biz.registrationSource || 'admin', biz.avatarUrl || null,
         billing.gateway_token || null, billing.last_four || null, billing.card_brand || null, billing.subscription_status || 'pending',
         billing.next_billing_date || null, billing.last_payment_date || null, billing.last_payment_amount || 0.00,
         billing.last_failed_attempt || null, billing.last_transaction_id || null
@@ -1162,7 +1194,7 @@ async function updateBusiness(id, fields) {
         if (mapping[key]) {
             sets.push(`${mapping[key]} = ?`);
             if (key === 'clientPass') {
-                values.push(hashPassword(fields[key]));
+                values.push(await hashPassword(fields[key]));
             } else {
                 values.push(fields[key]);
             }
@@ -1487,7 +1519,7 @@ async function findEmployeeByCredentials(businessId, usernameOrPin, password = n
             if (emp.pin && emp.pin.toString() === cleanPass) {
                 return emp;
             }
-            if (verifyPassword(cleanPass, emp.password)) {
+            if (await verifyPassword(cleanPass, emp.password)) {
                 return emp;
             }
         }
@@ -1502,7 +1534,7 @@ async function findEmployeeByCredentials(businessId, usernameOrPin, password = n
 async function createEmployee({ businessId, name, username, password, pin = null, role = 'mesero' }) {
     const id = `emp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const effectivePassword = password || pin || '123456';
-    const hashedPassword = hashPassword(effectivePassword);
+    const hashedPassword = await hashPassword(effectivePassword);
     await pool.query(
         'INSERT INTO streetfeed_employees (id, business_id, name, username, password, pin, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [id, businessId, name, username, hashedPassword, pin || null, role, 'active']
@@ -1515,7 +1547,7 @@ async function updateEmployee(id, businessId, { name, username, password, pin, r
     const params = [];
     if (name !== undefined) { updates.push('name = ?'); params.push(name); }
     if (username !== undefined) { updates.push('username = ?'); params.push(username); }
-    if (password) { updates.push('password = ?'); params.push(hashPassword(password)); }
+    if (password) { updates.push('password = ?'); params.push(await hashPassword(password)); }
     if (pin !== undefined) { updates.push('pin = ?'); params.push(pin || null); }
     if (role !== undefined) { updates.push('role = ?'); params.push(role); }
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }

@@ -23,6 +23,19 @@
     }
 })();
 
+// ====== UTILIDADES DE RENDIMIENTO ======
+// debounce: agrupa llamadas rápidas — solo ejecuta la última después de `delay` ms
+if (typeof window._adminDebounce === 'undefined') {
+    window._adminDebounce = function debounce(fn, delay) {
+        let t;
+        return function(...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), delay);
+        };
+    };
+}
+const _dbnc = window._adminDebounce;
+
 /* =========================================
    ADMIN DASHBOARD & INVENTORY CONTROL LOGIC
    ========================================= */
@@ -94,7 +107,7 @@ function openProductKardexModal(dishId) {
 
     // Header info
     if (titleEl) titleEl.textContent = dish.name;
-    const catObj = (state.categories || []).find(c => c.id === dish.cat);
+    const catObj = (state.categories || []).find(c => String(c.id) === String(dish.cat));
     if (catBadgeEl) catBadgeEl.textContent = catObj ? catObj.name : (dish.cat || 'General');
 
     const isTracked = dish.trackStock === true;
@@ -193,7 +206,7 @@ function openProductKardexModal(dishId) {
     }
 
     if (modal) modal.classList.remove('hidden');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: modal });
 }
 
 function openStockAdjustModal(dishId) {
@@ -283,7 +296,7 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
     }
 
     tbody.innerHTML = items.map(dish => {
-        const catObj = (state.categories || []).find(c => c.id === dish.cat);
+        const catObj = (state.categories || []).find(c => String(c.id) === String(dish.cat));
         const catName = catObj ? catObj.name : dish.cat;
         const isTracked = dish.trackStock === true;
         const stockQty = parseInt(dish.stock) || 0;
@@ -335,7 +348,7 @@ function renderStockTable(filter = 'tracked', searchQuery = null, catFilter = nu
         });
     });
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: tbody });
 }
 
 function getFilteredKardexMovements() {
@@ -449,7 +462,7 @@ function renderKardexTable() {
     // Bind event listeners once
     if (searchInput && !searchInput.dataset.bound) {
         searchInput.dataset.bound = '1';
-        searchInput.addEventListener('input', () => renderKardexTable());
+        searchInput.addEventListener('input', _dbnc(() => renderKardexTable(), 250));
     }
     if (catFilterSelect && !catFilterSelect.dataset.bound) {
         catFilterSelect.dataset.bound = '1';
@@ -493,15 +506,41 @@ function renderKardexTable() {
 
     const { movements } = getFilteredKardexMovements();
 
-    // Limit to 50 for table display
-    const displayedMovements = movements.slice(0, 50);
+    // ====== LAZY LOADING EN KARDEX (25 movimientos por lote) ======
+    // Detectar cambio de filtros → resetear página
+    const _ks = document.getElementById('kardex-search-input')?.value || '';
+    const _kc = document.getElementById('kardex-cat-filter')?.value || '';
+    const _kt = document.getElementById('kardex-type-filter')?.value || '';
+    const _kp = document.getElementById('kardex-period-filter')?.value || '';
+    const kardexFingerprint = `${movements.length}|${_ks}|${_kc}|${_kt}|${_kp}`;
+    if (window._kardexFingerprint !== kardexFingerprint) {
+        window._kardexFingerprint = kardexFingerprint;
+        window._kardexPage = 1;
+    }
+    window._kardexAllMovements = movements;
 
-    if (displayedMovements.length === 0) {
+    _renderKardexBatch(tbody);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: tbody });
+}
+
+// ====== HELPER: Renderiza lote de Kardex ======
+const KARDEX_PAGE_SIZE = 25;
+window._kardexPage = window._kardexPage || 1;
+window._kardexAllMovements = window._kardexAllMovements || [];
+
+function _renderKardexBatch(tbody) {
+    if (!tbody) return;
+    const allMovements = window._kardexAllMovements;
+    const page = window._kardexPage || 1;
+    const toShow = allMovements.slice(0, page * KARDEX_PAGE_SIZE);
+    const remaining = allMovements.length - toShow.length;
+
+    if (toShow.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" style="padding: 2.5rem; text-align: center; color: var(--text-dim);">No hay registros de movimientos que coincidan con la búsqueda</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = displayedMovements.map(m => {
+    let html = toShow.map(m => {
         let typeBadge = `<span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center;">Ingreso</span>`;
         if (m.type === 'out') {
             typeBadge = `<span style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center;">Merma</span>`;
@@ -510,11 +549,8 @@ function renderKardexTable() {
         } else if (m.type === 'sale') {
             typeBadge = `<span style="background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center;">Venta</span>`;
         }
-
         const formattedDate = new Date(m.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
         const qtyDisplay = m.qty > 0 ? `+${m.qty}` : m.qty;
-
-        // Financial Value ($ Total)
         const unitPrice = m.price || m.productPrice || 0;
         const totalVal = Math.abs(m.qty || 0) * unitPrice;
         const valDisplay = m.qty > 0 ? `+$${totalVal.toLocaleString('es-CO')}` : (m.qty < 0 ? `-$${totalVal.toLocaleString('es-CO')}` : '$0');
@@ -522,7 +558,6 @@ function renderKardexTable() {
         if (motivoText === 'Merma / Salida') motivoText = 'Merma';
         if (motivoText.toLowerCase().includes('reabastecimiento') || motivoText.toLowerCase().includes('ingreso')) motivoText = 'Reabastecimiento';
         motivoText = motivoText.replace(/\s*de stock\s*/gi, '').trim();
-
         return `
             <tr style="border-bottom: 1px solid var(--glass-border); font-size: 0.88rem;">
                 <td style="padding: 0.85rem 1rem; color: var(--text-dim); font-size: 0.82rem; white-space: nowrap;">${formattedDate}</td>
@@ -535,7 +570,23 @@ function renderKardexTable() {
             </tr>
         `;
     }).join('');
+
+    if (remaining > 0) {
+        html += `<tr id="kardex-load-sentinel"><td colspan="7" style="text-align:center; padding:1.2rem; color:var(--text-dim); font-size:0.8rem;">
+            <span style="opacity:0.7;">Mostrando ${toShow.length} de ${allMovements.length} movimientos</span>
+            <button onclick="_kardexLoadMore()" style="margin-left:1rem; background:rgba(2,132,199,0.15); border:1px solid rgba(2,132,199,0.3); color:#38bdf8; padding:5px 14px; border-radius:20px; cursor:pointer; font-size:0.78rem; font-weight:700;">Cargar ${Math.min(remaining, KARDEX_PAGE_SIZE)} más</button>
+        </td></tr>`;
+    }
+
+    tbody.innerHTML = html;
 }
+
+window._kardexLoadMore = function() {
+    window._kardexPage = (window._kardexPage || 1) + 1;
+    const tbody = document.getElementById('kardex-table-body');
+    _renderKardexBatch(tbody);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: tbody });
+};
 
 // Modal Libreta por Fecha Específica
 function openKardexNotebookModal() {
@@ -740,7 +791,7 @@ function openPDFExportModal() {
     }
 
     modal.classList.remove('hidden');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: modal });
 }
 
 function exportKardexPDFConfigured({ scope, catId, dishId, period }) {
@@ -880,9 +931,9 @@ function renderAdmin(openCatIds = null) {
     
     if (menuSearchInput && !menuSearchInput.dataset.bound) {
         menuSearchInput.dataset.bound = '1';
-        menuSearchInput.addEventListener('input', () => {
+        menuSearchInput.addEventListener('input', _dbnc(() => {
             renderAdmin();
-        });
+        }, 280));
     }
     
     // Capture current open states if not provided
@@ -2052,10 +2103,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stock Search Input
     const stockSearchInput = document.getElementById('stock-search-input');
     if (stockSearchInput) {
-        stockSearchInput.addEventListener('input', (e) => {
+        stockSearchInput.addEventListener('input', _dbnc((e) => {
             const catFilter = document.getElementById('stock-category-filter')?.value || 'all';
             renderStockTable(currentStockFilter, e.target.value, catFilter);
-        });
+        }, 250));
     }
 
     // Stock Category Filter Select
@@ -2081,8 +2132,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stockAdjustForm) {
         stockAdjustForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const dishId = parseInt(document.getElementById('stock-adjust-item-id').value);
-            const dish = state.dishes.find(d => d.id === dishId);
+            const dishId = document.getElementById('stock-adjust-item-id').value;
+            const dish = state.dishes.find(d => String(d.id) === String(dishId));
             if (!dish) return;
 
             const trackStock = document.getElementById('item-adjust-track-stock')?.checked === true;
@@ -2106,7 +2157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     moveQty = qty;
                 } else if (type === 'out') {
                     newStock = Math.max(0, oldStock - qty);
-                    moveQty = -qty;
+                    moveQty = newStock - oldStock;
                 } else if (type === 'set') {
                     newStock = Math.max(0, qty);
                     moveQty = newStock - oldStock;
@@ -3591,7 +3642,84 @@ if (!localStorage.getItem('streetfeed_orders')) {
     generateMockData();
 }
 
+// ====== AUTO-ARCHIVADO DE PEDIDOS ANTIGUOS ======
+// Mueve pedidos finalizados de más de 60 días al archivo para evitar que el
+// historial crezca sin control y vuelva a ralentizar el panel de Super Admin / Admin.
+// Solo se ejecuta una vez por sesión de página.
+(function autoArchiveOldOrders() {
+    if (window._autoArchiveDone) return;
+    window._autoArchiveDone = true;
+    try {
+        const raw = localStorage.getItem('streetfeed_orders');
+        if (!raw || raw.length < 5000) return; // Menos de ~25 pedidos, no vale la pena
+        const orders = JSON.parse(raw) || [];
+        if (orders.length < 100) return; // Límite: solo archivar si hay 100+ pedidos
+
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 60); // 60 días atrás
+
+        const toKeep = [];
+        const toArchive = [];
+
+        orders.forEach(o => {
+            const orderDate = o.date ? new Date(o.date) : null;
+            const isOld = orderDate && orderDate < cutoffDate;
+            const isFinalized = o.status === 'accepted' || o.status === 'completed';
+            if (isOld && isFinalized) {
+                toArchive.push(o);
+            } else {
+                toKeep.push(o);
+            }
+        });
+
+        if (toArchive.length > 0) {
+            // Guardar activos (invalida cache automáticamente vía interceptor)
+            localStorage.setItem('streetfeed_orders', JSON.stringify(toKeep));
+            // Agregar a archivo histórico (para no perder datos)
+            try {
+                const archiveRaw = localStorage.getItem('streetfeed_orders_archive') || '[]';
+                const archive = JSON.parse(archiveRaw);
+                const combined = archive.concat(toArchive);
+                // Mantener máx 500 pedidos en archivo también
+                const trimmed = combined.slice(-500);
+                localStorage.setItem('streetfeed_orders_archive', JSON.stringify(trimmed));
+            } catch (e) {}
+            console.info(`[StreetFeed] Auto-archivados ${toArchive.length} pedidos históricos (>60 días). Activos: ${toKeep.length}`);
+        }
+    } catch (e) {
+        // Silencioso — no interrumpir la carga si algo falla
+    }
+})();
+
+// ====== CACHE DE PEDIDOS EN MEMORIA ======
+// Razón: getOrders() se llama docenas de veces por acción (renderStats, renderHistory,
+// getEmployeeStats, renderOrders, etc.). Con 200+ pedidos en localStorage, cada llamada
+// parsea un JSON grande y bloquea el hilo. Este cache solo lo parsea una vez.
+let _ordersCache = null;
+let _ordersCacheValid = false;
+
+// Interceptor: invalida el cache automáticamente cada vez que se escribe streetfeed_orders
+(function() {
+    if (window._ordersCacheInterceptorInstalled) return;
+    window._ordersCacheInterceptorInstalled = true;
+    const origSetItem = localStorage.setItem.bind(localStorage);
+    Object.defineProperty(localStorage, 'setItem', {
+        value: function(key, value) {
+            if (key && (key === 'streetfeed_orders' || key.startsWith('streetfeed_orders_'))) {
+                _ordersCache = null;
+                _ordersCacheValid = false;
+            }
+            return origSetItem(key, value);
+        },
+        configurable: true,
+        writable: true
+    });
+})();
+
 function getOrders() {
+    // Devuelve desde cache si es válido
+    if (_ordersCacheValid && _ordersCache !== null) return _ordersCache;
+
     let raw;
     try { raw = JSON.parse(localStorage.getItem('streetfeed_orders')) || []; } catch(e) { raw = []; }
     let modified = false;
@@ -3615,8 +3743,13 @@ function getOrders() {
     });
 
     if (modified) {
+        // Escribir de vuelta (esto invalida el cache vía el interceptor, luego lo recargamos)
         localStorage.setItem('streetfeed_orders', JSON.stringify(orders));
     }
+
+    // Guardar en cache
+    _ordersCache = orders;
+    _ordersCacheValid = true;
     return orders;
 }
 
@@ -5724,17 +5857,74 @@ window.renderOrders = function() {
         unpaidList.innerHTML = unpaid.map(o => createOrderCard(o)).join('');
     }
 
-    // Render 4. Historial
-    if (history.length === 0) {
-        historyList.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="archive" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>${historyDateFilter ? 'No hay pedidos para esta fecha.' : 'El historial está vacío.'}</p></div>`;
-    } else {
-        historyList.innerHTML = history.map(o => createOrderCard(o)).join('');
-    }
+    // ====== RENDER 4. HISTORIAL — CON LAZY LOADING (PAGINACIÓN PROGRESIVA) ======
+    // Solo renderiza los primeros 20 pedidos. Al hacer scroll al final carga 20 más.
+    window._historyAllItems = history; // Guardar el array completo filtrado
     
+    // Detectar si los filtros/búsqueda cambiaron → resetear paginación
+    const historyFingerprint = `${history.length}|${historyDateFilter}|${window.historyScope}|${window.historySearchQuery}`;
+    if (window._historyFingerprint !== historyFingerprint) {
+        window._historyFingerprint = historyFingerprint;
+        window._historyPage = 1; // Resetear a la primera página
+    }
+
+    _renderHistoryBatch(historyList);
+
     if (window.lucide) lucide.createIcons();
 
     // Always keep the Domicilios sidebar badge in sync
     updateDomiciliosBadge();
+}
+
+// ====== HELPER: Renderiza el siguiente lote del historial (Lazy Load) ======
+const HISTORY_PAGE_SIZE = 20;
+window._historyPage = window._historyPage || 1;
+window._historyAllItems = window._historyAllItems || [];
+
+function _renderHistoryBatch(container) {
+    if (!container) return;
+    const allItems = window._historyAllItems;
+    const page = window._historyPage || 1;
+    const toShow = allItems.slice(0, page * HISTORY_PAGE_SIZE);
+    const remaining = allItems.length - toShow.length;
+
+    if (toShow.length === 0) {
+        container.innerHTML = `<div class="empty-state-orders" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-dim);"><i data-lucide="archive" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.3;"></i><p>${window.historyDateFilter ? 'No hay pedidos para esta fecha.' : 'El historial está vacío.'}</p></div>`;
+        return;
+    }
+
+    // Renderizar las tarjetas del lote actual
+    let html = toShow.map(o => createOrderCard(o)).join('');
+
+    // Agregar indicador de "cargar más" si quedan ítems
+    if (remaining > 0) {
+        html += `
+        <div id="history-load-more-sentinel" style="grid-column:1/-1; display:flex; flex-direction:column; align-items:center; gap:0.75rem; padding:1.5rem; color:var(--text-dim);">
+            <div style="width:28px; height:28px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--theme-accent); border-radius:50%; animation: spin 0.8s linear infinite;"></div>
+            <span style="font-size:0.8rem;">Cargando más... (${remaining} restantes)</span>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+
+    // Iniciar IntersectionObserver en el sentinel para auto-cargar el siguiente lote
+    if (remaining > 0) {
+        const sentinel = document.getElementById('history-load-more-sentinel');
+        if (sentinel && typeof IntersectionObserver !== 'undefined') {
+            // Desconectar observer anterior si existía
+            if (window._historyObserver) window._historyObserver.disconnect();
+            window._historyObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    window._historyObserver.disconnect();
+                    window._historyObserver = null;
+                    window._historyPage = (window._historyPage || 1) + 1;
+                    _renderHistoryBatch(container);
+                    if (window.lucide) lucide.createIcons();
+                }
+            }, { threshold: 0.1, rootMargin: '150px' });
+            window._historyObserver.observe(sentinel);
+        }
+    }
 }
 
 window.isCleaningMode = false;
@@ -5794,11 +5984,12 @@ function createOrderCard(order) {
     const printBtn = `<button onclick="window.printThermalTicket('${order.id}')" style="width: ${isHistory ? '34px' : '44px'}; height: ${isHistory ? '34px' : '44px'}; border-radius: ${isHistory ? '8px' : '12px'}; background: rgba(var(--primary-rgb, 247, 147, 30), 0.08); border: 1px solid rgba(var(--primary-rgb, 247, 147, 30), 0.25); color: var(--theme-accent); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Imprimir Ticket Térmico POS"><i data-lucide="printer" style="width: ${isHistory ? '16px' : '20px'}; height: ${isHistory ? '16px' : '20px'};"></i></button>`;
 
     // Columnas fijas idénticas para TODOS los estados → alineación perfecta
-    const gridCols = '220px 175px auto 130px auto';
+    const gridCols = '220px 175px 235px 130px 1fr';
 
     const totalDisplay = isCocina
         ? `<span style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(245,158,11,0.12); padding: 0.25rem 0.5rem; border-radius: 6px;">Comanda</span>`
         : `<span style="font-size: 1.1rem; font-weight: 950; color: var(--text); letter-spacing: -0.5px;">$${(order.total || 0).toLocaleString()}</span>`;
+
 
     let actionsHtml = '';
     if (isMesero) {
@@ -5960,14 +6151,15 @@ function createOrderCard(order) {
     }
 
     const paymentBadge = !isCocina ? `
-        <div onclick="event.stopPropagation(); window.togglePaymentDropdown('${order.id}', event);" title="Cambiar método de pago" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${payColor}; box-shadow: 0 4px 10px ${payShadow}; white-space: nowrap; cursor: pointer; transition: all 0.2s;">
+        <div onclick="event.stopPropagation(); window.togglePaymentDropdown('${order.id}', event);" title="Cambiar método de pago" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.7rem; border-radius: 6px; background: ${payColor}; box-shadow: 0 4px 10px ${payShadow}; white-space: nowrap; cursor: pointer; transition: all 0.2s; min-width: 105px; box-sizing: border-box;">
             <i data-lucide="${payIcon}" style="width: 12px; color: #fff;"></i>
             <span style="font-size: 0.65rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">${payLabel}</span>
             <i data-lucide="chevron-down" style="width: 10px; color: rgba(255,255,255,0.8); margin-left: 1px;"></i>
         </div>` : '';
 
     return `
-        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="position: relative; display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 0.75rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); height: 72px; overflow: hidden; padding-right: ${isHistory ? '0.8rem' : '1.2rem'};">
+        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="position: relative; display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 0.75rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); height: 72px; overflow: hidden; padding-right: ${isHistory ? '2.5rem' : '4rem'};">
+
 
             <!-- 1. Identidad -->
             <div style="padding: 0 0.5rem 0 1.2rem; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.22rem; height: 100%; width: 220px; overflow: hidden; flex-shrink: 0;">
@@ -5988,7 +6180,7 @@ function createOrderCard(order) {
             </div>
 
             <!-- 3. Pedido (Productos + Pago) -->
-            <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem 0 0.6rem; overflow: visible;">
+            <div style="display: flex; align-items: center; gap: 0.7rem; border-left: 1px solid var(--glass-border); padding: 0 0.8rem 0 0.6rem; overflow: visible; width: 235px; flex-shrink: 0;">
                 ${isHistory ? `
                 <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.65rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); white-space: nowrap; flex-shrink: 0;" title="${(order.items || []).length} productos en este pedido">
                     <i data-lucide="package" style="width: 12px; color: var(--text-dim);"></i>
@@ -6007,7 +6199,7 @@ function createOrderCard(order) {
             </div>
 
             <!-- 5. Acciones -->
-            <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0 0.5rem; justify-content: flex-end; width: auto; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0 0.5rem; justify-content: flex-end; width: 100%; flex-shrink: 0;">
                 ${actionsHtml}
             </div>
 
@@ -8514,9 +8706,10 @@ document.addEventListener('click', (e) => {
 
                         if (!dish.inventoryHistory) dish.inventoryHistory = [];
                         dish.inventoryHistory.push({
+                            id: Date.now(),
                             date: new Date().toISOString(),
                             type: 'sale',
-                            qty: -orderQty,
+                            qty: newQty - currentQty,
                             resultingStock: newQty,
                             note: `Venta Pedido Manual #${orderData.id}`
                         });
@@ -8704,10 +8897,7 @@ window.renderExpenses = function() {
     let topC = 'Ninguna';
     let maxV = 0;
     for (const c in catTotals) {
-        if (catTotals[c] > maxV) {
-            maxV = catTotals[c];
-            topC = c;
-        }
+        if (catTotals[c] > maxV) { maxV = catTotals[c]; topC = c; }
     }
     document.getElementById('expense-top-category').innerText = topC;
     document.getElementById('expense-last-date').innerText = expenses.length > 0 ? expenses[0].date : '--';
@@ -8722,7 +8912,25 @@ window.renderExpenses = function() {
         return;
     }
 
-    container.innerHTML = filtered.map(e => `
+    // ====== LAZY LOADING EN GASTOS (20 por lote) ======
+    const expenseFingerprint = `${filtered.length}|${searchQuery}|${monthFilter}`;
+    if (window._expenseFingerprint !== expenseFingerprint) {
+        window._expenseFingerprint = expenseFingerprint;
+        window._expensePage = 1;
+    }
+    window._expenseAllItems = filtered;
+    _renderExpenseBatch(container, fmt);
+};
+
+function _renderExpenseBatch(container, fmt) {
+    if (!container) return;
+    const fmtFn = fmt || ((n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n));
+    const allItems = window._expenseAllItems || [];
+    const page = window._expensePage || 1;
+    const toShow = allItems.slice(0, page * 20);
+    const remaining = allItems.length - toShow.length;
+
+    let html = toShow.map(e => `
         <div class="chart-card glass" style="padding:15px 20px; display:flex; align-items:center; justify-content:space-between; gap:15px; border-left:4px solid var(--theme-accent); margin-bottom:0px;">
             <div style="display:flex; align-items:center; gap:15px;">
                 <div style="background:rgba(255, 107, 0, 0.1); width:45px; height:45px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--theme-accent); font-size:1.2rem;">
@@ -8734,15 +8942,29 @@ window.renderExpenses = function() {
                 </div>
             </div>
             <div style="text-align:right; display:flex; align-items:center; gap:20px;">
-                <div style="font-size:1.15rem; font-weight:800; color:var(--theme-accent);">${fmt(e.amount)}</div>
+                <div style="font-size:1.15rem; font-weight:800; color:var(--theme-accent);">${fmtFn(e.amount)}</div>
                 <button onclick="deleteExpense(${e.id})" style="background:rgba(239, 68, 68, 0.12); border:1px solid rgba(239, 68, 68, 0.25); color:#ef4444; width:36px; height:36px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: all 0.3s;" title="Eliminar registro">
                     <i data-lucide="trash-2" style="width: 16px;"></i>
                 </button>
             </div>
         </div>
     `).join('');
-    
+
+    if (remaining > 0) {
+        html += `<div style="text-align:center; padding:1.2rem; color:var(--text-dim); font-size:0.82rem;">
+            <span style="opacity:0.7;">Mostrando ${toShow.length} de ${allItems.length} gastos</span>
+            <button onclick="_expenseLoadMore()" style="margin-left:1rem; background:rgba(247,147,30,0.15); border:1px solid rgba(247,147,30,0.3); color:var(--theme-accent); padding:5px 14px; border-radius:20px; cursor:pointer; font-size:0.78rem; font-weight:700;">Cargar ${Math.min(remaining, 20)} más</button>
+        </div>`;
+    }
+
+    container.innerHTML = html;
     if (window.lucide) lucide.createIcons();
+}
+
+window._expenseLoadMore = function() {
+    window._expensePage = (window._expensePage || 1) + 1;
+    const container = document.getElementById('expenses-list-container');
+    _renderExpenseBatch(container);
 };
 
 function getExpenseIcon(cat) {
@@ -9851,37 +10073,69 @@ function renderActiveProfileMetrics() {
         if (commEl) commEl.textContent = '$' + stats.commission.toLocaleString('es-CO');
     }
 
-    // Recent orders
+    // Recent orders — con paginación progresiva (20 por lote)
     const listEl = document.getElementById('emp-profile-orders-list');
     if (listEl) {
         if (stats.recentOrders.length === 0) {
             listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--glass-border);">Sin pedidos registrados en este período.</div>`;
         } else {
-            listEl.innerHTML = stats.recentOrders.map(o => {
-                const isDone = o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered' || o.status === 'entregado';
-                const isCancelled = o.status === 'cancelled' || o.status === 'cancelado';
-                const statusColor = isDone ? '#10b981' : (isCancelled ? '#ef4444' : '#f59e0b');
-                const statusLabel = isDone ? ((o.deliveryType === 'delivery' || o.deliveredBy) ? 'Entregado' : 'Completado') : (isCancelled ? 'Cancelado' : 'En proceso');
-                const time = o.date ? new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Reciente';
-                return `
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; gap: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.8rem;">
-                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-dim); font-family: monospace; background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 5px; white-space: nowrap;">${o.id || o.orderId || 'ORD'}</div>
-                        <div>
-                            <div style="font-size: 0.82rem; font-weight: 700; color: var(--text);">${o.customer?.name || 'Cliente'}</div>
-                            <div style="font-size: 0.72rem; color: var(--text-dim);">${time}</div>
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
-                        <span style="font-size: 0.9rem; font-weight: 900; color: var(--text);">$${(o.total || 0).toLocaleString('es-CO')}</span>
-                        <span style="font-size: 0.65rem; font-weight: 800; color: ${statusColor}; background: ${statusColor}22; padding: 2px 8px; border-radius: 5px; text-transform: uppercase;">${statusLabel}</span>
-                    </div>
-                </div>
-                `;
-            }).join('');
+            // Guardar lista completa y resetear página al cambiar filtros
+            const empFP = `${window._activeProfileEmpId}|${stats.recentOrders.length}`;
+            if (window._empProfileFP !== empFP) {
+                window._empProfileFP = empFP;
+                window._empProfilePage = 1;
+            }
+            window._empProfileAllOrders = stats.recentOrders;
+            _renderEmpProfileOrdersBatch(listEl);
         }
     }
 }
+
+// ====== HELPER: Pedidos del perfil de empleado con lazy loading ======
+function _renderEmpProfileOrdersBatch(container) {
+    if (!container) return;
+    const allOrders = window._empProfileAllOrders || [];
+    const page = window._empProfilePage || 1;
+    const toShow = allOrders.slice(0, page * 20);
+    const remaining = allOrders.length - toShow.length;
+
+    let html = toShow.map(o => {
+        const isDone = o.status === 'accepted' || o.status === 'completed' || o.status === 'delivered' || o.status === 'entregado';
+        const isCancelled = o.status === 'cancelled' || o.status === 'cancelado';
+        const statusColor = isDone ? '#10b981' : (isCancelled ? '#ef4444' : '#f59e0b');
+        const statusLabel = isDone ? ((o.deliveryType === 'delivery' || o.deliveredBy) ? 'Entregado' : 'Completado') : (isCancelled ? 'Cancelado' : 'En proceso');
+        const time = o.date ? new Date(o.date).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Reciente';
+        return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-dim); font-family: monospace; background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 5px; white-space: nowrap;">${o.id || o.orderId || 'ORD'}</div>
+                <div>
+                    <div style="font-size: 0.82rem; font-weight: 700; color: var(--text);">${o.customer?.name || 'Cliente'}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-dim);">${time}</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
+                <span style="font-size: 0.9rem; font-weight: 900; color: var(--text);">$${(o.total || 0).toLocaleString('es-CO')}</span>
+                <span style="font-size: 0.65rem; font-weight: 800; color: ${statusColor}; background: ${statusColor}22; padding: 2px 8px; border-radius: 5px; text-transform: uppercase;">${statusLabel}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    if (remaining > 0) {
+        html += `<div style="text-align:center; padding:0.9rem; color:var(--text-dim); font-size:0.8rem;">
+            <span style="opacity:0.7;">Mostrando ${toShow.length} de ${allOrders.length} pedidos</span>
+            <button onclick="_empProfileLoadMore()" style="margin-left:0.8rem; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#818cf8; padding:4px 12px; border-radius:16px; cursor:pointer; font-size:0.75rem; font-weight:700;">Cargar ${Math.min(remaining, 20)} más</button>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+window._empProfileLoadMore = function() {
+    window._empProfilePage = (window._empProfilePage || 1) + 1;
+    const container = document.getElementById('emp-profile-orders-list');
+    _renderEmpProfileOrdersBatch(container);
+};
 
 window.viewEmployeeProfile = function(empId, showPersonalInfo = false) {
     const emp = employeesList.find(e => String(e.id) === String(empId));
@@ -11613,7 +11867,25 @@ function renderDriverDeliveriesSection() {
         }
     }
 
-    container.innerHTML = filterBarHtml + contentHtml;
+    // ====== LAZY LOADING EN DOMICILIOS (defensivo - 15 por lote) ======
+    // Los domicilios activos raramente pasan de 10, pero lo protegemos igual.
+    const DOMI_PAGE_SIZE = 15;
+    let displayContent = contentHtml;
+    if (activeTab === 'mine' && assignedList.length > DOMI_PAGE_SIZE) {
+        const shown = assignedList.slice(0, DOMI_PAGE_SIZE);
+        const rem = assignedList.length - shown.length;
+        displayContent = shown.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
+        displayContent += `<div style="grid-column:1/-1; text-align:center; padding:1rem; color:var(--text-dim); font-size:0.82rem;">
+            Mostrando ${shown.length} de ${assignedList.length} — <a href="#" onclick="event.preventDefault(); renderDriverDeliveriesSection();" style="color:var(--theme-accent);">Ver todos</a></div>`;
+    } else if (activeTab === 'available' && unassigned.length > DOMI_PAGE_SIZE) {
+        const shown = unassigned.slice(0, DOMI_PAGE_SIZE);
+        const rem = unassigned.length - shown.length;
+        displayContent = shown.map((o, i) => buildDeliveryCard(o, i, isDriver, assignments)).join('');
+        displayContent += `<div style="grid-column:1/-1; text-align:center; padding:1rem; color:var(--text-dim); font-size:0.82rem;">
+            Mostrando ${shown.length} de ${unassigned.length} — <a href="#" onclick="event.preventDefault(); renderDriverDeliveriesSection();" style="color:var(--theme-accent);">Ver todos</a></div>`;
+    }
+
+    container.innerHTML = filterBarHtml + displayContent;
     if (window.lucide) lucide.createIcons();
 }
 

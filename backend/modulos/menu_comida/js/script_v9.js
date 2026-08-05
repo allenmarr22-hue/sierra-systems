@@ -2904,14 +2904,6 @@ window.confirmClearCart = function() {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    const isPageAdmin = window.location.pathname.endsWith('admin.html');
-    
-    if (isPageAdmin) {
-        if (state.isLoggedIn) switchView('admin');
-        else switchView('login');
-        return;
-    }
-
     updateUIFromConfig();
     renderCategories();
     renderMenu();
@@ -2924,14 +2916,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Scroll to top AFTER everything is rendered (overrides browser scroll restore)
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'instant' }), 0);
     
+    const isPageAdmin = window.location.pathname.endsWith('admin.html');
     const savedView = sessionStorage.getItem('streetfeed_view');
-    if (savedView === 'admin' && state.isLoggedIn) switchView('admin');
-    else switchView('menu');
+    
+    if (isPageAdmin) {
+        if (state.isLoggedIn) switchView('admin');
+        else switchView('login');
+    } else {
+        if (savedView === 'admin' && state.isLoggedIn) switchView('admin');
+        else switchView('menu');
+    }
 
     // --- SINCRONIZACIÓN EN TIEMPO REAL (CROSS-TAB) ---
     // Escucha cambios en localStorage hechos desde otras pestañas (como el Admin)
     window.addEventListener('storage', (e) => {
-        if (window.location.pathname.endsWith('admin.html')) return;
         if (e.key && e.key.startsWith('streetfeed_')) {
             // Recargar datos actualizados
             state.dishes = JSON.parse(localStorage.getItem('streetfeed_dishes')) || state.dishes;

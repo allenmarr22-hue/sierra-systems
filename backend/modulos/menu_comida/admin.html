@@ -10,6 +10,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // ====== OPTIMIZACIÓN CRÍTICA DE LUCIDE ICONS (Super Admin / Admin Performance) ======
+        (function() {
+            function patchLucide() {
+                if (typeof window.lucide !== 'undefined' && window.lucide.createIcons && !window.lucide.createIcons.__isOptimized) {
+                    const orig = window.lucide.createIcons;
+                    window.lucide.createIcons = function(options) {
+                        if (!options) {
+                            const unrendered = document.querySelectorAll('[data-lucide]:not(svg)');
+                            if (unrendered.length === 0) return;
+                            return orig.call(this, { nodes: unrendered });
+                        }
+                        return orig.call(this, options);
+                    };
+                    window.lucide.createIcons.__isOptimized = true;
+                }
+            }
+            patchLucide();
+            document.addEventListener('DOMContentLoaded', patchLucide);
+        })();
+    </script>
     <!-- Image Compression -->
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
     
