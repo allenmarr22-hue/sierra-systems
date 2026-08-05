@@ -7147,15 +7147,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const iconName = isLight ? 'sun' : 'moon';
                 const iconColor = isLight ? '#d97706' : '#ffffff';
                 iconContainer.innerHTML = `<i data-lucide="${iconName}" id="theme-icon" style="color: ${iconColor} !important; width: 20px; height: 20px;"></i>`;
+                if (window.lucide) lucide.createIcons({ node: iconContainer });
             }
-            if (window.lucide) lucide.createIcons();
         };
 
         const savedTheme = localStorage.getItem('streetfeed_admin_theme') || 'dark';
         const isLightInitial = savedTheme === 'light';
         
-        // Set color-scheme on html element immediately so OS uses correct I-beam cursor color
         document.documentElement.style.colorScheme = isLightInitial ? 'light' : 'dark';
+        document.documentElement.classList.toggle('light-mode', isLightInitial);
+        document.body.classList.toggle('light-mode', isLightInitial);
         
         if (typeof applyTheme === 'function') {
             applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
@@ -7168,30 +7169,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 const current = localStorage.getItem('streetfeed_admin_theme') || 'dark';
                 const nextIsLight = current !== 'light';
                 
+                // 1. CAMBIO DE MODO INSTANTÁNEO (0 milisegundos sin bloqueo)
+                document.body.classList.toggle('light-mode', nextIsLight);
+                document.documentElement.classList.toggle('light-mode', nextIsLight);
                 localStorage.setItem('streetfeed_admin_theme', nextIsLight ? 'light' : 'dark');
-                
-                // Force color-scheme on html element so OS switches I-beam cursor color
                 document.documentElement.style.colorScheme = nextIsLight ? 'light' : 'dark';
-                
-                if (typeof applyTheme === 'function') {
-                    applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
-                }
                 
                 updateThemeUI(nextIsLight);
                 updateSoundUI();
-                
-                if (typeof window.reRenderCurrentStats === 'function') {
-                    window.reRenderCurrentStats();
-                }
-                if (typeof window.reRenderCurrentMyMetrics === 'function') {
-                    window.reRenderCurrentMyMetrics();
-                }
-                if (typeof renderDriverMetrics === 'function') {
-                    renderDriverMetrics();
-                }
-                if (typeof renderExpenses === 'function') {
-                    renderExpenses();
-                }
+
+                // 2. Re-renderizado diferido de gráficos pesados en segundo plano para no congelar la UI
+                requestAnimationFrame(() => {
+                    if (typeof applyTheme === 'function') {
+                        applyTheme(state.config.themeAccent, state.config.themeBg, state.config.themeLogo);
+                    }
+                    if (typeof window.reRenderCurrentStats === 'function') {
+                        window.reRenderCurrentStats();
+                    }
+                    if (typeof window.reRenderCurrentMyMetrics === 'function') {
+                        window.reRenderCurrentMyMetrics();
+                    }
+                    if (typeof renderDriverMetrics === 'function') {
+                        renderDriverMetrics();
+                    }
+                    if (typeof renderExpenses === 'function') {
+                        renderExpenses();
+                    }
+                });
             });
         }
     }

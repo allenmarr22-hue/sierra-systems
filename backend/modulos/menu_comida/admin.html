@@ -344,10 +344,15 @@
             } catch(e) {}
         })();
 
-        // ====== 3. PREVENCIÓN DE PARPADEO DEL TEMA ACCENT ======
+        // ====== 3. PREVENCIÓN DE PARPADEO MODO DÍA / NOCHE & TEMA ACCENT ======
         (function() {
             document.documentElement.classList.add('is-admin-route');
             try {
+                const savedTheme = localStorage.getItem('streetfeed_admin_theme') || 'dark';
+                if (savedTheme === 'light') {
+                    document.documentElement.classList.add('light-mode');
+                    document.documentElement.style.colorScheme = 'light';
+                }
                 const stateRaw = localStorage.getItem('streetfeed_state');
                 if (stateRaw) {
                     const state = JSON.parse(stateRaw);
@@ -423,6 +428,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
+    <script>
+        if (localStorage.getItem('streetfeed_admin_theme') === 'light') {
+            document.body.classList.add('light-mode');
+        }
+    </script>
     <div id="app">
         <!-- Rotate Phone Overlay (solo teléfonos en vertical) -->
         <div id="rotate-overlay" class="rotate-overlay">
