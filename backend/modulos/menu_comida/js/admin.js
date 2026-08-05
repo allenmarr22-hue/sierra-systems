@@ -210,7 +210,7 @@ function openProductKardexModal(dishId) {
 }
 
 function openStockAdjustModal(dishId) {
-    const dish = state.dishes.find(d => d.id === dishId);
+    const dish = state.dishes.find(d => String(d.id) === String(dishId));
     if (!dish) return;
 
     document.getElementById('stock-adjust-item-id').value = dish.id;
@@ -1146,7 +1146,7 @@ function renderAdmin(openCatIds = null) {
     });
 
     container.querySelectorAll('.edit-item').forEach(btn => {
-        btn.addEventListener('click', () => openAdminModal(parseInt(btn.dataset.id)));
+        btn.addEventListener('click', () => openAdminModal(btn.dataset.id));
     });
 
     container.querySelectorAll('.delete-item').forEach(btn => {
@@ -1326,6 +1326,30 @@ function prefillConfigForm() {
     
     // Render business type selector
     renderBizTypeSelector();
+
+    ensureConfigSubtabVisible();
+}
+
+function ensureConfigSubtabVisible() {
+    const configTab = document.getElementById('config-tab');
+    if (!configTab) return;
+
+    let activeBtn = configTab.querySelector('.subtab-btn:not(.promo-subtab-btn):not(.inventory-subtab-btn).active');
+    if (!activeBtn) {
+        activeBtn = configTab.querySelector('.subtab-btn:not(.promo-subtab-btn):not(.inventory-subtab-btn)');
+        if (activeBtn) activeBtn.classList.add('active');
+    }
+    if (activeBtn) {
+        const secId = activeBtn.dataset.section;
+        configTab.querySelectorAll('.config-sub-section').forEach(sec => sec.classList.add('hidden'));
+        const targetSec = document.getElementById(secId);
+        if (targetSec) {
+            targetSec.classList.remove('hidden');
+        }
+        if (secId === 'appearance-sec' && typeof renderAppearancePanel === 'function') {
+            renderAppearancePanel();
+        }
+    }
 }
 
 /* ================================================
@@ -1851,6 +1875,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'domicilios-tab') {
                 if (typeof renderDriverDeliveriesSection === 'function') renderDriverDeliveriesSection();
             }
+            if (tabId === 'config-tab') {
+                if (typeof prefillConfigForm === 'function') prefillConfigForm();
+                if (typeof ensureConfigSubtabVisible === 'function') ensureConfigSubtabVisible();
+            }
         });
     });
 
@@ -2122,7 +2150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.adjust-stock-btn');
         if (btn) {
-            const dishId = parseInt(btn.dataset.id);
+            const dishId = btn.dataset.id;
             openStockAdjustModal(dishId);
         }
     });
@@ -2197,19 +2225,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Config Sub-tabs navigation
-    document.querySelectorAll('.subtab-btn:not(.promo-subtab-btn)').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const sectionId = btn.dataset.section;
-            document.querySelectorAll('.subtab-btn:not(.promo-subtab-btn)').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.config-sub-section').forEach(sec => sec.classList.add('hidden'));
-            document.getElementById(sectionId).classList.remove('hidden');
-            
-            // Trigger specific renders
-            if (sectionId === 'appearance-sec') renderAppearancePanel();
+    // Config Sub-tabs navigation (scoped to config-tab only)
+    const configTabEl = document.getElementById('config-tab');
+    if (configTabEl) {
+        configTabEl.querySelectorAll('.subtab-btn:not(.promo-subtab-btn):not(.inventory-subtab-btn)').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sectionId = btn.dataset.section;
+                configTabEl.querySelectorAll('.subtab-btn:not(.promo-subtab-btn):not(.inventory-subtab-btn)').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                configTabEl.querySelectorAll('.config-sub-section').forEach(sec => sec.classList.add('hidden'));
+                const targetEl = document.getElementById(sectionId);
+                if (targetEl) targetEl.classList.remove('hidden');
+                
+                // Trigger specific renders
+                if (sectionId === 'appearance-sec') renderAppearancePanel();
+            });
         });
-    });
+    }
 
     // Promo Sub-tabs navigation
     document.querySelectorAll('.promo-subtab-btn').forEach(btn => {
@@ -3305,7 +3337,7 @@ function setupDiscountAutocomplete() {
 
         dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
             item.onclick = () => {
-                const dish = state.dishes.find(d => d.id === parseInt(item.dataset.id));
+                const dish = state.dishes.find(d => String(d.id) === String(item.dataset.id));
                 if (dish) selectDish(dish);
             };
         });
@@ -6158,7 +6190,7 @@ function createOrderCard(order) {
         </div>` : '';
 
     return `
-        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="position: relative; display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 0.75rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); height: 72px; overflow: hidden; padding-right: ${isHistory ? '2.5rem' : '4rem'};">
+        <div class="order-card-pro ${statusClass}" data-id="${order.id}" style="position: relative; display: grid; grid-template-columns: ${gridCols}; align-items: center; background: var(--surface-light); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 0.75rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); height: 72px; overflow: hidden;">
 
 
             <!-- 1. Identidad -->
@@ -6199,7 +6231,7 @@ function createOrderCard(order) {
             </div>
 
             <!-- 5. Acciones -->
-            <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0 0.5rem; justify-content: flex-end; width: 100%; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; justify-self: end; margin-right: 0.75rem;">
                 ${actionsHtml}
             </div>
 
