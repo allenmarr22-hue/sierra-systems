@@ -685,10 +685,6 @@
                     <!-- filled by JS -->
                 </div>
 
-                <div id="items-list">
-                    <!-- filled by JS -->
-                </div>
-
                 <div class="total-row">
                     <span class="total-lbl">Total a Pagar</span>
                     <span class="total-val" id="total-val">$0</span>
@@ -894,15 +890,6 @@
         `;
 
         if (window.lucide) lucide.createIcons();
-
-        // Items
-        const items = targetOrder.items || [];
-        document.getElementById('items-list').innerHTML = items.map(it => `
-            <div class="item-row">
-                <span class="item-name">${esc(it.qty || 1)}× ${esc(it.name)}</span>
-                <span class="item-price">$${((it.qty || 1) * (it.price || 0)).toLocaleString('es-CO')}</span>
-            </div>
-        `).join('') || '<div class="item-row" style="color:var(--text-dim);">Sin items registrados</div>';
 
         // Total
         document.getElementById('total-val').textContent = `$${(targetOrder.total || 0).toLocaleString('es-CO')}`;
