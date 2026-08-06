@@ -599,7 +599,7 @@
                 <div id="rating-msg">¡Muchas gracias por tu calificación! 🙌</div>
             </div>
 
-            <a href="./index.html" class="btn-primary">🍔 Realizar Otro Pedido</a>
+            <a href="./index.html" class="btn-primary" id="btn-volver-menu">🍔 Realizar Otro Pedido</a>
         </div>
 
         <!-- STEPPER CARD -->
@@ -708,6 +708,18 @@
         if (window.lucide) lucide.createIcons();
         loadConfig();
         loadOrderData();
+
+        // Fix the "Realizar Otro Pedido" link to carry the instanceId so the menu
+        // doesn't enter Demo mode when coming back from rastreo.html
+        const btnVolver = document.getElementById('btn-volver-menu');
+        if (btnVolver) {
+            const currentParams = new URLSearchParams(window.location.search);
+            const instanceId = currentParams.get('instanceId');
+            const menuUrl = instanceId
+                ? `./index.html?instanceId=${encodeURIComponent(instanceId)}`
+                : './index.html';
+            btnVolver.href = menuUrl;
+        }
 
         // Sync in real-time when admin changes order status in another tab
         window.addEventListener('storage', (e) => {
