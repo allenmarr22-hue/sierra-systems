@@ -527,20 +527,34 @@
 
             document.getElementById('total-val').textContent = `$${(targetOrder.total || 0).toLocaleString('es-CO')}`;
 
-            // Update Stepper Pipeline
-            updateStepper(targetOrder.status || 'pending');
+            // Handle Map visibility: map is shown ONLY for delivery orders
+            const delType = targetOrder.customer?.deliveryType || targetOrder.deliveryType || 'delivery';
+            const mapWrapper = document.getElementById('map-wrapper');
+            if (mapWrapper) {
+                mapWrapper.style.display = (delType === 'delivery') ? 'block' : 'none';
+            }
 
-            // Live Poll Driver GPS
-            pollDriverLocation(activeId);
-            if (!locationPollTimer) {
-                locationPollTimer = setInterval(() => pollDriverLocation(activeId), 3000);
+            // Update Stepper Pipeline
+            updateStepper(targetOrder.status || 'pending', delType);
+
+            // Live Poll Driver GPS (Only if delivery)
+            if (delType === 'delivery') {
+                pollDriverLocation(activeId);
+                if (!locationPollTimer) {
+                    locationPollTimer = setInterval(() => pollDriverLocation(activeId), 3000);
+                }
             }
         }
 
-        function updateStepper(status) {
+        function updateStepper(status, delType = 'delivery') {
             document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active', 'completed'));
             const statusTag = document.getElementById('current-status-tag');
             const celebrationCard = document.getElementById('celebration-card');
+
+            const step3Label = document.querySelector('#step-3 .step-label');
+            if (step3Label) {
+                step3Label.textContent = (delType === 'delivery') ? 'En Camino' : (delType === 'takeout' ? '¡Listo!' : 'En Mesa');
+            }
 
             const s1 = document.getElementById('step-1');
             const s2 = document.getElementById('step-2');
@@ -552,13 +566,13 @@
                 s2.classList.add('completed');
                 s3.classList.add('completed');
                 s4.classList.add('completed');
-                if (statusTag) statusTag.textContent = "¡Entregado! 🥳";
+                if (statusTag) statusTag.textContent = "¡Completado! 🥳";
                 if (celebrationCard) celebrationCard.style.display = 'block';
             } else if (status === 'dispatched' || status === 'on-the-way') {
                 s1.classList.add('completed');
                 s2.classList.add('completed');
                 s3.classList.add('active');
-                if (statusTag) statusTag.textContent = "En Camino 🛵";
+                if (statusTag) statusTag.textContent = (delType === 'delivery') ? "En Camino 🛵" : (delType === 'takeout' ? "¡Listo para Retirar! 🛍️" : "¡Servido en Mesa! 🍽️");
                 if (celebrationCard) celebrationCard.style.display = 'none';
             } else if (status === 'confirmed' || status === 'preparing') {
                 s1.classList.add('completed');
