@@ -6332,20 +6332,33 @@ window.updateOrderStatus = function(id, newStatus) {
     );
 };
 
-// Desbloqueo automático del canal de audio WebAudio con cualquier interacción del usuario
-let _globalAudioUnlocked = false;
-document.addEventListener('click', () => {
-    if (!_globalAudioUnlocked) {
-        _globalAudioUnlocked = true;
+// Instancia única compartida de AudioContext para evitar bloqueos de autoplay en Chrome/Edge
+let _sharedAudioCtx = null;
+
+function _getSharedAudioCtx() {
+    if (!_sharedAudioCtx) {
         try {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
-                const ctx = new AudioCtx();
-                if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+                _sharedAudioCtx = new AudioCtx();
             }
         } catch(e) {}
     }
-}, { passive: true });
+    if (_sharedAudioCtx && _sharedAudioCtx.state === 'suspended') {
+        _sharedAudioCtx.resume().catch(() => {});
+    }
+    return _sharedAudioCtx;
+}
+
+// Desbloqueo del canal de audio WebAudio con cualquier interacción del usuario
+['click', 'touchstart', 'pointerdown', 'keydown'].forEach(evtType => {
+    document.addEventListener(evtType, () => {
+        const ctx = _getSharedAudioCtx();
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+    }, { passive: true });
+});
 
 // --- AUDIO NOTIFICATIONS & THERMAL POS TICKET PRINTING ---
 window.isSoundEnabled = function() {
@@ -6356,39 +6369,42 @@ window.isSoundEnabled = function() {
 window.playNewOrderChime = function() {
     if (!window.isSoundEnabled()) return;
     try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
+        const ctx = _getSharedAudioCtx();
+        if (!ctx) return;
         if (ctx.state === 'suspended') {
             ctx.resume().catch(() => {});
         }
         const now = ctx.currentTime;
-        [1046.50, 1567.98].forEach((freq, idx) => {
-            const startTime = now + (idx * 0.18);
+        // 3-tone bright chime: G5 (783.99 Hz), C6 (1046.50 Hz), E6 (1318.51 Hz)
+        [783.99, 1046.50, 1318.51].forEach((freq, idx) => {
+            const startTime = now + (idx * 0.12);
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, startTime);
-            gain.gain.setValueAtTime(0.3, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.8);
+            gain.gain.setValueAtTime(0.5, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.6);
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start(startTime);
-            osc.stop(startTime + 0.85);
+            osc.stop(startTime + 0.65);
         });
     } catch (e) {
         console.warn("Audio chime error:", e);
     }
+
+    try {
+        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+    } catch(e) {}
 };
 
 window.playDispatchChime = function() {
     if (!window.isSoundEnabled()) return;
     try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
+        const ctx = _getSharedAudioCtx();
+        if (!ctx) return;
         if (ctx.state === 'suspended') {
-            ctx.resume();
+            ctx.resume().catch(() => {});
         }
         const now = ctx.currentTime;
 
