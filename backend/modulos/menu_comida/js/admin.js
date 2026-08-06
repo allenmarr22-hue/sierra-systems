@@ -11255,46 +11255,66 @@ function isAssignmentForDriver(assignment, driver) {
     return false;
 }
 
-function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = null) {
-    const assignments = getOrderAssignments();
-    const existing = assignments[orderId];
+function claimDeliveryOrder(orderId, targetDriverName = null, targetDriverId = null, skipConfirm = false) {
     const driver = (targetDriverName && targetDriverId)
         ? { name: targetDriverName, id: targetDriverId }
         : getCurrentDriverInfo();
 
-    if (existing && !isAssignmentForDriver(existing, driver) && !targetDriverName) {
-        const elapsed = existing.claimedAt
-            ? Math.round((Date.now() - new Date(existing.claimedAt).getTime()) / 60000)
-            : 0;
-        if (typeof showAdminNotification === 'function') {
-            showAdminNotification(`❌ Ya reclamado por ${existing.driverName} (hace ${elapsed} min)`, 'error');
+    const doClaim = () => {
+        const assignments = getOrderAssignments();
+        const existing = assignments[orderId];
+
+        if (existing && !isAssignmentForDriver(existing, driver) && !targetDriverName) {
+            const elapsed = existing.claimedAt
+                ? Math.round((Date.now() - new Date(existing.claimedAt).getTime()) / 60000)
+                : 0;
+            if (typeof showAdminNotification === 'function') {
+                showAdminNotification(`❌ Ya reclamado por ${existing.driverName} (hace ${elapsed} min)`, 'error');
+            }
+            return;
         }
+
+        assignments[orderId] = {
+            driverName: driver.name,
+            driverId: driver.id,
+            claimedAt: new Date().toISOString()
+        };
+        saveOrderAssignments(assignments);
+
+        // Stamp deliveredBy on the order so driver history works, keeping original attendedBy if present
+        const allOrders = getOrders();
+        const claimIdx = allOrders.findIndex(o => String(o.id || o.orderId) === String(orderId));
+        if (claimIdx !== -1 && driver.name) {
+            if (!allOrders[claimIdx].attendedBy) {
+                allOrders[claimIdx].attendedBy = driver.name;
+            }
+            allOrders[claimIdx].deliveredBy = driver.name;
+            localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+        }
+
+        if (typeof showAdminNotification === 'function') {
+            showAdminNotification(`🛵 Pedido #${orderId} asignado a ${driver.name}`, 'success');
+        }
+        renderDriverDeliveriesSection();
+        if (typeof window.renderOrders === 'function') window.renderOrders();
+    };
+
+    if (skipConfirm || (targetDriverName && targetDriverId)) {
+        doClaim();
         return;
     }
 
-    assignments[orderId] = {
-        driverName: driver.name,
-        driverId: driver.id,
-        claimedAt: new Date().toISOString()
-    };
-    saveOrderAssignments(assignments);
-
-    // Stamp deliveredBy on the order so driver history works, keeping original attendedBy if present
-    const allOrders = getOrders();
-    const claimIdx = allOrders.findIndex(o => String(o.id || o.orderId) === String(orderId));
-    if (claimIdx !== -1 && driver.name) {
-        if (!allOrders[claimIdx].attendedBy) {
-            allOrders[claimIdx].attendedBy = driver.name;
-        }
-        allOrders[claimIdx].deliveredBy = driver.name;
-        localStorage.setItem('streetfeed_orders', JSON.stringify(allOrders));
+    if (typeof showConfirm === 'function') {
+        showConfirm(
+            `¿Deseas reclamar el pedido #${orderId} para realizar la entrega a domicilio?`,
+            doClaim,
+            '🛵 Sí, Yo lo llevo',
+            'linear-gradient(135deg, #10b981, #059669)',
+            'Confirmar Asignación'
+        );
+    } else if (confirm(`¿Reclamar pedido #${orderId}?`)) {
+        doClaim();
     }
-
-    if (typeof showAdminNotification === 'function') {
-        showAdminNotification(`🛵 Pedido #${orderId} asignado a ${driver.name}`, 'success');
-    }
-    renderDriverDeliveriesSection();
-    if (typeof window.renderOrders === 'function') window.renderOrders();
 }
 
 function getAvailableDrivers() {
