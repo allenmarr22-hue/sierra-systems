@@ -5713,12 +5713,17 @@ window.renderOrders = function() {
 
     const isDriverRole = (typeof currentEmployeeRole !== 'undefined' && currentEmployeeRole === 'domiciliario');
 
-    if (!isDriverRole && window._prevIncomingCount !== undefined && incoming.length > window._prevIncomingCount) {
-        if (typeof window.playNewOrderChime === 'function') {
-            window.playNewOrderChime();
+    // ── Detección de nuevos pedidos por ID (más confiable que comparar conteo) ──
+    const currentPendingIds = new Set(incoming.map(o => String(o.id || o.orderId || '')));
+    if (!isDriverRole && window._prevPendingIds !== undefined) {
+        const hasNewOrder = [...currentPendingIds].some(id => id && !window._prevPendingIds.has(id));
+        if (hasNewOrder) {
+            if (typeof window.playNewOrderChime === 'function') window.playNewOrderChime();
+            if (typeof showAdminNotification === 'function') showAdminNotification('🔔 ¡Nuevo pedido recibido!', 'success');
         }
     }
-    window._prevIncomingCount = incoming.length;
+    window._prevPendingIds = currentPendingIds;
+    window._prevIncomingCount = incoming.length; // keep backward compat
 
     // Chime for domiciliario: play when a new dispatched delivery arrives in their queue
     const dispatchedDeliveries = unpaid.filter(o => {
@@ -7257,7 +7262,28 @@ function generatePDF(monthIdx) {
 // Inicializar sistema de pedidos y herramientas de historial
 document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname.endsWith('admin.html')) {
+        // Pre-seed the ID set BEFORE first render so we don't chime for existing pending orders on load
+        const _initialPending = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]')
+            .filter(o => o.status === 'pending' || !o.status);
+        window._prevPendingIds = new Set(_initialPending.map(o => String(o.id || o.orderId || '')));
+        window._prevIncomingCount = _initialPending.length;
+
         renderOrders();
+
+        // ── Polling de respaldo: re-verifica localStorage cada 4s en caso de que
+        //    el 'storage' event no se haya disparado (ej: mismo tab, reconexión, etc.) ──
+        setInterval(() => {
+            if (typeof window.renderOrders === 'function') {
+                // Solo re-renderiza si el número de pending realmente cambió
+                try {
+                    const _latest = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]')
+                        .filter(o => o.status === 'pending' || !o.status).length;
+                    if (_latest !== window._prevIncomingCount) {
+                        window.renderOrders();
+                    }
+                } catch(e) {}
+            }
+        }, 4000);
 
         // Listeners Herramientas Historial
         const dateFilter = document.getElementById('history-date-filter');

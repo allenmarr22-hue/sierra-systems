@@ -2525,7 +2525,7 @@ function initCheckout() {
         // Guardar en el historial global (para que el Admin lo vea)
         state.orders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
         state.orders.push(orderData);
-        saveStateToLocal();
+        saveStateToLocalNow(); // Inmediato — sin debounce para que el Admin lo reciba al instante
 
         // Preparar mensaje de WhatsApp
         sendOrderToWhatsApp(orderData);
