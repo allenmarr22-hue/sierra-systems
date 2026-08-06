@@ -1910,25 +1910,30 @@ document.addEventListener('DOMContentLoaded', () => {
             state.config.heroDesc = document.getElementById('conf-hero-desc').value;
             state.config.heroTime = document.getElementById('conf-hero-time').value;
             state.config.heroRating = document.getElementById('conf-hero-rating').value;
+            state.config.whatsappNumber = (document.getElementById('conf-whatsapp') || {}).value || state.config.whatsappNumber;
+
             const addrEl = document.getElementById('conf-address');
             if (addrEl) state.config.address = addrEl.value;
 
             const deptEl = document.getElementById('conf-department');
             if (deptEl) state.config.businessDepartment = deptEl.value.trim();
 
-            const cityEl = document.getElementById('conf-city');
-            if (cityEl) {
-                const selectedCity = cityEl.value.trim();
+            // Read city from hidden input (custom combobox stores value there)
+            const cityHidden = document.getElementById('conf-city-value');
+            const cityEl    = document.getElementById('conf-city');
+            const selectedCity = ((cityHidden && cityHidden.value) || (cityEl && cityEl.value) || '').trim();
+            if (selectedCity) {
                 state.config.businessCity = selectedCity;
                 state.config.city = selectedCity;
-
-                // Lookup GPS coordinates automatically for selected city if available
-                const matchedCoords = getCoordinatesForCityName(selectedCity);
+                const matchedCoords = typeof getCoordinatesForCityName === 'function' ? getCoordinatesForCityName(selectedCity) : null;
                 if (matchedCoords) {
                     state.config.storeLat = matchedCoords.lat;
                     state.config.storeLng = matchedCoords.lng;
                 }
             }
+
+            const footerEl = document.getElementById('conf-footer');
+            if (footerEl) state.config.footerText = footerEl.value;
             
             const waTemplateEl = document.getElementById('conf-wa-template');
             if (waTemplateEl) state.config.waTemplateOrder = waTemplateEl.value;
@@ -13243,41 +13248,109 @@ function getCoordinatesForCityName(cityName) {
     return null;
 }
 
+function _buildCombobox(inputEl, dropdownEl, items, onSelect) {
+    let active = -1;
+    function show(list) {
+        dropdownEl.innerHTML = '';
+        if (!list.length) { dropdownEl.style.display = 'none'; return; }
+        list.forEach((item, i) => {
+            const div = document.createElement('div');
+            div.className = 'col-combo-item';
+            div.textContent = item;
+            div.addEventListener('mousedown', (e) => { e.preventDefault(); select(item); });
+            dropdownEl.appendChild(div);
+        });
+        dropdownEl.style.display = 'block';
+        active = -1;
+    }
+    function hide() { dropdownEl.style.display = 'none'; active = -1; }
+    function select(val) { inputEl.value = val; hide(); if (onSelect) onSelect(val); }
+
+    inputEl.addEventListener('input', () => {
+        const q = inputEl.value.toLowerCase();
+        const filtered = items.filter(i => i.toLowerCase().includes(q));
+        show(q ? filtered : items);
+    });
+    inputEl.addEventListener('focus', () => {
+        const q = inputEl.value.toLowerCase();
+        show(q ? items.filter(i => i.toLowerCase().includes(q)) : items);
+    });
+    inputEl.addEventListener('blur', () => setTimeout(hide, 150));
+    inputEl.addEventListener('keydown', (e) => {
+        const rows = dropdownEl.querySelectorAll('.col-combo-item');
+        if (!rows.length) return;
+        if (e.key === 'ArrowDown') { active = Math.min(active + 1, rows.length - 1); }
+        else if (e.key === 'ArrowUp') { active = Math.max(active - 1, 0); }
+        else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); select(rows[active].textContent); return; }
+        else if (e.key === 'Escape') { hide(); return; }
+        rows.forEach((r, i) => r.classList.toggle('active', i === active));
+        if (active >= 0) rows[active].scrollIntoView({ block: 'nearest' });
+    });
+    dropdownEl.style.display = 'none';
+}
+
 function initColombiaLocationsDropdowns() {
-    const deptDl = document.getElementById('dl-departments');
-    const cityDl = document.getElementById('dl-cities');
-    const deptInput = document.getElementById('conf-department');
-    const cityInput = document.getElementById('conf-city');
-    if (!deptDl || !cityDl || !deptInput || !cityInput) return;
+    const deptInput  = document.getElementById('conf-department');
+    const cityInput  = document.getElementById('conf-city');
+    if (!deptInput || !cityInput) return;
 
-    // Populate departments datalist
-    deptDl.innerHTML = Object.keys(COLOMBIA_LOCATIONS_DATA)
-        .map(dept => `<option value="${dept}">${dept}</option>`).join('');
-
-    const updateCitiesDatalist = () => {
-        const selectedDept = deptInput.value.trim();
-        let cities = [];
-        const matchedKey = Object.keys(COLOMBIA_LOCATIONS_DATA).find(
-            k => k.toLowerCase() === selectedDept.toLowerCase()
-        );
-        if (matchedKey) {
-            cities = COLOMBIA_LOCATIONS_DATA[matchedKey].cities;
-        } else {
-            const allCities = new Set();
-            Object.values(COLOMBIA_LOCATIONS_DATA).forEach(item => item.cities.forEach(c => allCities.add(c)));
-            cities = Array.from(allCities);
+    // Ensure wrapper is relative positioned
+    [deptInput, cityInput].forEach(inp => {
+        if (inp.parentElement && getComputedStyle(inp.parentElement).position === 'static') {
+            inp.parentElement.style.position = 'relative';
         }
-        cityDl.innerHTML = cities.map(city => `<option value="${city}">${city}</option>`).join('');
-    };
+    });
 
-    deptInput.addEventListener('input', updateCitiesDatalist);
-    deptInput.addEventListener('change', updateCitiesDatalist);
-    updateCitiesDatalist();
+    // Create dropdown containers
+    let deptDrop = document.getElementById('col-combo-dept');
+    if (!deptDrop) {
+        deptDrop = document.createElement('div');
+        deptDrop.id = 'col-combo-dept';
+        deptDrop.className = 'col-combo-dropdown';
+        deptInput.parentElement.appendChild(deptDrop);
+    }
+    let cityDrop = document.getElementById('col-combo-city');
+    if (!cityDrop) {
+        cityDrop = document.createElement('div');
+        cityDrop.id = 'col-combo-city';
+        cityDrop.className = 'col-combo-dropdown';
+        cityInput.parentElement.appendChild(cityDrop);
+    }
+
+    // Hidden input to store confirmed city value
+    let cityHidden = document.getElementById('conf-city-value');
+    if (!cityHidden) {
+        cityHidden = document.createElement('input');
+        cityHidden.type = 'hidden';
+        cityHidden.id = 'conf-city-value';
+        cityInput.parentElement.appendChild(cityHidden);
+    }
+
+    const depts = Object.keys(COLOMBIA_LOCATIONS_DATA);
+
+    function getCitiesFor(dept) {
+        const key = depts.find(k => k.toLowerCase() === dept.toLowerCase());
+        if (key) return COLOMBIA_LOCATIONS_DATA[key].cities;
+        const all = new Set();
+        Object.values(COLOMBIA_LOCATIONS_DATA).forEach(d => d.cities.forEach(c => all.add(c)));
+        return Array.from(all).sort();
+    }
+
+    _buildCombobox(deptInput, deptDrop, depts, (val) => {
+        // When a department is chosen, rebuild city combobox
+        const cities = getCitiesFor(val);
+        _buildCombobox(cityInput, cityDrop, cities, (city) => { cityHidden.value = city; });
+        cityInput.value = '';
+        cityHidden.value = '';
+    });
+
+    const initialCities = getCitiesFor(deptInput.value);
+    _buildCombobox(cityInput, cityDrop, initialCities, (city) => { cityHidden.value = city; });
+    cityHidden.value = cityInput.value;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     initColombiaLocationsDropdowns();
 });
-
 
 

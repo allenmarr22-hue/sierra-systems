@@ -5014,3 +5014,78 @@ textarea:focus,
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
     outline: none !important;
 }
+
+/* ───── COLOMBIA LOCATION COMBOBOX ───── */
+.col-combo-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: #1a1f2e;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    animation: comboFadeIn 0.15s ease;
+}
+
+@keyframes comboFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.col-combo-dropdown::-webkit-scrollbar {
+    width: 5px;
+}
+.col-combo-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+.col-combo-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+    border-radius: 99px;
+}
+.col-combo-dropdown::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.22);
+}
+
+.col-combo-item {
+    padding: 0.48rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+    border-radius: 6px;
+    margin: 2px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.col-combo-item:hover,
+.col-combo-item.active {
+    background: rgba(247, 147, 30, 0.14);
+    color: #f7931e;
+}
+
+body.light-mode .col-combo-dropdown {
+    background: #f8fafc;
+    border-color: rgba(0,0,0,0.08);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+}
+
+body.light-mode .col-combo-item {
+    color: #374151;
+}
+
+body.light-mode .col-combo-item:hover,
+body.light-mode .col-combo-item.active {
+    background: rgba(2, 132, 199, 0.1);
+    color: #0284c7;
+}
+
