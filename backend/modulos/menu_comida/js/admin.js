@@ -1267,8 +1267,8 @@ function prefillConfigForm() {
         'conf-whatsapp': state.config.whatsappNumber,
         'conf-tagline': state.config.tagline,
         'conf-address': state.config.address || '',
-        'conf-department': state.config.businessDepartment || 'La Guajira',
-        'conf-city': state.config.businessCity || state.config.city || 'Riohacha',
+        'conf-department': state.config.businessDepartment !== undefined ? state.config.businessDepartment : '',
+        'conf-city': state.config.businessCity !== undefined ? state.config.businessCity : (state.config.city !== undefined ? state.config.city : ''),
         'conf-instagram': state.config.instagram,
         'conf-facebook': state.config.facebook,
         'conf-hero-t1': state.config.heroTitleT1,
@@ -1921,10 +1921,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Read city from hidden input (custom combobox stores value there)
             const cityHidden = document.getElementById('conf-city-value');
             const cityEl    = document.getElementById('conf-city');
-            const selectedCity = ((cityHidden && cityHidden.value) || (cityEl && cityEl.value) || '').trim();
+            const selectedCity = ((cityEl && cityEl.value) || (cityHidden && cityHidden.value) || '').trim();
+            state.config.businessCity = selectedCity;
+            state.config.city = selectedCity;
+            
             if (selectedCity) {
-                state.config.businessCity = selectedCity;
-                state.config.city = selectedCity;
                 const matchedCoords = typeof getCoordinatesForCityName === 'function' ? getCoordinatesForCityName(selectedCity) : null;
                 if (matchedCoords) {
                     state.config.storeLat = matchedCoords.lat;
