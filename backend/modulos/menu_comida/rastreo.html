@@ -708,8 +708,8 @@
     let targetOrder = null;
     let locationTimer = null;
     let currentRating = 0;
-    let storeLat = 10.9685;   // Fallback: Barranquilla
-    let storeLng = -74.7813;
+    let storeLat = 11.5444;   // Default: Riohacha, La Guajira
+    let storeLng = -72.9072;
 
     // ───── UTILS ─────
     function esc(str) {
@@ -805,6 +805,18 @@
         storeMarker = L.marker([storeLat, storeLng], { icon: storeIcon })
             .addTo(map)
             .bindPopup('<b>STREETFEED</b><br>📍 Nuestro Restaurante');
+
+        // Optional: Auto-detect current browser position in Riohacha if no admin custom coordinates set
+        if (navigator.geolocation && (!localStorage.getItem('streetfeed_config') || !JSON.parse(localStorage.getItem('streetfeed_config') || '{}').storeLat)) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                storeLat = pos.coords.latitude;
+                storeLng = pos.coords.longitude;
+                if (map && storeMarker) {
+                    map.setView([storeLat, storeLng], 15);
+                    storeMarker.setLatLng([storeLat, storeLng]);
+                }
+            }, (err) => {}, { timeout: 3000 });
+        }
     }
 
     // ───── LOAD ORDER DATA ─────
@@ -838,8 +850,7 @@
         if (!targetOrder) {
             targetOrder = {
                 id: orderId || 'ORD-1',
-                customer: { name: 'Cliente', address: 'Dirección Registrada', payment: 'Efectivo', deliveryType: 'delivery' },
-                items: [{ name: 'Pedido de Muestra', qty: 1, price: 25000 }],
+                customer: { name: 'Carlos Mendoza', address: 'Calle 15 # 12-45, Riohacha', phone: '300 123 4567', payment: 'Efectivo', deliveryType: 'delivery' },
                 total: 25000,
                 status: 'pending',
                 date: new Date().toISOString()
