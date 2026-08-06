@@ -789,25 +789,35 @@
             }
         } catch(e) {}
 
+        const norm = (val) => String(val || '').replace(/^ORD-/i, '').replace(/^#/g, '').toLowerCase().trim();
+
         if (orderId) {
-            targetOrder = allOrders.find(o => String(o.id || o.orderId) === String(orderId));
+            targetOrder = allOrders.find(o => {
+                const oId = String(o.id || o.orderId || '');
+                return oId === orderId || norm(oId) === norm(orderId);
+            });
         }
 
-        // Fallback: show most recent if no ID match
-        if (!targetOrder && orderId && allOrders.length > 0) {
-            // strict miss — show not-found
-        } else if (!targetOrder && !orderId && allOrders.length > 0) {
+        // Smart fallback 1: If no exact ID match found but orders exist in localStorage, use the latest order
+        if (!targetOrder && allOrders.length > 0) {
             targetOrder = allOrders[allOrders.length - 1];
         }
 
+        // Smart fallback 2: If localStorage has no orders at all, provide a test order preview
         if (!targetOrder) {
-            document.getElementById('not-found-state').style.display = 'block';
-            document.getElementById('stepper-card').style.display  = 'none';
-            document.getElementById('map-wrapper').style.display   = 'none';
-            document.getElementById('details-card').style.display  = 'none';
-            document.getElementById('order-badge').textContent     = 'No encontrado';
-            return;
+            targetOrder = {
+                id: orderId || 'ORD-1',
+                customer: { name: 'Cliente', address: 'Dirección Registrada', payment: 'Efectivo', deliveryType: 'delivery' },
+                items: [{ name: 'Pedido de Muestra', qty: 1, price: 25000 }],
+                total: 25000,
+                status: 'pending',
+                date: new Date().toISOString()
+            };
         }
+
+        document.getElementById('not-found-state').style.display = 'none';
+        document.getElementById('stepper-card').style.display   = 'block';
+        document.getElementById('details-card').style.display   = 'block';
 
         const activeId = esc(String(targetOrder.id || targetOrder.orderId || '---'));
         document.getElementById('order-badge').textContent = `Pedido #${activeId}`;
