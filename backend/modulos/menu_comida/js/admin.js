@@ -11783,7 +11783,7 @@ function buildDeliveryCard(order, idx, isDriver, assignments) {
                             <button onclick="claimDeliveryOrder('${escapeHtml(orderId)}')"
                                 style="padding:0.82rem 0.5rem;border-radius:12px;font-weight:900;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.4);transition:filter 0.2s;"
                                 onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
-                                <i data-lucide="hand" style="width:17px;height:17px;"></i> ✋ Yo lo llevo
+                                <i data-lucide="hand" style="width:17px;height:17px;"></i> Yo lo llevo
                             </button>
                             <button onclick="openDriverMapModal('${escapeHtml(orderId)}','${escapeHtml(customerName)}','${escapeHtml(address)}')"
                                 style="padding:0.82rem 0.5rem;border-radius:12px;font-size:0.88rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:0.4rem;background:linear-gradient(135deg,#0284c7,#0369a1);color:#ffffff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(2,132,199,0.35);transition:filter 0.2s;"
