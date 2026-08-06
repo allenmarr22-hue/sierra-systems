@@ -3730,6 +3730,11 @@ if (!localStorage.getItem('streetfeed_orders')) {
 let _ordersCache = null;
 let _ordersCacheValid = false;
 
+window.invalidateOrdersCache = function() {
+    _ordersCache = null;
+    _ordersCacheValid = false;
+};
+
 // Interceptor: invalida el cache automáticamente cada vez que se escribe streetfeed_orders
 (function() {
     if (window._ordersCacheInterceptorInstalled) return;
@@ -3738,8 +3743,7 @@ let _ordersCacheValid = false;
     Object.defineProperty(localStorage, 'setItem', {
         value: function(key, value) {
             if (key && (key === 'streetfeed_orders' || key.startsWith('streetfeed_orders_'))) {
-                _ordersCache = null;
-                _ordersCacheValid = false;
+                window.invalidateOrdersCache();
             }
             return origSetItem(key, value);
         },
@@ -4697,6 +4701,10 @@ document.querySelectorAll('#driver-month-dropdown li').forEach(li => {
 
 window.addEventListener('storage', (e) => {
     if (e.key && e.key.startsWith('streetfeed_')) {
+        if (typeof window.invalidateOrdersCache === 'function') {
+            window.invalidateOrdersCache();
+        }
+        
         const statsTab = document.getElementById('stats-tab');
         if (statsTab && !statsTab.classList.contains('hidden')) {
             if (typeof window.reRenderCurrentStats === 'function') window.reRenderCurrentStats();
@@ -6337,7 +6345,7 @@ window.playNewOrderChime = function() {
         if (!AudioCtx) return;
         const ctx = new AudioCtx();
         if (ctx.state === 'suspended') {
-            ctx.resume();
+            ctx.resume().catch(() => {});
         }
         const now = ctx.currentTime;
         [1046.50, 1567.98].forEach((freq, idx) => {
@@ -7270,20 +7278,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderOrders();
 
-        // ── Polling de respaldo: re-verifica localStorage cada 4s en caso de que
-        //    el 'storage' event no se haya disparado (ej: mismo tab, reconexión, etc.) ──
+        // ── Polling de respaldo: re-verifica localStorage cada 3s e invalida cache ──
         setInterval(() => {
             if (typeof window.renderOrders === 'function') {
-                // Solo re-renderiza si el número de pending realmente cambió
                 try {
-                    const _latest = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]')
-                        .filter(o => o.status === 'pending' || !o.status).length;
-                    if (_latest !== window._prevIncomingCount) {
-                        window.renderOrders();
+                    const rawOrders = JSON.parse(localStorage.getItem('streetfeed_orders') || '[]');
+                    const pendingOrders = rawOrders.filter(o => o.status === 'pending' || !o.status);
+                    const currentPendingIds = new Set(pendingOrders.map(o => String(o.id || o.orderId || '')));
+                    
+                    // Si hay algún ID nuevo que no teníamos guardado, forzar renderizado fresco
+                    if (window._prevPendingIds !== undefined) {
+                        const hasNew = [...currentPendingIds].some(id => id && !window._prevPendingIds.has(id));
+                        if (hasNew || pendingOrders.length !== window._prevIncomingCount) {
+                            if (typeof window.invalidateOrdersCache === 'function') {
+                                window.invalidateOrdersCache();
+                            }
+                            window.renderOrders();
+                        }
                     }
                 } catch(e) {}
             }
-        }, 4000);
+        }, 3000);
 
         // Listeners Herramientas Historial
         const dateFilter = document.getElementById('history-date-filter');
