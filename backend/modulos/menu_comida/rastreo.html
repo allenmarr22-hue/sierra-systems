@@ -480,6 +480,16 @@
                 .bindPopup('<b>STREETFEED</b><br>Restaurante');
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function loadOrderData() {
             const urlParams = new URLSearchParams(window.location.search);
             const orderId = urlParams.get('order') || urlParams.get('id');
@@ -500,14 +510,14 @@
             }
 
             const activeId = targetOrder.id || targetOrder.orderId || 'PENDIENTE';
-            document.getElementById('order-badge').textContent = `Pedido #${activeId}`;
+            document.getElementById('order-badge').textContent = `Pedido #${escapeHtml(activeId)}`;
 
             // Populate Customer Info
             const cust = targetOrder.customer || {};
             document.getElementById('customer-info').innerHTML = `
-                <div><strong>👤 Cliente:</strong> ${cust.name || 'Cliente'}</div>
-                <div><strong>📍 Dirección:</strong> ${cust.address || 'Domicilio'}</div>
-                <div><strong>💵 Método de Pago:</strong> ${cust.payment || 'Efectivo'}</div>
+                <div><strong>👤 Cliente:</strong> ${escapeHtml(cust.name || 'Cliente')}</div>
+                <div><strong>📍 Dirección:</strong> ${escapeHtml(cust.address || 'Domicilio')}</div>
+                <div><strong>💵 Método de Pago:</strong> ${escapeHtml(cust.payment || 'Efectivo')}</div>
             `;
 
             // Populate Support WA Button
@@ -520,7 +530,7 @@
             const itemsListEl = document.getElementById('items-list');
             itemsListEl.innerHTML = (targetOrder.items || []).map(it => `
                 <div class="item-row">
-                    <span>${it.qty || 1}x ${it.name}</span>
+                    <span>${it.qty || 1}x ${escapeHtml(it.name)}</span>
                     <span>$${((it.qty || 1) * (it.price || 0)).toLocaleString('es-CO')}</span>
                 </div>
             `).join('');
