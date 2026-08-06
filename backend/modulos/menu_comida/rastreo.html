@@ -426,33 +426,57 @@
         }
 
         .customer-block {
-            background: var(--surface-2);
-            border: 1px solid var(--border-light);
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--border);
             border-radius: var(--radius-lg);
-            padding: 1rem 1.1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.45rem;
+            padding: 1.1rem 1.25rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem 1.25rem;
             margin-bottom: 1.25rem;
         }
 
         .customer-row {
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
+            flex-direction: column;
+            gap: 0.35rem;
         }
 
         .customer-row .lbl {
             color: var(--text-dim);
-            font-weight: 600;
-            min-width: 90px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .customer-row .lbl svg {
+            color: var(--text-mid);
+            stroke-width: 2.2;
         }
 
         .customer-row .val {
             color: var(--text);
-            font-weight: 700;
+            font-size: 0.92rem;
+            font-weight: 800;
             word-break: break-word;
+        }
+
+        .type-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            padding: 0.22rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            width: fit-content;
         }
 
         .divider {
@@ -837,24 +861,39 @@
         // Customer info block
         const cust = targetOrder.customer || {};
         const delType = cust.deliveryType || targetOrder.deliveryType || 'delivery';
-        const typeLabel = delType === 'delivery' ? '🛵 Domicilio' : (delType === 'takeout' ? '🛍️ Para Llevar' : '🍽️ En Mesa');
+        
+        const typeBadge = delType === 'delivery'
+            ? `<span class="type-badge-pill"><i data-lucide="bike" style="width:13px;height:13px;"></i> Domicilio</span>`
+            : (delType === 'takeout'
+                ? `<span class="type-badge-pill" style="background:rgba(247,147,30,0.12);color:var(--brand);border-color:rgba(247,147,30,0.25);"><i data-lucide="shopping-bag" style="width:13px;height:13px;"></i> Para Llevar</span>`
+                : `<span class="type-badge-pill" style="background:rgba(59,130,246,0.12);color:#3b82f6;border-color:rgba(59,130,246,0.25);"><i data-lucide="utensils" style="width:13px;height:13px;"></i> En Mesa</span>`);
 
         document.getElementById('customer-info').innerHTML = `
             <div class="customer-row">
-                <span class="lbl">👤 Cliente</span>
+                <span class="lbl"><i data-lucide="user" style="width:14px;height:14px;"></i> Cliente</span>
                 <span class="val">${esc(cust.name || 'Cliente')}</span>
             </div>
             <div class="customer-row">
-                <span class="lbl">📋 Tipo</span>
-                <span class="val">${typeLabel}</span>
+                <span class="lbl"><i data-lucide="package" style="width:14px;height:14px;"></i> Modalidad</span>
+                <span class="val">${typeBadge}</span>
             </div>
-            ${cust.address ? `<div class="customer-row"><span class="lbl">📍 Dirección</span><span class="val">${esc(cust.address)}</span></div>` : ''}
-            ${cust.phone ? `<div class="customer-row"><span class="lbl">📞 Teléfono</span><span class="val">${esc(cust.phone)}</span></div>` : ''}
+            ${cust.address ? `
             <div class="customer-row">
-                <span class="lbl">💳 Pago</span>
+                <span class="lbl"><i data-lucide="map-pin" style="width:14px;height:14px;"></i> Dirección</span>
+                <span class="val">${esc(cust.address)}</span>
+            </div>` : ''}
+            ${cust.phone ? `
+            <div class="customer-row">
+                <span class="lbl"><i data-lucide="phone" style="width:14px;height:14px;"></i> Teléfono</span>
+                <span class="val">${esc(cust.phone)}</span>
+            </div>` : ''}
+            <div class="customer-row">
+                <span class="lbl"><i data-lucide="credit-card" style="width:14px;height:14px;"></i> Método de Pago</span>
                 <span class="val">${esc(cust.payment || 'Efectivo')}</span>
             </div>
         `;
+
+        if (window.lucide) lucide.createIcons();
 
         // Items
         const items = targetOrder.items || [];
@@ -921,31 +960,31 @@
         if (status === 'completed' || status === 'accepted' || status === 'delivered') {
             steps.forEach(s => s.classList.add('done'));
             filledPct = 100;
-            if (tagEl) { tagEl.textContent = '¡Completado! 🥳'; tagEl.className = 'green'; }
+            if (tagEl) { tagEl.textContent = 'Entregado'; tagEl.className = 'green'; }
             if (celebEl) celebEl.style.display = 'block';
         } else if (status === 'dispatched' || status === 'on-the-way') {
             steps[0].classList.add('done');
             steps[1].classList.add('done');
             steps[2].classList.add('active');
             filledPct = 66;
-            const txt = delType === 'delivery' ? 'En Camino 🛵' : (delType === 'takeout' ? '¡Listo para retirar! 🛍️' : '¡Servido en mesa! 🍽️');
+            const txt = delType === 'delivery' ? 'En Camino' : (delType === 'takeout' ? 'Listo para retirar' : 'Servido en mesa');
             if (tagEl) { tagEl.textContent = txt; tagEl.className = ''; }
             if (celebEl) celebEl.style.display = 'none';
         } else if (status === 'confirmed' || status === 'preparing') {
             steps[0].classList.add('done');
             steps[1].classList.add('active');
             filledPct = 33;
-            if (tagEl) { tagEl.textContent = 'En Cocina 🔥'; tagEl.className = ''; }
+            if (tagEl) { tagEl.textContent = 'En Cocina'; tagEl.className = ''; }
             if (celebEl) celebEl.style.display = 'none';
         } else if (status === 'cancelled') {
-            if (tagEl) { tagEl.textContent = 'Cancelado ❌'; tagEl.className = ''; tagEl.style.color = '#ef4444'; tagEl.style.background = 'rgba(239,68,68,0.12)'; tagEl.style.borderColor = 'rgba(239,68,68,0.3)'; }
+            if (tagEl) { tagEl.textContent = 'Cancelado'; tagEl.className = ''; tagEl.style.color = '#ef4444'; tagEl.style.background = 'rgba(239,68,68,0.12)'; tagEl.style.borderColor = 'rgba(239,68,68,0.3)'; }
             if (celebEl) celebEl.style.display = 'none';
             steps[0].classList.add('active');
         } else {
             // pending
             steps[0].classList.add('active');
             filledPct = 0;
-            if (tagEl) { tagEl.textContent = 'Recibido 📋'; tagEl.className = ''; }
+            if (tagEl) { tagEl.textContent = 'Recibido'; tagEl.className = ''; }
             if (celebEl) celebEl.style.display = 'none';
         }
 
