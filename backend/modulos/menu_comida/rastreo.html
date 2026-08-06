@@ -240,9 +240,9 @@
         #current-status-tag {
             font-size: 0.84rem;
             font-weight: 900;
-            color: var(--brand);
-            background: var(--brand-glow);
-            border: 1px solid rgba(247,147,30,0.3);
+            color: var(--success);
+            background: var(--success-glow);
+            border: 1px solid rgba(16,185,129,0.35);
             padding: 0.28rem 0.8rem;
             border-radius: 50px;
             transition: all 0.4s ease;
@@ -320,10 +320,10 @@
         }
 
         .step-col.active .step-circle {
-            background: rgba(247,147,30,0.15);
-            border-color: var(--brand);
-            color: var(--brand);
-            box-shadow: 0 0 0 4px rgba(247,147,30,0.12), 0 0 20px rgba(247,147,30,0.3);
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--success);
+            color: var(--success);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), 0 0 22px rgba(16, 185, 129, 0.4);
             transform: scale(1.12);
         }
 
@@ -338,12 +338,11 @@
             font-size: 0.72rem;
             font-weight: 700;
             color: var(--text-dim);
-            text-align: center;
             transition: color 0.4s ease;
             line-height: 1.2;
         }
 
-        .step-col.active .step-lbl { color: var(--brand); font-weight: 900; }
+        .step-col.active .step-lbl { color: var(--success); font-weight: 900; }
         .step-col.done .step-lbl  { color: var(--success); }
 
         /* ===== MAP CARD ===== */
