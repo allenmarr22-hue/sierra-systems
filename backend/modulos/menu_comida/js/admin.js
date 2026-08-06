@@ -1267,6 +1267,8 @@ function prefillConfigForm() {
         'conf-whatsapp': state.config.whatsappNumber,
         'conf-tagline': state.config.tagline,
         'conf-address': state.config.address || '',
+        'conf-department': state.config.businessDepartment || 'La Guajira',
+        'conf-city': state.config.businessCity || state.config.city || 'Riohacha',
         'conf-instagram': state.config.instagram,
         'conf-facebook': state.config.facebook,
         'conf-hero-t1': state.config.heroTitleT1,
@@ -1305,6 +1307,10 @@ function prefillConfigForm() {
     for (const [id, value] of Object.entries(fields)) {
         const el = document.getElementById(id);
         if (el) el.value = (value === undefined || value === 'undefined') ? '' : value;
+    }
+
+    if (typeof initColombiaLocationsDropdowns === 'function') {
+        initColombiaLocationsDropdowns();
     }
     
     const storeToggle = document.getElementById('conf-store-open');
@@ -1904,10 +1910,25 @@ document.addEventListener('DOMContentLoaded', () => {
             state.config.heroDesc = document.getElementById('conf-hero-desc').value;
             state.config.heroTime = document.getElementById('conf-hero-time').value;
             state.config.heroRating = document.getElementById('conf-hero-rating').value;
-            state.config.whatsappNumber = document.getElementById('conf-whatsapp').value;
             const addrEl = document.getElementById('conf-address');
             if (addrEl) state.config.address = addrEl.value;
-            state.config.footerText = document.getElementById('conf-footer').value;
+
+            const deptEl = document.getElementById('conf-department');
+            if (deptEl) state.config.businessDepartment = deptEl.value.trim();
+
+            const cityEl = document.getElementById('conf-city');
+            if (cityEl) {
+                const selectedCity = cityEl.value.trim();
+                state.config.businessCity = selectedCity;
+                state.config.city = selectedCity;
+
+                // Lookup GPS coordinates automatically for selected city if available
+                const matchedCoords = getCoordinatesForCityName(selectedCity);
+                if (matchedCoords) {
+                    state.config.storeLat = matchedCoords.lat;
+                    state.config.storeLng = matchedCoords.lng;
+                }
+            }
             
             const waTemplateEl = document.getElementById('conf-wa-template');
             if (waTemplateEl) state.config.waTemplateOrder = waTemplateEl.value;
@@ -13057,6 +13078,205 @@ Object.defineProperty(window, 'activeWatchPositionId', {
 Object.defineProperty(window, 'activeGpsOrderId', {
     get: () => activeGpsOrderId,
     set: (v) => { activeGpsOrderId = v; }
+});
+
+// ───── COLOMBIA DEPARTMENTS & CITIES DATA (Autocomplete) ─────
+const COLOMBIA_LOCATIONS_DATA = {
+    "La Guajira": {
+        coords: { lat: 11.5444, lng: -72.9072 },
+        cities: ["Riohacha", "Maicao", "Uribia", "Manaure", "Fonseca", "San Juan del Cesar", "Barrancas", "Hatonuevo", "Albania", "Dibulla", "Villanueva", "El Molino", "Urumita", "La Jagua del Pilar"]
+    },
+    "Antioquia": {
+        coords: { lat: 6.2442, lng: -75.5812 },
+        cities: ["Medellín", "Envigado", "Itagüí", "Bello", "Sabaneta", "Rionegro", "Apartadó", "Turbo", "Caucasia", "Caldas", "La Estrella", "Copacabana", "Girardota"]
+    },
+    "Atlántico": {
+        coords: { lat: 10.9685, lng: -74.7813 },
+        cities: ["Barranquilla", "Soledad", "Malambo", "Puerto Colombia", "Sabanalarga", "Galapa", "Baranoa"]
+    },
+    "Bogotá D.C.": {
+        coords: { lat: 4.7110, lng: -74.0721 },
+        cities: ["Bogotá"]
+    },
+    "Bolívar": {
+        coords: { lat: 10.3910, lng: -75.4794 },
+        cities: ["Cartagena", "Magangué", "Turbaco", "Arjona", "El Carmen de Bolívar"]
+    },
+    "Cesar": {
+        coords: { lat: 10.4631, lng: -73.2532 },
+        cities: ["Valledupar", "Aguachica", "Agustín Codazzi", "Bosconia", "La Paz", "Curumaní"]
+    },
+    "Cundinamarca": {
+        coords: { lat: 4.7110, lng: -74.0721 },
+        cities: ["Soacha", "Chía", "Zipaquirá", "Fusagasugá", "Facatativá", "Girardot", "Mosquera", "Funza", "Cajicá", "Madrid"]
+    },
+    "Magdalena": {
+        coords: { lat: 11.2408, lng: -74.1990 },
+        cities: ["Santa Marta", "Ciénaga", "Fundación", "El Banco", "Plato"]
+    },
+    "Meta": {
+        coords: { lat: 4.1420, lng: -73.6266 },
+        cities: ["Villavicencio", "Acacías", "Granada"]
+    },
+    "Nariño": {
+        coords: { lat: 1.2136, lng: -77.2811 },
+        cities: ["Pasto", "Ipiales", "Tumaco"]
+    },
+    "Norte de Santander": {
+        coords: { lat: 7.8939, lng: -72.5078 },
+        cities: ["Cúcuta", "Ocaña", "Pamplona", "Villa del Rosario", "Los Patios"]
+    },
+    "Quindío": {
+        coords: { lat: 4.5339, lng: -75.6811 },
+        cities: ["Armenia", "Calarcá", "Montenegro", "Quimbaya"]
+    },
+    "Risaralda": {
+        coords: { lat: 4.8133, lng: -75.6961 },
+        cities: ["Pereira", "Dosquebradas", "Santa Rosa de Cabal"]
+    },
+    "Santander": {
+        coords: { lat: 7.1254, lng: -73.1198 },
+        cities: ["Bucaramanga", "Floridablanca", "Girón", "Piedecuesta", "Barrancabermeja"]
+    },
+    "Tolima": {
+        coords: { lat: 4.4389, lng: -75.2322 },
+        cities: ["Ibagué", "Espinal", "Melgar", "Honda"]
+    },
+    "Valle del Cauca": {
+        coords: { lat: 3.4516, lng: -76.5320 },
+        cities: ["Cali", "Palmira", "Buenaventura", "Tuluá", "Cartago", "Buga", "Jamundí", "Yumbo"]
+    },
+    "Boyacá": {
+        coords: { lat: 5.5353, lng: -73.3678 },
+        cities: ["Tunja", "Duitama", "Sogamoso", "Chiquinquirá"]
+    },
+    "Caldas": {
+        coords: { lat: 5.0689, lng: -75.5174 },
+        cities: ["Manizales", "Villamaría", "Chinchiná", "La Dorada"]
+    },
+    "Córdoba": {
+        coords: { lat: 8.7479, lng: -75.8814 },
+        cities: ["Montería", "Cereté", "Sahagún", "Lorica", "Montelíbano"]
+    },
+    "Sucre": {
+        coords: { lat: 9.3047, lng: -75.3978 },
+        cities: ["Sincelejo", "Corozal", "San Marcos"]
+    },
+    "Huila": {
+        coords: { lat: 2.9273, lng: -75.2819 },
+        cities: ["Neiva", "Pitalito", "Garzón"]
+    },
+    "Caquetá": {
+        coords: { lat: 1.6144, lng: -75.6062 },
+        cities: ["Florencia"]
+    },
+    "Arauca": {
+        coords: { lat: 7.0847, lng: -70.7592 },
+        cities: ["Arauca", "Tame", "Saravena"]
+    },
+    "Casanare": {
+        coords: { lat: 5.3378, lng: -72.3958 },
+        cities: ["Yopal", "Aguazul"]
+    },
+    "Putumayo": {
+        coords: { lat: 1.1528, lng: -76.6522 },
+        cities: ["Mocoa", "Puerto Asís"]
+    },
+    "San Andrés": {
+        coords: { lat: 12.5847, lng: -81.7006 },
+        cities: ["San Andrés"]
+    }
+};
+
+const CITY_GPS_MAP = {
+    'riohacha': { lat: 11.5444, lng: -72.9072 },
+    'maicao': { lat: 11.3774, lng: -72.2422 },
+    'uribia': { lat: 11.7139, lng: -72.2661 },
+    'manaure': { lat: 11.7750, lng: -72.4444 },
+    'fonseca': { lat: 10.8864, lng: -72.8478 },
+    'san juan del cesar': { lat: 10.7711, lng: -73.0033 },
+    'barrancas': { lat: 10.9575, lng: -72.7886 },
+    'hatonuevo': { lat: 11.0667, lng: -72.7667 },
+    'albania': { lat: 11.1614, lng: -72.5919 },
+    'dibulla': { lat: 11.2742, lng: -73.3083 },
+    'villanueva': { lat: 10.6047, lng: -72.9786 },
+    'medellin': { lat: 6.2442, lng: -75.5812 },
+    'medellín': { lat: 6.2442, lng: -75.5812 },
+    'envigado': { lat: 6.1759, lng: -75.5917 },
+    'itagüí': { lat: 6.1844, lng: -75.5991 },
+    'bello': { lat: 6.3373, lng: -75.5579 },
+    'sabaneta': { lat: 6.1517, lng: -75.6167 },
+    'rionegro': { lat: 6.1552, lng: -75.3739 },
+    'barranquilla': { lat: 10.9685, lng: -74.7813 },
+    'soledad': { lat: 10.9184, lng: -74.7644 },
+    'bogota': { lat: 4.7110, lng: -74.0721 },
+    'bogotá': { lat: 4.7110, lng: -74.0721 },
+    'cartagena': { lat: 10.3910, lng: -75.4794 },
+    'valledupar': { lat: 10.4631, lng: -73.2532 },
+    'santa marta': { lat: 11.2408, lng: -74.1990 },
+    'cali': { lat: 3.4516, lng: -76.5320 },
+    'bucaramanga': { lat: 7.1254, lng: -73.1198 },
+    'pereira': { lat: 4.8133, lng: -75.6961 },
+    'manizales': { lat: 5.0689, lng: -75.5174 },
+    'monteria': { lat: 8.7479, lng: -75.8814 },
+    'montería': { lat: 8.7479, lng: -75.8814 },
+    'pasto': { lat: 1.2136, lng: -77.2811 },
+    'cucuta': { lat: 7.8939, lng: -72.5078 },
+    'cúcuta': { lat: 7.8939, lng: -72.5078 },
+    'ibague': { lat: 4.4389, lng: -75.2322 },
+    'ibagué': { lat: 4.4389, lng: -75.2322 },
+    'villavicencio': { lat: 4.1420, lng: -73.6266 },
+    'armenia': { lat: 4.5339, lng: -75.6811 },
+    'neiva': { lat: 2.9273, lng: -75.2819 },
+    'sincelejo': { lat: 9.3047, lng: -75.3978 },
+    'tunja': { lat: 5.5353, lng: -73.3678 }
+};
+
+function getCoordinatesForCityName(cityName) {
+    if (!cityName) return null;
+    const clean = String(cityName).toLowerCase().trim();
+    for (const key in CITY_GPS_MAP) {
+        if (clean.includes(key) || key.includes(clean)) {
+            return CITY_GPS_MAP[key];
+        }
+    }
+    return null;
+}
+
+function initColombiaLocationsDropdowns() {
+    const deptDl = document.getElementById('dl-departments');
+    const cityDl = document.getElementById('dl-cities');
+    const deptInput = document.getElementById('conf-department');
+    const cityInput = document.getElementById('conf-city');
+    if (!deptDl || !cityDl || !deptInput || !cityInput) return;
+
+    // Populate departments datalist
+    deptDl.innerHTML = Object.keys(COLOMBIA_LOCATIONS_DATA)
+        .map(dept => `<option value="${dept}">${dept}</option>`).join('');
+
+    const updateCitiesDatalist = () => {
+        const selectedDept = deptInput.value.trim();
+        let cities = [];
+        const matchedKey = Object.keys(COLOMBIA_LOCATIONS_DATA).find(
+            k => k.toLowerCase() === selectedDept.toLowerCase()
+        );
+        if (matchedKey) {
+            cities = COLOMBIA_LOCATIONS_DATA[matchedKey].cities;
+        } else {
+            const allCities = new Set();
+            Object.values(COLOMBIA_LOCATIONS_DATA).forEach(item => item.cities.forEach(c => allCities.add(c)));
+            cities = Array.from(allCities);
+        }
+        cityDl.innerHTML = cities.map(city => `<option value="${city}">${city}</option>`).join('');
+    };
+
+    deptInput.addEventListener('input', updateCitiesDatalist);
+    deptInput.addEventListener('change', updateCitiesDatalist);
+    updateCitiesDatalist();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initColombiaLocationsDropdowns();
 });
 
 

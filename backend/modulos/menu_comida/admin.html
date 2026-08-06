@@ -1728,7 +1728,19 @@
                                             <input type="text" id="conf-address" placeholder="Ej: Calle 15 #12-45">
                                         </div>
 
-                                        <!-- Fila 3: Instagram (izq) | Facebook (der) -->
+                                        <!-- Fila 3: Departamento (izq) | Ciudad / Municipio (der) con Autocompletado -->
+                                        <div class="form-group">
+                                            <label>Departamento</label>
+                                            <input type="text" id="conf-department" list="dl-departments" placeholder="Ej: La Guajira, Antioquia, Atlántico..." autocomplete="off">
+                                            <datalist id="dl-departments"></datalist>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Ciudad / Municipio</label>
+                                            <input type="text" id="conf-city" list="dl-cities" placeholder="Ej: Riohacha, Medellín, Barranquilla..." autocomplete="off">
+                                            <datalist id="dl-cities"></datalist>
+                                        </div>
+
+                                        <!-- Fila 4: Instagram (izq) | Facebook (der) -->
                                         <div class="form-group">
                                             <label>Instagram (URL)</label>
                                             <input type="text" id="conf-instagram">
