@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STREETFEED - Rastreo de Pedido 🛵</title>
+    <title>STREETFEED - Rastreo GPS de Pedido 🛵</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -21,8 +21,9 @@
             --brand: #f7931e;
             --brand-light: rgba(247, 147, 30, 0.15);
             --success: #10b981;
-            --border: rgba(255, 255, 255, 0.08);
-            --radius: 20px;
+            --success-light: rgba(16, 185, 129, 0.15);
+            --border: rgba(255, 255, 255, 0.1);
+            --radius: 24px;
         }
 
         * {
@@ -30,6 +31,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -38,12 +40,18 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            padding-bottom: 2rem;
         }
 
+        /* Top Header */
         header {
-            background: var(--surface);
+            background: rgba(21, 28, 44, 0.85);
+            backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
             padding: 1rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -51,34 +59,60 @@
 
         .brand-logo {
             font-weight: 900;
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             color: var(--brand);
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .order-badge-pill {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 0.35rem 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #e2e8f0;
         }
 
         main {
             flex: 1;
-            max-width: 800px;
+            max-width: 760px;
             width: 100%;
             margin: 0 auto;
-            padding: 1.5rem;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
         }
 
-        /* Stepper */
-        .stepper-box {
-            background: var(--surface);
+        /* Animated Stepper Card */
+        .stepper-card {
+            background: linear-gradient(145deg, #151c2c, #0f172a);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1.5rem 1.25rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .stepper-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .stepper-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
+            gap: 0.4rem;
             position: relative;
         }
 
@@ -89,55 +123,53 @@
         }
 
         .step-icon {
-            width: 44px;
-            height: 44px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             border: 2px solid var(--border);
             color: var(--text-dim);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 0.5rem;
-            transition: all 0.3s ease;
+            margin: 0 auto 0.6rem;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .step-item.active .step-icon {
             background: var(--brand-light);
             border-color: var(--brand);
             color: var(--brand);
-            box-shadow: 0 0 15px rgba(247, 147, 30, 0.3);
+            box-shadow: 0 0 20px rgba(247, 147, 30, 0.4);
+            transform: scale(1.08);
         }
 
         .step-item.completed .step-icon {
-            background: rgba(16, 185, 129, 0.15);
+            background: var(--success-light);
             border-color: var(--success);
             color: var(--success);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
         }
 
         .step-label {
-            font-size: 0.75rem;
-            font-weight: 700;
+            font-size: 0.76rem;
+            font-weight: 800;
             color: var(--text-dim);
+            transition: color 0.3s ease;
         }
 
-        .step-item.active .step-label {
-            color: var(--brand);
-        }
+        .step-item.active .step-label { color: var(--brand); }
+        .step-item.completed .step-label { color: var(--success); }
 
-        .step-item.completed .step-label {
-            color: var(--success);
-        }
-
-        /* Map Container */
-        #map-wrapper {
+        /* Map Section */
+        .map-card {
             background: var(--surface-card);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             overflow: hidden;
             height: 380px;
-            margin-bottom: 1.5rem;
             position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.35);
         }
 
         #map {
@@ -146,14 +178,14 @@
             z-index: 1;
         }
 
-        .live-tag {
+        .live-gps-badge {
             position: absolute;
             top: 1rem;
             right: 1rem;
             z-index: 10;
-            background: rgba(11, 15, 25, 0.85);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 185, 129, 0.4);
             color: #34d399;
             padding: 0.4rem 0.85rem;
             border-radius: 50px;
@@ -161,25 +193,26 @@
             font-weight: 800;
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.45rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
-        .live-dot {
+        .pulse-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: var(--success);
-            box-shadow: 0 0 8px var(--success);
-            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 10px var(--success);
+            animation: pulseGps 1.5s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+        @keyframes pulseGps {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.5; }
         }
 
         /* Order Details Card */
-        .order-details-card {
+        .details-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -190,92 +223,208 @@
             margin: 1rem 0;
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
+            gap: 0.65rem;
         }
 
         .item-row {
             display: flex;
             justify-content: space-between;
-            font-size: 0.9rem;
+            font-size: 0.92rem;
             font-weight: 600;
+            color: #e2e8f0;
         }
 
         .total-row {
             border-top: 1px dashed var(--border);
-            padding-top: 0.8rem;
+            padding-top: 0.9rem;
+            margin-top: 0.5rem;
             display: flex;
             justify-content: space-between;
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             font-weight: 900;
             color: var(--brand);
         }
 
-        /* Custom Leaflet Driver Icon */
-        .leaflet-driver-marker {
-            background: var(--brand);
-            border: 3px solid #ffffff;
+        /* Celebration Screen (Completed) */
+        .celebration-card {
+            display: none;
+            background: linear-gradient(145deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.95));
+            border: 2px solid var(--success);
+            border-radius: var(--radius);
+            padding: 2rem 1.5rem;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(16, 185, 129, 0.25);
+            animation: fadeIn 0.4s ease;
+        }
+
+        .celebration-icon {
+            width: 76px;
+            height: 76px;
             border-radius: 50%;
-            width: 38px;
-            height: 38px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            margin: 0 auto 1.25rem;
+            font-size: 2.4rem;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+            animation: bounce 1.2s ease infinite alternate;
         }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        /* Star Rating Widget */
+        .rating-box {
+            margin: 1.5rem 0 1.25rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 1.2rem;
+        }
+
+        .star-rating {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .star-btn {
+            background: none;
+            border: none;
+            font-size: 2.2rem;
+            cursor: pointer;
+            filter: grayscale(1);
+            opacity: 0.4;
+            transition: all 0.2s ease;
+        }
+
+        .star-btn.active {
+            filter: grayscale(0);
+            opacity: 1;
+            transform: scale(1.18);
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 0.95rem 1.25rem;
+            border-radius: 14px;
+            border: none;
+            font-weight: 900;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: transform 0.18s, filter 0.18s;
+            text-decoration: none;
+        }
+
+        .btn-brand {
+            background: linear-gradient(135deg, var(--brand), #d97706);
+            color: #000;
+            box-shadow: 0 6px 20px rgba(247, 147, 30, 0.35);
+        }
+
+        .btn-brand:hover { transform: scale(1.02); filter: brightness(1.1); }
     </style>
 </head>
 <body>
 
     <header>
         <div class="brand-logo">
-            <i data-lucide="flame" style="width: 22px; height: 22px;"></i>
+            <i data-lucide="flame" style="width:24px;height:24px;"></i>
             STREETFEED
         </div>
-        <div id="order-badge" style="font-size: 0.85rem; font-weight: 800; color: var(--text-dim);">
+        <div id="order-badge" class="order-badge-pill">
             Cargando pedido...
         </div>
     </header>
 
     <main>
-        <!-- Stepper -->
-        <div class="stepper-box">
+        <!-- Celebration Card (Shown when status === completed) -->
+        <div id="celebration-card" class="celebration-card">
+            <div class="celebration-icon">🥳</div>
+            <h2 style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-bottom: 0.4rem;">¡Pedido Entregado con Éxito!</h2>
+            <p style="color: var(--text-dim); font-size: 0.9rem; max-width: 420px; margin: 0 auto 1.25rem;">
+                ¡Esperamos que disfrutes tu comida! Gracias por preferir a <strong>STREETFEED</strong>.
+            </p>
+
+            <!-- Star Rating Box -->
+            <div class="rating-box">
+                <div style="font-size: 0.88rem; font-weight: 800; color: #e2e8f0;">¿Qué tal estuvo tu pedido?</div>
+                <div class="star-rating" id="star-rating-container">
+                    <button class="star-btn" onclick="rateOrder(1)">⭐</button>
+                    <button class="star-btn" onclick="rateOrder(2)">⭐</button>
+                    <button class="star-btn" onclick="rateOrder(3)">⭐</button>
+                    <button class="star-btn" onclick="rateOrder(4)">⭐</button>
+                    <button class="star-btn" onclick="rateOrder(5)">⭐</button>
+                </div>
+                <div id="rating-feedback-msg" style="font-size: 0.78rem; color: var(--success); font-weight: 800; margin-top: 0.6rem; display: none;">
+                    ¡Muchas gracias por tu calificación! 🙌
+                </div>
+            </div>
+
+            <a href="./index.html" class="btn-action btn-brand">
+                🍔 Realizar Otro Pedido
+            </a>
+        </div>
+
+        <!-- Stepper Box -->
+        <div id="stepper-box" class="stepper-card">
+            <div class="stepper-title">
+                <span>Estado de tu Pedido</span>
+                <span id="current-status-tag" style="color: var(--brand); font-weight: 900;">Cargando...</span>
+            </div>
             <div class="stepper-grid">
-                <div id="step-1" class="step-item completed">
-                    <div class="step-icon"><i data-lucide="clipboard-check" style="width: 20px;"></i></div>
+                <div id="step-1" class="step-item active">
+                    <div class="step-icon"><i data-lucide="clipboard-check" style="width: 22px;"></i></div>
                     <div class="step-label">Recibido</div>
                 </div>
-                <div id="step-2" class="step-item active">
-                    <div class="step-icon"><i data-lucide="flame" style="width: 20px;"></i></div>
+                <div id="step-2" class="step-item">
+                    <div class="step-icon"><i data-lucide="flame" style="width: 22px;"></i></div>
                     <div class="step-label">En Cocina</div>
                 </div>
                 <div id="step-3" class="step-item">
-                    <div class="step-icon"><i data-lucide="bike" style="width: 20px;"></i></div>
+                    <div class="step-icon"><i data-lucide="bike" style="width: 22px;"></i></div>
                     <div class="step-label">En Camino</div>
                 </div>
                 <div id="step-4" class="step-item">
-                    <div class="step-icon"><i data-lucide="check-circle" style="width: 20px;"></i></div>
+                    <div class="step-icon"><i data-lucide="check-circle" style="width: 22px;"></i></div>
                     <div class="step-label">Entregado</div>
                 </div>
             </div>
         </div>
 
         <!-- Map Container -->
-        <div id="map-wrapper">
-            <div class="live-tag">
-                <span class="live-dot"></span>
+        <div id="map-wrapper" class="map-card">
+            <div class="live-gps-badge">
+                <span class="pulse-dot"></span>
                 <span>GPS EN VIVO</span>
             </div>
             <div id="map"></div>
         </div>
 
-        <!-- Order Summary Card -->
-        <div class="order-details-card">
-            <h3 style="font-size: 1.1rem; font-weight: 900; margin-bottom: 0.8rem;">📋 Resumen de tu Pedido</h3>
-            <div id="customer-info" style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.8rem;"></div>
+        <!-- Order Summary Details -->
+        <div class="details-card">
+            <h3 style="font-size: 1.15rem; font-weight: 900; margin-bottom: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>📋 Resumen de tu Pedido</span>
+                <a id="support-wa-btn" href="#" target="_blank" style="font-size: 0.8rem; color: var(--success); text-decoration: none; font-weight: 800; display: flex; align-items: center; gap: 0.3rem;">
+                    💬 Soporte WhatsApp
+                </a>
+            </h3>
+
+            <div id="customer-info" style="font-size: 0.88rem; color: var(--text-dim); display: flex; flex-direction: column; gap: 0.35rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 0.85rem 1rem; border-radius: 16px;">
+                <!-- Customer Info -->
+            </div>
 
             <div id="items-list" class="items-list">
-                <!-- Dynamic items -->
+                <!-- Dynamic Items -->
             </div>
 
             <div id="total-row" class="total-row">
@@ -289,10 +438,13 @@
         let map = null;
         let driverMarker = null;
         let destMarker = null;
+        let storeMarker = null;
+        let routePolyline = null;
         let targetOrder = null;
         let locationPollTimer = null;
+        let currentRating = 0;
 
-        // Default store location coordinates (Calle 15, Barranquilla / default location)
+        // Coordinates default (Store Location)
         const DEFAULT_STORE_LAT = 10.9685;
         const DEFAULT_STORE_LNG = -74.7813;
 
@@ -300,26 +452,31 @@
             if (window.lucide) lucide.createIcons();
             initMap();
             loadOrderData();
+
+            // Sincronización instantánea en tiempo real con localStorage
+            window.addEventListener('storage', (e) => {
+                if (e.key && e.key.startsWith('streetfeed_')) {
+                    loadOrderData();
+                }
+            });
         });
 
         function initMap() {
-            // Initialize Leaflet map centered at default store location
-            map = L.map('map').setView([DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], 14);
+            map = L.map('map').setView([DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], 15);
 
-            // Add OpenStreetMap tiles (Free & High Quality)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap'
             }).addTo(map);
 
-            // Add Store Marker
+            // Store Marker
             const storeIcon = L.divIcon({
                 className: 'custom-store-pin',
-                html: `<div style="background:#f7931e; border:2px solid #fff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.4);"><i data-lucide="store" style="width:18px;"></i></div>`,
-                iconSize: [34, 34],
-                iconAnchor: [17, 17]
+                html: `<div style="background:#f7931e; border:3px solid #fff; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; font-weight:900; box-shadow:0 6px 15px rgba(247,147,30,0.5);"><i data-lucide="store" style="width:20px;"></i></div>`,
+                iconSize: [38, 38],
+                iconAnchor: [19, 19]
             });
-            destMarker = L.marker([DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], { icon: storeIcon }).addTo(map)
+            storeMarker = L.marker([DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], { icon: storeIcon }).addTo(map)
                 .bindPopup('<b>STREETFEED</b><br>Restaurante');
         }
 
@@ -327,22 +484,39 @@
             const urlParams = new URLSearchParams(window.location.search);
             const orderId = urlParams.get('order') || urlParams.get('id');
 
-            const allOrders = JSON.parse(localStorage.getItem('restaurant_orders') || '[]');
-            targetOrder = allOrders.find(o => String(o.id) === String(orderId)) || allOrders[allOrders.length - 1];
+            const allOrders = JSON.parse(localStorage.getItem('streetfeed_orders') || localStorage.getItem('restaurant_orders') || '[]');
+            
+            if (orderId) {
+                targetOrder = allOrders.find(o => String(o.id || o.orderId) === String(orderId));
+            }
+            if (!targetOrder && allOrders.length > 0) {
+                targetOrder = allOrders[allOrders.length - 1];
+            }
 
             if (!targetOrder) {
                 document.getElementById('order-badge').textContent = "Pedido no encontrado";
+                document.getElementById('current-status-tag').textContent = "Desconocido";
                 return;
             }
 
-            document.getElementById('order-badge').textContent = `Pedido #${targetOrder.id}`;
+            const activeId = targetOrder.id || targetOrder.orderId || 'PENDIENTE';
+            document.getElementById('order-badge').textContent = `Pedido #${activeId}`;
+
+            // Populate Customer Info
+            const cust = targetOrder.customer || {};
             document.getElementById('customer-info').innerHTML = `
-                <div><strong>Cliente:</strong> ${targetOrder.customer?.name || 'Cliente'}</div>
-                <div><strong>Dirección:</strong> ${targetOrder.customer?.address || 'Domicilio'} ${targetOrder.customer?.neighborhood ? ' (Barrio ' + targetOrder.customer.neighborhood + ')' : ''}</div>
-                <div><strong>Pago:</strong> ${targetOrder.customer?.payment || 'Efectivo'}</div>
+                <div><strong>👤 Cliente:</strong> ${cust.name || 'Cliente'}</div>
+                <div><strong>📍 Dirección:</strong> ${cust.address || 'Domicilio'}</div>
+                <div><strong>💵 Método de Pago:</strong> ${cust.payment || 'Efectivo'}</div>
             `;
 
-            // Populate items list
+            // Populate Support WA Button
+            const config = JSON.parse(localStorage.getItem('streetfeed_config') || '{}');
+            const phone = config.whatsappNumber || '573000000000';
+            const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent('Hola STREETFEED, tengo una consulta sobre mi pedido #' + activeId)}`;
+            document.getElementById('support-wa-btn').href = waUrl;
+
+            // Populate Items List
             const itemsListEl = document.getElementById('items-list');
             itemsListEl.innerHTML = (targetOrder.items || []).map(it => `
                 <div class="item-row">
@@ -353,37 +527,51 @@
 
             document.getElementById('total-val').textContent = `$${(targetOrder.total || 0).toLocaleString('es-CO')}`;
 
-            // Update stepper status
-            updateStepper(targetOrder.status || 'in-progress');
+            // Update Stepper Pipeline
+            updateStepper(targetOrder.status || 'pending');
 
-            // Start live GPS polling
-            pollDriverLocation(targetOrder.id);
-            locationPollTimer = setInterval(() => pollDriverLocation(targetOrder.id), 4000);
+            // Live Poll Driver GPS
+            pollDriverLocation(activeId);
+            if (!locationPollTimer) {
+                locationPollTimer = setInterval(() => pollDriverLocation(activeId), 3000);
+            }
         }
 
         function updateStepper(status) {
             document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active', 'completed'));
+            const statusTag = document.getElementById('current-status-tag');
+            const celebrationCard = document.getElementById('celebration-card');
 
             const s1 = document.getElementById('step-1');
             const s2 = document.getElementById('step-2');
             const s3 = document.getElementById('step-3');
             const s4 = document.getElementById('step-4');
 
-            if (status === 'delivered') {
+            if (status === 'completed' || status === 'accepted' || status === 'delivered') {
                 s1.classList.add('completed');
                 s2.classList.add('completed');
                 s3.classList.add('completed');
                 s4.classList.add('completed');
-            } else if (status === 'on-the-way' || status === 'delivering') {
+                if (statusTag) statusTag.textContent = "¡Entregado! 🥳";
+                if (celebrationCard) celebrationCard.style.display = 'block';
+            } else if (status === 'dispatched' || status === 'on-the-way') {
                 s1.classList.add('completed');
                 s2.classList.add('completed');
                 s3.classList.add('active');
-            } else if (status === 'cooking' || status === 'preparing') {
+                if (statusTag) statusTag.textContent = "En Camino 🛵";
+                if (celebrationCard) celebrationCard.style.display = 'none';
+            } else if (status === 'confirmed' || status === 'preparing') {
                 s1.classList.add('completed');
                 s2.classList.add('active');
+                if (statusTag) statusTag.textContent = "En Cocina 🔥";
+                if (celebrationCard) celebrationCard.style.display = 'none';
             } else {
                 s1.classList.add('active');
+                if (statusTag) statusTag.textContent = "Recibido 📋";
+                if (celebrationCard) celebrationCard.style.display = 'none';
             }
+
+            if (window.lucide) lucide.createIcons();
         }
 
         function pollDriverLocation(orderId) {
@@ -403,9 +591,9 @@
 
             const bikeIcon = L.divIcon({
                 className: 'custom-bike-pin',
-                html: `<div style="background:#10b981; border:3px solid #fff; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; box-shadow:0 6px 15px rgba(16,185,129,0.5);"><i data-lucide="bike" style="width:22px;"></i></div>`,
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
+                html: `<div style="background:#10b981; border:3px solid #fff; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; box-shadow:0 0 25px rgba(16,185,129,0.7);"><i data-lucide="bike" style="width:24px;"></i></div>`,
+                iconSize: [44, 44],
+                iconAnchor: [22, 22]
             });
 
             if (!driverMarker) {
@@ -415,13 +603,49 @@
                 driverMarker.setLatLng([lat, lng]);
             }
 
-            // Fit map bounds to show driver and store
+            // Draw route line from Store to Driver
+            if (!routePolyline) {
+                routePolyline = L.polyline([[DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], [lat, lng]], {
+                    color: '#10b981',
+                    weight: 5,
+                    opacity: 0.8,
+                    dashArray: '8, 8'
+                }).addTo(map);
+            } else {
+                routePolyline.setLatLngs([[DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], [lat, lng]]);
+            }
+
+            // Fit map bounds
             const bounds = L.latLngBounds([[DEFAULT_STORE_LAT, DEFAULT_STORE_LNG], [lat, lng]]);
             map.fitBounds(bounds, { padding: [50, 50] });
 
-            // Mark step 3 as active
-            updateStepper('on-the-way');
             if (window.lucide) lucide.createIcons();
+        }
+
+        function rateOrder(stars) {
+            currentRating = stars;
+            const buttons = document.querySelectorAll('.star-btn');
+            buttons.forEach((btn, index) => {
+                if (index < stars) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            const feedbackMsg = document.getElementById('rating-feedback-msg');
+            if (feedbackMsg) feedbackMsg.style.display = 'block';
+
+            // Save rating into localStorage
+            if (targetOrder) {
+                const ratings = JSON.parse(localStorage.getItem('streetfeed_ratings') || '[]');
+                ratings.push({
+                    orderId: targetOrder.id,
+                    rating: stars,
+                    date: new Date().toISOString()
+                });
+                localStorage.setItem('streetfeed_ratings', JSON.stringify(ratings));
+            }
         }
     </script>
 </body>

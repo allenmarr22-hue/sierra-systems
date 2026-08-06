@@ -2536,6 +2536,9 @@ function initCheckout() {
 
         // Preparar mensaje de WhatsApp
         sendOrderToWhatsApp(orderData);
+        if (typeof showPostOrderSuccessModal === 'function') {
+            showPostOrderSuccessModal(orderData);
+        }
 
         // Limpiar y cerrar
         modal.classList.add('hidden');
@@ -2615,11 +2618,48 @@ function sendOrderToWhatsApp(order) {
         message += `Domicilio: $${order.deliveryFee.toLocaleString()}\n`;
     }
     message += `${e.cash} *TOTAL A PAGAR: $${order.total.toLocaleString()}*\n`;
+    message += `--------------------------\n`;
+    
+    // Live GPS tracking link included in WhatsApp message
+    const trackingUrl = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(order.id)}`;
+    message += `${e.pin} *SIGUE TU PEDIDO EN VIVO:* \n${trackingUrl}\n`;
     message += `--------------------------\n\n`;
     message += `${e.rocket} _Enviado desde el Menú Digital_`;
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+}
+
+function showPostOrderSuccessModal(order) {
+    const trackingUrl = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(order.id)}`;
+    
+    let modal = document.getElementById('post-order-success-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'post-order-success-modal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.78);backdrop-filter:blur(12px);z-index:999999;display:flex;align-items:center;justify-content:center;padding:1.25rem;animation:fadeIn 0.25s ease;';
+        document.body.appendChild(modal);
+    }
+    
+    const orderIdStr = String(order.id || order.orderId || 'PENDIENTE');
+    modal.innerHTML = `
+        <div style="background:linear-gradient(145deg, #1e293b, #0f172a);border:1px solid rgba(255,255,255,0.12);border-radius:24px;max-width:440px;width:100%;padding:2rem;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.5);color:#fff;">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.1));border:2px solid #10b981;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:2.2rem;box-shadow:0 0 25px rgba(16,185,129,0.35);">
+                🚀
+            </div>
+            <h3 style="font-size:1.4rem;font-weight:900;margin:0 0 0.4rem;background:linear-gradient(90deg,#fff,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">¡Pedido Realizado con Éxito!</h3>
+            <p style="color:#94a3b8;font-size:0.88rem;margin:0 0 1.5rem;line-height:1.5;">Tu pedido <strong style="color:#f59e0b;">#${escapeHtml(orderIdStr)}</strong> ha sido enviado. Puedes ver el mapa en tiempo real o consultar el mensaje de WhatsApp.</p>
+            
+            <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                <a href="${trackingUrl}" target="_blank" style="padding:0.92rem 1.25rem;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-weight:900;font-size:0.95rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:0.5rem;box-shadow:0 6px 20px rgba(16,185,129,0.35);transition:transform 0.18s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    📍 Ver mi Pedido en Tiempo Real
+                </a>
+                <button onclick="document.getElementById('post-order-success-modal').remove()" style="padding:0.85rem 1.25rem;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#cbd5e1;font-weight:800;font-size:0.88rem;cursor:pointer;transition:all 0.18s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                    Entendido / Cerrar
+                </button>
+            </div>
+        </div>
+    `;
 }
 
 function showConfirm(msg, onConfirm, okText = 'Eliminar', okColor = '#ff5252', title = '¿Estás seguro?', onCancel = null) {

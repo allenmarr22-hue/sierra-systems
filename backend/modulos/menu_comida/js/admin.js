@@ -6801,6 +6801,20 @@ document.addEventListener('click', function(e) {
     }
 });
 
+window.copyCustomerTrackingLink = function(orderId) {
+    const url = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(orderId)}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            if (typeof showToast === 'function') showToast('📋 Enlace de rastreo copiado');
+            else if (typeof showAdminNotification === 'function') showAdminNotification('📋 Enlace de rastreo copiado', 'success');
+        }).catch(() => {
+            prompt('Copia este enlace de rastreo para el cliente:', url);
+        });
+    } else {
+        prompt('Copia este enlace de rastreo para el cliente:', url);
+    }
+};
+
 window.showOrderDetails = function(id) {
     const payMenu = document.getElementById('global-payment-dropdown');
     if (payMenu) payMenu.style.display = 'none';
@@ -6972,14 +6986,18 @@ window.showOrderDetails = function(id) {
     }).join('');
 
     const printActionBtns = `
-        <div style="grid-column: span 2; display: flex; gap: 0.6rem; margin-bottom: 0.5rem;">
-            <button class="admin-btn-action" style="flex: 1; height: 46px; border-radius: 12px; background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onclick="window.printKitchenTicket('${order.id}')" title="Imprimir comanda limpia para el cocinero (Sin precios)">
-                <i data-lucide="chef-hat" style="width: 18px; height: 18px;"></i>
-                <span>Comanda Cocina</span>
+        <div style="grid-column: span 2; display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <button class="admin-btn-action" style="flex: 1; height: 44px; border-radius: 12px; background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem; font-size:0.8rem;" onclick="window.printKitchenTicket('${order.id}')" title="Imprimir comanda limpia para el cocinero (Sin precios)">
+                <i data-lucide="chef-hat" style="width: 16px; height: 16px;"></i>
+                <span>Comanda</span>
             </button>
-            <button class="admin-btn-action" style="flex: 1; height: 46px; border-radius: 12px; background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onclick="window.printCustomerReceipt('${order.id}')" title="Imprimir pre-cuenta / ticket con precios para el cliente">
-                <i data-lucide="receipt" style="width: 18px; height: 18px;"></i>
-                <span>Ticket Cliente</span>
+            <button class="admin-btn-action" style="flex: 1; height: 44px; border-radius: 12px; background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem; font-size:0.8rem;" onclick="window.printCustomerReceipt('${order.id}')" title="Imprimir pre-cuenta / ticket con precios para el cliente">
+                <i data-lucide="receipt" style="width: 16px; height: 16px;"></i>
+                <span>Ticket</span>
+            </button>
+            <button class="admin-btn-action" style="flex: 1; height: 44px; border-radius: 12px; background: rgba(2,132,199,0.12); color: #0284c7; border: 1px solid rgba(2,132,199,0.3); font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem; font-size:0.8rem;" onclick="window.copyCustomerTrackingLink('${order.id}')" title="Copiar enlace de rastreo GPS en vivo para el cliente">
+                <i data-lucide="share-2" style="width: 16px; height: 16px;"></i>
+                <span>Link Rastreo</span>
             </button>
         </div>
     `;
