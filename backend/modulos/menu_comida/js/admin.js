@@ -6445,7 +6445,7 @@ window.playDispatchChime = function() {
 function openThermalPrintWindow(title, content) {
     const printArea = document.getElementById('thermal-ticket-print-area');
     if (printArea) {
-        printArea.style.display = 'block';
+        printArea.style.display = 'none';
         printArea.innerHTML = content;
     }
 
@@ -6482,23 +6482,31 @@ function openThermalPrintWindow(title, content) {
         </html>
     `;
 
+    const cleanupPrintArea = () => {
+        if (printArea) {
+            printArea.style.display = 'none';
+            printArea.innerHTML = '';
+        }
+    };
+
     try {
         const printWin = window.open('', '_blank', 'width=420,height=600,scrollbars=yes');
         if (printWin) {
             printWin.document.open();
             printWin.document.write(printDoc);
             printWin.document.close();
+            setTimeout(cleanupPrintArea, 800);
             return;
         }
     } catch(e) {
         console.warn("Print window open blocked, using main window print fallback:", e);
     }
 
+    // Fallback if popups are blocked: use main window print
+    if (printArea) printArea.style.display = 'block';
     setTimeout(() => {
         window.print();
-        setTimeout(() => {
-            if (printArea) printArea.style.display = 'none';
-        }, 500);
+        setTimeout(cleanupPrintArea, 500);
     }, 150);
 }
 

@@ -2089,6 +2089,13 @@ function setupEventListeners() {
         }
         if (typeof activeGpsOrderId !== 'undefined') activeGpsOrderId = null;
 
+        // Clean up thermal print area if present
+        const printArea = document.getElementById('thermal-ticket-print-area');
+        if (printArea) {
+            printArea.style.display = 'none';
+            printArea.innerHTML = '';
+        }
+
         state.isLoggedIn = false;
         localStorage.setItem('streetfeed_isLoggedIn', 'false');
         // Clear credentials on logout for security
