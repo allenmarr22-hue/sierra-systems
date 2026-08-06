@@ -6332,6 +6332,21 @@ window.updateOrderStatus = function(id, newStatus) {
     );
 };
 
+// Desbloqueo automático del canal de audio WebAudio con cualquier interacción del usuario
+let _globalAudioUnlocked = false;
+document.addEventListener('click', () => {
+    if (!_globalAudioUnlocked) {
+        _globalAudioUnlocked = true;
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+                const ctx = new AudioCtx();
+                if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+            }
+        } catch(e) {}
+    }
+}, { passive: true });
+
 // --- AUDIO NOTIFICATIONS & THERMAL POS TICKET PRINTING ---
 window.isSoundEnabled = function() {
     const saved = localStorage.getItem('streetfeed_sound_enabled');
