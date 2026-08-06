@@ -908,11 +908,6 @@
                 <span class="lbl"><i data-lucide="package" style="width:14px;height:14px;"></i> Modalidad</span>
                 <span class="val">${typeBadge}</span>
             </div>
-            ${cust.address ? `
-            <div class="customer-row">
-                <span class="lbl"><i data-lucide="map-pin" style="width:14px;height:14px;"></i> Dirección</span>
-                <span class="val">${esc(cust.address)}</span>
-            </div>` : ''}
             ${cust.phone ? `
             <div class="customer-row">
                 <span class="lbl"><i data-lucide="phone" style="width:14px;height:14px;"></i> Teléfono</span>
@@ -922,6 +917,11 @@
                 <span class="lbl"><i data-lucide="credit-card" style="width:14px;height:14px;"></i> Método de Pago</span>
                 <span class="val">${esc(cust.payment || 'Efectivo')}</span>
             </div>
+            ${cust.address ? `
+            <div class="customer-row" style="grid-column: 1 / -1;">
+                <span class="lbl"><i data-lucide="map-pin" style="width:14px;height:14px;"></i> Dirección</span>
+                <span class="val">${esc(cust.address)}</span>
+            </div>` : ''}
         `;
 
         if (window.lucide) lucide.createIcons();
