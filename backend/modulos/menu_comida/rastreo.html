@@ -400,7 +400,23 @@
             touch-action: pan-x pan-y !important;
         }
         .leaflet-container:active { cursor: grabbing !important; }
-        .leaflet-container .leaflet-map-pane { pointer-events: auto !important; }
+        
+        /* Prevenir que las imágenes de los mapas capturen el mouse o hagan arrastre nativo de imagen */
+        .leaflet-tile-container img,
+        .leaflet-tile {
+            -webkit-user-drag: none !important;
+            user-drag: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+            pointer-events: none !important;
+        }
+        .leaflet-tile-pane {
+            pointer-events: none !important;
+        }
+        .leaflet-marker-pane,
+        .leaflet-popup-pane {
+            pointer-events: auto !important;
+        }
 
         .map-overlay-top {
             position: absolute;
