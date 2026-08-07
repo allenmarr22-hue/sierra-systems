@@ -293,8 +293,8 @@
             content: '';
             position: absolute;
             top: 23px; /* Half of icon size */
-            left: calc(12.5% + 6px);
-            right: calc(12.5% + 6px);
+            left: 12.5%;
+            right: 12.5%;
             height: 3px;
             background: var(--border);
             border-radius: 4px;
@@ -305,11 +305,12 @@
         #stepper-fill {
             position: absolute;
             top: 23px;
-            left: calc(12.5% + 6px);
+            left: 12.5%;
             height: 3px;
             border-radius: 4px;
             background: linear-gradient(90deg, var(--success), #34d399);
             width: 0%;
+            max-width: 75%;
             z-index: 1;
             transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 0 12px rgba(16,185,129,0.5);
@@ -329,7 +330,7 @@
             width: 46px;
             height: 46px;
             border-radius: 50%;
-            background: var(--surface-2);
+            background: #111827;
             border: 2px solid var(--border);
             color: var(--text-dim);
             display: flex;
@@ -337,6 +338,7 @@
             justify-content: center;
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             position: relative;
+            z-index: 3;
         }
 
         .step-circle svg {
@@ -346,7 +348,7 @@
         }
 
         .step-col.active .step-circle {
-            background: rgba(16, 185, 129, 0.15);
+            background: #064e3b;
             border-color: var(--success);
             color: var(--success);
             box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), 0 0 22px rgba(16, 185, 129, 0.4);
@@ -354,7 +356,7 @@
         }
 
         .step-col.done .step-circle {
-            background: rgba(16,185,129,0.15);
+            background: #064e3b;
             border-color: var(--success);
             color: var(--success);
             box-shadow: 0 0 0 3px rgba(16,185,129,0.1), 0 0 14px rgba(16,185,129,0.25);
@@ -1038,7 +1040,7 @@
             if (celebEl) celebEl.style.display = 'none';
         }
 
-        if (fillEl) fillEl.style.width = `${filledPct}%`;
+        if (fillEl) fillEl.style.width = `${(filledPct * 0.75)}%`;
         if (window.lucide) lucide.createIcons();
     }
 
