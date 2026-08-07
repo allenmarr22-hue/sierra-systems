@@ -737,12 +737,16 @@
     let map = null;
     let driverMarker = null;
     let storeMarker = null;
+    let customerMarker = null;
     let routePolyline = null;
+    let routePolylineDest = null;
     let targetOrder = null;
     let locationTimer = null;
     let currentRating = 0;
     let storeLat = 11.5444;   // Default: Riohacha, La Guajira
     let storeLng = -72.9072;
+    let customerLat = null;
+    let customerLng = null;
 
     // ───── UTILS ─────
     function esc(str) {
@@ -892,6 +896,8 @@
             .addTo(map)
             .bindPopup('<b>STREETFEED</b><br>📍 Nuestro Restaurante');
 
+        initCustomerMarker();
+
         // Optional: Auto-detect current browser position in Riohacha if no admin custom coordinates set
         if (navigator.geolocation && (!localStorage.getItem('streetfeed_config') || !JSON.parse(localStorage.getItem('streetfeed_config') || '{}').storeLat)) {
             navigator.geolocation.getCurrentPosition((pos) => {
@@ -902,6 +908,51 @@
                     storeMarker.setLatLng([storeLat, storeLng]);
                 }
             }, (err) => {}, { timeout: 3000 });
+        }
+    }
+
+    function initCustomerMarker() {
+        if (!map) return;
+
+        // Extract customer coords from targetOrder or fallback
+        if (targetOrder && targetOrder.customer) {
+            const c = targetOrder.customer;
+            if (c.lat && c.lng) {
+                customerLat = parseFloat(c.lat);
+                customerLng = parseFloat(c.lng);
+            } else if (c.customerCoords && c.customerCoords.lat && c.customerCoords.lng) {
+                customerLat = parseFloat(c.customerCoords.lat);
+                customerLng = parseFloat(c.customerCoords.lng);
+            }
+        }
+
+        // Realistic fallback near store if customer coords are not set
+        if (!customerLat || !customerLng) {
+            customerLat = storeLat - 0.0048;
+            customerLng = storeLng - 0.0068;
+        }
+
+        const houseIcon = L.divIcon({
+            className: '',
+            html: `<div style="
+                background: #0f172a;
+                border: 3px solid #3b82f6;
+                width: 44px; height: 44px;
+                border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                color: #3b82f6;
+                box-shadow: 0 4px 20px rgba(59,130,246,0.5);
+            "><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>`,
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+        });
+
+        if (!customerMarker) {
+            customerMarker = L.marker([customerLat, customerLng], { icon: houseIcon })
+                .addTo(map)
+                .bindPopup('<b>🏠 Tu Casa (Destino)</b><br>Dirección de entrega');
+        } else {
+            customerMarker.setLatLng([customerLat, customerLng]);
         }
     }
 
@@ -1165,22 +1216,38 @@
             driverMarker.setLatLng([lat, lng]);
         }
 
-        // Route polyline (store → driver)
-        const pts = [[storeLat, storeLng], [lat, lng]];
+        initCustomerMarker();
+
+        // 1. Line: Store → Driver (emerald green)
+        const pts1 = [[storeLat, storeLng], [lat, lng]];
         if (!routePolyline) {
-            routePolyline = L.polyline(pts, {
+            routePolyline = L.polyline(pts1, {
                 color: '#10b981',
                 weight: 4,
-                opacity: 0.75,
+                opacity: 0.8,
                 dashArray: '10, 8'
             }).addTo(map);
         } else {
-            routePolyline.setLatLngs(pts);
+            routePolyline.setLatLngs(pts1);
         }
 
-        // Auto-fit bounds (only if user hasn't manually dragged the map)
+        // 2. Line: Driver → Customer Home (blue dashed)
+        const pts2 = [[lat, lng], [customerLat, customerLng]];
+        if (!routePolylineDest) {
+            routePolylineDest = L.polyline(pts2, {
+                color: '#3b82f6',
+                weight: 4,
+                opacity: 0.85,
+                dashArray: '8, 8'
+            }).addTo(map);
+        } else {
+            routePolylineDest.setLatLngs(pts2);
+        }
+
+        // Auto-fit bounds for all 3 points (Store, Driver, Customer Home)
         if (!window._userMapDragged) {
-            map.fitBounds(L.latLngBounds(pts), { padding: [55, 55] });
+            const allPts = [[storeLat, storeLng], [lat, lng], [customerLat, customerLng]];
+            map.fitBounds(L.latLngBounds(allPts), { padding: [60, 60] });
         }
         if (window.lucide) lucide.createIcons();
     }
