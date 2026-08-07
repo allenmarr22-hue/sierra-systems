@@ -783,7 +783,7 @@
                 </div>
 
                 <div class="total-row">
-                    <span class="total-lbl">Total a Pagar</span>
+                    <span class="total-lbl" id="total-lbl">Total a Pagar</span>
                     <span class="total-val" id="total-val">$0</span>
                 </div>
 
@@ -1129,6 +1129,11 @@
         if (window.lucide) lucide.createIcons();
 
         // Total
+        const isFinishedOrder = targetOrder && (targetOrder.status === 'completed' || targetOrder.status === 'delivered' || targetOrder.status === 'accepted' || targetOrder.isPaid);
+        const totalLblEl = document.getElementById('total-lbl');
+        if (totalLblEl) {
+            totalLblEl.textContent = isFinishedOrder ? 'Total Pagado' : 'Total a Pagar';
+        }
         document.getElementById('total-val').textContent = `$${(targetOrder.total || 0).toLocaleString('es-CO')}`;
 
         // WhatsApp support link
