@@ -1139,9 +1139,11 @@
             document.getElementById('support-wa-btn').href = `https://wa.me/${phone}?text=${waMsg}`;
         } catch(e) {}
 
-        // Map visibility (only for delivery)
+        // Map visibility (only for active delivery orders; hide when delivered/completed/cancelled)
         const mapWrapper = document.getElementById('map-wrapper');
-        if (delType === 'delivery') {
+        const isFinished = targetOrder && (targetOrder.status === 'completed' || targetOrder.status === 'delivered' || targetOrder.status === 'accepted' || targetOrder.status === 'cancelled');
+
+        if (delType === 'delivery' && !isFinished) {
             mapWrapper.style.display = 'block';
             initMap();
             startLocationPolling(activeId);
@@ -1186,6 +1188,9 @@
             filledPct = 100;
             if (tagEl) { tagEl.textContent = 'Entregado'; tagEl.className = 'green'; }
             if (celebEl) celebEl.style.display = 'block';
+            const mapWrapper = document.getElementById('map-wrapper');
+            if (mapWrapper) mapWrapper.style.display = 'none';
+            if (locationTimer) { clearInterval(locationTimer); locationTimer = null; }
         } else if (status === 'dispatched' || status === 'on-the-way') {
             steps[0].classList.add('done');
             steps[1].classList.add('done');
