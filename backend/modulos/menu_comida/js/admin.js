@@ -12112,12 +12112,24 @@ function toggleDriverGPS(orderId) {
         }).catch(e => console.log('Location update error', e));
     };
 
+    const _getStoreCoordsFallback = () => {
+        try {
+            const cfg = JSON.parse(localStorage.getItem('streetfeed_config') || '{}');
+            if (cfg.storeLat && cfg.storeLng) {
+                return { lat: parseFloat(cfg.storeLat), lng: parseFloat(cfg.storeLng) };
+            }
+        } catch(e) {}
+        return { lat: 11.5444, lng: -72.9072 };
+    };
+
+    const storeCoords = _getStoreCoordsFallback();
+
     // Send immediate initial position
     navigator.geolocation.getCurrentPosition(
         (pos) => sendPos(pos.coords.latitude, pos.coords.longitude),
         (err) => {
-            console.warn('Initial GPS error, using fallback location:', err);
-            sendPos(10.4631, -73.2532);
+            console.warn('Initial GPS error, using fallback location near store:', err);
+            sendPos(storeCoords.lat + 0.003, storeCoords.lng + 0.003);
         },
         { enableHighAccuracy: true, timeout: 5000 }
     );
@@ -12128,7 +12140,8 @@ function toggleDriverGPS(orderId) {
         (err) => {
             console.warn('GPS watch error, fallback simulation active:', err);
             if (!activeGpsInterval) {
-                let baseLat = 10.4631, baseLng = -73.2532;
+                let baseLat = storeCoords.lat + 0.003;
+                let baseLng = storeCoords.lng + 0.003;
                 activeGpsInterval = setInterval(() => {
                     baseLat += (Math.random() - 0.5) * 0.0003;
                     baseLng += (Math.random() - 0.5) * 0.0003;
@@ -12370,10 +12383,11 @@ function openDriverMapModal(orderId, customerName, address) {
     setTimeout(async () => {
         // ── Initialize or reuse map instance ──────────────────────────────
         if (!adminDriverMapInstance) {
+            const defaultCoords = (typeof _getStoreCoordsFallback === 'function') ? _getStoreCoordsFallback() : { lat: 11.5444, lng: -72.9072 };
             adminDriverMapInstance = L.map('admin-driver-map', {
                 zoomControl: false,
                 attributionControl: true
-            }).setView([10.4631, -73.2532], 14);
+            }).setView([defaultCoords.lat, defaultCoords.lng], 14);
 
             L.control.zoom({ position: 'topright' }).addTo(adminDriverMapInstance);
 
@@ -13111,7 +13125,7 @@ const COLOMBIA_LOCATIONS_DATA = {
         cities: ["Cartagena", "Magangué", "Turbaco", "Arjona", "El Carmen de Bolívar"]
     },
     "Cesar": {
-        coords: { lat: 10.4631, lng: -73.2532 },
+        coords: { lat: 11.5444, lng: -72.9072 },
         cities: ["Valledupar", "Aguachica", "Agustín Codazzi", "Bosconia", "La Paz", "Curumaní"]
     },
     "Cundinamarca": {
