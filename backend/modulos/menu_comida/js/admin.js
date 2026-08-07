@@ -6829,7 +6829,9 @@ document.addEventListener('click', function(e) {
 });
 
 window.copyCustomerTrackingLink = function(orderId) {
-    const url = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(orderId)}`;
+    const instanceId = new URLSearchParams(window.location.search).get('instanceId');
+    const instParam = instanceId ? `&instanceId=${encodeURIComponent(instanceId)}` : '';
+    const url = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(orderId)}${instParam}`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(() => {
             if (typeof showToast === 'function') showToast('📋 Enlace de rastreo copiado');

@@ -2621,7 +2621,9 @@ function sendOrderToWhatsApp(order) {
     message += `--------------------------\n`;
     
     // Live GPS / Status tracking link included in WhatsApp message
-    const trackingUrl = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(order.id)}`;
+    const instanceId = new URLSearchParams(window.location.search).get('instanceId');
+    const instParam = instanceId ? `&instanceId=${encodeURIComponent(instanceId)}` : '';
+    const trackingUrl = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(order.id)}${instParam}`;
     const delType = order.customer?.deliveryType || 'delivery';
     if (delType === 'delivery') {
         message += `${e.pin} *SIGUE TU DOMICILIO EN VIVO:* \n${trackingUrl}\n`;
@@ -2638,7 +2640,9 @@ function sendOrderToWhatsApp(order) {
 }
 
 function showPostOrderSuccessModal(order) {
-    const trackingUrl = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(order.id)}`;
+    const instanceId = new URLSearchParams(window.location.search).get('instanceId');
+    const instParam = instanceId ? `&instanceId=${encodeURIComponent(instanceId)}` : '';
+    const trackingUrl = `${window.location.origin}/modules/order-system/rastreo.html?order=${encodeURIComponent(order.id)}${instParam}`;
     const delType = order.customer?.deliveryType || 'delivery';
     
     let modal = document.getElementById('post-order-success-modal');
