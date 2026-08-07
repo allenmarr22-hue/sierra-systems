@@ -394,9 +394,11 @@
             flex-direction: column;
             gap: 0.5rem;
             align-items: flex-end;
+            pointer-events: none;
         }
 
         .live-badge {
+            pointer-events: auto;
             background: rgba(8,12,20,0.88);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(16,185,129,0.45);
@@ -674,11 +676,11 @@
                         <span class="step-lbl">En Cocina</span>
                     </div>
                     <div class="step-col" id="step-3">
-                        <div class="step-circle" id="step-3-circle"><i data-lucide="bike"></i></div>
+                        <div class="step-circle"><i data-lucide="bike"></i></div>
                         <span class="step-lbl" id="step-3-lbl">En Camino</span>
                     </div>
                     <div class="step-col" id="step-4">
-                        <div class="step-circle" id="step-4-circle"><i data-lucide="check-circle"></i></div>
+                        <div class="step-circle"><i data-lucide="check-circle"></i></div>
                         <span class="step-lbl" id="step-4-lbl">Entregado</span>
                     </div>
                 </div>
@@ -830,8 +832,24 @@
 
     // ───── MAP INIT ─────
     function initMap() {
-        if (map) return; // already initialized
-        map = L.map('map', { zoomControl: true }).setView([storeLat, storeLng], 15);
+        if (map) {
+            setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+            return; // already initialized
+        }
+        map = L.map('map', {
+            zoomControl: true,
+            dragging: true,
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            touchZoom: true
+        }).setView([storeLat, storeLng], 15);
+
+        if (map.dragging) map.dragging.enable();
+        if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+        }, 300);
 
         // Ultra-clean minimalist Light map tiles (Rappi / Uber Eats style)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -993,23 +1011,15 @@
         const fillEl   = document.getElementById('stepper-fill');
         const tagEl    = document.getElementById('current-status-tag');
         const celebEl  = document.getElementById('celebration-card');
-        const circle3  = document.getElementById('step-3-circle');
-        const circle4  = document.getElementById('step-4-circle');
+        const lbl3     = document.getElementById('step-3-lbl');
+        const lbl4     = document.getElementById('step-4-lbl');
 
-        // Adjust labels and icons based on order type
+        // Adjust labels based on order type
         if (lbl3) {
             lbl3.textContent = delType === 'delivery' ? 'En Camino'  : (delType === 'takeout' ? '¡Listo!' : 'En Mesa');
         }
         if (lbl4) {
             lbl4.textContent = delType === 'delivery' ? 'Entregado' : (delType === 'takeout' ? 'Recogido' : 'Pagado');
-        }
-        if (circle3) {
-            const iconName = delType === 'delivery' ? 'bike' : (delType === 'takeout' ? 'shopping-bag' : 'utensils');
-            circle3.innerHTML = `<i data-lucide="${iconName}"></i>`;
-        }
-        if (circle4) {
-            const iconName = delType === 'delivery' ? 'check-circle' : (delType === 'takeout' ? 'package-check' : 'receipt');
-            circle4.innerHTML = `<i data-lucide="${iconName}"></i>`;
         }
 
         // Reset all
