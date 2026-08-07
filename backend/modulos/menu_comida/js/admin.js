@@ -12459,6 +12459,14 @@ function openDriverMapModal(orderId, customerName, address) {
         if (storeAddress && storeAddress.length >= 4) {
             const storeCoords = await _geocodeForMap(storeAddress);
             if (storeCoords && adminDriverMapInstance) {
+                // ✅ Persist exact geocoded coords to localStorage so rastreo.html uses them too
+                try {
+                    const existingCfg = JSON.parse(localStorage.getItem('streetfeed_config') || '{}');
+                    existingCfg.storeLat = storeCoords.lat;
+                    existingCfg.storeLng = storeCoords.lng;
+                    localStorage.setItem('streetfeed_config', JSON.stringify(existingCfg));
+                } catch(e) {}
+
                 const storeHtml = `
                     <div style="text-align:center;width:48px;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 62" width="48" height="62" style="filter:drop-shadow(0 4px 14px rgba(245,158,11,0.55));overflow:visible;">
