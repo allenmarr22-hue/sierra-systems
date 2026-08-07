@@ -841,15 +841,20 @@
             dragging: true,
             scrollWheelZoom: true,
             doubleClickZoom: true,
-            touchZoom: true
+            touchZoom: true,
+            tap: false
         }).setView([storeLat, storeLng], 15);
 
         if (map.dragging) map.dragging.enable();
         if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
 
+        map.on('dragstart', () => {
+            window._userMapDragged = true;
+        });
+
         setTimeout(() => {
             if (map) map.invalidateSize();
-        }, 300);
+        }, 500);
 
         // Ultra-clean minimalist Light map tiles (Rappi / Uber Eats style)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -1164,8 +1169,10 @@
             routePolyline.setLatLngs(pts);
         }
 
-        // Auto-fit bounds
-        map.fitBounds(L.latLngBounds(pts), { padding: [55, 55] });
+        // Auto-fit bounds (only if user hasn't manually dragged the map)
+        if (!window._userMapDragged) {
+            map.fitBounds(L.latLngBounds(pts), { padding: [55, 55] });
+        }
         if (window.lucide) lucide.createIcons();
     }
 
