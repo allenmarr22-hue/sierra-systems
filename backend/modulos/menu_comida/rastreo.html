@@ -1218,32 +1218,6 @@
 
         initCustomerMarker();
 
-        // 1. Line: Store → Driver (emerald green)
-        const pts1 = [[storeLat, storeLng], [lat, lng]];
-        if (!routePolyline) {
-            routePolyline = L.polyline(pts1, {
-                color: '#10b981',
-                weight: 4,
-                opacity: 0.8,
-                dashArray: '10, 8'
-            }).addTo(map);
-        } else {
-            routePolyline.setLatLngs(pts1);
-        }
-
-        // 2. Line: Driver → Customer Home (blue dashed)
-        const pts2 = [[lat, lng], [customerLat, customerLng]];
-        if (!routePolylineDest) {
-            routePolylineDest = L.polyline(pts2, {
-                color: '#3b82f6',
-                weight: 4,
-                opacity: 0.85,
-                dashArray: '8, 8'
-            }).addTo(map);
-        } else {
-            routePolylineDest.setLatLngs(pts2);
-        }
-
         // Auto-fit bounds for all 3 points (Store, Driver, Customer Home)
         if (!window._userMapDragged) {
             const allPts = [[storeLat, storeLng], [lat, lng], [customerLat, customerLng]];
