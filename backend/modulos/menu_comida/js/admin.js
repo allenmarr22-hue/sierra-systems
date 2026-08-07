@@ -4910,7 +4910,7 @@ function renderMyMetrics(range = 'today', specificMonth = null, specificDate = n
     const commEl = document.getElementById('my-stat-commission');
 
     if (isDriverUser) {
-        if (commRateEl) commRateEl.textContent = 'Ganancias Domicilio';
+        if (commRateEl) commRateEl.textContent = 'Domicilio';
         if (commEl) commEl.textContent = '$' + (filterStats.totalDeliveryFee || 0).toLocaleString('es-CO');
     } else {
         if (commRateEl) commRateEl.textContent = `Comisión (${filterStats.commissionRate}%)`;
@@ -10225,7 +10225,7 @@ function renderActiveProfileMetrics() {
     const commEl = document.getElementById('emp-profile-commission');
 
     if (isDriverRole) {
-        if (commLabelEl) commLabelEl.textContent = 'Ganancias Domicilio';
+        if (commLabelEl) commLabelEl.textContent = 'Domicilio';
         if (commEl) commEl.textContent = '$' + (stats.totalDeliveryFee || 0).toLocaleString('es-CO');
     } else {
         if (commLabelEl) commLabelEl.textContent = `Comisión (${stats.commissionRate}%)`;
