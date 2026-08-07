@@ -674,11 +674,11 @@
                         <span class="step-lbl">En Cocina</span>
                     </div>
                     <div class="step-col" id="step-3">
-                        <div class="step-circle"><i data-lucide="bike"></i></div>
+                        <div class="step-circle" id="step-3-circle"><i data-lucide="bike"></i></div>
                         <span class="step-lbl" id="step-3-lbl">En Camino</span>
                     </div>
                     <div class="step-col" id="step-4">
-                        <div class="step-circle"><i data-lucide="check-circle"></i></div>
+                        <div class="step-circle" id="step-4-circle"><i data-lucide="check-circle"></i></div>
                         <span class="step-lbl" id="step-4-lbl">Entregado</span>
                     </div>
                 </div>
@@ -993,15 +993,23 @@
         const fillEl   = document.getElementById('stepper-fill');
         const tagEl    = document.getElementById('current-status-tag');
         const celebEl  = document.getElementById('celebration-card');
-        const lbl3     = document.getElementById('step-3-lbl');
-        const lbl4     = document.getElementById('step-4-lbl');
+        const circle3  = document.getElementById('step-3-circle');
+        const circle4  = document.getElementById('step-4-circle');
 
-        // Adjust labels based on order type
+        // Adjust labels and icons based on order type
         if (lbl3) {
             lbl3.textContent = delType === 'delivery' ? 'En Camino'  : (delType === 'takeout' ? '¡Listo!' : 'En Mesa');
         }
         if (lbl4) {
             lbl4.textContent = delType === 'delivery' ? 'Entregado' : (delType === 'takeout' ? 'Recogido' : 'Pagado');
+        }
+        if (circle3) {
+            const iconName = delType === 'delivery' ? 'bike' : (delType === 'takeout' ? 'shopping-bag' : 'utensils');
+            circle3.innerHTML = `<i data-lucide="${iconName}"></i>`;
+        }
+        if (circle4) {
+            const iconName = delType === 'delivery' ? 'check-circle' : (delType === 'takeout' ? 'package-check' : 'receipt');
+            circle4.innerHTML = `<i data-lucide="${iconName}"></i>`;
         }
 
         // Reset all
