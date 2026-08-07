@@ -6327,6 +6327,7 @@ window.updateOrderStatus = function(id, newStatus) {
                             activeWatchPositionId = null;
                         }
                         activeGpsOrderId = null;
+                        try { localStorage.removeItem('streetfeed_active_gps_order'); } catch(e) {}
                         if (typeof updateGpsStatusPill === 'function') updateGpsStatusPill(false);
                     }
                     delete assignments[String(id)];
@@ -11616,6 +11617,7 @@ function releaseDeliveryOrder(orderId) {
             navigator.geolocation.clearWatch(activeWatchPositionId);
             activeWatchPositionId = null;
             activeGpsOrderId = null;
+            try { localStorage.removeItem('streetfeed_active_gps_order'); } catch(e) {}
             updateGpsStatusPill(false);
         }
         // Remove the assignment so the order returns to the unassigned pool
@@ -11952,6 +11954,21 @@ function renderDriverDeliveriesSection() {
         return isDeliv;
     });
 
+    // Auto-resume active GPS if saved in localStorage and not currently watching
+    if (!activeGpsOrderId && isDriver) {
+        try {
+            const savedActiveGps = localStorage.getItem('streetfeed_active_gps_order');
+            if (savedActiveGps) {
+                const isStillDispatched = deliveryOrders.some(o => String(o.id || o.orderId) === String(savedActiveGps));
+                if (isStillDispatched) {
+                    toggleDriverGPS(savedActiveGps, { quiet: true });
+                } else {
+                    localStorage.removeItem('streetfeed_active_gps_order');
+                }
+            }
+        } catch(e) {}
+    }
+
     // Use centralized badge updater so it's always consistent with renderOrders
     updateDomiciliosBadge();
 
@@ -12073,7 +12090,7 @@ function renderDriverDeliveriesSection() {
 
 let activeGpsInterval = null;
 
-function toggleDriverGPS(orderId) {
+function toggleDriverGPS(orderId, options = {}) {
     if (activeGpsOrderId === orderId) {
         if (activeWatchPositionId !== null) {
             navigator.geolocation.clearWatch(activeWatchPositionId);
@@ -12084,18 +12101,20 @@ function toggleDriverGPS(orderId) {
             activeGpsInterval = null;
         }
         activeGpsOrderId = null;
+        try { localStorage.removeItem('streetfeed_active_gps_order'); } catch(e) {}
         updateGpsStatusPill(false);
-        if (typeof showAdminNotification === 'function') showAdminNotification('📡 Transmisión de GPS detenida', 'info');
+        if (!options.quiet && typeof showAdminNotification === 'function') showAdminNotification('📡 Transmisión de GPS detenida', 'info');
         renderDriverDeliveriesSection();
         return;
     }
 
     if (!navigator.geolocation) {
-        if (typeof showAdminNotification === 'function') showAdminNotification('❌ Tu navegador o dispositivo no soporta localización GPS', 'error');
+        if (!options.quiet && typeof showAdminNotification === 'function') showAdminNotification('❌ Tu navegador o dispositivo no soporta localización GPS', 'error');
         return;
     }
 
     activeGpsOrderId = orderId;
+    try { localStorage.setItem('streetfeed_active_gps_order', String(orderId)); } catch(e) {}
     updateGpsStatusPill(true);
 
     const sendPos = (lat, lng) => {
@@ -12152,7 +12171,7 @@ function toggleDriverGPS(orderId) {
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 
-    if (typeof showAdminNotification === 'function') showAdminNotification('🚀 GPS Activado. Transmitiendo ubicación...', 'success');
+    if (!options.quiet && typeof showAdminNotification === 'function') showAdminNotification('🚀 GPS Activado. Transmitiendo ubicación...', 'success');
     renderDriverDeliveriesSection();
 }
 
@@ -12186,6 +12205,7 @@ function completeDriverDelivery(orderId) {
         }
         if (activeGpsOrderId === orderId) {
             activeGpsOrderId = null;
+            try { localStorage.removeItem('streetfeed_active_gps_order'); } catch(e) {}
             updateGpsStatusPill(false);
         }
         // Save assignment BEFORE clearing (to preserve driverName for deliveredBy stamp)
