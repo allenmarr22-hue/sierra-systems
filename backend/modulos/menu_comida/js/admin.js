@@ -12100,6 +12100,10 @@ function toggleDriverGPS(orderId, options = {}) {
             clearInterval(activeGpsInterval);
             activeGpsInterval = null;
         }
+        if (window._driverWakeLock) {
+            try { window._driverWakeLock.release(); } catch(e) {}
+            window._driverWakeLock = null;
+        }
         activeGpsOrderId = null;
         try { localStorage.removeItem('streetfeed_active_gps_order'); } catch(e) {}
         updateGpsStatusPill(false);
@@ -12153,6 +12157,13 @@ function toggleDriverGPS(orderId, options = {}) {
         { enableHighAccuracy: true, timeout: 5000 }
     );
 
+    // Screen WakeLock to prevent phone display & browser from sleeping while active
+    if ('wakeLock' in navigator && !window._driverWakeLock) {
+        navigator.wakeLock.request('screen').then(wl => {
+            window._driverWakeLock = wl;
+        }).catch(() => {});
+    }
+
     // Watch position continuously
     activeWatchPositionId = navigator.geolocation.watchPosition(
         (pos) => sendPos(pos.coords.latitude, pos.coords.longitude),
@@ -12173,6 +12184,40 @@ function toggleDriverGPS(orderId, options = {}) {
 
     if (!options.quiet && typeof showAdminNotification === 'function') showAdminNotification('🚀 GPS Activado. Transmitiendo ubicación...', 'success');
     renderDriverDeliveriesSection();
+}
+
+// Automatic focus & visibility change listener to immediately push GPS on tab open/resume
+if (!window._gpsVisibilityListenerAdded) {
+    window._gpsVisibilityListenerAdded = true;
+    const forceSendOnActive = () => {
+        if (typeof activeGpsOrderId !== 'undefined' && activeGpsOrderId && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    if (typeof activeGpsOrderId !== 'undefined' && activeGpsOrderId) {
+                        try {
+                            localStorage.setItem(`streetfeed_driver_location_${activeGpsOrderId}`, JSON.stringify({
+                                orderId: activeGpsOrderId,
+                                lat: pos.coords.latitude,
+                                lng: pos.coords.longitude,
+                                updatedAt: Date.now()
+                            }));
+                            fetch('/api/driver/location', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ orderId: activeGpsOrderId, lat: pos.coords.latitude, lng: pos.coords.longitude })
+                            }).catch(() => {});
+                        } catch(e) {}
+                    }
+                },
+                () => {},
+                { enableHighAccuracy: true, timeout: 4000 }
+            );
+        }
+    };
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') forceSendOnActive();
+    });
+    window.addEventListener('focus', forceSendOnActive);
 }
 
 function updateGpsStatusPill(isActive) {
